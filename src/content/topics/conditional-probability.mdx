@@ -1,0 +1,559 @@
+---
+title: "Conditional Probability & Independence"
+subtitle: "How new information reshapes probability — from Bayes' theorem to the conditional independence assumption that makes probabilistic ML tractable"
+status: "published"
+difficulty: "foundational"
+prerequisites:
+  - "sample-spaces"
+tags:
+  - "probability"
+  - "conditional-probability"
+  - "bayes-theorem"
+  - "independence"
+  - "conditional-independence"
+  - "total-probability"
+  - "chain-rule"
+  - "naive-bayes"
+domain: "foundations-of-probability"
+videoId: null
+notebookPath: "notebooks/conditional-probability/02_conditional_probability_independence.ipynb"
+githubUrl: "https://github.com/jonx0037/formalStatistics/blob/main/src/content/topics/conditional-probability.mdx"
+datePublished: 2026-04-11
+estimatedReadTime: 45
+abstract: "Conditional probability P(A|B) = P(A∩B)/P(B) answers the fundamental question: how does knowing that B occurred change the probability of A? From this single definition, we derive the multiplication rule, the chain rule for probability, the law of total probability, and Bayes' theorem P(A|B) = P(B|A)P(A)/P(B) — the engine of Bayesian inference. Two events are independent when P(A∩B) = P(A)·P(B), meaning information about one tells you nothing about the other. But independence is more subtle than it appears: pairwise independence does not imply mutual independence, and marginal independence does not imply conditional independence (nor vice versa). Conditional independence — the assumption that A and B become independent once we condition on C — is the structural property that makes probabilistic ML tractable. It is the assumption encoded in every Bayesian network, every naive Bayes classifier, and every hidden Markov model. The medical testing example (sensitivity, specificity, positive predictive value) and the Monty Hall problem illustrate how Bayes' theorem produces correct answers that violate untrained intuition."
+formalcalculusPrereqs:
+  - topic: "sequences-limits"
+    site: "formalcalculus"
+    relationship: "The proof that independence of events implies independence of their complements uses basic algebraic manipulation of limits. The same epsilon-N framework from formalCalculus Topic 1."
+formalmlConnections:
+  - topic: "graphical-models"
+    site: "formalml"
+    relationship: "Conditional independence is the structural assumption encoded in Bayesian networks. The factorization P(X₁,..., Xₙ) = ∏ P(Xᵢ | Parents(Xᵢ)) is the chain rule of probability combined with conditional independence assumptions read from the graph."
+  - topic: "shannon-entropy"
+    site: "formalml"
+    relationship: "Conditional entropy H(X|Y) = -Σ P(x,y) log P(x|y) and mutual information I(X;Y) = H(X) - H(X|Y) are defined via conditional probability. The chain rule for entropy H(X,Y) = H(X) + H(Y|X) mirrors the chain rule for probability."
+  - topic: "bayesian-inference"
+    site: "formalml"
+    relationship: "The posterior distribution P(θ|data) ∝ P(data|θ)P(θ) is Bayes' theorem applied to parameter spaces. Every MCMC algorithm, every variational inference method targets this posterior."
+connections:
+  - topic: "sample-spaces"
+    relationship: "The probability space (Ω, F, P) and Kolmogorov axioms from Topic 1 are the foundation. Conditional probability is a new probability measure on the same sigma-algebra."
+  - topic: "random-variables"
+    relationship: "Conditional distributions P(X ≤ x | Y = y), conditional expectation E[X|Y], and the chain rule for densities f(x,y) = f(x|y)·f(y) all extend the conditional probability framework from events to random variables."
+  - topic: "bayesian-foundations"
+    relationship: "Bayes' theorem derived here becomes the engine of Bayesian statistics: prior × likelihood ∝ posterior. Conjugate priors, Jeffreys priors, and posterior computation all build on this foundation."
+references:
+  - type: "book"
+    title: "Probability and Measure"
+    author: "Patrick Billingsley"
+    year: 2012
+    edition: "Anniversary Edition"
+    publisher: "Wiley"
+    isbn: "978-1-118-12237-0"
+    url: "https://www.wiley.com/en-us/Probability+and+Measure%2C+Anniversary+Edition-p-9781118122372"
+    note: "Chapter 4 covers conditional probability and independence with full measure-theoretic rigor."
+  - type: "book"
+    title: "Probability: Theory and Examples"
+    author: "Rick Durrett"
+    year: 2019
+    edition: "5th"
+    publisher: "Cambridge University Press"
+    isbn: "978-1-108-47368-2"
+    url: "https://services.math.duke.edu/~rtd/PTE/pte.html"
+    note: "Section 1.3 on independence and Section 4.1 on conditional expectation."
+  - type: "book"
+    title: "Probability and Random Processes"
+    author: "Geoffrey Grimmett & David Stirzaker"
+    year: 2020
+    edition: "4th"
+    publisher: "Oxford University Press"
+    isbn: "978-0-19-884759-1"
+    url: "https://global.oup.com/academic/product/probability-and-random-processes-9780198847595"
+    note: "Chapter 1 sections on conditional probability and independence with excellent examples."
+  - type: "book"
+    title: "All of Statistics"
+    author: "Larry Wasserman"
+    year: 2004
+    publisher: "Springer"
+    isbn: "978-0-387-40272-7"
+    url: "https://link.springer.com/book/10.1007/978-0-387-21736-9"
+    note: "Chapter 2 covers conditional probability and Bayes' theorem concisely."
+  - type: "book"
+    title: "Pattern Recognition and Machine Learning"
+    author: "Christopher M. Bishop"
+    year: 2006
+    publisher: "Springer"
+    isbn: "978-0-387-31073-2"
+    url: "https://www.microsoft.com/en-us/research/publication/pattern-recognition-machine-learning/"
+    note: "Chapter 8 on graphical models shows how conditional independence enables tractable inference."
+  - type: "book"
+    title: "Probabilistic Graphical Models: Principles and Techniques"
+    author: "Daphne Koller & Nir Friedman"
+    year: 2009
+    publisher: "MIT Press"
+    isbn: "978-0-262-01319-2"
+    url: "https://mitpress.mit.edu/9780262013192/probabilistic-graphical-models/"
+    note: "The definitive reference for conditional independence in graphical models. Chapter 3 on Bayesian networks."
+  - type: "book"
+    title: "Understanding Machine Learning: From Theory to Algorithms"
+    author: "Shai Shalev-Shwartz & Shai Ben-David"
+    year: 2014
+    publisher: "Cambridge University Press"
+    isbn: "978-1-107-05713-5"
+    url: "https://www.cs.huji.ac.il/~shais/UnderstandingMachineLearning/"
+    note: "Chapter 24 covers PAC-Bayes bounds, connecting Bayesian reasoning to learning theory."
+---
+
+import DefinitionBlock from '../../components/ui/DefinitionBlock.astro';
+import TheoremBlock from '../../components/ui/TheoremBlock.astro';
+import ProofBlock from '../../components/ui/ProofBlock.astro';
+import ExampleBlock from '../../components/ui/ExampleBlock.astro';
+import RemarkBlock from '../../components/ui/RemarkBlock.astro';
+import ExternalLink from '../../components/ui/ExternalLink.astro';
+
+import ConditionalProbabilityExplorer from '../../components/viz/ConditionalProbabilityExplorer.tsx';
+import TotalProbabilityExplorer from '../../components/viz/TotalProbabilityExplorer.tsx';
+import BayesTheoremExplorer from '../../components/viz/BayesTheoremExplorer.tsx';
+import IndependenceTester from '../../components/viz/IndependenceTester.tsx';
+import ConditionalIndependenceExplorer from '../../components/viz/ConditionalIndependenceExplorer.tsx';
+
+## 1. Conditional Probability
+
+In [Topic 1](/topics/sample-spaces) we built the machinery of probability spaces: sample spaces, sigma-algebras, and the Kolmogorov axioms. Everything there describes *unconditional* probability — the probability of events in the absence of any additional information.
+
+But in practice, we almost always have partial information. A doctor knows the patient tested positive before computing the probability of disease. A spam filter knows the email contains the word "lottery" before computing the probability it's spam. A stock trader knows yesterday's return before estimating today's. The question becomes: *how does knowing that $B$ occurred change the probability of $A$?*
+
+<DefinitionBlock number={1} title="Conditional Probability">
+Let $(\Omega, \mathcal{F}, P)$ be a probability space and let $B \in \mathcal{F}$ with $P(B) > 0$. The *conditional probability of $A$ given $B$* is
+
+$$P(A \mid B) = \frac{P(A \cap B)}{P(B)}.$$
+</DefinitionBlock>
+
+The intuition is clean: conditioning on $B$ means *restricting our universe* to outcomes in $B$. Among those outcomes, we ask how many also belong to $A$. The denominator $P(B)$ re-normalizes so that $P(B \mid B) = 1$ — the new "sample space" has total probability 1.
+
+<img src="/images/topics/conditional-probability/conditional-probability-venn.png" alt="Three-panel Venn diagram showing conditional probability: full sample space, B highlighted, and P(A|B) as A∩B within B" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
+
+<ExampleBlock number={1} title="Conditional probability on a fair die">
+Roll a fair die, $\Omega = \{1,2,3,4,5,6\}$ with $P(\{\omega\}) = 1/6$. Let $A = \{2,4,6\}$ (even) and $B = \{4,5,6\}$ (at least 4).
+
+$$P(A \mid B) = \frac{P(A \cap B)}{P(B)} = \frac{P(\{4,6\})}{P(\{4,5,6\})} = \frac{2/6}{3/6} = \frac{2}{3}.$$
+
+Knowing the roll was at least 4, the probability of even jumps from $1/2$ to $2/3$. Information changed the probability.
+</ExampleBlock>
+
+<RemarkBlock title="Conditional probability is a probability measure">
+For fixed $B$ with $P(B) > 0$, the function $A \mapsto P(A \mid B)$ satisfies the Kolmogorov axioms on $(\Omega, \mathcal{F})$:
+1. $P(A \mid B) = P(A \cap B)/P(B) \geq 0$ (non-negativity).
+2. $P(\Omega \mid B) = P(B)/P(B) = 1$ (normalization).
+3. Countable additivity follows from that of $P$.
+
+So conditioning on $B$ gives us a new probability space — the same $\Omega$ and $\mathcal{F}$, but a different measure. Every theorem we proved in [Topic 1](/topics/sample-spaces) (complement rule, inclusion-exclusion, union bound, continuity) holds for conditional probabilities too.
+</RemarkBlock>
+
+<DefinitionBlock number={2} title="Conditional Probability as a Probability Measure">
+For $B \in \mathcal{F}$ with $P(B) > 0$, define $P_B : \mathcal{F} \to [0,1]$ by $P_B(A) = P(A \mid B)$. Then $(\Omega, \mathcal{F}, P_B)$ is a probability space.
+</DefinitionBlock>
+
+Use the explorer below to see how conditioning on $B$ restricts the sample space and reshapes probabilities. Toggle "Condition on B" to watch $\Omega$ fade and $B$ become the new universe:
+
+<ConditionalProbabilityExplorer client:visible />
+
+---
+
+## 2. The Multiplication Rule and Chain Rule
+
+### The Multiplication Rule
+
+Rearranging the definition of conditional probability gives us the **multiplication rule** (also called the **product rule**):
+
+<TheoremBlock number={1} title="Multiplication Rule (Product Rule)">
+For events $A, B \in \mathcal{F}$ with $P(B) > 0$,
+
+$$P(A \cap B) = P(A \mid B) \cdot P(B).$$
+
+By symmetry (when $P(A) > 0$): $P(A \cap B) = P(B \mid A) \cdot P(A)$.
+</TheoremBlock>
+
+<ProofBlock title="Multiplication Rule">
+Multiply both sides of $P(A \mid B) = P(A \cap B)/P(B)$ by $P(B)$. ∎
+</ProofBlock>
+
+This is trivial as a proof, but powerful as a computational tool. It converts a joint probability into a conditional probability times a marginal — and often the conditional is the easier quantity to reason about.
+
+### The Chain Rule
+
+Applying the multiplication rule repeatedly gives the **chain rule of probability**:
+
+<TheoremBlock number={2} title="Chain Rule of Probability">
+For events $A_1, \ldots, A_n \in \mathcal{F}$ with $P(A_1 \cap \cdots \cap A_{n-1}) > 0$,
+
+$$P(A_1 \cap A_2 \cap \cdots \cap A_n) = P(A_1) \cdot P(A_2 \mid A_1) \cdot P(A_3 \mid A_1 \cap A_2) \cdots P(A_n \mid A_1 \cap \cdots \cap A_{n-1}).$$
+</TheoremBlock>
+
+The proof is a straightforward induction using the multiplication rule at each step: the base case is Theorem 1, and the inductive step applies the multiplication rule to $(A_1 \cap \cdots \cap A_{n-1})$ and $A_n$.
+
+<ExampleBlock number={2} title="Drawing cards without replacement">
+Draw 3 cards from a standard 52-card deck without replacement. What is the probability all three are hearts?
+
+$$P(H_1 \cap H_2 \cap H_3) = P(H_1) \cdot P(H_2 \mid H_1) \cdot P(H_3 \mid H_1 \cap H_2)$$
+
+$$= \frac{13}{52} \cdot \frac{12}{51} \cdot \frac{11}{50} = \frac{1716}{132600} \approx 0.01294.$$
+
+Each factor reflects the *updated* state of the deck: after drawing one heart, 12 of 51 remaining cards are hearts. The chain rule captures this sequential conditioning perfectly.
+</ExampleBlock>
+
+<img src="/images/topics/conditional-probability/chain-rule-tree.png" alt="Probability tree diagram showing the chain rule with branch weights for sequential conditioning" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
+
+**Why this matters for ML:** The chain rule is the foundation of autoregressive models. A language model factorizes $P(w_1, w_2, \ldots, w_T) = \prod_{t=1}^T P(w_t \mid w_1, \ldots, w_{t-1})$ — this is exactly the chain rule applied to a sequence of token events.
+
+---
+
+## 3. The Law of Total Probability
+
+The law of total probability is one of the most useful results in all of probability. It lets us compute $P(A)$ by "dividing and conquering" — breaking the computation into cases.
+
+<TheoremBlock number={3} title="Law of Total Probability">
+Let $B_1, B_2, \ldots, B_k$ be a *partition* of $\Omega$: the $B_i$ are pairwise disjoint and $\bigcup_{i=1}^k B_i = \Omega$. If $P(B_i) > 0$ for all $i$, then for any event $A \in \mathcal{F}$,
+
+$$P(A) = \sum_{i=1}^k P(A \mid B_i) \cdot P(B_i).$$
+</TheoremBlock>
+
+<ProofBlock title="Law of Total Probability">
+Since the $B_i$ partition $\Omega$, we have $A = A \cap \Omega = A \cap \left(\bigcup_i B_i\right) = \bigcup_i (A \cap B_i)$. The sets $A \cap B_i$ are pairwise disjoint (because the $B_i$ are). By countable additivity:
+
+$$P(A) = \sum_{i=1}^k P(A \cap B_i)$$
+
+$$= \sum_{i=1}^k P(A \mid B_i) \cdot P(B_i)$$
+
+where the last step uses the multiplication rule. ∎
+</ProofBlock>
+
+The most common application uses a two-element partition $\{B, B^c\}$:
+
+$$P(A) = P(A \mid B) \cdot P(B) + P(A \mid B^c) \cdot P(B^c).$$
+
+<ExampleBlock number={3} title="Prevalence-weighted testing">
+A disease has 2% prevalence. A test has sensitivity $P(+ \mid D) = 0.95$ and specificity $P(- \mid D^c) = 0.90$. What is $P(+)$, the probability of testing positive?
+
+Partition: $\{D, D^c\}$. By total probability:
+
+$$P(+) = P(+ \mid D) \cdot P(D) + P(+ \mid D^c) \cdot P(D^c)$$
+
+$$= 0.95 \times 0.02 + 0.10 \times 0.98 = 0.019 + 0.098 = 0.117.$$
+
+About 11.7% of people test positive — and the vast majority are false positives, because the disease is rare. This is where Bayes' theorem comes in.
+</ExampleBlock>
+
+<img src="/images/topics/conditional-probability/total-probability-partition.png" alt="Sample space partitioned into regions B₁, B₂, B₃ with event A overlapping each; stacked bar chart of weighted terms" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
+
+Use the explorer below to partition $\Omega$ into 2, 3, or 4 regions and see how the law of total probability decomposes $P(A)$ into weighted contributions:
+
+<TotalProbabilityExplorer client:visible />
+
+---
+
+## 4. Bayes' Theorem
+
+Bayes' theorem is the multiplication rule used twice, combined with total probability. It answers: given that we *observed* $B$, what is the probability that it was *caused by* (or associated with) $A$?
+
+<TheoremBlock number={4} title="Bayes' Theorem">
+Let $A, B \in \mathcal{F}$ with $P(B) > 0$ and $P(A) > 0$. Then
+
+$$P(A \mid B) = \frac{P(B \mid A) \cdot P(A)}{P(B)}.$$
+
+More generally, if $A_1, \ldots, A_k$ partition $\Omega$ with $P(A_i) > 0$ for all $i$, then
+
+$$P(A_i \mid B) = \frac{P(B \mid A_i) \cdot P(A_i)}{\sum_{j=1}^k P(B \mid A_j) \cdot P(A_j)}.$$
+</TheoremBlock>
+
+<ProofBlock title="Bayes' Theorem">
+By the multiplication rule, $P(A \cap B) = P(B \mid A) \cdot P(A) = P(A \mid B) \cdot P(B)$. Divide by $P(B)$:
+
+$$P(A \mid B) = \frac{P(B \mid A) \cdot P(A)}{P(B)}.$$
+
+The general form follows by expanding $P(B)$ via the law of total probability. ∎
+</ProofBlock>
+
+### The Bayesian Vocabulary
+
+Bayes' theorem has a canonical interpretation:
+
+| Term | Symbol | Role |
+|---|---|---|
+| **Prior** | $P(A)$ | Probability of $A$ *before* observing $B$ |
+| **Likelihood** | $P(B \mid A)$ | Probability of the evidence $B$ *given* $A$ |
+| **Evidence** | $P(B)$ | Total probability of $B$ (normalization constant) |
+| **Posterior** | $P(A \mid B)$ | Probability of $A$ *after* observing $B$ |
+
+In shorthand: **posterior $\propto$ likelihood $\times$ prior**. The evidence $P(B)$ is just the normalizing constant that makes the posterior sum to 1.
+
+<img src="/images/topics/conditional-probability/bayes-theorem-flow.png" alt="Three-panel flow: prior bars, likelihood scaling, posterior bars (normalized)" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
+
+<RemarkBlock title="The base rate fallacy">
+Humans are notoriously bad at Bayesian reasoning. We tend to overweight the likelihood $P(B \mid A)$ and ignore the prior $P(A)$ — the *base rate*. In medical testing, this means patients (and sometimes doctors) confuse "the test is 99% accurate" with "I'm 99% likely to have the disease." As Example 4 shows, these can be wildly different when the disease is rare.
+</RemarkBlock>
+
+### The Medical Testing Example
+
+<ExampleBlock number={4} title="Medical testing: sensitivity, specificity, and PPV">
+A disease has prevalence $P(D) = 0.01$ (1% of the population). A diagnostic test has:
+- Sensitivity: $P(+ \mid D) = 0.99$ (catches 99% of true cases)
+- Specificity: $P(- \mid D^c) = 0.95$ (correctly clears 95% of healthy people), so $P(+ \mid D^c) = 0.05$.
+
+Question: If you test positive, what is the probability you actually have the disease?
+
+By Bayes:
+
+$$P(D \mid +) = \frac{P(+ \mid D) \cdot P(D)}{P(+)} = \frac{0.99 \times 0.01}{0.99 \times 0.01 + 0.05 \times 0.99}$$
+
+$$= \frac{0.0099}{0.0099 + 0.0495} = \frac{0.0099}{0.0594} \approx 0.167.$$
+
+Despite a "99% accurate" test, a positive result means only about a 17% chance of disease. The base rate (1% prevalence) dominates.
+
+**Natural frequency framing.** Consider 10,000 people:
+- 100 have the disease → 99 test positive (true positives), 1 tests negative (false negative)
+- 9,900 are healthy → 495 test positive (false positives), 9,405 test negative (true negatives)
+- Total positives: 99 + 495 = 594. Of those, 99 actually have the disease: $99/594 \approx 16.7\%$.
+</ExampleBlock>
+
+<img src="/images/topics/conditional-probability/medical-testing.png" alt="Natural frequency tree for 1000 people showing TP/FP/TN/FN; PPV vs prevalence curve" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
+
+Explore Bayes' theorem interactively below. Try the medical testing presets to see how PPV changes dramatically with prevalence — even when sensitivity and specificity stay fixed:
+
+<BayesTheoremExplorer client:visible />
+
+---
+
+## 5. Independence
+
+Two events are *independent* when knowing one occurred gives no information about the other. The formal definition says this in the most computationally useful way:
+
+<DefinitionBlock number={3} title="Independence (Two Events)">
+Events $A$ and $B$ are *independent* if
+
+$$P(A \cap B) = P(A) \cdot P(B).$$
+
+Equivalently (when $P(B) > 0$): $P(A \mid B) = P(A)$ — conditioning on $B$ doesn't change the probability of $A$.
+</DefinitionBlock>
+
+<ExampleBlock number={5} title="Independent coin flips">
+Flip two fair coins. Let $A$ = "first coin is heads" and $B$ = "second coin is heads." Then $\Omega = \{HH, HT, TH, TT\}$ with $P(\{\omega\}) = 1/4$.
+
+$$P(A) = 1/2, \quad P(B) = 1/2, \quad P(A \cap B) = P(\{HH\}) = 1/4 = P(A) \cdot P(B).$$
+
+Independent. This matches our intuition: the second coin doesn't "know" what the first coin did.
+</ExampleBlock>
+
+<DefinitionBlock number={4} title="Independence (Finite Collection)">
+Events $A_1, \ldots, A_n$ are *(mutually) independent* if for every subset $\{i_1, \ldots, i_k\} \subseteq \{1, \ldots, n\}$ with $k \geq 2$,
+
+$$P(A_{i_1} \cap \cdots \cap A_{i_k}) = P(A_{i_1}) \cdots P(A_{i_k}).$$
+
+This requires $2^n - n - 1$ conditions — not just the $\binom{n}{2}$ pairwise ones. For three events, we need *four* conditions: the three pairwise ones plus $P(A \cap B \cap C) = P(A) \cdot P(B) \cdot P(C)$.
+</DefinitionBlock>
+
+### Independence of Complements
+
+<TheoremBlock number={5} title="Independence of Complements">
+If $A$ and $B$ are independent, then $A$ and $B^c$ are also independent (and $A^c$ and $B^c$, etc.).
+</TheoremBlock>
+
+<ProofBlock title="Independence of Complements">
+We need to show $P(A \cap B^c) = P(A) \cdot P(B^c)$.
+
+$$P(A \cap B^c) = P(A) - P(A \cap B)$$
+
+$$= P(A) - P(A) \cdot P(B)$$
+
+$$= P(A)(1 - P(B))$$
+
+$$= P(A) \cdot P(B^c). \quad \square$$
+
+The first equality uses $A = (A \cap B) \cup (A \cap B^c)$ with the two sets disjoint. The second uses the independence assumption $P(A \cap B) = P(A) \cdot P(B)$.
+</ProofBlock>
+
+This is reassuring: if "rain" and "traffic jam" are independent, then "no rain" and "traffic jam" should be too.
+
+<img src="/images/topics/conditional-probability/independence-venn.png" alt="Two-panel Venn diagram: independent events with P(A∩B)=P(A)·P(B) verified, dependent events with inequality shown" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
+
+Use the tester below to build events on a die and check whether they're independent. Try the presets, then define your own:
+
+<IndependenceTester client:visible />
+
+---
+
+## 6. Pairwise vs. Mutual Independence
+
+Pairwise independence — checking $P(A_i \cap A_j) = P(A_i) \cdot P(A_j)$ for all pairs — does *not* guarantee mutual independence. You also need the higher-order conditions.
+
+<DefinitionBlock number={5} title="Pairwise Independence">
+Events $A_1, \ldots, A_n$ are *pairwise independent* if $P(A_i \cap A_j) = P(A_i) \cdot P(A_j)$ for all $i \neq j$.
+</DefinitionBlock>
+
+<ExampleBlock number={6} title="Pairwise but not mutually independent events">
+Flip two fair coins. Define:
+- $A$ = "first coin is heads": $P(A) = 1/2$
+- $B$ = "second coin is heads": $P(B) = 1/2$
+- $C$ = "the two coins show different faces" $= \{HT, TH\}$: $P(C) = 1/2$
+
+Check pairwise independence:
+- $P(A \cap B) = P(\{HH\}) = 1/4 = P(A) \cdot P(B)$ ✓
+- $P(A \cap C) = P(\{HT\}) = 1/4 = P(A) \cdot P(C)$ ✓
+- $P(B \cap C) = P(\{TH\}) = 1/4 = P(B) \cdot P(C)$ ✓
+
+But $A \cap B \cap C = \emptyset$ (both heads means same face, so $C$ fails), so:
+
+$$P(A \cap B \cap C) = 0 \neq 1/8 = P(A) \cdot P(B) \cdot P(C).$$
+
+The three events are pairwise independent but *not* mutually independent.
+</ExampleBlock>
+
+<img src="/images/topics/conditional-probability/pairwise-vs-mutual.png" alt="Two-panel: classic 2-coin counterexample with Venn diagram and table showing pairwise but not mutual independence" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
+
+<RemarkBlock title="Pairwise ⊄ mutual: the extra conditions matter">
+This is not a pathological edge case. In machine learning, pairwise decorrelation (e.g., PCA) does not guarantee full independence — a fact that higher-order methods like ICA (independent component analysis) exploit. The difference between pairwise and mutual independence is the difference between matching second-order statistics and matching the full joint distribution.
+</RemarkBlock>
+
+---
+
+## 7. Conditional Independence
+
+Conditional independence is arguably the most important concept in probabilistic ML. It says: "once we know $C$, $A$ and $B$ become independent."
+
+<DefinitionBlock number={6} title="Conditional Independence">
+Events $A$ and $B$ are *conditionally independent given $C$* (written $A \perp\!\!\!\perp B \mid C$) if
+
+$$P(A \cap B \mid C) = P(A \mid C) \cdot P(B \mid C).$$
+
+Equivalently (when $P(B \cap C) > 0$): $P(A \mid B \cap C) = P(A \mid C)$ — once you know $C$, learning $B$ tells you nothing new about $A$.
+</DefinitionBlock>
+
+### Independence Does NOT Imply Conditional Independence
+
+This is the subtle part. All four combinations are possible:
+
+| Marginally independent? | Conditionally independent given $C$? | Name |
+|---|---|---|
+| Yes | Yes | Fully independent |
+| Yes | No | **Explaining away** (Berkson's paradox) |
+| No | Yes | **Confounding** |
+| No | No | Generally dependent |
+
+<TheoremBlock number={6} title="Conditional Independence Does Not Imply Marginal Independence">
+There exist events $A$, $B$, $C$ such that $A \perp\!\!\!\perp B$ (marginally independent) but $A$ and $B$ are *not* conditionally independent given $C$. And vice versa.
+</TheoremBlock>
+
+<ProofBlock title="Conditional Independence Does Not Imply Marginal Independence">
+By construction. The "explaining away" and "confounding" presets in the explorer below provide concrete probability distributions witnessing each direction. ∎
+</ProofBlock>
+
+<ExampleBlock number={7} title="Conditional independence: explaining away">
+Two independent causes $A$ and $B$ can produce an effect $C$. Marginally, $A \perp\!\!\!\perp B$. But conditioning on $C$ (the effect having occurred) makes $A$ and $B$ dependent: if we know the effect happened and $A$ didn't cause it, $B$ becomes more likely. This is called *explaining away*.
+
+Concrete example: A fire alarm ($C$) can be triggered by a fire ($A$) or by cooking smoke ($B$). Fire and cooking smoke are independent events. But given that the alarm is ringing, learning there's no fire makes cooking smoke more probable.
+</ExampleBlock>
+
+<img src="/images/topics/conditional-probability/conditional-independence.png" alt="Graphical model A←C→B and table showing conditional independence does not imply marginal independence" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
+
+<RemarkBlock title="Independence ⇎ conditional independence">
+Conditional independence is the language of graphical models:
+- In a **Bayesian network** (directed graph), $A \perp\!\!\!\perp B \mid C$ is encoded by the graph structure (d-separation).
+- The **naive Bayes** classifier assumes all features are conditionally independent given the class label: $P(X_1, \ldots, X_d \mid Y) = \prod_{j=1}^d P(X_j \mid Y)$.
+- In **hidden Markov models**, observations are conditionally independent given the hidden state.
+
+These assumptions are rarely *exactly* true, but they make inference tractable. The art of probabilistic modeling is choosing which conditional independencies to assume.
+</RemarkBlock>
+
+Explore the four independence configurations below. Use the presets or adjust the joint distribution manually to see when marginal and conditional independence agree — and when they don't:
+
+<ConditionalIndependenceExplorer client:visible />
+
+---
+
+## 8. Connections to ML
+
+### The Naive Bayes Classifier
+
+The naive Bayes classifier is Bayes' theorem + conditional independence. Given features $X_1, \ldots, X_d$ and class label $Y$:
+
+$$P(Y \mid X_1, \ldots, X_d) \propto P(Y) \prod_{j=1}^d P(X_j \mid Y)$$
+
+The "naive" assumption is that features are conditionally independent given the class: $X_i \perp\!\!\!\perp X_j \mid Y$ for all $i \neq j$. This reduces $O(2^d)$ parameters to $O(d)$ — from an intractable joint to a product of marginals.
+
+<img src="/images/topics/conditional-probability/naive-bayes-factorization.png" alt="Naive Bayes plate diagram with factorization formula highlighting conditional independence" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
+
+### Bayesian Inference
+
+Every Bayesian model applies Bayes' theorem to parameter spaces:
+
+$$P(\theta \mid \text{data}) = \frac{P(\text{data} \mid \theta) \cdot P(\theta)}{P(\text{data})}$$
+
+| Term | ML Role |
+|---|---|
+| $P(\theta)$ (prior) | Regularization, inductive bias |
+| $P(\text{data} \mid \theta)$ (likelihood) | Model fit |
+| $P(\theta \mid \text{data})$ (posterior) | Updated beliefs after seeing data |
+| $P(\text{data})$ (evidence) | Model comparison (marginal likelihood) |
+
+The full development of Bayesian inference — conjugate priors, MCMC, variational methods — lives in Bayesian Foundations (coming soon) within formalStatistics and <ExternalLink href="https://formalml.com/topics/bayesian-inference" site="formalml" topic="Bayesian Inference" /> on formalML.
+
+### The Monty Hall Problem
+
+<ExampleBlock number={8} title="The Monty Hall Problem">
+A game show has three doors. Behind one is a car; behind the others, goats. You pick a door (say Door 1). The host, who knows what's behind the doors, opens another door (say Door 3) to reveal a goat. Should you switch to Door 2?
+
+Let $C_i$ = "car is behind door $i$." Prior: $P(C_1) = P(C_2) = P(C_3) = 1/3$.
+
+Let $H_3$ = "host opens door 3." The host must open a goat door $\neq$ your choice:
+- $P(H_3 \mid C_1) = 1/2$ (car is behind your door, host picks randomly from 2 and 3)
+- $P(H_3 \mid C_2) = 1$ (car is behind door 2, host *must* open door 3)
+- $P(H_3 \mid C_3) = 0$ (host can't open the car door)
+
+By Bayes:
+
+$$P(C_2 \mid H_3) = \frac{P(H_3 \mid C_2) \cdot P(C_2)}{P(H_3)}$$
+
+$$= \frac{1 \times 1/3}{1/2 \times 1/3 + 1 \times 1/3 + 0 \times 1/3} = \frac{1/3}{1/2} = \frac{2}{3}.$$
+
+Switching wins with probability 2/3. Staying wins with probability 1/3. The host's action provides information that shifts the posterior — a direct application of Bayes' theorem.
+</ExampleBlock>
+
+### Conditional Entropy and Mutual Information
+
+Conditional probability powers the information-theoretic quantities central to ML:
+- **Conditional entropy**: $H(X \mid Y) = -\sum_{x,y} P(x,y) \log P(x \mid y)$ — remaining uncertainty in $X$ after observing $Y$
+- **Mutual information**: $I(X; Y) = H(X) - H(X \mid Y)$ — information $Y$ provides about $X$
+- **Chain rule for entropy**: $H(X, Y) = H(X) + H(Y \mid X)$ — mirrors the chain rule for probability
+
+These are developed fully in <ExternalLink href="https://formalml.com/topics/shannon-entropy" site="formalml" topic="Shannon Entropy" /> on formalML.
+
+---
+
+## 9. Summary
+
+| Concept | Key Idea |
+|---|---|
+| **Conditional probability** $P(A \mid B)$ | Probability of $A$ given that $B$ occurred — restricting the sample space to $B$ |
+| **Multiplication rule** | $P(A \cap B) = P(A \mid B) \cdot P(B)$ — joint from conditional $\times$ marginal |
+| **Chain rule** | $P(A_1 \cap \cdots \cap A_n) = P(A_1) \cdot P(A_2 \mid A_1) \cdots$ — sequential conditioning |
+| **Law of total probability** | $P(A) = \sum_i P(A \mid B_i) \cdot P(B_i)$ — divide and conquer via partition |
+| **Bayes' theorem** | $P(A \mid B) = P(B \mid A) \cdot P(A) / P(B)$ — posterior $\propto$ likelihood $\times$ prior |
+| **Base rate fallacy** | Ignoring the prior $P(A)$ when interpreting evidence — PPV depends on prevalence |
+| **Independence** | $P(A \cap B) = P(A) \cdot P(B)$ — information about one tells you nothing about the other |
+| **Pairwise vs. mutual** | Pairwise $\not\Rightarrow$ mutual — need all subset product conditions |
+| **Conditional independence** | $P(A \cap B \mid C) = P(A \mid C) \cdot P(B \mid C)$ — independence after conditioning on $C$ |
+| **Naive Bayes** | $P(Y \mid X) \propto P(Y) \prod_j P(X_j \mid Y)$ — conditional independence reduces parameters from $O(2^d)$ to $O(d)$ |
+
+### What's Next
+
+**Random Variables & Distributions** (coming soon) extends these ideas from events to numbers. A random variable $X : \Omega \to \mathbb{R}$ is a measurable function that translates the abstract probability space into numerical statements. Conditional distributions $P(X \leq x \mid Y = y)$, conditional expectation $E[X \mid Y]$, and the law of total expectation $E[X] = E[E[X \mid Y]]$ all build directly on the conditional probability framework developed here.
+
+### References
+
+1. Billingsley, P. (2012). [*Probability and Measure*](https://www.wiley.com/en-us/Probability+and+Measure%2C+Anniversary+Edition-p-9781118122372) (Anniversary ed.). Wiley.
+2. Durrett, R. (2019). [*Probability: Theory and Examples*](https://services.math.duke.edu/~rtd/PTE/pte.html) (5th ed.). Cambridge University Press.
+3. Grimmett, G. & Stirzaker, D. (2020). [*Probability and Random Processes*](https://global.oup.com/academic/product/probability-and-random-processes-9780198847595) (4th ed.). Oxford University Press.
+4. Wasserman, L. (2004). [*All of Statistics*](https://link.springer.com/book/10.1007/978-0-387-21736-9). Springer.
+5. Bishop, C. M. (2006). [*Pattern Recognition and Machine Learning*](https://www.microsoft.com/en-us/research/publication/pattern-recognition-machine-learning/). Springer.
+6. Koller, D. & Friedman, N. (2009). [*Probabilistic Graphical Models*](https://mitpress.mit.edu/9780262013192/probabilistic-graphical-models/). MIT Press.
+7. Shalev-Shwartz, S. & Ben-David, S. (2014). [*Understanding Machine Learning*](https://www.cs.huji.ac.il/~shais/UnderstandingMachineLearning/). Cambridge University Press.

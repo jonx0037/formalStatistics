@@ -3,6 +3,9 @@
  *
  * Pure, deterministic functions for probability computations used across
  * interactive components in Topics 1–4. Extended by later topics.
+ *
+ * Topic 1: Set operations, sigma-algebra, counting, inclusion-exclusion, Monte Carlo.
+ * Topic 2: Conditional probability, Bayes' theorem, independence, medical testing.
  */
 
 // ── Types ───────────────────────────────────────────────────────────────────
@@ -281,4 +284,209 @@ export function mcBirthday(
     if (hasMatch) matches++;
   }
   return matches / nTrials;
+}
+
+// ── Conditional probability (Topic 2) ──────────────────────────────────────
+
+/** P(A|B) = P(A∩B) / P(B). Returns NaN if P(B) = 0. */
+export function conditionalP(pAB: number, pB: number): number {
+  if (pB === 0) return NaN;
+  return pAB / pB;
+}
+
+/** Multiplication rule: P(A∩B) = P(A|B) · P(B). */
+export function multiplicationRule(pAgivenB: number, pB: number): number {
+  return pAgivenB * pB;
+}
+
+/**
+ * Chain rule: P(A₁ ∩ A₂ ∩ ... ∩ Aₙ) from a sequence of conditional probabilities.
+ * Input: [P(A₁), P(A₂|A₁), P(A₃|A₁∩A₂), ...].
+ */
+export function chainRule(conditionals: number[]): number {
+  if (conditionals.length === 0) return 1;
+  let product = 1;
+  for (const p of conditionals) {
+    product *= p;
+  }
+  return product;
+}
+
+// ── Law of total probability (Topic 2) ─────────────────────────────────────
+
+/**
+ * Law of total probability: P(A) = Σ P(A|Bᵢ) · P(Bᵢ) for a partition {B₁, ..., Bₖ}.
+ * @param pAgivenB - Array of P(A|Bᵢ)
+ * @param pB - Array of P(Bᵢ), must sum to 1
+ */
+export function totalProbability(
+  pAgivenB: number[],
+  pB: number[],
+): number {
+  let sum = 0;
+  for (let i = 0; i < pAgivenB.length; i++) {
+    sum += pAgivenB[i] * pB[i];
+  }
+  return sum;
+}
+
+// ── Bayes' theorem (Topic 2) ───────────────────────────────────────────────
+
+/** P(A|B) = P(B|A)·P(A) / P(B). Returns NaN if P(B) = 0. */
+export function bayesTheorem(
+  pBgivenA: number,
+  pA: number,
+  pB: number,
+): number {
+  if (pB === 0) return NaN;
+  return (pBgivenA * pA) / pB;
+}
+
+/**
+ * Bayes' theorem via total probability for a partition.
+ * Returns P(Aᵢ|B) for each element of the partition.
+ * P(Aᵢ|B) = P(B|Aᵢ)·P(Aᵢ) / Σⱼ P(B|Aⱼ)·P(Aⱼ).
+ */
+export function bayesWithPartition(
+  pBgivenA: number[],
+  pA: number[],
+): number[] {
+  const pB = totalProbability(pBgivenA, pA);
+  if (pB === 0) return pBgivenA.map(() => NaN);
+  return pBgivenA.map((pBgAi, i) => (pBgAi * pA[i]) / pB);
+}
+
+// ── Independence (Topic 2) ─────────────────────────────────────────────────
+
+/** Check if P(A∩B) ≈ P(A)·P(B) within tolerance. */
+export function areIndependent(
+  pA: number,
+  pB: number,
+  pAB: number,
+  tolerance: number = 1e-9,
+): boolean {
+  return Math.abs(pAB - pA * pB) <= tolerance;
+}
+
+/**
+ * Check pairwise independence for n events given their marginals and
+ * pairwise joint probabilities.
+ * @param marginals - Array of P(Aᵢ)
+ * @param pairwiseJoints - Map from "i,j" to P(Aᵢ ∩ Aⱼ)
+ */
+export function arePairwiseIndependent(
+  marginals: number[],
+  pairwiseJoints: Map<string, number>,
+  tolerance: number = 1e-9,
+): { pairwiseIndependent: boolean; failures: string[] } {
+  const failures: string[] = [];
+  for (let i = 0; i < marginals.length; i++) {
+    for (let j = i + 1; j < marginals.length; j++) {
+      const key = `${i},${j}`;
+      const pIJ = pairwiseJoints.get(key);
+      if (pIJ === undefined) continue;
+      if (Math.abs(pIJ - marginals[i] * marginals[j]) > tolerance) {
+        failures.push(`P(A${i}∩A${j}) = ${pIJ.toFixed(4)} ≠ P(A${i})·P(A${j}) = ${(marginals[i] * marginals[j]).toFixed(4)}`);
+      }
+    }
+  }
+  return { pairwiseIndependent: failures.length === 0, failures };
+}
+
+/**
+ * Check mutual independence: requires all subset products to match.
+ * @param marginals - Array of P(Aᵢ)
+ * @param subsetJoints - Map from subset key (e.g., "0,1,2") to joint probability
+ */
+export function areMutuallyIndependent(
+  marginals: number[],
+  subsetJoints: Map<string, number>,
+  tolerance: number = 1e-9,
+): { mutuallyIndependent: boolean; failures: string[] } {
+  const failures: string[] = [];
+  for (const [key, jointP] of subsetJoints.entries()) {
+    const indices = key.split(',').map(Number);
+    if (indices.length < 2) continue;
+    const product = indices.reduce((acc, idx) => acc * marginals[idx], 1);
+    if (Math.abs(jointP - product) > tolerance) {
+      const subsetLabel = indices.map((i) => `A${i}`).join('∩');
+      const productLabel = indices.map((i) => `P(A${i})`).join('·');
+      failures.push(`P(${subsetLabel}) = ${jointP.toFixed(4)} ≠ ${productLabel} = ${product.toFixed(4)}`);
+    }
+  }
+  return { mutuallyIndependent: failures.length === 0, failures };
+}
+
+// ── Conditional independence (Topic 2) ─────────────────────────────────────
+
+/** Check if A ⊥⊥ B | C: P(A∩B|C) ≈ P(A|C)·P(B|C). */
+export function areConditionallyIndependent(
+  pABgivenC: number,
+  pAgivenC: number,
+  pBgivenC: number,
+  tolerance: number = 1e-9,
+): boolean {
+  return Math.abs(pABgivenC - pAgivenC * pBgivenC) <= tolerance;
+}
+
+// ── Medical testing (Topic 2) ──────────────────────────────────────────────
+
+/**
+ * Compute PPV, NPV, and natural frequencies for a diagnostic test.
+ * @param prevalence - P(Disease) = base rate
+ * @param sensitivity - P(+|D) = true positive rate
+ * @param specificity - P(−|Dᶜ) = true negative rate
+ * @param population - Population size for natural frequency display (default 10000)
+ */
+export function diagnosticTest(
+  prevalence: number,
+  sensitivity: number,
+  specificity: number,
+  population: number = 10000,
+): {
+  ppv: number;
+  npv: number;
+  truePositives: number;
+  falsePositives: number;
+  trueNegatives: number;
+  falseNegatives: number;
+} {
+  const numDiseased = Math.round(population * prevalence);
+  const numHealthy = population - numDiseased;
+
+  const truePositives = Math.round(numDiseased * sensitivity);
+  const falseNegatives = numDiseased - truePositives;
+  const trueNegatives = Math.round(numHealthy * specificity);
+  const falsePositives = numHealthy - trueNegatives;
+
+  const totalPositives = truePositives + falsePositives;
+  const totalNegatives = trueNegatives + falseNegatives;
+
+  const ppv = totalPositives === 0 ? NaN : truePositives / totalPositives;
+  const npv = totalNegatives === 0 ? NaN : trueNegatives / totalNegatives;
+
+  return { ppv, npv, truePositives, falsePositives, trueNegatives, falseNegatives };
+}
+
+// ── Monte Carlo conditional probability (Topic 2) ──────────────────────────
+
+/**
+ * MC estimate of P(A|B) by sampling and filtering.
+ * @param sampleA - Boolean array: sampleA[i] = true iff trial i is in A
+ * @param sampleB - Boolean array: sampleB[i] = true iff trial i is in B
+ */
+export function mcConditionalP(
+  sampleA: boolean[],
+  sampleB: boolean[],
+): number {
+  let countB = 0;
+  let countAB = 0;
+  for (let i = 0; i < sampleA.length; i++) {
+    if (sampleB[i]) {
+      countB++;
+      if (sampleA[i]) countAB++;
+    }
+  }
+  if (countB === 0) return NaN;
+  return countAB / countB;
 }
