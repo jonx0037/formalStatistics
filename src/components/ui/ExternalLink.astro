@@ -1,0 +1,16 @@
+---
+interface Props {
+  href: string;
+  site: 'formalcalculus' | 'formalml';
+  topic: string;
+}
+
+const { href, site, topic } = Astro.props;
+
+const badgeClass = site === 'formalcalculus' ? 'formalcalculus-badge' : 'formalml-badge';
+const label = site === 'formalcalculus' ? 'formalCalculus' : 'formalML';
+---
+
+<a href={href} class={badgeClass} target="_blank" rel="noopener noreferrer">
+  {label}: {topic}
+</a>

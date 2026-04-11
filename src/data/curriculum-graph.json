@@ -1,6 +1,6 @@
 {
   "nodes": [
-    { "id": "sample-spaces", "label": "Sample Spaces, Events & Axioms", "domain": "foundations-of-probability", "status": "planned", "url": "/topics/sample-spaces" },
+    { "id": "sample-spaces", "label": "Sample Spaces, Events & Axioms", "domain": "foundations-of-probability", "status": "published", "url": "/topics/sample-spaces" },
     { "id": "conditional-probability", "label": "Conditional Probability & Independence", "domain": "foundations-of-probability", "status": "planned", "url": "/topics/conditional-probability" },
     { "id": "random-variables", "label": "Random Variables & Distributions", "domain": "foundations-of-probability", "status": "planned", "url": "/topics/random-variables" },
     { "id": "expectation-moments", "label": "Expectation, Variance & Moments", "domain": "foundations-of-probability", "status": "planned", "url": "/topics/expectation-moments" },

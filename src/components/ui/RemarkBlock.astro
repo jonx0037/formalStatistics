@@ -1,0 +1,30 @@
+---
+interface Props {
+  number: number;
+  title?: string;
+}
+
+const { number, title } = Astro.props;
+---
+
+<div
+  class="my-6 rounded-lg border-l-4 p-5"
+  style="background: var(--color-remark-bg); border-color: var(--color-remark-border);"
+>
+  <div class="flex items-baseline gap-2 mb-2">
+    <span
+      class="text-xs font-bold uppercase tracking-wide"
+      style="color: var(--color-remark-border);"
+    >
+      Remark {number}
+    </span>
+    {title && (
+      <span class="font-semibold" style="color: var(--color-text-heading);">
+        {title}
+      </span>
+    )}
+  </div>
+  <div class="topic-content" style="color: var(--color-text);">
+    <slot />
+  </div>
+</div>

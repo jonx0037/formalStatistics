@@ -1,0 +1,47 @@
+---
+interface Props {
+  type?: 'theorem' | 'corollary' | 'lemma';
+  number: number;
+  title: string;
+}
+
+const { type = 'theorem', number, title } = Astro.props;
+
+const labels: Record<string, string> = {
+  theorem: 'Theorem',
+  corollary: 'Corollary',
+  lemma: 'Lemma',
+};
+
+const bgVars: Record<string, string> = {
+  theorem: 'var(--color-theorem-bg)',
+  corollary: 'var(--color-theorem-bg)',
+  lemma: 'var(--color-lemma-bg)',
+};
+
+const borderVars: Record<string, string> = {
+  theorem: 'var(--color-theorem-border)',
+  corollary: 'var(--color-theorem-border)',
+  lemma: 'var(--color-lemma-border)',
+};
+---
+
+<div
+  class="my-6 rounded-lg border-l-4 p-5"
+  style={`background: ${bgVars[type]}; border-color: ${borderVars[type]};`}
+>
+  <div class="flex items-baseline gap-2 mb-2">
+    <span
+      class="text-xs font-bold uppercase tracking-wide"
+      style={`color: ${borderVars[type]};`}
+    >
+      {labels[type]} {number}
+    </span>
+    <span class="font-semibold" style="color: var(--color-text-heading);">
+      {title}
+    </span>
+  </div>
+  <div class="topic-content" style="color: var(--color-text);">
+    <slot />
+  </div>
+</div>
