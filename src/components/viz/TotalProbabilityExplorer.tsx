@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useResizeObserver } from './shared/useResizeObserver';
 import { totalProbability } from './shared/probability';
 
@@ -72,8 +72,8 @@ export default function TotalProbabilityExplorer() {
   const [pAgivenB, setPAgivenB] = useState<number[]>(defaultPAgivenB(3));
 
   // Compute each term and total
-  const terms = pB.map((pb, i) => pAgivenB[i] * pb);
-  const pA = totalProbability(pAgivenB, pB);
+  const terms = useMemo(() => pB.map((pb, i) => pAgivenB[i] * pb), [pB, pAgivenB]);
+  const pA = useMemo(() => totalProbability(pAgivenB, pB), [pAgivenB, pB]);
 
   // Layout: stack panels vertically on narrow screens
   const isNarrow = width > 0 && width < 500;
@@ -221,7 +221,7 @@ export default function TotalProbabilityExplorer() {
                       fontWeight={600}
                       fill={color.base}
                     >
-                      B{'\u2081'.charCodeAt(0) - 0x2081 + i > 0 ? String.fromCharCode(0x2081 + i) : '\u2081'}
+                      B{String.fromCharCode(0x2081 + i)}
                     </text>
                     {/* A∩Bi label inside the intersection */}
                     {regionWidth > 30 && pAgivenB[i] > 0.1 && (
@@ -284,7 +284,7 @@ export default function TotalProbabilityExplorer() {
                 let cumulativeHeight = 0;
 
                 return terms.map((term, i) => {
-                  const segmentHeight = (term / Math.max(pA, 0.001)) * barMaxHeight * Math.min(pA, 1);
+                  const segmentHeight = term * barMaxHeight;
                   const segmentY = barBaseY - cumulativeHeight - segmentHeight;
                   cumulativeHeight += segmentHeight;
                   const color = PALETTE[i];
@@ -321,7 +321,7 @@ export default function TotalProbabilityExplorer() {
               {/* P(A) total label on top */}
               {(() => {
                 const barBaseY = panelHeight - barLabelSpace;
-                const totalBarHeight = terms.reduce((s, t) => s + (t / Math.max(pA, 0.001)) * barMaxHeight * Math.min(pA, 1), 0);
+                const totalBarHeight = pA * barMaxHeight;
                 return (
                   <text
                     x={barX + barWidth / 2}
@@ -358,7 +358,7 @@ export default function TotalProbabilityExplorer() {
           <div className="text-xs font-medium mb-1.5" style={{ color: 'var(--color-text-muted)' }}>
             Partition probabilities P(B{'\u1d62'})
           </div>
-          <div className={`grid gap-3 ${partitionSize <= 2 ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1 sm:grid-cols-' + partitionSize}`}>
+          <div className={'grid gap-3 grid-cols-1 ' + (partitionSize === 2 ? 'sm:grid-cols-2' : partitionSize === 3 ? 'sm:grid-cols-3' : 'sm:grid-cols-4')}>
             {pB.map((val, i) => (
               <label key={`pb-${i}`} className="text-xs" style={{ color: PALETTE[i].base }}>
                 P(B{String.fromCharCode(0x2081 + i)}) = {val.toFixed(2)}
@@ -381,7 +381,7 @@ export default function TotalProbabilityExplorer() {
           <div className="text-xs font-medium mb-1.5" style={{ color: 'var(--color-text-muted)' }}>
             Conditional probabilities P(A|B{'\u1d62'})
           </div>
-          <div className={`grid gap-3 ${partitionSize <= 2 ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1 sm:grid-cols-' + partitionSize}`}>
+          <div className={'grid gap-3 grid-cols-1 ' + (partitionSize === 2 ? 'sm:grid-cols-2' : partitionSize === 3 ? 'sm:grid-cols-3' : 'sm:grid-cols-4')}>
             {pAgivenB.map((val, i) => (
               <label key={`pagb-${i}`} className="text-xs" style={{ color: PALETTE[i].base }}>
                 P(A|B{String.fromCharCode(0x2081 + i)}) = {val.toFixed(2)}

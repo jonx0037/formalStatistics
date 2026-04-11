@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useId } from 'react';
 import { useResizeObserver } from './shared/useResizeObserver';
 import { conditionalP } from './shared/probability';
 
@@ -23,10 +23,11 @@ export default function ConditionalProbabilityExplorer() {
   const cy = h * 0.5;
   const r = Math.min(width * 0.22, 100);
 
-  // Unique clip-path IDs to avoid collisions with other Venn components
-  const clipAId = 'condClipA';
-  const clipBId = 'condClipB';
-  const clipIntersectionId = 'condClipIntersection';
+  // Per-instance clip-path IDs to avoid collisions when multiple instances render
+  const instanceId = useId();
+  const clipAId = `condClipA-${instanceId}`;
+  const clipBId = `condClipB-${instanceId}`;
+  const clipIntersectionId = `condClipIntersection-${instanceId}`;
 
   return (
     <div

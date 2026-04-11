@@ -451,13 +451,13 @@ export function diagnosticTest(
   trueNegatives: number;
   falseNegatives: number;
 } {
-  const diseased = population * prevalence;
-  const healthy = population * (1 - prevalence);
+  const numDiseased = Math.round(population * prevalence);
+  const numHealthy = population - numDiseased;
 
-  const truePositives = Math.round(diseased * sensitivity);
-  const falseNegatives = Math.round(diseased * (1 - sensitivity));
-  const falsePositives = Math.round(healthy * (1 - specificity));
-  const trueNegatives = Math.round(healthy * specificity);
+  const truePositives = Math.round(numDiseased * sensitivity);
+  const falseNegatives = numDiseased - truePositives;
+  const trueNegatives = Math.round(numHealthy * specificity);
+  const falsePositives = numHealthy - trueNegatives;
 
   const totalPositives = truePositives + falsePositives;
   const totalNegatives = trueNegatives + falseNegatives;

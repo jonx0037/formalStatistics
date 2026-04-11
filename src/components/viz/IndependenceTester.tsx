@@ -52,15 +52,18 @@ export default function IndependenceTester() {
   // Build sample space based on mode
   const omega = useMemo(() => (mode === 'single' ? singleDieOmega() : doubleDieOmega()), [mode]);
 
-  // Derived probabilities
-  const pA = equallyLikelyP(eventA, omega);
-  const pB = equallyLikelyP(eventB, omega);
-  const aIntersectB = intersection(eventA, eventB);
-  const pAB = equallyLikelyP(aIntersectB, omega);
-  const pApB = pA * pB;
-  const independent = areIndependent(pA, pB, pAB);
-  const diff = pAB - pApB;
-  const pAgivenB = conditionalP(pAB, pB);
+  // Derived probabilities (memoized to avoid recalculation on every render)
+  const { pA, pB, aIntersectB, pAB, pApB, independent, diff, pAgivenB } = useMemo(() => {
+    const pA = equallyLikelyP(eventA, omega);
+    const pB = equallyLikelyP(eventB, omega);
+    const aIntersectB = intersection(eventA, eventB);
+    const pAB = equallyLikelyP(aIntersectB, omega);
+    const pApB = pA * pB;
+    const independent = areIndependent(pA, pB, pAB);
+    const diff = pAB - pApB;
+    const pAgivenB = conditionalP(pAB, pB);
+    return { pA, pB, aIntersectB, pAB, pApB, independent, diff, pAgivenB };
+  }, [eventA, eventB, omega]);
 
   // Toggle an outcome in the currently selected event
   function toggleOutcome(outcome: string) {

@@ -49,8 +49,8 @@ export default function BayesTheoremExplorer() {
   const abstractValues = useMemo(() => {
     const pAc = 1 - pA;
     const pB = totalProbability([pBgivenA, pBgivenAc], [pA, pAc]);
-    const pAgivenB = pB === 0 ? 0 : bayesTheorem(pBgivenA, pA, pB);
-    const pAcGivenB = pB === 0 ? 0 : bayesTheorem(pBgivenAc, pAc, pB);
+    const pAgivenB = pB === 0 ? NaN : bayesTheorem(pBgivenA, pA, pB);
+    const pAcGivenB = pB === 0 ? NaN : bayesTheorem(pBgivenAc, pAc, pB);
     return { pAc, pB, pAgivenB, pAcGivenB };
   }, [pA, pBgivenA, pBgivenAc]);
 
@@ -61,7 +61,7 @@ export default function BayesTheoremExplorer() {
       { a: pA, ac: 1 - pA },                                 // Step 0: Prior
       { a: pBgivenA * pA, ac: pBgivenAc * pAc },             // Step 1: Multiply
       { a: pBgivenA * pA, ac: pBgivenAc * pAc },             // Step 2: Unnormalized
-      { a: pAgivenB, ac: pAcGivenB },                        // Step 3: Posterior
+      { a: isNaN(pAgivenB) ? 0 : pAgivenB, ac: isNaN(pAcGivenB) ? 0 : pAcGivenB }, // Step 3: Posterior (0 for display when undefined)
     ];
   }, [pA, pBgivenA, pBgivenAc, abstractValues]);
 
@@ -151,7 +151,7 @@ export default function BayesTheoremExplorer() {
               {(() => {
                 const bars = stepBars[animStep];
                 const maxVal = Math.max(bars.a, bars.ac, 0.01);
-                const scale = barAreaHeight / Math.max(maxVal, 0.01);
+                const scale = barAreaHeight / maxVal;
 
                 const x1 = barAreaLeft + barGap;
                 const x2 = x1 + barWidth + barGap;
@@ -315,7 +315,7 @@ export default function BayesTheoremExplorer() {
               <div>
                 <span style={{ color: 'var(--color-text-muted)' }}>Posterior (Bayes):</span>{' '}
                 P(A|B) = P(B|A)&middot;P(A) / P(B) ={' '}
-                <strong style={{ color: COLOR_A }}>{abstractValues.pAgivenB.toFixed(4)}</strong>
+                <strong style={{ color: COLOR_A }}>{isNaN(abstractValues.pAgivenB) ? 'undefined' : abstractValues.pAgivenB.toFixed(4)}</strong>
               </div>
             </div>
           </>
