@@ -1,0 +1,50 @@
+---
+interface Props {
+  title: string;
+  description: string;
+  url: string;
+  difficulty: 'foundational' | 'intermediate' | 'advanced';
+  domain: string;
+  status: 'published' | 'planned';
+}
+
+const { title, description, url, difficulty, domain, status } = Astro.props;
+
+const difficultyColors = {
+  foundational: 'bg-green-100 text-green-800 border-green-300',
+  intermediate: 'bg-blue-100 text-blue-800 border-blue-300',
+  advanced: 'bg-purple-100 text-purple-800 border-purple-300',
+};
+
+const isPlanned = status === 'planned';
+---
+
+<div
+  class={`rounded-lg border p-5 transition-all ${isPlanned ? 'opacity-60' : 'hover:shadow-md hover:border-[var(--color-primary)]'}`}
+  style={`background: var(--color-surface); border-color: var(--color-border);`}
+>
+  {isPlanned ? (
+    <div>
+      <div class="flex items-center gap-2 mb-2">
+        <span class={`px-2 py-0.5 rounded-full text-xs font-semibold border ${difficultyColors[difficulty]}`}>
+          {difficulty}
+        </span>
+        <span class="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 border border-gray-200">
+          coming soon
+        </span>
+      </div>
+      <h3 class="text-lg font-semibold mb-1" style="color: var(--color-text-heading);">{title}</h3>
+      <p class="text-sm" style="color: var(--color-text-muted);">{description}</p>
+    </div>
+  ) : (
+    <a href={url} class="block">
+      <div class="flex items-center gap-2 mb-2">
+        <span class={`px-2 py-0.5 rounded-full text-xs font-semibold border ${difficultyColors[difficulty]}`}>
+          {difficulty}
+        </span>
+      </div>
+      <h3 class="text-lg font-semibold mb-1" style="color: var(--color-text-heading);">{title}</h3>
+      <p class="text-sm" style="color: var(--color-text-muted);">{description}</p>
+    </a>
+  )}
+</div>

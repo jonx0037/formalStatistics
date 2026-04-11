@@ -1,46 +1,157 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { tracks } from '../data/curriculum';
+import TopicCard from '../components/ui/TopicCard.astro';
+import CurriculumGraph from '../components/viz/CurriculumGraph.tsx';
+import graphData from '../data/curriculum-graph.json';
+
+// Difficulty assignment based on topic characteristics
+const difficultyMap: Record<string, 'foundational' | 'intermediate' | 'advanced'> = {
+  'sample-spaces': 'foundational',
+  'conditional-probability': 'foundational',
+  'random-variables': 'foundational',
+  'expectation-moments': 'foundational',
+  'discrete-distributions': 'foundational',
+  'continuous-distributions': 'foundational',
+  'exponential-families': 'intermediate',
+  'multivariate-distributions': 'intermediate',
+  'modes-of-convergence': 'intermediate',
+  'law-of-large-numbers': 'intermediate',
+  'central-limit-theorem': 'intermediate',
+  'large-deviations': 'advanced',
+  'point-estimation': 'foundational',
+  'maximum-likelihood': 'intermediate',
+  'method-of-moments': 'intermediate',
+  'sufficient-statistics': 'intermediate',
+  'hypothesis-testing': 'foundational',
+  'likelihood-ratio-tests': 'intermediate',
+  'confidence-intervals': 'intermediate',
+  'multiple-testing': 'intermediate',
+  'linear-regression': 'foundational',
+  'generalized-linear-models': 'intermediate',
+  'regularization': 'intermediate',
+  'model-selection': 'intermediate',
+  'bayesian-foundations': 'intermediate',
+  'bayesian-computation': 'intermediate',
+  'bayesian-model-comparison': 'advanced',
+  'hierarchical-bayes': 'advanced',
+  'order-statistics': 'intermediate',
+  'kernel-density-estimation': 'intermediate',
+  'bootstrap': 'intermediate',
+  'empirical-processes': 'advanced',
+};
+
+// Topic descriptions for cards
+const topicDescriptions: Record<string, string> = {
+  'sample-spaces': 'Kolmogorov axioms, sigma-algebras for the working statistician, combinatorial probability',
+  'conditional-probability': 'Bayes\' theorem, law of total probability, conditional independence',
+  'random-variables': 'Measurable functions, PMFs and PDFs, CDFs',
+  'expectation-moments': 'Integration against a measure, moment-generating functions, characteristic functions',
+  'discrete-distributions': 'Bernoulli, Binomial, Poisson, Geometric, Negative Binomial',
+  'continuous-distributions': 'Normal, Exponential, Gamma, Beta, Uniform',
+  'exponential-families': 'Sufficient statistics, natural parameters, log-partition function',
+  'multivariate-distributions': 'Joint, marginal, conditional densities, the multivariate normal',
+  'modes-of-convergence': 'Almost sure, in probability, in distribution, in Lp',
+  'law-of-large-numbers': 'Weak and strong LLN, Kolmogorov\'s theorem',
+  'central-limit-theorem': 'Lindeberg-L\u00e9vy, Berry-Esseen bound',
+  'large-deviations': 'Markov, Chebyshev, Chernoff, Hoeffding, sub-Gaussian theory',
+  'point-estimation': 'Estimators as random variables, bias, variance, MSE decomposition',
+  'maximum-likelihood': 'Likelihood function, score, Fisher information, asymptotic normality',
+  'method-of-moments': 'Moment equations, generalized method of moments, Z-estimators',
+  'sufficient-statistics': 'Information compression, UMVUE, completeness',
+  'hypothesis-testing': 'Null and alternative, Type I/II errors, power, p-values',
+  'likelihood-ratio-tests': 'Most powerful tests, the likelihood ratio principle, Wilks\' theorem',
+  'confidence-intervals': 'Pivotal quantities, inversion of tests, coverage probability',
+  'multiple-testing': 'Bonferroni, Holm, Benjamini-Hochberg FDR',
+  'linear-regression': 'Least squares as projection, Gauss-Markov theorem, residual analysis',
+  'generalized-linear-models': 'Link functions, exponential family connection, deviance',
+  'regularization': 'Ridge, lasso, elastic net \u2014 bias-variance as explicit penalization',
+  'model-selection': 'AIC, BIC, cross-validation theory, Mallows\' Cp',
+  'bayesian-foundations': 'Prior, likelihood, posterior, conjugacy, Jeffreys priors',
+  'bayesian-computation': 'MCMC, Metropolis-Hastings, Gibbs sampling, Hamiltonian Monte Carlo',
+  'bayesian-model-comparison': 'Bayes factors, marginal likelihood, posterior predictive checks',
+  'hierarchical-bayes': 'Multilevel models, shrinkage estimators, James-Stein',
+  'order-statistics': 'Distribution-free inference, sample quantile asymptotics',
+  'kernel-density-estimation': 'Bandwidth selection, bias-variance for density estimation',
+  'bootstrap': 'Efron\'s bootstrap, bootstrap confidence intervals, bootstrap hypothesis tests',
+  'empirical-processes': 'Glivenko-Cantelli, Donsker\'s theorem, VC dimension',
+};
+
+// Group nodes by domain
+const nodesByDomain = new Map<string, typeof graphData.nodes>();
+for (const node of graphData.nodes) {
+  const existing = nodesByDomain.get(node.domain) || [];
+  existing.push(node);
+  nodesByDomain.set(node.domain, existing);
+}
 ---
 
-<BaseLayout title="Curriculum" description="8 tracks covering probability and statistics from foundations through advanced topics.">
-  <section class="max-w-4xl mx-auto px-4 sm:px-6 py-12">
-    <h1
-      class="text-3xl sm:text-4xl font-bold mb-4 text-center"
-      style="font-family: var(--font-serif); color: var(--color-text-heading);"
-    >
-      Curriculum
-    </h1>
-    <p class="text-center mb-12 max-w-2xl mx-auto" style="color: var(--color-text-muted);">
-      32 topics across 8 tracks, progressing from foundational probability through the statistical
-      theory that directly feeds into graduate-level ML.
-    </p>
+<BaseLayout title="Curriculum" description="The full formalStatistics curriculum — 32 topics across 8 tracks.">
+  <div class="max-w-5xl mx-auto px-4 sm:px-6 py-12">
+    <header class="mb-12 text-center">
+      <h1
+        class="text-3xl sm:text-4xl font-bold mb-3"
+        style="font-family: var(--font-serif); color: var(--color-text-heading);"
+      >
+        Curriculum
+      </h1>
+      <p class="text-lg" style="color: var(--color-text-muted);">
+        32 topics across 8 tracks &mdash; from probability foundations to high-dimensional statistics.
+      </p>
+      <p class="text-sm mt-2" style="color: var(--color-text-muted);">
+        Every topic connects backward to
+        <a href="https://formalcalculus.com/paths" class="text-[var(--color-accent)] hover:underline" target="_blank" rel="noopener">
+          formalCalculus
+        </a>
+        prerequisites and forward to
+        <a href="https://formalml.com/paths" class="text-[var(--color-primary)] hover:underline" target="_blank" rel="noopener">
+          formalML
+        </a>
+        topics it enables.
+      </p>
+    </header>
 
-    <div class="space-y-6">
-      {tracks.map((track) => (
-        <div
-          class="rounded-lg border p-6"
-          style="background: var(--color-surface-alt); border-color: var(--color-border);"
-        >
-          <div class="flex items-baseline gap-3 mb-2">
-            <span
-              class="text-sm font-bold px-2 py-0.5 rounded"
-              style="background: var(--color-primary); color: white;"
-            >
-              Track {track.number}
-            </span>
-            <h2 class="text-xl font-bold" style="color: var(--color-text-heading);">
-              {track.title}
-            </h2>
-          </div>
-          <p class="mb-3" style="color: var(--color-text-muted);">
+    <!-- Interactive prerequisite DAG -->
+    <section class="mb-16">
+      <h2
+        class="text-xl font-bold mb-1"
+        style="font-family: var(--font-serif); color: var(--color-text-heading);"
+      >
+        Prerequisite Graph
+      </h2>
+      <p class="text-sm mb-4" style="color: var(--color-text-muted);">
+        The full dependency graph &mdash; arrows show prerequisites. Filled nodes are published topics.
+      </p>
+      <CurriculumGraph client:visible />
+    </section>
+
+    {tracks.map((track) => {
+      const nodes = nodesByDomain.get(track.domain) || [];
+      return (
+        <section class="mb-12">
+          <h2
+            class="text-xl font-bold mb-1"
+            style="font-family: var(--font-serif); color: var(--color-text-heading);"
+          >
+            {track.title}
+          </h2>
+          <p class="text-sm mb-4" style="color: var(--color-text-muted);">
             {track.description}
           </p>
-          <p class="text-sm italic" style="color: var(--color-text-muted);">
-            {track.topicCount} topics &mdash; coming soon
-          </p>
-        </div>
-      ))}
-    </div>
-  </section>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {nodes.map((node) => (
+              <TopicCard
+                title={node.label}
+                description={topicDescriptions[node.id] || ''}
+                url={node.url}
+                difficulty={difficultyMap[node.id] || 'intermediate'}
+                domain={node.domain}
+                status={node.status as 'published' | 'planned'}
+              />
+            ))}
+          </div>
+        </section>
+      );
+    })}
+  </div>
 </BaseLayout>
