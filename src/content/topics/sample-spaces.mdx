@@ -1,0 +1,530 @@
+---
+title: "Sample Spaces, Events & Axioms"
+subtitle: "The Kolmogorov axioms — non-negativity, normalization, and countable additivity — define the contract that every valid probability distribution must satisfy"
+status: "published"
+difficulty: "foundational"
+prerequisites: []
+tags:
+  - "probability"
+  - "sample-space"
+  - "sigma-algebra"
+  - "kolmogorov-axioms"
+  - "events"
+  - "counting"
+  - "inclusion-exclusion"
+  - "union-bound"
+domain: "foundations-of-probability"
+videoId: null
+notebookPath: "notebooks/sample-spaces/01_sample_spaces_events_axioms.ipynb"
+githubUrl: "https://github.com/jonx0037/formalStatistics/blob/main/src/content/topics/sample-spaces.mdx"
+datePublished: 2026-04-11
+estimatedReadTime: 40
+abstract: "Probability theory begins with three objects: a sample space Ω (all possible outcomes), a sigma-algebra F (the collection of events we can assign probabilities to), and a probability measure P satisfying Kolmogorov's axioms — non-negativity, normalization, and countable additivity. From these three axioms alone, we derive the complement rule, monotonicity, inclusion-exclusion, Boole's inequality (the union bound), and the continuity of probability. For finite equally-likely sample spaces, probability reduces to counting, and the tools of combinatorics become computational engines. The birthday problem and derangements demonstrate the surprising power of these counting methods. Every ML model implicitly defines a probability space, and the Kolmogorov axioms are the contract ensuring internal consistency."
+formalcalculusPrereqs:
+  - topic: "sequences-limits"
+    site: "formalcalculus"
+    relationship: "Continuity of probability (Theorem 6) uses convergence of partial sums. The proof relies on the same telescoping-sum argument and epsilon-N convergence framework developed in formalCalculus."
+formalmlConnections:
+  - topic: "measure-theoretic-probability"
+    site: "formalml"
+    relationship: "The sigma-algebra and probability measure defined here generalize to abstract measure spaces. The Kolmogorov axioms are the probability specialization of the Lebesgue measure axioms."
+  - topic: "shannon-entropy"
+    site: "formalml"
+    relationship: "Entropy H(P) = -sum p_i log p_i is defined on probability distributions over finite sample spaces. The axioms ensure that probability distributions — and therefore entropy — are well-defined."
+connections:
+  - topic: "conditional-probability"
+    relationship: "The probability space (Ω, F, P) defined here is the foundation for conditional probability P(A|B) = P(A∩B)/P(B). Bayes' theorem, the law of total probability, and conditional independence all build directly on the Kolmogorov axioms."
+  - topic: "random-variables"
+    relationship: "Random variables are measurable functions X : (Ω, F) → (ℝ, B(ℝ)). The sigma-algebra F defined here determines which functions qualify as random variables — measurability is the bridge from events to numbers."
+references:
+  - type: "book"
+    title: "Probability and Measure"
+    author: "Patrick Billingsley"
+    year: 2012
+    edition: "Anniversary Edition"
+    publisher: "Wiley"
+    note: "The canonical measure-theoretic probability text. Chapters 1-2 cover sample spaces and probability measures with full rigor."
+  - type: "book"
+    title: "Probability: Theory and Examples"
+    author: "Rick Durrett"
+    year: 2019
+    edition: "5th"
+    publisher: "Cambridge University Press"
+    note: "Graduate probability with excellent examples. Chapter 1 provides a concise treatment of the axioms."
+  - type: "book"
+    title: "Probability and Random Processes"
+    author: "Geoffrey Grimmett & David Stirzaker"
+    year: 2020
+    edition: "4th"
+    publisher: "Oxford University Press"
+    note: "Strong on combinatorial probability and classical examples."
+  - type: "book"
+    title: "All of Statistics"
+    author: "Larry Wasserman"
+    year: 2004
+    publisher: "Springer"
+    note: "Compact reference bridging probability and statistics for ML practitioners."
+  - type: "book"
+    title: "Understanding Machine Learning: From Theory to Algorithms"
+    author: "Shai Shalev-Shwartz & Shai Ben-David"
+    year: 2014
+    publisher: "Cambridge University Press"
+    note: "Chapter 2 uses the union bound as the starting point for PAC learning theory."
+---
+
+import DefinitionBlock from '../../components/ui/DefinitionBlock.astro';
+import TheoremBlock from '../../components/ui/TheoremBlock.astro';
+import ProofBlock from '../../components/ui/ProofBlock.astro';
+import ExampleBlock from '../../components/ui/ExampleBlock.astro';
+import RemarkBlock from '../../components/ui/RemarkBlock.astro';
+import ExternalLink from '../../components/ui/ExternalLink.astro';
+
+import SampleSpaceExplorer from '../../components/viz/SampleSpaceExplorer.tsx';
+import EventSetOperationsExplorer from '../../components/viz/EventSetOperationsExplorer.tsx';
+import SigmaAlgebraExplorer from '../../components/viz/SigmaAlgebraExplorer.tsx';
+import InclusionExclusionExplorer from '../../components/viz/InclusionExclusionExplorer.tsx';
+import BirthdayProblemExplorer from '../../components/viz/BirthdayProblemExplorer.tsx';
+
+## 1. Experiments, Outcomes & Sample Spaces
+
+Probability is the mathematics of uncertainty. Before we can assign probabilities to anything, we need a precise language for describing *what could happen*. That language starts with three terms:
+
+- An **experiment** (or **random experiment**) is any process whose outcome is not known in advance.
+- An **outcome** is one specific result of the experiment.
+- The **sample space** $\Omega$ is the set of all possible outcomes.
+
+These are not deep concepts — they're agreements about notation. But getting them right is essential, because every probability statement we'll ever make is a statement about subsets of $\Omega$.
+
+<DefinitionBlock number={1} title="Sample Space">
+The *sample space* of a random experiment is the set $\Omega$ whose elements are the possible outcomes of the experiment. An individual outcome $\omega \in \Omega$ is called a *sample point*.
+</DefinitionBlock>
+
+### Examples of Sample Spaces
+
+Sample spaces range from the trivially finite to the uncountably infinite:
+
+| Experiment | Sample Space $\Omega$ | Size |
+|---|---|---|
+| Flip a fair coin | $\{H, T\}$ | Finite, $\lvert\Omega\rvert = 2$ |
+| Roll a six-sided die | $\{1, 2, 3, 4, 5, 6\}$ | Finite, $\lvert\Omega\rvert = 6$ |
+| Roll two dice (ordered) | $\{(i,j) : i,j \in \{1,\ldots,6\}\}$ | Finite, $\lvert\Omega\rvert = 36$ |
+| Flip a coin until heads | $\{H, TH, TTH, TTTH, \ldots\}$ | Countably infinite |
+| Pick a real number in $[0,1]$ | $[0,1]$ | Uncountable |
+| Lifetime of a component | $[0, \infty)$ | Uncountable |
+
+The distinction between finite, countably infinite, and uncountable matters enormously — it determines which mathematical tools we need. For finite and countable spaces, we can sum. For uncountable spaces, we must integrate.
+
+<img src="/images/topics/sample-spaces/sample-spaces-gallery.png" alt="Gallery of four sample spaces: coin flip, die roll, flip-until-heads, uniform [0,1]" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
+
+Use the explorer below to build sample spaces for different experiments and see how events and probabilities emerge:
+
+<SampleSpaceExplorer client:visible />
+
+---
+
+## 2. Events as Sets
+
+An *event* is any collection of outcomes — a subset of $\Omega$. We say event $A$ *occurs* if the actual outcome $\omega$ of the experiment satisfies $\omega \in A$.
+
+<DefinitionBlock number={2} title="Event">
+An *event* is a subset $A \subseteq \Omega$. The event $A$ *occurs* if the outcome $\omega$ of the experiment belongs to $A$.
+
+Special events:
+- The **certain event** $\Omega$ always occurs.
+- The **impossible event** $\emptyset$ never occurs.
+- A **simple event** $\{\omega\}$ consists of a single outcome.
+</DefinitionBlock>
+
+<ExampleBlock number={1} title="Die roll events and set operations">
+Let $\Omega = \{1, 2, 3, 4, 5, 6\}$.
+- $A = \{2, 4, 6\}$ is the event "roll an even number."
+- $B = \{5, 6\}$ is the event "roll at least 5."
+- $A \cap B = \{6\}$ is the event "roll an even number that is at least 5."
+- $A \cup B = \{2, 4, 5, 6\}$ is the event "roll an even number *or* at least 5."
+- $A^c = \{1, 3, 5\}$ is the event "do not roll an even number" (i.e., roll odd).
+</ExampleBlock>
+
+### Set Operations as Logical Connectives
+
+The correspondence between set operations and logical statements about events is exact:
+
+| Set Operation | Notation | Meaning |
+|---|---|---|
+| Union | $A \cup B$ | $A$ or $B$ (or both) occurs |
+| Intersection | $A \cap B$ | Both $A$ and $B$ occur |
+| Complement | $A^c$ | $A$ does not occur |
+| Set difference | $A \setminus B = A \cap B^c$ | $A$ occurs but $B$ does not |
+| Subset | $A \subseteq B$ | If $A$ occurs, then $B$ occurs |
+| Disjoint | $A \cap B = \emptyset$ | $A$ and $B$ cannot both occur |
+
+De Morgan's laws connect them:
+
+$$A^c \cup B^c = (A \cap B)^c \qquad \text{and} \qquad A^c \cap B^c = (A \cup B)^c$$
+
+In words: "not both" equals "not one or not the other," and "neither" equals "not either." De Morgan's laws generalize to arbitrary collections of events — including countably infinite unions and intersections, which is where sigma-algebras enter the picture.
+
+<img src="/images/topics/sample-spaces/event-set-operations.png" alt="Venn diagrams showing union, intersection, and complement" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
+
+Explore set operations interactively — toggle different operations to highlight regions and see De Morgan's laws in action:
+
+<EventSetOperationsExplorer client:visible />
+
+---
+
+## 3. Sigma-Algebras
+
+### The Problem with "All Subsets"
+
+For finite sample spaces, life is simple: the collection of events is just the power set $\mathcal{P}(\Omega) = \{A : A \subseteq \Omega\}$. With a six-sided die, $\mathcal{P}(\Omega)$ has $2^6 = 64$ subsets, and we can assign a probability to each one without trouble.
+
+For uncountable sample spaces like $\Omega = [0,1]$, things break. There is no way to assign a probability to *every* subset of $[0,1]$ while satisfying the Kolmogorov axioms — this is the content of the **Vitali construction** (1905), which produces a non-measurable set. The details require measure theory we'll encounter in the Measure-Theoretic Probability topic on <ExternalLink href="https://formalml.com/topics/measure-theoretic-probability" site="formalml" topic="measure-theoretic probability" />.
+
+The fix is elegant: instead of trying to assign probabilities to all subsets, we work only with a well-behaved collection called a **sigma-algebra**.
+
+<DefinitionBlock number={3} title="σ-algebra">
+A $\sigma$*-algebra* (or $\sigma$*-field*) on a set $\Omega$ is a collection $\mathcal{F} \subseteq \mathcal{P}(\Omega)$ satisfying:
+
+1. $\Omega \in \mathcal{F}$ &nbsp;(the sample space is an event)
+2. If $A \in \mathcal{F}$, then $A^c \in \mathcal{F}$ &nbsp;(closed under complements)
+3. If $A_1, A_2, A_3, \ldots \in \mathcal{F}$, then $\bigcup_{n=1}^{\infty} A_n \in \mathcal{F}$ &nbsp;(closed under countable unions)
+
+By De Morgan's law, closure under complements + countable unions gives closure under countable intersections for free. And since $\emptyset = \Omega^c$, the empty set is always in $\mathcal{F}$.
+</DefinitionBlock>
+
+<RemarkBlock number={1} title="Algebra vs σ-algebra — why countable matters">
+The word "countable" in axiom (3) is doing heavy lifting. A collection closed under *finite* unions but not countable unions is called an *algebra* (or *field*) of sets. The upgrade from algebra to $\sigma$-algebra is exactly what we need for limit theorems — taking limits of sequences of events requires countable set operations.
+</RemarkBlock>
+
+<ExampleBlock number={2} title="The trivial and discrete σ-algebras">
+- The *trivial* $\sigma$-algebra $\mathcal{F} = \{\emptyset, \Omega\}$ is the smallest possible — we can only say "something happened" or "nothing happened."
+- The *discrete* $\sigma$-algebra $\mathcal{F} = \mathcal{P}(\Omega)$ is the largest — every subset is an event. This works for countable $\Omega$.
+</ExampleBlock>
+
+<ExampleBlock number={3} title="A partition σ-algebra on {1,2,3,4}">
+Let $\Omega = \{1, 2, 3, 4\}$. Consider $\mathcal{F} = \{\emptyset, \{1,2\}, \{3,4\}, \Omega\}$.
+
+Check: (1) $\Omega \in \mathcal{F}$ ✓. (2) $\{1,2\}^c = \{3,4\} \in \mathcal{F}$ ✓. (3) All unions of members yield members ✓.
+
+This $\sigma$-algebra "sees" the partition $\{\{1,2\}, \{3,4\}\}$ but cannot distinguish 1 from 2 or 3 from 4. It encodes partial information — a theme that becomes central in conditional probability and filtrations.
+</ExampleBlock>
+
+<ExampleBlock number={4} title="The Borel σ-algebra on ℝ">
+On $\Omega = \mathbb{R}$, the *Borel $\sigma$-algebra* $\mathcal{B}(\mathbb{R})$ is the smallest $\sigma$-algebra containing all open intervals $(a, b)$. It contains all open sets, all closed sets, all countable intersections of open sets ($G_\delta$ sets), all countable unions of closed sets ($F_\sigma$ sets), and more. This is the standard $\sigma$-algebra for probability on $\mathbb{R}$ — the one you use 99% of the time.
+
+**Why this matters for ML:** When you write "$X \sim \mathcal{N}(\mu, \sigma^2)$," you are implicitly working with the Borel $\sigma$-algebra on $\mathbb{R}$. The measurability requirement — that a random variable must pull Borel sets back to events in your $\sigma$-algebra — is what makes statements like "$P(X \leq t)$" well-defined. We'll formalize this in Random Variables & Distributions (coming soon).
+</ExampleBlock>
+
+<img src="/images/topics/sample-spaces/sigma-algebra-examples.png" alt="Three sigma-algebra examples: trivial, partition, and power set" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
+
+Build your own sigma-algebras below. Select subsets and watch the validator check the closure properties in real time:
+
+<SigmaAlgebraExplorer client:visible />
+
+---
+
+## 4. The Kolmogorov Axioms
+
+We now have the stage ($\Omega$), the actors ($\mathcal{F}$), and we need the script: a function that assigns a number to each event. Kolmogorov's axioms (1933) tell us what properties this function must have.
+
+<DefinitionBlock number={4} title="Probability Measure (Kolmogorov Axioms)">
+A *probability measure* on a measurable space $(\Omega, \mathcal{F})$ is a function $P : \mathcal{F} \to [0,1]$ satisfying:
+
+**Axiom 1 (Non-negativity).** For every $A \in \mathcal{F}$, $P(A) \geq 0$.
+
+**Axiom 2 (Normalization).** $P(\Omega) = 1$.
+
+**Axiom 3 (Countable Additivity).** If $A_1, A_2, A_3, \ldots \in \mathcal{F}$ are pairwise disjoint (i.e., $A_i \cap A_j = \emptyset$ for all $i \neq j$), then
+
+$$P\left(\bigcup_{n=1}^{\infty} A_n\right) = \sum_{n=1}^{\infty} P(A_n).$$
+
+The triple $(\Omega, \mathcal{F}, P)$ is called a *probability space*.
+</DefinitionBlock>
+
+That's it. Three axioms. Every theorem in probability theory — the law of large numbers, the central limit theorem, Bayes' rule, the convergence of your neural network's training loss — follows from these three axioms plus the machinery of analysis.
+
+<RemarkBlock number={2} title="Why countable additivity?">
+Axiom 3 demands countable additivity, not mere finite additivity. This is the axiom that makes limit theorems possible. If we only required $P(A_1 \cup \cdots \cup A_n) = P(A_1) + \cdots + P(A_n)$ for finite collections, we could not take limits of sequences of events — and without limits, no convergence theorems, no law of large numbers, no central limit theorem. The jump from "finitely many" to "countably many" is small in notation but enormous in mathematical power.
+</RemarkBlock>
+
+<ExampleBlock number={5} title="The fair die probability space">
+Roll a fair die. The probability space is:
+- $\Omega = \{1, 2, 3, 4, 5, 6\}$
+- $\mathcal{F} = \mathcal{P}(\Omega)$ (all 64 subsets)
+- $P(\{\omega\}) = 1/6$ for each $\omega$, extended by additivity: $P(A) = \lvert A\rvert/6$
+
+Check the axioms: (1) $P(A) = \lvert A\rvert/6 \geq 0$ ✓. (2) $P(\Omega) = 6/6 = 1$ ✓. (3) For disjoint $A, B$: $P(A \cup B) = \lvert A \cup B\rvert/6 = (\lvert A\rvert + \lvert B\rvert)/6 = P(A) + P(B)$ ✓.
+</ExampleBlock>
+
+<img src="/images/topics/sample-spaces/kolmogorov-axioms.png" alt="Visual representation of the three Kolmogorov axioms" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
+
+---
+
+## 5. Consequences of the Axioms
+
+Everything in this section is *derived* from the three axioms — no additional assumptions needed. This is the engine of probability theory: a small axiomatic base generating a rich body of results.
+
+### The Complement Rule
+
+<TheoremBlock number={1} title="Complement Rule">
+For any event $A \in \mathcal{F}$,
+
+$$P(A^c) = 1 - P(A).$$
+</TheoremBlock>
+
+<ProofBlock>
+Since $A$ and $A^c$ are disjoint and $A \cup A^c = \Omega$, Axiom 3 gives $P(A) + P(A^c) = P(\Omega) = 1$ (by Axiom 2). Rearranging: $P(A^c) = 1 - P(A)$.
+</ProofBlock>
+
+<TheoremBlock type="corollary" number={1} title="P(∅) = 0">
+$P(\emptyset) = 0$.
+</TheoremBlock>
+
+<ProofBlock>
+Take $A = \Omega$ in Theorem 1: $P(\emptyset) = P(\Omega^c) = 1 - P(\Omega) = 1 - 1 = 0$.
+</ProofBlock>
+
+### Monotonicity
+
+<TheoremBlock number={2} title="Monotonicity">
+If $A \subseteq B$, then $P(A) \leq P(B)$.
+</TheoremBlock>
+
+<ProofBlock>
+Write $B = A \cup (B \setminus A)$, where $A$ and $B \setminus A$ are disjoint. By Axiom 3:
+
+$$P(B) = P(A) + P(B \setminus A) \geq P(A)$$
+
+since $P(B \setminus A) \geq 0$ by Axiom 1.
+</ProofBlock>
+
+### The Addition Rule (Inclusion-Exclusion for Two Events)
+
+<TheoremBlock number={3} title="Addition Rule (Inclusion-Exclusion, n=2)">
+For any events $A, B \in \mathcal{F}$,
+
+$$P(A \cup B) = P(A) + P(B) - P(A \cap B).$$
+</TheoremBlock>
+
+<ProofBlock>
+Decompose $A \cup B$ into three pairwise disjoint pieces:
+
+$$A \cup B = (A \setminus B) \cup (A \cap B) \cup (B \setminus A).$$
+
+By Axiom 3:
+
+$$P(A \cup B) = P(A \setminus B) + P(A \cap B) + P(B \setminus A).$$
+
+Now, $A = (A \setminus B) \cup (A \cap B)$ (disjoint), so $P(A) = P(A \setminus B) + P(A \cap B)$, giving $P(A \setminus B) = P(A) - P(A \cap B)$. Similarly $P(B \setminus A) = P(B) - P(A \cap B)$. Substituting:
+
+$$P(A \cup B) = [P(A) - P(A \cap B)] + P(A \cap B) + [P(B) - P(A \cap B)] = P(A) + P(B) - P(A \cap B).$$
+</ProofBlock>
+
+### General Inclusion-Exclusion
+
+<TheoremBlock number={4} title="General Inclusion-Exclusion">
+For events $A_1, \ldots, A_n \in \mathcal{F}$,
+
+$$P\left(\bigcup_{i=1}^n A_i\right) = \sum_{i} P(A_i) - \sum_{i \lt j} P(A_i \cap A_j) + \sum_{i \lt j \lt k} P(A_i \cap A_j \cap A_k) - \cdots + (-1)^{n+1} P(A_1 \cap \cdots \cap A_n).$$
+
+The proof proceeds by induction on $n$, with the base case $n = 2$ being Theorem 3. The inductive step applies Theorem 3 to $\left(\bigcup_{i=1}^{n-1} A_i\right) \cup A_n$ and uses the distributive law.
+</TheoremBlock>
+
+Step through the inclusion-exclusion formula term by term and watch the running total converge to the exact probability:
+
+<InclusionExclusionExplorer client:visible />
+
+### Union Bound (Boole's Inequality)
+
+<TheoremBlock number={5} title="Union Bound (Boole's Inequality)">
+For any countable collection of events $A_1, A_2, \ldots \in \mathcal{F}$,
+
+$$P\left(\bigcup_{n=1}^{\infty} A_n\right) \leq \sum_{n=1}^{\infty} P(A_n).$$
+</TheoremBlock>
+
+<ProofBlock>
+Define $B_1 = A_1$ and $B_n = A_n \setminus \bigcup_{k=1}^{n-1} A_k$ for $n \geq 2$. The $B_n$ are pairwise disjoint, $\bigcup B_n = \bigcup A_n$, and $B_n \subseteq A_n$. By countable additivity and monotonicity:
+
+$$P\left(\bigcup_{n=1}^{\infty} A_n\right) = P\left(\bigcup_{n=1}^{\infty} B_n\right) = \sum_{n=1}^{\infty} P(B_n) \leq \sum_{n=1}^{\infty} P(A_n).$$
+</ProofBlock>
+
+### Continuity of Probability
+
+<TheoremBlock number={6} title="Continuity of Probability">
+Let $A_1, A_2, \ldots \in \mathcal{F}$.
+
+**(a)** If $A_n \uparrow A$ (i.e., $A_1 \subseteq A_2 \subseteq \cdots$ and $A = \bigcup_{n=1}^{\infty} A_n$), then $P(A) = \lim_{n \to \infty} P(A_n)$.
+
+**(b)** If $A_n \downarrow A$ (i.e., $A_1 \supseteq A_2 \supseteq \cdots$ and $A = \bigcap_{n=1}^{\infty} A_n$), then $P(A) = \lim_{n \to \infty} P(A_n)$.
+</TheoremBlock>
+
+<ProofBlock>
+**Proof of (a).** Define $B_1 = A_1$ and $B_n = A_n \setminus A_{n-1}$ for $n \geq 2$. The $B_n$ are pairwise disjoint and $\bigcup_{k=1}^n B_k = A_n$. So $\bigcup_{n=1}^{\infty} B_n = A$. By countable additivity:
+
+$$P(A) = \sum_{n=1}^{\infty} P(B_n) = \lim_{N \to \infty} \sum_{n=1}^{N} P(B_n) = \lim_{N \to \infty} P(A_N).$$
+
+**Proof of (b).** Apply part (a) to $A_n^c \uparrow A^c$, then use the complement rule.
+</ProofBlock>
+
+This is where the convergence of sequences from <ExternalLink href="https://formalcalculus.com/topics/sequences-limits" site="formalcalculus" topic="sequences & limits" /> becomes essential — the telescoping sum and limit exchange are the same tools you developed there.
+
+<RemarkBlock number={3} title="Continuity ⟺ countable additivity">
+Given finite additivity, countable additivity is *equivalent* to continuity from below (Theorem 6a). This means Axiom 3 is really saying "probability is a continuous set function," connecting our probability axioms directly to the continuity of limits.
+</RemarkBlock>
+
+<img src="/images/topics/sample-spaces/continuity-of-probability.png" alt="Continuity of probability: increasing and decreasing sequences of events" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
+
+---
+
+## 6. Combinatorial Probability
+
+### The Equally Likely Model
+
+When $\Omega$ is finite and every outcome is equally probable — $P(\{\omega\}) = 1/\lvert\Omega\rvert$ for all $\omega$ — probability reduces to counting:
+
+$$P(A) = \frac{\lvert A\rvert}{\lvert\Omega\rvert} = \frac{\text{number of favorable outcomes}}{\text{total number of outcomes}}.$$
+
+This is the *classical* or *Laplacian* definition of probability. It's a special case of the Kolmogorov axioms, not the foundation — many important probability spaces (continuous distributions, unfair coins) don't have equally likely outcomes.
+
+### Counting Tools
+
+To use the equally likely model, we need to count. The three essential counting principles:
+
+**Multiplication Principle.** If experiment 1 has $n_1$ outcomes and experiment 2 has $n_2$ outcomes, the combined experiment has $n_1 \cdot n_2$ outcomes.
+
+**Permutations.** The number of ways to arrange $k$ items chosen from $n$ (order matters) is $P(n, k) = n!/(n-k)!$.
+
+**Combinations.** The number of ways to choose $k$ items from $n$ (order doesn't matter) is $\binom{n}{k} = n! / (k!(n-k)!)$.
+
+### The Birthday Problem
+
+<ExampleBlock number={6} title="Birthday Problem">
+In a group of $n$ people, what is the probability that at least two share a birthday? Assume 365 equally likely birthdays.
+
+It's easier to compute the complement: $P(\text{all different})$.
+- Person 1 has $365/365$ choices.
+- Person 2 must avoid person 1's birthday: $364/365$.
+- Person $k$ must avoid the previous $k-1$ birthdays: $(365-k+1)/365$.
+
+$$P(\text{all different}) = \prod_{k=0}^{n-1} \frac{365 - k}{365} = \frac{365!}{(365-n)! \cdot 365^n}$$
+
+$$P(\text{at least one match}) = 1 - P(\text{all different})$$
+
+The famous result: with just $n = 23$ people, the probability exceeds 50%.
+</ExampleBlock>
+
+<img src="/images/topics/sample-spaces/birthday-problem.png" alt="Birthday problem: probability of a match vs group size" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
+
+Explore the birthday problem below — adjust the group size and run Monte Carlo simulations to see the exact curve confirmed empirically:
+
+<BirthdayProblemExplorer client:visible />
+
+### The Matching Problem (Derangements)
+
+<ExampleBlock number={7} title="Hat-Check Problem (Derangements)">
+$n$ people check their hats; the hats are returned at random. What is the probability that *nobody* gets their own hat back?
+
+A permutation with no fixed points is called a **derangement**. Let $A_i$ be the event "person $i$ gets their own hat." We want $P\left(\bigcup_{i=1}^n A_i\right)^c$.
+
+By inclusion-exclusion:
+
+$$P\left(\bigcup_{i=1}^n A_i\right) = \sum_{k=1}^n (-1)^{k+1} \binom{n}{k} \cdot \frac{(n-k)!}{n!} = \sum_{k=1}^n \frac{(-1)^{k+1}}{k!}$$
+
+So the probability of a derangement is:
+
+$$P(\text{derangement}) = \sum_{k=0}^n \frac{(-1)^k}{k!} \xrightarrow{n \to \infty} \frac{1}{e} \approx 0.3679$$
+
+This is remarkable: for large $n$, the probability converges to $1/e$, independent of $n$. The convergence is extremely fast — already at $n = 5$, the answer is accurate to three decimal places.
+</ExampleBlock>
+
+<img src="/images/topics/sample-spaces/derangements.png" alt="Derangement probability converging to 1/e" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
+
+---
+
+## 7. Conditional Probability & Independence (Preview)
+
+We close the mathematical content with a brief preview of the next topic. Conditional probability answers: "given that event $B$ has occurred, what is the probability of event $A$?"
+
+<DefinitionBlock number={5} title="Conditional Probability (preview)">
+For events $A, B \in \mathcal{F}$ with $P(B) > 0$,
+
+$$P(A \mid B) = \frac{P(A \cap B)}{P(B)}.$$
+</DefinitionBlock>
+
+<DefinitionBlock number={6} title="Independence (preview)">
+Events $A$ and $B$ are *independent* if
+
+$$P(A \cap B) = P(A) \cdot P(B).$$
+
+Equivalently (when $P(B) > 0$): $P(A \mid B) = P(A)$ — knowing $B$ occurred doesn't change the probability of $A$.
+</DefinitionBlock>
+
+These concepts are the subject of Conditional Probability & Independence (coming soon). We'll prove Bayes' theorem, develop the law of total probability, and explore the surprisingly subtle concept of conditional independence — the assumption behind naive Bayes classifiers, graphical models, and essentially all tractable probabilistic inference.
+
+---
+
+## 8. Connections to ML
+
+### Probability Spaces in Disguise
+
+Every ML model implicitly defines a probability space:
+
+| ML Model | Sample Space $\Omega$ | $\sigma$-Algebra $\mathcal{F}$ | Probability $P$ |
+|---|---|---|---|
+| Bernoulli classifier | $\{0, 1\}$ | $\mathcal{P}(\{0,1\})$ | $P(Y{=}1) = \sigma(w^\top x)$ |
+| Multinomial (softmax) | $\{1, \ldots, K\}$ | $\mathcal{P}(\{1,\ldots,K\})$ | Softmax output |
+| Gaussian model | $\mathbb{R}$ | $\mathcal{B}(\mathbb{R})$ | $\mathcal{N}(\mu, \sigma^2)$ |
+| Language model | Token sequences | Cylinder $\sigma$-algebra | Autoregressive factorization |
+| Diffusion model | $\mathbb{R}^d$ | $\mathcal{B}(\mathbb{R}^d)$ | Learned via score matching |
+
+### The Union Bound in Learning Theory
+
+Boole's inequality (Theorem 5) is the entry point to PAC learning. The core argument:
+
+1. You have $\lvert\mathcal{H}\rvert$ hypotheses (models).
+2. For each $h \in \mathcal{H}$, define $A_h$ = "hypothesis $h$ overfits" (training error is small but true error is large).
+3. You want $P(\text{some hypothesis overfits}) = P\left(\bigcup_h A_h\right) \leq \delta$.
+4. By the union bound: $P\left(\bigcup_h A_h\right) \leq \sum_h P(A_h)$.
+5. So it suffices to make $P(A_h) \leq \delta / \lvert\mathcal{H}\rvert$ for each $h$.
+
+This is the simplest version of the *uniform convergence* argument. It tells you that generalization requires either few hypotheses or very tight per-hypothesis bounds — the fundamental tension of statistical learning theory. The full treatment lives on <ExternalLink href="https://formalml.com/topics/measure-theoretic-probability" site="formalml" topic="measure-theoretic probability" />.
+
+<img src="/images/topics/sample-spaces/union-bound-pac.png" alt="Union bound in PAC learning: per-hypothesis error budget" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
+
+### Sigma-Algebras and Information
+
+In Bayesian ML, the $\sigma$-algebra encodes *what you can observe*. A filtration $\mathcal{F}_0 \subseteq \mathcal{F}_1 \subseteq \cdots$ models *information arriving over time*:
+
+- In online learning, $\mathcal{F}_t$ is the information available after seeing $t$ data points.
+- In reinforcement learning, $\mathcal{F}_t$ is the history up to time $t$ (all states, actions, rewards).
+- In time series, $\mathcal{F}_t$ is the natural filtration of the observed process.
+
+This seems abstract now, but when we get to martingales and stochastic processes later in formalStatistics, filtrations will be the language we use to formalize "what the model knows at each step."
+
+---
+
+## 9. Summary
+
+| Concept | Key Idea |
+|---|---|
+| **Sample space** $\Omega$ | The set of all possible outcomes |
+| **Event** $A \subseteq \Omega$ | A subset of outcomes; "something we can ask about" |
+| **$\sigma$-algebra** $\mathcal{F}$ | The collection of "askable" events — closed under complements and countable unions |
+| **Probability measure** $P$ | A function $P : \mathcal{F} \to [0,1]$ satisfying non-negativity, normalization, and countable additivity |
+| **Probability space** $(\Omega, \mathcal{F}, P)$ | The complete specification of a probabilistic model |
+| **Complement rule** | $P(A^c) = 1 - P(A)$ |
+| **Addition rule** | $P(A \cup B) = P(A) + P(B) - P(A \cap B)$ |
+| **Union bound** | $P(\bigcup A_n) \leq \sum P(A_n)$ — the workhorse of PAC learning |
+| **Continuity** | $A_n \uparrow A \Rightarrow P(A_n) \to P(A)$ — why countable additivity matters |
+| **Combinatorial probability** | $P(A) = \lvert A\rvert / \lvert\Omega\rvert$ when outcomes are equally likely |
+
+### What's Next
+
+The next topic — **Conditional Probability & Independence** (coming soon) — builds on this foundation to answer: "how does new information change probabilities?" We'll derive Bayes' theorem, formalize independence, and see why conditional independence is the structural assumption that makes probabilistic ML tractable.
+
+### References
+
+1. Billingsley, P. (2012). *Probability and Measure* (Anniversary ed.). Wiley.
+2. Durrett, R. (2019). *Probability: Theory and Examples* (5th ed.). Cambridge University Press.
+3. Grimmett, G. & Stirzaker, D. (2020). *Probability and Random Processes* (4th ed.). Oxford University Press.
+4. Wasserman, L. (2004). *All of Statistics*. Springer.
+5. Shalev-Shwartz, S. & Ben-David, S. (2014). *Understanding Machine Learning: From Theory to Algorithms*. Cambridge University Press.

@@ -1,0 +1,38 @@
+---
+import type { CollectionEntry } from 'astro:content';
+import { getCollection, render } from 'astro:content';
+import TopicLayout from '../../layouts/TopicLayout.astro';
+
+export async function getStaticPaths() {
+  const topics = await getCollection('topics');
+  return topics
+    .filter((topic: CollectionEntry<'topics'>) => topic.data.status === 'published')
+    .map((topic: CollectionEntry<'topics'>) => ({
+      params: { slug: topic.id },
+      props: { topic },
+    }));
+}
+
+interface Props {
+  topic: CollectionEntry<'topics'>;
+}
+
+const { topic } = Astro.props;
+const { Content } = await render(topic);
+const { data } = topic;
+---
+
+<TopicLayout
+  title={data.title}
+  subtitle={data.subtitle}
+  difficulty={data.difficulty}
+  domain={data.domain}
+  estimatedReadTime={data.estimatedReadTime}
+  datePublished={data.datePublished}
+  abstract={data.abstract}
+  formalcalculusPrereqs={data.formalcalculusPrereqs}
+  formalmlConnections={data.formalmlConnections}
+  connections={data.connections}
+>
+  <Content />
+</TopicLayout>

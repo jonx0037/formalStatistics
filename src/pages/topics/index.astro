@@ -1,0 +1,128 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import TopicCard from '../../components/ui/TopicCard.astro';
+import { tracks } from '../../data/curriculum';
+import graphData from '../../data/curriculum-graph.json';
+
+const difficultyMap: Record<string, 'foundational' | 'intermediate' | 'advanced'> = {
+  'sample-spaces': 'foundational',
+  'conditional-probability': 'foundational',
+  'random-variables': 'foundational',
+  'expectation-moments': 'foundational',
+  'discrete-distributions': 'foundational',
+  'continuous-distributions': 'foundational',
+  'exponential-families': 'intermediate',
+  'multivariate-distributions': 'intermediate',
+  'modes-of-convergence': 'intermediate',
+  'law-of-large-numbers': 'intermediate',
+  'central-limit-theorem': 'intermediate',
+  'large-deviations': 'advanced',
+  'point-estimation': 'foundational',
+  'maximum-likelihood': 'intermediate',
+  'method-of-moments': 'intermediate',
+  'sufficient-statistics': 'intermediate',
+  'hypothesis-testing': 'foundational',
+  'likelihood-ratio-tests': 'intermediate',
+  'confidence-intervals': 'intermediate',
+  'multiple-testing': 'intermediate',
+  'linear-regression': 'foundational',
+  'generalized-linear-models': 'intermediate',
+  'regularization': 'intermediate',
+  'model-selection': 'intermediate',
+  'bayesian-foundations': 'intermediate',
+  'bayesian-computation': 'intermediate',
+  'bayesian-model-comparison': 'advanced',
+  'hierarchical-bayes': 'advanced',
+  'order-statistics': 'intermediate',
+  'kernel-density-estimation': 'intermediate',
+  'bootstrap': 'intermediate',
+  'empirical-processes': 'advanced',
+};
+
+const topicDescriptions: Record<string, string> = {
+  'sample-spaces': 'Kolmogorov axioms, sigma-algebras, combinatorial probability',
+  'conditional-probability': 'Bayes\' theorem, law of total probability, independence',
+  'random-variables': 'Measurable functions, PMFs and PDFs, CDFs',
+  'expectation-moments': 'Integration against a measure, moment-generating functions',
+  'discrete-distributions': 'Bernoulli, Binomial, Poisson, Geometric',
+  'continuous-distributions': 'Normal, Exponential, Gamma, Beta, Uniform',
+  'exponential-families': 'Sufficient statistics, natural parameters',
+  'multivariate-distributions': 'Joint, marginal, conditional densities',
+  'modes-of-convergence': 'Almost sure, in probability, in distribution, in Lp',
+  'law-of-large-numbers': 'Weak and strong LLN',
+  'central-limit-theorem': 'Lindeberg-L\u00e9vy, Berry-Esseen bound',
+  'large-deviations': 'Markov, Chebyshev, Chernoff, Hoeffding bounds',
+  'point-estimation': 'Bias-variance, MSE decomposition',
+  'maximum-likelihood': 'Likelihood function, Fisher information',
+  'method-of-moments': 'Moment equations, M-estimation',
+  'sufficient-statistics': 'UMVUE, Rao-Blackwell, completeness',
+  'hypothesis-testing': 'Type I/II errors, power, p-values',
+  'likelihood-ratio-tests': 'Neyman-Pearson lemma, Wilks\' theorem',
+  'confidence-intervals': 'Pivotal quantities, coverage probability',
+  'multiple-testing': 'Bonferroni, Benjamini-Hochberg FDR',
+  'linear-regression': 'Least squares, Gauss-Markov theorem',
+  'generalized-linear-models': 'Link functions, deviance',
+  'regularization': 'Ridge, lasso, elastic net',
+  'model-selection': 'AIC, BIC, cross-validation theory',
+  'bayesian-foundations': 'Prior selection, conjugacy, Jeffreys priors',
+  'bayesian-computation': 'MCMC, Metropolis-Hastings, Gibbs sampling',
+  'bayesian-model-comparison': 'Bayes factors, marginal likelihood',
+  'hierarchical-bayes': 'Multilevel models, shrinkage estimators',
+  'order-statistics': 'Quantile asymptotics, distribution-free inference',
+  'kernel-density-estimation': 'Bandwidth selection, bias-variance',
+  'bootstrap': 'Efron\'s bootstrap, bootstrap confidence intervals',
+  'empirical-processes': 'Glivenko-Cantelli, Donsker, VC dimension',
+};
+
+const nodesByDomain = new Map<string, typeof graphData.nodes>();
+for (const node of graphData.nodes) {
+  const existing = nodesByDomain.get(node.domain) || [];
+  existing.push(node);
+  nodesByDomain.set(node.domain, existing);
+}
+---
+
+<BaseLayout title="Topics" description="All formalStatistics topics — from probability foundations to high-dimensional statistics.">
+  <div class="max-w-5xl mx-auto px-4 sm:px-6 py-12">
+    <header class="mb-12 text-center">
+      <h1
+        class="text-3xl sm:text-4xl font-bold mb-3"
+        style="font-family: var(--font-serif); color: var(--color-text-heading);"
+      >
+        Topics
+      </h1>
+      <p class="text-lg" style="color: var(--color-text-muted);">
+        32 topics across 8 tracks &mdash; published topics are linked, the rest are coming soon.
+      </p>
+    </header>
+
+    {tracks.map((track) => {
+      const nodes = nodesByDomain.get(track.domain) || [];
+      return (
+        <section class="mb-12">
+          <h2
+            class="text-xl font-bold mb-1"
+            style="font-family: var(--font-serif); color: var(--color-text-heading);"
+          >
+            {track.title}
+          </h2>
+          <p class="text-sm mb-4" style="color: var(--color-text-muted);">
+            {track.description}
+          </p>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {nodes.map((node) => (
+              <TopicCard
+                title={node.label}
+                description={topicDescriptions[node.id] || ''}
+                url={node.url}
+                difficulty={difficultyMap[node.id] || 'intermediate'}
+                domain={node.domain}
+                status={node.status as 'published' | 'planned'}
+              />
+            ))}
+          </div>
+        </section>
+      );
+    })}
+  </div>
+</BaseLayout>

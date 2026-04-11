@@ -20,6 +20,12 @@ const currentPath = Astro.url.pathname;
     <!-- Links -->
     <div class="flex items-center gap-6">
       <a
+        href="/topics"
+        class={`text-sm font-medium transition-colors ${currentPath.startsWith('/topics') ? 'text-[var(--color-primary)]' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
+      >
+        Topics
+      </a>
+      <a
         href="/paths"
         class={`text-sm font-medium transition-colors ${currentPath === '/paths' ? 'text-[var(--color-primary)]' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
       >

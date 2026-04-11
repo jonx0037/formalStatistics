@@ -1,0 +1,20 @@
+---
+---
+
+<details
+  class="my-4 rounded-lg border-l-4 p-5 group"
+  style="background: var(--color-proof-bg); border-color: var(--color-proof-border);"
+>
+  <summary
+    class="cursor-pointer select-none text-xs font-bold uppercase tracking-wide mb-2"
+    style="color: var(--color-proof-border);"
+  >
+    Proof
+    <span class="ml-1 text-[10px] group-open:hidden">[show]</span>
+    <span class="ml-1 text-[10px] hidden group-open:inline">[hide]</span>
+  </summary>
+  <div class="topic-content mt-2" style="color: var(--color-text);">
+    <slot />
+    <div class="text-right mt-2 text-lg" style="color: var(--color-text-muted);">&#9724;</div>
+  </div>
+</details>
