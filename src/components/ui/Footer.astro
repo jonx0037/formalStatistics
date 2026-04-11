@@ -1,0 +1,54 @@
+---
+const year = new Date().getFullYear();
+---
+
+<footer
+  class="border-t py-8 mt-16"
+  style="border-color: var(--color-border); background: var(--color-surface-alt);"
+>
+  <div class="max-w-6xl mx-auto px-4 sm:px-6">
+    <div class="flex flex-col sm:flex-row justify-between items-center gap-4">
+      <div class="text-sm" style="color: var(--color-text-muted);">
+        <span style="font-family: var(--font-serif); font-weight: 700;">
+          formal<span style="color: var(--color-primary);">Statistics</span>
+        </span>
+        <span class="mx-2">&middot;</span>
+        <span>&copy; {year} Jonathan Rocha. All rights reserved.</span>
+      </div>
+      <div class="flex items-center gap-4 text-sm" style="color: var(--color-text-muted);">
+        <a
+          href="https://formalcalculus.com"
+          target="_blank"
+          rel="noopener"
+          class="hover:text-[var(--color-text)] transition-colors"
+        >
+          formalCalculus
+        </a>
+        <a
+          href="https://formalml.com"
+          target="_blank"
+          rel="noopener"
+          class="hover:text-[var(--color-text)] transition-colors"
+        >
+          formalML
+        </a>
+        <a
+          href="https://datasalt.ai"
+          target="_blank"
+          rel="noopener"
+          class="hover:text-[var(--color-text)] transition-colors"
+        >
+          DataSalt
+        </a>
+        <a
+          href="https://github.com/jonx0037/formalStatistics"
+          target="_blank"
+          rel="noopener"
+          class="hover:text-[var(--color-text)] transition-colors"
+        >
+          GitHub
+        </a>
+      </div>
+    </div>
+  </div>
+</footer>

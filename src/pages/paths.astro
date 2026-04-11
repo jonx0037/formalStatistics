@@ -1,0 +1,46 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { tracks } from '../data/curriculum';
+---
+
+<BaseLayout title="Curriculum" description="8 tracks covering probability and statistics from foundations through advanced topics.">
+  <section class="max-w-4xl mx-auto px-4 sm:px-6 py-12">
+    <h1
+      class="text-3xl sm:text-4xl font-bold mb-4 text-center"
+      style="font-family: var(--font-serif); color: var(--color-text-heading);"
+    >
+      Curriculum
+    </h1>
+    <p class="text-center mb-12 max-w-2xl mx-auto" style="color: var(--color-text-muted);">
+      32 topics across 8 tracks, progressing from foundational probability through the statistical
+      theory that directly feeds into graduate-level ML.
+    </p>
+
+    <div class="space-y-6">
+      {tracks.map((track) => (
+        <div
+          class="rounded-lg border p-6"
+          style="background: var(--color-surface-alt); border-color: var(--color-border);"
+        >
+          <div class="flex items-baseline gap-3 mb-2">
+            <span
+              class="text-sm font-bold px-2 py-0.5 rounded"
+              style="background: var(--color-primary); color: white;"
+            >
+              Track {track.number}
+            </span>
+            <h2 class="text-xl font-bold" style="color: var(--color-text-heading);">
+              {track.title}
+            </h2>
+          </div>
+          <p class="mb-3" style="color: var(--color-text-muted);">
+            {track.description}
+          </p>
+          <p class="text-sm italic" style="color: var(--color-text-muted);">
+            {track.topicCount} topics &mdash; coming soon
+          </p>
+        </div>
+      ))}
+    </div>
+  </section>
+</BaseLayout>
