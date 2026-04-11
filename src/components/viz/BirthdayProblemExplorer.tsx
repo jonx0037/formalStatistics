@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { useResizeObserver } from './shared/useResizeObserver';
-import { birthdayProbability, seededRandom } from './shared/probability';
+import { birthdayProbability, mcBirthday, seededRandom } from './shared/probability';
 
 export default function BirthdayProblemExplorer() {
   const { ref: containerRef, width } = useResizeObserver<HTMLDivElement>();
@@ -9,7 +9,7 @@ export default function BirthdayProblemExplorer() {
   const [mcMatches, setMcMatches] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
   const rngRef = useRef(seededRandom(42));
-  const animRef = useRef<number>(0);
+  const trialsRef = useRef(0);
 
   // Exact curve data
   const curveData = useMemo(() => {
@@ -23,10 +23,12 @@ export default function BirthdayProblemExplorer() {
   const exactP = birthdayProbability(n);
   const mcP = mcTrials > 0 ? mcMatches / mcTrials : 0;
 
-  // SVG dimensions
+  // SVG dimensions — responsive: full width on mobile, half on sm+
   const chartH = Math.min(width * 0.45, 260);
   const pad = { top: 20, right: 20, bottom: 40, left: 50 };
-  const plotW = (width - pad.left - pad.right) / 2 - 16;
+  const plotW = Math.max(0, width < 640
+    ? width - pad.left - pad.right
+    : (width - pad.left - pad.right) / 2 - 16);
   const plotH = chartH - pad.top - pad.bottom;
 
   // Scales
@@ -38,62 +40,51 @@ export default function BirthdayProblemExplorer() {
     .map((d, i) => `${i === 0 ? 'M' : 'L'} ${xScale(d.n).toFixed(1)} ${yScale(d.p).toFixed(1)}`)
     .join(' ');
 
-  // MC simulation
+  // MC simulation — uses shared mcBirthday utility
   const runBatch = useCallback(() => {
     const batchSize = 200;
-    const rng = rngRef.current;
-    let batchMatches = 0;
-    for (let i = 0; i < batchSize; i++) {
-      const birthdays = new Set<number>();
-      let match = false;
-      for (let j = 0; j < n; j++) {
-        const day = Math.floor(rng() * 365);
-        if (birthdays.has(day)) { match = true; break; }
-        birthdays.add(day);
-      }
-      if (match) batchMatches++;
-    }
+    const matchRate = mcBirthday(n, batchSize, rngRef.current);
+    const batchMatches = Math.round(matchRate * batchSize);
+    trialsRef.current += batchSize;
     setMcTrials((prev) => prev + batchSize);
     setMcMatches((prev) => prev + batchMatches);
   }, [n]);
 
   const startSim = useCallback(() => {
-    setIsRunning(true);
     rngRef.current = seededRandom(Date.now());
+    trialsRef.current = 0;
     setMcTrials(0);
     setMcMatches(0);
+    setIsRunning(true);
   }, []);
 
   const stopSim = useCallback(() => {
     setIsRunning(false);
-    cancelAnimationFrame(animRef.current);
   }, []);
 
-  // Animation loop
+  // Animation loop — uses ref for trial count to avoid effect churn
   useEffect(() => {
     if (!isRunning) return;
     let active = true;
     const loop = () => {
       if (!active) return;
       runBatch();
-      if (mcTrials < 10000) {
-        animRef.current = requestAnimationFrame(loop);
+      if (trialsRef.current < 10000) {
+        requestAnimationFrame(loop);
       } else {
         setIsRunning(false);
       }
     };
-    animRef.current = requestAnimationFrame(loop);
-    return () => {
-      active = false;
-      cancelAnimationFrame(animRef.current);
-    };
-  }, [isRunning, runBatch, mcTrials]);
+    requestAnimationFrame(loop);
+    return () => { active = false; };
+  }, [isRunning, runBatch]);
 
   // Reset MC when n changes
   useEffect(() => {
     setMcTrials(0);
     setMcMatches(0);
     setIsRunning(false);
+    trialsRef.current = 0;
   }, [n]);
 
   // Y-axis ticks

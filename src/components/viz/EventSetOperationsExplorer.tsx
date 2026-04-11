@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { useResizeObserver } from './shared/useResizeObserver';
 
 type Operation = 'union' | 'intersection' | 'compA' | 'compB' | 'diffAB' | 'compUnion' | 'compIntersection';
@@ -19,7 +19,6 @@ export default function EventSetOperationsExplorer() {
   const [pA, setPA] = useState(0.5);
   const [pB, setPB] = useState(0.4);
   const [pAB, setPAB] = useState(0.15);
-  const svgRef = useRef<SVGSVGElement>(null);
 
   const maxPAB = Math.min(pA, pB);
   const clampedPAB = Math.min(pAB, maxPAB);
@@ -106,7 +105,6 @@ export default function EventSetOperationsExplorer() {
       {/* SVG Venn diagram */}
       <div ref={containerRef} className="w-full">
         <svg
-          ref={svgRef}
           width={width}
           height={h}
           viewBox={`0 0 ${width} ${h}`}

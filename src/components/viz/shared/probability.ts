@@ -96,6 +96,17 @@ export function isValidSigmaAlgebra(
   const omegaKey = serializeSet(omega);
   const emptyKey = serializeSet(new Set<string>());
 
+  // 0. Every event must be a subset of Ω
+  for (const event of collection) {
+    for (const el of event) {
+      if (!omega.has(el)) {
+        const eventStr = `{${[...event].sort().join(',')}}`;
+        violations.push(`${eventStr} contains element "${el}" not in Ω`);
+        break;
+      }
+    }
+  }
+
   // 1. Ω must be in F
   if (!serialized.has(omegaKey)) {
     violations.push('Ω is not in the collection');
@@ -238,7 +249,7 @@ export function seededRandom(seed: number): () => number {
   let state = seed;
   return () => {
     state = (state * 1664525 + 1013904223) & 0xffffffff;
-    return (state >>> 0) / 0xffffffff;
+    return (state >>> 0) / 0x100000000;
   };
 }
 
