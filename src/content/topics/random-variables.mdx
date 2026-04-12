@@ -1,0 +1,715 @@
+---
+title: "Random Variables & Distribution Functions"
+subtitle: "The bridge from events to numbers — PMFs, PDFs, CDFs, and the distribution machinery that makes statistical computation possible"
+status: "published"
+difficulty: "foundational"
+prerequisites:
+  - "sample-spaces"
+  - "conditional-probability"
+tags:
+  - "probability"
+  - "random-variables"
+  - "pmf"
+  - "pdf"
+  - "cdf"
+  - "joint-distribution"
+  - "marginal-distribution"
+  - "conditional-distribution"
+  - "transformation"
+  - "measurability"
+domain: "foundations-of-probability"
+videoId: null
+notebookPath: "notebooks/random-variables/03_random_variables_distribution_functions.ipynb"
+githubUrl: "https://github.com/jonx0037/formalStatistics/blob/main/src/content/topics/random-variables.mdx"
+datePublished: 2026-04-11
+estimatedReadTime: 50
+abstract: "A random variable X : Ω → ℝ is a measurable function that translates abstract outcomes into numbers, and once we have numbers, we can compute. Discrete random variables are described by probability mass functions p_X(x) = P(X = x), where each value is a genuine probability. Continuous random variables are described by probability density functions f_X(x), where the density is NOT a probability — only integrals of the density give probabilities. The cumulative distribution function F_X(x) = P(X ≤ x) is a universal descriptor that applies to every random variable. Joint distributions f_{X,Y}(x,y) capture the full dependence between random variables; marginals are obtained by integrating out, and conditional distributions f_{X|Y}(x|y) = f_{X,Y}(x,y)/f_Y(y) extend conditional probability from events to random variables. Independence means the joint factors: f_{X,Y} = f_X · f_Y. For transformations Y = g(X), the CDF method and the change of variables formula with its Jacobian determine the new distribution — machinery that powers normalizing flows in generative modeling. The inverse CDF transform shows that Uniform(0,1) random variables can generate samples from any distribution."
+formalcalculusPrereqs:
+  - topic: "sequences-limits"
+    site: "formalcalculus"
+    relationship: "CDF properties (Theorem 1) use limits at infinity and continuity of probability from Topic 1. The proof that F(x) → 0 as x → -∞ and F(x) → 1 as x → ∞ requires the convergence framework from formalCalculus."
+  - topic: "change-of-variables"
+    site: "formalcalculus"
+    relationship: "The change of variables formula for PDFs (Theorem 7) uses the Jacobian and the substitution rule for integrals. The multidimensional version uses the Jacobian determinant."
+formalmlConnections:
+  - topic: "normalizing-flows"
+    site: "formalml"
+    relationship: "Normalizing flows learn invertible transformations of simple distributions. The change of variables formula f_Y(y) = f_X(g⁻¹(y)) · |det J_{g⁻¹}(y)| is the mathematical backbone — each flow layer applies this formula."
+  - topic: "information-geometry"
+    site: "formalml"
+    relationship: "Fisher information is defined via the score function ∂/∂θ log f(x; θ), which requires the PDF parameterization. The statistical manifold is the space of distributions."
+  - topic: "variational-inference"
+    site: "formalml"
+    relationship: "Variational inference approximates posterior distributions by minimizing KL divergence between density functions. The conditional PDF framework enables the ELBO decomposition."
+connections:
+  - topic: "sample-spaces"
+    relationship: "Random variables are measurable functions on the probability space (Ω, F, P) from Topic 1. The sigma-algebra F determines which functions qualify as random variables."
+  - topic: "conditional-probability"
+    relationship: "Conditional distributions f_{X|Y}(x|y) = f_{X,Y}(x,y)/f_Y(y) extend conditional probability P(A|B) = P(A∩B)/P(B) from events to random variables. The chain rule for densities mirrors the multiplication rule."
+  - topic: "expectation-moments"
+    relationship: "Expectation is integration against the distribution: E[X] = ∫ x f_X(x) dx (continuous) or Σ x p_X(x) (discrete). The PMF/PDF/CDF framework defined here is the prerequisite."
+  - topic: "discrete-distributions"
+    relationship: "Bernoulli, Binomial, Poisson, etc., are specific named PMFs. This topic defines what a PMF is; that topic catalogs the important ones."
+  - topic: "continuous-distributions"
+    relationship: "Normal, Exponential, Gamma, Beta, etc., are specific named PDFs. This topic defines what a PDF is; that topic catalogs the important ones."
+references:
+  - type: "book"
+    title: "Probability and Measure"
+    author: "Patrick Billingsley"
+    year: 2012
+    edition: "Anniversary Edition"
+    publisher: "Wiley"
+    isbn: "978-1-118-12237-0"
+    url: "https://www.wiley.com/en-us/Probability+and+Measure%2C+Anniversary+Edition-p-9781118122372"
+    note: "Chapter 5 covers random variables and distribution functions with full measure-theoretic rigor."
+  - type: "book"
+    title: "Probability: Theory and Examples"
+    author: "Rick Durrett"
+    year: 2019
+    edition: "5th"
+    publisher: "Cambridge University Press"
+    isbn: "978-1-108-47368-2"
+    url: "https://services.math.duke.edu/~rtd/PTE/pte.html"
+    note: "Chapter 1 on distribution functions and random variables."
+  - type: "book"
+    title: "Probability and Random Processes"
+    author: "Geoffrey Grimmett & David Stirzaker"
+    year: 2020
+    edition: "4th"
+    publisher: "Oxford University Press"
+    isbn: "978-0-19-884759-1"
+    url: "https://global.oup.com/academic/product/probability-and-random-processes-9780198847595"
+    note: "Chapter 3 on discrete and continuous random variables with excellent worked examples."
+  - type: "book"
+    title: "All of Statistics"
+    author: "Larry Wasserman"
+    year: 2004
+    publisher: "Springer"
+    isbn: "978-0-387-40272-7"
+    url: "https://link.springer.com/book/10.1007/978-0-387-21736-9"
+    note: "Chapters 2–3 cover random variables, distributions, and conditional distributions concisely."
+  - type: "book"
+    title: "Statistical Inference"
+    author: "George Casella & Roger L. Berger"
+    year: 2002
+    edition: "2nd"
+    publisher: "Duxbury"
+    isbn: "978-0-534-24312-8"
+    url: "https://www.cengage.com/c/statistical-inference-2e-casella/"
+    note: "Chapter 1–2 on probability and random variables. Excellent treatment of transformations."
+  - type: "book"
+    title: "Pattern Recognition and Machine Learning"
+    author: "Christopher M. Bishop"
+    year: 2006
+    publisher: "Springer"
+    isbn: "978-0-387-31073-2"
+    url: "https://www.microsoft.com/en-us/research/publication/pattern-recognition-machine-learning/"
+    note: "Chapter 2 on probability distributions and their ML applications."
+  - type: "book"
+    title: "Deep Learning"
+    author: "Ian Goodfellow, Yoshua Bengio & Aaron Courville"
+    year: 2016
+    publisher: "MIT Press"
+    isbn: "978-0-262-03561-3"
+    url: "https://www.deeplearningbook.org/"
+    note: "Chapter 3 covers probability and information theory for deep learning."
+  - type: "article"
+    title: "Normalizing Flows: An Introduction and Review of Current Methods"
+    author: "Ivan Kobyzev, Simon J.D. Prince & Marcus A. Brubaker"
+    year: 2021
+    journal: "IEEE TPAMI"
+    volume: "43(11)"
+    pages: "3964-3979"
+    url: "https://doi.org/10.1109/TPAMI.2020.2992934"
+    note: "Survey of normalizing flows — the change of variables formula as the engine of generative modeling."
+---
+
+import DefinitionBlock from '../../components/ui/DefinitionBlock.astro';
+import TheoremBlock from '../../components/ui/TheoremBlock.astro';
+import ProofBlock from '../../components/ui/ProofBlock.astro';
+import ExampleBlock from '../../components/ui/ExampleBlock.astro';
+import RemarkBlock from '../../components/ui/RemarkBlock.astro';
+import ExternalLink from '../../components/ui/ExternalLink.astro';
+
+import RandomVariableMappingExplorer from '../../components/viz/RandomVariableMappingExplorer.tsx';
+import PMFPDFExplorer from '../../components/viz/PMFPDFExplorer.tsx';
+import CDFExplorer from '../../components/viz/CDFExplorer.tsx';
+import JointDistributionExplorer from '../../components/viz/JointDistributionExplorer.tsx';
+import TransformationExplorer from '../../components/viz/TransformationExplorer.tsx';
+
+## 1. Random Variables: The Bridge from Events to Numbers
+
+In [Topic 1](/topics/sample-spaces) and [Topic 2](/topics/conditional-probability), we worked entirely with *events* — subsets of the sample space $\Omega$. We asked questions like "$P(\text{even}) = ?$" and "$P(A \mid B) = ?$". But most of statistics and machine learning works with *numbers*, not sets. We want to talk about the "value" of a die roll, the "height" of a person, the "loss" of a model.
+
+A **random variable** is the bridge. It's a function that assigns a number to each outcome.
+
+**Motivating example.** Roll two dice. The sample space is $\Omega = \{(i,j) : i,j \in \{1,\ldots,6\}\}$ with 36 outcomes. Define $S : \Omega \to \mathbb{R}$ by $S((i,j)) = i + j$. Now instead of asking "what is the probability of outcomes in the set $\{(1,6),(2,5),(3,4),(4,3),(5,2),(6,1)\}$?" we simply ask "$P(S = 7) = ?$". The random variable $S$ compresses the 36-element sample space into the numbers $\{2, 3, \ldots, 12\}$.
+
+This is not just notational convenience — it's a change of mathematical universe. Once we have a function $X : \Omega \to \mathbb{R}$, we can add random variables ($X + Y$), multiply them, take expectations ($E[X]$), compute variances ($\text{Var}(X)$), and apply calculus. The entire toolkit of analysis opens up.
+
+<DefinitionBlock number={1} title="Random Variable">
+Let $(\Omega, \mathcal{F}, P)$ be a probability space. A *random variable* is a function $X : \Omega \to \mathbb{R}$ that is *measurable* with respect to $\mathcal{F}$ — meaning that for every Borel set $B \in \mathcal{B}(\mathbb{R})$,
+
+$$X^{-1}(B) = \{\omega \in \Omega : X(\omega) \in B\} \in \mathcal{F}.$$
+
+In practice, the condition we check most often is the CDF condition: for every $x \in \mathbb{R}$,
+
+$$\{\omega \in \Omega : X(\omega) \leq x\} \in \mathcal{F}.$$
+
+This is sufficient because the half-lines $(-\infty, x]$ generate the Borel $\sigma$-algebra (see [Topic 1, Example 4](/topics/sample-spaces)).
+</DefinitionBlock>
+
+<RemarkBlock title="Why measurability?">
+The measurability condition ensures that we can assign a probability to every statement of the form "$X \leq x$" or "$X \in B$". Without it, $P(X \leq x)$ is undefined — the set $\{X \leq x\}$ might not be in $\mathcal{F}$, and $P$ only speaks to events in $\mathcal{F}$. For finite or countable sample spaces with the discrete $\sigma$-algebra (the power set), every function is measurable — so the condition is automatic. It only becomes restrictive for uncountable $\Omega$, and even then, every function you'll encounter in practice is measurable.
+
+**Why this matters for ML:** When you write "$X \sim \mathcal{N}(\mu, \sigma^2)$," you are implicitly working with the Borel $\sigma$-algebra on $\mathbb{R}$. The measurability requirement — that a random variable must pull Borel sets back to events in your $\sigma$-algebra — is what makes statements like "$P(X \leq t)$" well-defined. We formalized $\sigma$-algebras in [Topic 1](/topics/sample-spaces).
+</RemarkBlock>
+
+<DefinitionBlock number={2} title="Random Vector">
+A *random vector* $\mathbf{X} = (X_1, \ldots, X_d) : \Omega \to \mathbb{R}^d$ is a function where each component $X_i$ is a random variable.
+</DefinitionBlock>
+
+<img src="/images/topics/random-variables/random-variable-mappings.png" alt="Three-panel diagram showing random variable mappings: identity mapping from die outcomes to numbers, indicator mapping, and sum-of-two-dice mapping with arrows from Ω to ℝ" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
+
+<ExampleBlock number={1} title="Die roll as a random variable">
+Roll one die. $\Omega = \{1,2,3,4,5,6\}$, $\mathcal{F} = \mathcal{P}(\Omega)$. The identity function $X(\omega) = \omega$ is a random variable. So is $Y(\omega) = \omega^2$, or $Z(\omega) = \mathbf{1}\{\omega \text{ is even}\}$ (the indicator of "even"). Each creates a different mapping from outcomes to numbers.
+</ExampleBlock>
+
+<ExampleBlock number={2} title="Sum of two dice">
+$\Omega = \{(i,j) : i,j \in \{1,\ldots,6\}\}$, $S((i,j)) = i + j$. The pre-images are:
+
+- $S^{-1}(\{2\}) = \{(1,1)\}$, so $P(S = 2) = 1/36$
+- $S^{-1}(\{7\}) = \{(1,6),(2,5),(3,4),(4,3),(5,2),(6,1)\}$, so $P(S = 7) = 6/36 = 1/6$
+- $S^{-1}(\{12\}) = \{(6,6)\}$, so $P(S = 12) = 1/36$
+
+The random variable $S$ *induces* a probability distribution on $\{2,3,\ldots,12\}$ via the pre-image and $P$.
+</ExampleBlock>
+
+Use the explorer below to see how random variables map outcomes to numbers. Select an experiment and a mapping, then watch the arrows and the induced probability distribution:
+
+<RandomVariableMappingExplorer client:visible />
+
+---
+
+## 2. Discrete Random Variables and PMFs
+
+<DefinitionBlock number={3} title="Discrete Random Variable">
+A random variable $X$ is *discrete* if it takes values in a finite or countably infinite set $\{x_1, x_2, x_3, \ldots\}$.
+</DefinitionBlock>
+
+The distribution of a discrete random variable is completely described by its probability mass function.
+
+<DefinitionBlock number={4} title="Probability Mass Function (PMF)">
+The *probability mass function* (PMF) of a discrete random variable $X$ is the function $p_X : \mathbb{R} \to [0,1]$ defined by
+
+$$p_X(x) = P(X = x) = P(\{\omega \in \Omega : X(\omega) = x\}).$$
+
+The PMF satisfies two properties:
+
+1. $p_X(x) \geq 0$ for all $x$ (from Axiom 1 of the Kolmogorov axioms, [Topic 1](/topics/sample-spaces))
+2. $\sum_{x} p_X(x) = 1$ (from Axiom 2, summing over all values in the support)
+</DefinitionBlock>
+
+<DefinitionBlock number={5} title="Support">
+The *support* of a discrete random variable $X$ is the set of values where the PMF is positive:
+
+$$\text{supp}(X) = \{x \in \mathbb{R} : p_X(x) > 0\}.$$
+</DefinitionBlock>
+
+<img src="/images/topics/random-variables/pmf-examples.png" alt="Three-panel bar chart showing PMFs: Bernoulli(0.3), Binomial(10, 0.3), and Geometric(0.3)" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
+
+<ExampleBlock number={3} title="Bernoulli random variable">
+A Bernoulli random variable models a single trial with two outcomes. $X \in \{0, 1\}$ with $P(X = 1) = p$ and $P(X = 0) = 1 - p$ for some $p \in [0,1]$. Written compactly:
+
+$$p_X(x) = p^x (1-p)^{1-x}, \quad x \in \{0, 1\}.$$
+
+We write $X \sim \text{Bernoulli}(p)$. This is the building block of classification: "$Y \sim \text{Bernoulli}(\sigma(w^\top x))$" is logistic regression.
+</ExampleBlock>
+
+<ExampleBlock number={4} title="Binomial random variable">
+The sum of $n$ independent $\text{Bernoulli}(p)$ trials. $X \in \{0, 1, \ldots, n\}$ with
+
+$$p_X(k) = \binom{n}{k} p^k (1-p)^{n-k}, \quad k = 0, 1, \ldots, n.$$
+
+We write $X \sim \text{Binomial}(n, p)$. The binomial coefficient $\binom{n}{k}$ counts the number of ways to arrange $k$ successes among $n$ trials — this is the combinatorics from [Topic 1 (§6)](/topics/sample-spaces) in action.
+</ExampleBlock>
+
+For a discrete random variable, $p_X(x) = P(X = x)$ is an actual probability. This is NOT true for continuous random variables (as we'll see in §3). The probability of any event involving $X$ is computed by summing the PMF:
+
+$$P(X \in A) = \sum_{x \in A} p_X(x).$$
+
+---
+
+## 3. Continuous Random Variables and PDFs
+
+When the sample space is uncountable — say $\Omega = [0,1]$ — a random variable $X$ can take any real value in a continuum. For any specific value $x$, we have $P(X = x) = 0$. This is not a pathology; it's a fundamental feature of the uncountable. There are uncountably many possible values, and since they must sum to 1, each individual probability must be zero.
+
+So we can't describe continuous random variables with a PMF. Instead, we describe them with a *density* — a function whose *integral* gives probabilities.
+
+<DefinitionBlock number={6} title="Continuous Random Variable and PDF">
+A random variable $X$ is *continuous* if there exists a non-negative function $f_X : \mathbb{R} \to [0, \infty)$ such that for every interval $[a, b]$,
+
+$$P(a \leq X \leq b) = \int_a^b f_X(x) \, dx.$$
+
+The function $f_X$ is called the *probability density function* (PDF). It satisfies:
+
+1. $f_X(x) \geq 0$ for all $x$
+2. $\int_{-\infty}^{\infty} f_X(x) \, dx = 1$
+
+These mirror the PMF conditions — replace sums with integrals.
+</DefinitionBlock>
+
+<RemarkBlock title="The density is NOT a probability">
+This is perhaps the most common confusion in probability. For a continuous random variable:
+
+- $f_X(x)$ is a *density*, not a probability. It can be greater than 1.
+- $f_X(x) \, dx$ is (informally) the probability that $X$ falls in a tiny interval around $x$.
+- Only *integrals* of the density give probabilities.
+- $P(X = x) = 0$ for every individual $x$. Probabilities of *intervals* are what matter.
+</RemarkBlock>
+
+<img src="/images/topics/random-variables/pdf-examples.png" alt="Three-panel PDF plot: Uniform(0,1) with shaded probability region, Standard Normal with shaded area, and Uniform(0, 0.5) showing density exceeding 1" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
+
+<ExampleBlock number={5} title="Uniform distribution on [0, 1]">
+$X \sim \text{Uniform}(0,1)$ has density $f_X(x) = 1$ for $x \in [0,1]$ and $f_X(x) = 0$ otherwise. Then $P(0.2 \leq X \leq 0.5) = \int_{0.2}^{0.5} 1 \, dx = 0.3$. The probability equals the length of the interval — probability is area under the density curve.
+</ExampleBlock>
+
+<ExampleBlock number={6} title="Standard normal distribution">
+$Z \sim \mathcal{N}(0, 1)$ has density
+
+$$f_Z(z) = \frac{1}{\sqrt{2\pi}} e^{-z^2/2}.$$
+
+This density is positive everywhere on $\mathbb{R}$ and integrates to 1 (a non-trivial fact requiring the Gaussian integral $\int_{-\infty}^{\infty} e^{-z^2/2} \, dz = \sqrt{2\pi}$).
+
+Note that $f_Z(0) = 1/\sqrt{2\pi} \approx 0.399$ — this is less than 1 in this case, but for a $\text{Uniform}(0, 0.5)$ distribution, $f_X(x) = 2$ on $[0, 0.5]$, which exceeds 1. The density is not bounded by 1.
+</ExampleBlock>
+
+Toggle between discrete and continuous modes in the explorer below. In discrete mode, each bar height IS a probability. In continuous mode, drag to select an interval — the shaded AREA is the probability:
+
+<PMFPDFExplorer client:visible />
+
+---
+
+## 4. The Cumulative Distribution Function
+
+The CDF works for *every* random variable — discrete, continuous, or mixed. It is the universal descriptor.
+
+<DefinitionBlock number={7} title="Cumulative Distribution Function (CDF)">
+The *cumulative distribution function* (CDF) of a random variable $X$ is
+
+$$F_X(x) = P(X \leq x), \quad x \in \mathbb{R}.$$
+</DefinitionBlock>
+
+<TheoremBlock number={1} title="Properties of the CDF">
+For any random variable $X$, the CDF $F_X$ satisfies:
+
+1. *Non-decreasing:* If $a \leq b$, then $F_X(a) \leq F_X(b)$.
+2. *Right-continuous:* $\lim_{h \to 0^+} F_X(x + h) = F_X(x)$ for all $x$.
+3. *Limits at infinity:* $\lim_{x \to -\infty} F_X(x) = 0$ and $\lim_{x \to \infty} F_X(x) = 1$.
+</TheoremBlock>
+
+<ProofBlock title="Properties of the CDF (Theorem 1)">
+**(1)** If $a \leq b$, then $\{X \leq a\} \subseteq \{X \leq b\}$. By monotonicity of probability ([Topic 1, Theorem 2](/topics/sample-spaces)): $F_X(a) = P(X \leq a) \leq P(X \leq b) = F_X(b)$.
+
+**(2)** Let $h_n \downarrow 0$. Then the events $A_n = \{X \leq x + h_n\}$ decrease to $\{X \leq x\}$. By continuity of probability from above ([Topic 1, Theorem 6b](/topics/sample-spaces)):
+
+$$\lim_{n \to \infty} P(X \leq x + h_n) = P(X \leq x)$$
+
+i.e., $F_X(x + h_n) \to F_X(x)$.
+
+**(3)** For $x_n \to -\infty$, $\{X \leq x_n\} \downarrow \emptyset$, so $F_X(x_n) \to P(\emptyset) = 0$ by continuity from above. For $x_n \to \infty$, $\{X \leq x_n\} \uparrow \Omega$, so $F_X(x_n) \to P(\Omega) = 1$ by continuity from below.
+
+The limit properties rely on the convergence framework from <ExternalLink href="https://formalcalculus.com/topics/sequences-limits" site="formalcalculus" topic="Sequences & Limits" />. $\square$
+</ProofBlock>
+
+<RemarkBlock title="Using the CDF to compute probabilities">
+The CDF gives us a direct route to probabilities of intervals:
+
+$$P(a < X \leq b) = F_X(b) - F_X(a)$$
+
+This follows from $\{X \leq b\} = \{X \leq a\} \cup \{a < X \leq b\}$ (disjoint).
+
+For continuous random variables, $P(X = x) = 0$, so strict/non-strict inequalities don't matter: $P(a \leq X \leq b) = P(a < X < b) = F_X(b) - F_X(a)$.
+
+For discrete random variables, the CDF is a *step function* — it jumps at each value in the support. The jump at $x$ has height $P(X = x) = p_X(x)$.
+</RemarkBlock>
+
+<img src="/images/topics/random-variables/cdf-comparison.png" alt="Three-panel CDF comparison: discrete step CDF for Binomial, smooth CDF for Normal, and CDF-to-probability interval method" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
+
+For a continuous random variable with PDF $f_X$:
+
+$$F_X(x) = \int_{-\infty}^{x} f_X(t) \, dt$$
+
+And by the fundamental theorem of calculus, wherever $f_X$ is continuous:
+
+$$f_X(x) = F_X'(x)$$
+
+The PDF is the derivative of the CDF. The CDF is the antiderivative of the PDF. This connection requires the integration and differentiation machinery from <ExternalLink href="https://formalcalculus.com/topics/change-of-variables" site="formalcalculus" topic="Change of Variables" />.
+
+Explore discrete (step function) and continuous (smooth curve) CDFs side by side. Drag the vertical line to query $F(x) = P(X \leq x)$:
+
+<CDFExplorer client:visible />
+
+---
+
+## 5. Joint Distributions
+
+In ML, we almost never work with a single random variable. A feature vector $\mathbf{X} = (X_1, \ldots, X_d)$ is a collection of $d$ random variables. Understanding the *joint* behavior — how they relate to each other — is essential.
+
+<DefinitionBlock number={8} title="Joint PMF">
+For discrete random variables $X$ and $Y$, the *joint PMF* is
+
+$$p_{X,Y}(x, y) = P(X = x \text{ and } Y = y) = P(X = x, Y = y).$$
+
+It satisfies $p_{X,Y}(x,y) \geq 0$ and $\sum_x \sum_y p_{X,Y}(x,y) = 1$.
+</DefinitionBlock>
+
+<DefinitionBlock number={9} title="Joint PDF">
+For continuous random variables $X$ and $Y$, the *joint PDF* is a function $f_{X,Y} : \mathbb{R}^2 \to [0, \infty)$ such that
+
+$$P((X,Y) \in A) = \iint_A f_{X,Y}(x, y) \, dx \, dy$$
+
+for every (measurable) set $A \subseteq \mathbb{R}^2$. It satisfies $f_{X,Y}(x,y) \geq 0$ and $\iint f_{X,Y}(x,y)\,dx\,dy = 1$.
+</DefinitionBlock>
+
+<DefinitionBlock number={10} title="Joint CDF">
+The *joint CDF* is
+
+$$F_{X,Y}(x, y) = P(X \leq x, Y \leq y).$$
+
+This works for any pair of random variables.
+</DefinitionBlock>
+
+<img src="/images/topics/random-variables/joint-distributions.png" alt="Three-panel joint distribution visualization: two-dice heatmap, bivariate normal contours with ρ=0, and bivariate normal contours with ρ=0.7" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
+
+<ExampleBlock number={7} title="Joint distribution of two dice">
+Roll two fair dice. Let $X$ = first die, $Y$ = second die. The joint PMF is $p_{X,Y}(i, j) = 1/36$ for $i, j \in \{1,\ldots,6\}$. The marginal of $X$ is $p_X(i) = \sum_{j=1}^6 1/36 = 6/36 = 1/6$ — as expected.
+</ExampleBlock>
+
+<ExampleBlock number={8} title="Standard bivariate normal">
+$(X, Y) \sim \mathcal{N}(\mathbf{0}, \Sigma)$ where $\Sigma = \begin{pmatrix} 1 & \rho \\ \rho & 1 \end{pmatrix}$. The joint PDF is
+
+$$f_{X,Y}(x,y) = \frac{1}{2\pi\sqrt{1-\rho^2}} \exp\left(-\frac{x^2 - 2\rho xy + y^2}{2(1-\rho^2)}\right).$$
+
+The parameter $\rho \in (-1, 1)$ controls the correlation — the linear dependence between $X$ and $Y$. When $\rho = 0$, the joint factors as $f_X(x) \cdot f_Y(y)$, and $X$ and $Y$ are independent.
+</ExampleBlock>
+
+Explore joint distributions: toggle between discrete (two dice heatmap) and continuous (bivariate normal contours). Slide $\rho$ and watch the contours morph from circular (independent) to elliptical (dependent):
+
+<JointDistributionExplorer client:visible />
+
+---
+
+## 6. Marginal Distributions
+
+<DefinitionBlock number={11} title="Marginal PMF">
+For discrete $X, Y$, the *marginal PMF* of $X$ is
+
+$$p_X(x) = \sum_{y} p_{X,Y}(x, y).$$
+</DefinitionBlock>
+
+<DefinitionBlock number={12} title="Marginal PDF">
+For continuous $X, Y$ with joint PDF $f_{X,Y}$, the *marginal PDF* of $X$ is
+
+$$f_X(x) = \int_{-\infty}^{\infty} f_{X,Y}(x, y) \, dy.$$
+</DefinitionBlock>
+
+In both cases, we "integrate out" (or "sum out") the variable we don't want. This connects directly to the law of total probability from [Topic 2](/topics/conditional-probability): the marginal is a weighted average over all possible values of the other variable.
+
+<TheoremBlock number={2} title="Marginals from the Joint">
+The marginal distributions are uniquely determined by the joint distribution — sum over (discrete) or integrate out (continuous) the other variables.
+</TheoremBlock>
+
+<ProofBlock title="Marginals from the Joint (Theorem 2)">
+For the discrete case:
+
+$$p_X(x) = P(X = x) = P\left(\bigcup_y \{X = x, Y = y\}\right).$$
+
+Since $\{X = x, Y = y\}$ are pairwise disjoint for different $y$, countable additivity ([Topic 1, Axiom 3](/topics/sample-spaces)) gives
+
+$$p_X(x) = \sum_y P(X = x, Y = y) = \sum_y p_{X,Y}(x,y). \quad \square$$
+</ProofBlock>
+
+<img src="/images/topics/random-variables/joint-with-marginals.png" alt="Joint PDF contour plot of bivariate normal with marginal density curves displayed on the top and right axes" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
+
+<RemarkBlock title="Joint determines marginals, not vice versa">
+Knowing $f_X$ and $f_Y$ individually is *not* enough to reconstruct $f_{X,Y}$. The joint encodes the *dependence structure* between $X$ and $Y$ — information lost when we marginalize. This is why "correlation does not imply causation" has a precise mathematical meaning: the marginals constrain the joint, but don't determine it. Specifying the dependence structure is the job of copulas (Multivariate Distributions, coming soon).
+</RemarkBlock>
+
+---
+
+## 7. Conditional Distributions
+
+Conditional distributions extend conditional probability ([Topic 2](/topics/conditional-probability)) from events to random variables. Instead of "$P(A \mid B)$" for events, we ask "$P(X \leq x \mid Y = y)$" — the distribution of $X$ given that $Y$ takes a specific value.
+
+<DefinitionBlock number={13} title="Conditional PMF">
+For discrete $X, Y$ with $p_Y(y) > 0$,
+
+$$p_{X|Y}(x \mid y) = \frac{p_{X,Y}(x, y)}{p_Y(y)}.$$
+
+This is exactly the definition of conditional probability ([Topic 2, Definition 1](/topics/conditional-probability)) applied to the events $\{X = x\}$ and $\{Y = y\}$: $P(X = x \mid Y = y) = P(X = x, Y = y) / P(Y = y)$.
+</DefinitionBlock>
+
+<DefinitionBlock number={14} title="Conditional PDF">
+For continuous $X, Y$ with $f_Y(y) > 0$,
+
+$$f_{X|Y}(x \mid y) = \frac{f_{X,Y}(x, y)}{f_Y(y)}.$$
+
+This requires more care than the discrete case — since $P(Y = y) = 0$ for continuous $Y$, we can't directly condition on $\{Y = y\}$. The conditional PDF is defined as the limit $f_{X|Y}(x \mid y) = \lim_{\epsilon \to 0} P(X \leq x \mid y - \epsilon < Y \leq y + \epsilon)$. The formula above is the result of that limit.
+</DefinitionBlock>
+
+<img src="/images/topics/random-variables/conditional-distribution-slice.png" alt="Three-panel conditional distribution visualization: joint density with slice line, normalized conditional PDF, and multiple conditional PDFs for different values of y" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
+
+<TheoremBlock number={3} title="Chain Rule for Densities">
+The joint density factors as
+
+$$f_{X,Y}(x, y) = f_{X|Y}(x \mid y) \cdot f_Y(y) = f_{Y|X}(y \mid x) \cdot f_X(x).$$
+
+This is the density version of the multiplication rule ([Topic 2, Theorem 1](/topics/conditional-probability)). Rearranging gives the density version of Bayes' theorem:
+
+$$f_{X|Y}(x \mid y) = \frac{f_{Y|X}(y \mid x) \cdot f_X(x)}{f_Y(y)}.$$
+</TheoremBlock>
+
+<ProofBlock title="Chain Rule for Densities (Theorem 3)">
+Rearrange the definition $f_{X|Y}(x \mid y) = f_{X,Y}(x,y) / f_Y(y)$ to get
+
+$$f_{X,Y}(x,y) = f_{X|Y}(x \mid y) \cdot f_Y(y).$$
+
+The symmetric factorization follows by exchanging the roles of $X$ and $Y$. $\square$
+</ProofBlock>
+
+<ExampleBlock number={9} title="Conditional distribution of the bivariate normal">
+If $(X, Y)$ are jointly normal with correlation $\rho$, then $X \mid Y = y$ is normal:
+
+$$X \mid Y = y \sim \mathcal{N}\left(\mu_X + \rho \frac{\sigma_X}{\sigma_Y}(y - \mu_Y), \; \sigma_X^2(1 - \rho^2)\right).$$
+
+Two remarkable facts:
+
+1. The conditional mean is *linear* in $y$: this is why linear regression works for jointly normal data.
+2. The conditional variance $\sigma_X^2(1 - \rho^2)$ does *not depend on $y$* — this is the homoscedasticity assumption.
+</ExampleBlock>
+
+---
+
+## 8. Independence of Random Variables
+
+Independence of random variables extends the concept of independence from events ([Topic 2, Definitions 3–4](/topics/conditional-probability)) to distribution functions.
+
+<DefinitionBlock number={15} title="Independence of Random Variables">
+Random variables $X$ and $Y$ are *independent* (written $X \perp\!\!\!\perp Y$) if for every pair of Borel sets $A, B \subseteq \mathbb{R}$,
+
+$$P(X \in A, Y \in B) = P(X \in A) \cdot P(Y \in B).$$
+
+Equivalently, any of the following:
+
+- **CDF factorization:** $F_{X,Y}(x, y) = F_X(x) \cdot F_Y(y)$ for all $x, y$.
+- **PMF factorization (discrete):** $p_{X,Y}(x, y) = p_X(x) \cdot p_Y(y)$ for all $x, y$.
+- **PDF factorization (continuous):** $f_{X,Y}(x, y) = f_X(x) \cdot f_Y(y)$ for all $x, y$.
+</DefinitionBlock>
+
+<img src="/images/topics/random-variables/independence-vs-dependence.png" alt="Three-panel comparison of independent vs dependent bivariate normals: circular contours for ρ=0, elliptical contours for ρ≠0, and scatter samples from both" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
+
+<TheoremBlock number={4} title="Independence ⟺ Joint Factors">
+$X \perp\!\!\!\perp Y$ if and only if $f_{X,Y}(x,y) = f_X(x) f_Y(y)$ (continuous case) or $p_{X,Y}(x,y) = p_X(x) p_Y(y)$ (discrete case) for all $x, y$.
+</TheoremBlock>
+
+<ProofBlock title="Independence ⟺ Joint Factors (Theorem 4)">
+**($\Rightarrow$)** Assume $X \perp\!\!\!\perp Y$. Then for all $x, y$:
+
+$$F_{X,Y}(x,y) = P(X \leq x, Y \leq y) = P(X \leq x) \cdot P(Y \leq y) = F_X(x) \cdot F_Y(y).$$
+
+Differentiating with respect to both $x$ and $y$ (using the multivariable chain rule):
+
+$$f_{X,Y}(x,y) = \frac{\partial^2}{\partial x \, \partial y} F_{X,Y}(x,y) = F_X'(x) \cdot F_Y'(y) = f_X(x) \cdot f_Y(y).$$
+
+**($\Leftarrow$)** Assume $f_{X,Y}(x,y) = f_X(x) f_Y(y)$. Then for any Borel sets $A, B$:
+
+$$P(X \in A, Y \in B) = \int_A \int_B f_{X,Y}(x,y) \, dy \, dx = \int_A f_X(x) \, dx \int_B f_Y(y) \, dy = P(X \in A) \cdot P(Y \in B).$$
+
+The integral factors by Fubini's theorem. $\square$
+</ProofBlock>
+
+<TheoremBlock number={5} title="Independence ⟹ Conditional = Marginal">
+If $X \perp\!\!\!\perp Y$, then $f_{X|Y}(x \mid y) = f_X(x)$ — knowing $Y$ tells you nothing new about $X$.
+</TheoremBlock>
+
+<ProofBlock title="Independence ⟹ Conditional = Marginal (Theorem 5)">
+$$f_{X|Y}(x \mid y) = \frac{f_{X,Y}(x,y)}{f_Y(y)} = \frac{f_X(x) f_Y(y)}{f_Y(y)} = f_X(x). \quad \square$$
+</ProofBlock>
+
+This is the random variable version of the event independence criterion $P(A \mid B) = P(A)$ from [Topic 2](/topics/conditional-probability).
+
+<ExampleBlock number={10} title="Independent vs dependent normals">
+Let $(X, Y)$ be bivariate normal. They are independent if and only if $\rho = 0$. When $\rho \neq 0$, knowing $Y$ shifts the conditional mean of $X$ (by Example 9), so $X$ and $Y$ are dependent. The contour plots make this visible: $\rho = 0$ gives circular contours (factored density), $\rho \neq 0$ gives elliptical contours (non-factored).
+</ExampleBlock>
+
+---
+
+## 9. Transformations of Random Variables
+
+If $X$ has a known distribution and $Y = g(X)$ for some function $g$, what is the distribution of $Y$? This arises constantly:
+
+- If $X$ is a measurement, $Y = aX + b$ is a rescaled measurement.
+- If $X \sim \text{Uniform}(0,1)$, then $Y = -\log(X) \sim \text{Exponential}(1)$ — the inverse CDF transform.
+- If $X$ is a model's raw output, $Y = \sigma(X) = 1/(1 + e^{-X})$ is the sigmoid-transformed probability.
+- If $X$ is a random variable, $Y = X^2$ appears in the chi-squared distribution.
+
+<TheoremBlock number={6} title="CDF Method">
+Let $X$ be a random variable with known CDF $F_X$ and let $Y = g(X)$. Then
+
+$$F_Y(y) = P(Y \leq y) = P(g(X) \leq y).$$
+
+To find $F_Y$, solve the inequality $g(X) \leq y$ for $X$, then express the result in terms of $F_X$.
+</TheoremBlock>
+
+<ProofBlock title="CDF Method (Theorem 6)">
+This is the definition of CDF applied to $Y$. The content is in the method, not the proof. $\square$
+</ProofBlock>
+
+<ExampleBlock number={11} title="Linear transformation">
+Let $Y = aX + b$ with $a > 0$. Then
+
+$$F_Y(y) = P(aX + b \leq y) = P(X \leq (y-b)/a) = F_X\left(\frac{y-b}{a}\right).$$
+
+Differentiating: $f_Y(y) = \frac{1}{a} f_X\left(\frac{y-b}{a}\right)$. If $a < 0$, the inequality flips and $f_Y(y) = \frac{1}{|a|} f_X\left(\frac{y-b}{a}\right)$.
+
+Application: If $X \sim \mathcal{N}(\mu, \sigma^2)$, then $Z = (X - \mu)/\sigma \sim \mathcal{N}(0,1)$. Standardization is a linear transformation.
+</ExampleBlock>
+
+<img src="/images/topics/random-variables/transformation-cdf-method.png" alt="Three-panel transformation visualization: PDF of X ~ N(0,1), CDF method for Y = X², and resulting chi-squared(1) PDF" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
+
+When $g$ is monotonic and differentiable, we get a direct formula for the PDF.
+
+<TheoremBlock number={7} title="Change of Variables for PDFs">
+Let $X$ be a continuous random variable with PDF $f_X$. Let $Y = g(X)$ where $g$ is strictly monotonic and differentiable with inverse $g^{-1}$. Then
+
+$$f_Y(y) = f_X(g^{-1}(y)) \cdot |(g^{-1})'(y)|.$$
+
+The factor $|(g^{-1})'(y)|$ is the *Jacobian* — it accounts for how $g$ stretches or compresses intervals.
+</TheoremBlock>
+
+<ProofBlock title="Change of Variables for PDFs (Theorem 7)">
+Assume $g$ is strictly increasing (the decreasing case is similar with a sign flip).
+
+$$F_Y(y) = P(g(X) \leq y) = P(X \leq g^{-1}(y)) = F_X(g^{-1}(y)).$$
+
+Differentiate using the chain rule:
+
+$$f_Y(y) = f_X(g^{-1}(y)) \cdot (g^{-1})'(y).$$
+
+Since $g$ is increasing, $g^{-1}$ is also increasing, so $(g^{-1})'(y) > 0 = |(g^{-1})'(y)|$.
+
+For decreasing $g$, the inequality flips: $P(g(X) \leq y) = P(X \geq g^{-1}(y)) = 1 - F_X(g^{-1}(y))$, and differentiating introduces a minus sign that the absolute value absorbs. $\square$
+
+This proof uses the chain rule and substitution rule from <ExternalLink href="https://formalcalculus.com/topics/change-of-variables" site="formalcalculus" topic="Change of Variables" />.
+</ProofBlock>
+
+<ExampleBlock number={12} title="Log transformation (lognormal)">
+Let $X \sim \mathcal{N}(\mu, \sigma^2)$ and $Y = e^X$ (i.e., $X = \log Y$). Then $g^{-1}(y) = \log y$ and $(g^{-1})'(y) = 1/y$. So
+
+$$f_Y(y) = f_X(\log y) \cdot \frac{1}{y} = \frac{1}{y\sigma\sqrt{2\pi}} \exp\left(-\frac{(\log y - \mu)^2}{2\sigma^2}\right), \quad y > 0.$$
+
+This is the *lognormal distribution*. It arises when the logarithm of a quantity is normally distributed — common for financial returns, biological measurements, and the distribution of weights in neural networks.
+</ExampleBlock>
+
+<RemarkBlock title="The Jacobian in higher dimensions">
+For a vector transformation $\mathbf{Y} = g(\mathbf{X})$ where $g : \mathbb{R}^d \to \mathbb{R}^d$ is a diffeomorphism, the change of variables formula becomes
+
+$$f_{\mathbf{Y}}(\mathbf{y}) = f_{\mathbf{X}}(g^{-1}(\mathbf{y})) \cdot |\det J_{g^{-1}}(\mathbf{y})|$$
+
+where $J_{g^{-1}}$ is the Jacobian matrix. This is the formula behind <ExternalLink href="https://formalml.com/topics/normalizing-flows" site="formalml" topic="Normalizing Flows" /> — a class of generative models that learn invertible transformations of simple distributions. Each flow layer applies this change of variables formula.
+</RemarkBlock>
+
+Pick a source distribution and a transformation to watch the CDF method produce the output distribution. Toggle Monte Carlo samples and watch the histogram converge:
+
+<TransformationExplorer client:visible />
+
+---
+
+## 10. Expectation (Preview)
+
+We close the mathematical content with a brief preview of the next topic. Once we have random variables and their distributions, the next natural question is: *what is the "average" value?*
+
+<DefinitionBlock number={16} title="Expectation (preview)">
+The *expectation* (or *expected value*, or *mean*) of a random variable $X$ is
+
+$$E[X] = \sum_x x \cdot p_X(x) \quad \text{(discrete)}$$
+
+$$E[X] = \int_{-\infty}^{\infty} x \cdot f_X(x) \, dx \quad \text{(continuous)}$$
+
+provided the sum or integral converges absolutely.
+</DefinitionBlock>
+
+The expectation is the "center of mass" of the distribution — if you placed the PMF bars (or PDF curve) on a number line and balanced it on a fulcrum, the balance point is $E[X]$.
+
+These concepts — along with variance, covariance, higher moments, and moment-generating functions — are the subject of **Expectation, Variance & Moments** (coming soon). We'll prove the linearity of expectation, derive the variance decomposition, establish the law of total expectation $E[X] = E[E[X \mid Y]]$, and connect moments to the shapes of distributions.
+
+---
+
+## 11. Connections to ML
+
+### Feature Vectors as Random Vectors
+
+Every dataset in ML is implicitly modeled as a sample from a random vector. A training example $(\mathbf{x}_i, y_i)$ is a realization of the random vector $(\mathbf{X}, Y)$ where $\mathbf{X} = (X_1, \ldots, X_d)$ is the feature vector and $Y$ is the target.
+
+| ML Concept | Random Variable Formulation |
+|---|---|
+| Feature vector | Random vector $\mathbf{X} = (X_1, \ldots, X_d)$ |
+| Training set | $n$ i.i.d. draws from $P_{\mathbf{X},Y}$ |
+| Class probabilities | PMF $p_Y(k)$ or conditional PMF $p_{Y\|\mathbf{X}}(k \mid \mathbf{x})$ |
+| Regression target | Continuous $Y$ with conditional density $f_{Y\|\mathbf{X}}(y \mid \mathbf{x})$ |
+
+### Generative vs. Discriminative: Joint vs. Conditional
+
+The generative/discriminative distinction maps directly to joint vs. conditional distributions:
+
+- **Generative models** learn the joint distribution $P(\mathbf{X}, Y)$ — or equivalently, the class-conditional $P(\mathbf{X} \mid Y)$ and prior $P(Y)$. Examples: Gaussian Discriminant Analysis, naive Bayes, VAEs, diffusion models.
+- **Discriminative models** learn the conditional distribution $P(Y \mid \mathbf{X})$ directly. Examples: logistic regression, neural networks, random forests.
+
+From the joint, you can always get the conditional (via Bayes' theorem from [Topic 2](/topics/conditional-probability)). But generative models must model the full $\mathbf{X}$ distribution — a harder problem in high dimensions.
+
+### Softmax Outputs as PMFs
+
+A neural network classifier with softmax output computes $p_Y(k \mid \mathbf{x}) = \text{softmax}(z)_k$ for classes $k = 1, \ldots, K$. This output is a PMF: $p_Y(k \mid \mathbf{x}) \geq 0$ for all $k$, and $\sum_{k=1}^K p_Y(k \mid \mathbf{x}) = 1$ by construction of softmax. The softmax function *guarantees* that the output satisfies the PMF axioms — making the network's predictions interpretable as conditional probabilities.
+
+### Loss Functions as Transformations
+
+The loss $L = \ell(Y, \hat{Y})$ is a transformation of random variables. If $Y$ and $\hat{Y}$ have known distributions, the distribution of $L$ determines the *risk* — and the change of variables formula (Theorem 7) is how we analyze it.
+
+### The Inverse CDF Transform
+
+<TheoremBlock number={8} title="Universality of the Uniform (Inverse CDF Transform)">
+Let $U \sim \text{Uniform}(0,1)$ and let $F$ be any CDF with quantile function $F^{-1}(u) = \inf\{x : F(x) \geq u\}$. Then $X = F^{-1}(U)$ has CDF $F$.
+</TheoremBlock>
+
+<ProofBlock title="Universality of the Uniform (Theorem 8)">
+$$P(X \leq x) = P(F^{-1}(U) \leq x) = P(U \leq F(x)) = F(x)$$
+
+since $U \sim \text{Uniform}(0,1)$ gives $P(U \leq t) = t$ for $t \in [0,1]$. $\square$
+</ProofBlock>
+
+<img src="/images/topics/random-variables/inverse-cdf-transform.png" alt="Three-panel inverse CDF transform: Uniform(0,1) samples, inverse CDF mapping via quantile function, and resulting Normal samples" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
+
+This is how you sample from *any* distribution using only uniform random numbers. It's the foundation of Monte Carlo simulation and the basis of <ExternalLink href="https://formalml.com/topics/normalizing-flows" site="formalml" topic="Normalizing Flows" /> in generative modeling. The Fisher information metric that gives the space of distributions its geometry is developed in <ExternalLink href="https://formalml.com/topics/information-geometry" site="formalml" topic="Information Geometry" />, and the KL divergence used in <ExternalLink href="https://formalml.com/topics/variational-inference" site="formalml" topic="Variational Inference" /> relies on the conditional PDF framework established here.
+
+---
+
+## 12. Summary
+
+| Concept | Key Idea |
+|---|---|
+| **Random variable** $X : \Omega \to \mathbb{R}$ | A measurable function mapping outcomes to numbers |
+| **PMF** $p_X(x) = P(X = x)$ | Each value IS a probability (discrete) |
+| **PDF** $f_X(x)$ | NOT a probability; integrate for probability (continuous) |
+| **CDF** $F_X(x) = P(X \leq x)$ | The universal descriptor — works for all random variables |
+| **CDF properties** | Non-decreasing, right-continuous, $F(-\infty) = 0$, $F(\infty) = 1$ |
+| **Joint distribution** | Full description of two random variables together |
+| **Marginal** | Integrate out / sum out the other variable |
+| **Conditional distribution** | $f_{X\|Y}(x \mid y) = f_{X,Y}(x,y) / f_Y(y)$ |
+| **Independence** | $X \perp\!\!\!\perp Y$ iff $f_{X,Y} = f_X \cdot f_Y$ |
+| **Transformation** | $Y = g(X)$: CDF method or change of variables with Jacobian |
+| **Inverse CDF transform** | $X = F^{-1}(U)$ where $U \sim \text{Uniform}(0,1)$ generates $X \sim F$ |
+
+### What's Next
+
+**Expectation, Variance & Moments** (coming soon) answers: once we have distributions, what summaries do we compute? We'll define expectation ($E[X]$), prove linearity, derive variance ($\text{Var}(X) = E[X^2] - (E[X])^2$), develop the law of total expectation ($E[X] = E[E[X \mid Y]]$), and introduce moment-generating functions — the analytic tool that powers the proofs of the law of large numbers and the central limit theorem.
