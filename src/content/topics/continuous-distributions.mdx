@@ -1,0 +1,963 @@
+---
+title: "Continuous Distributions"
+subtitle: "Uniform, Normal, Exponential, Gamma, Beta, Chi-squared, Student's t, and F — the named PDFs that underpin statistical inference and machine learning, each derived from a distinct probabilistic mechanism."
+status: "published"
+difficulty: "foundational"
+prerequisites:
+  - "random-variables"
+  - "expectation-moments"
+  - "discrete-distributions"
+tags:
+  - "probability"
+  - "continuous-distributions"
+  - "normal"
+  - "exponential"
+  - "gamma"
+  - "beta"
+  - "chi-squared"
+  - "student-t"
+  - "f-distribution"
+  - "exponential-family"
+  - "conjugate-prior"
+domain: "core-distributions"
+videoId: null
+notebookPath: "notebooks/continuous-distributions/06_continuous_distributions.ipynb"
+githubUrl: "https://github.com/jonx0037/formalStatistics/blob/main/src/content/topics/continuous-distributions.mdx"
+datePublished: 2026-04-12
+estimatedReadTime: 55
+abstract: "Eight continuous distributions arise from eight distinct probabilistic mechanisms. The Uniform(a,b) assigns equal density across an interval — the continuous version of maximum ignorance. The Normal(μ,σ²) is the fixed point of addition: sums of many small independent effects converge to it via the CLT. The Exponential(λ) models memoryless waiting times in a Poisson process. The Gamma(α,β) generalizes the Exponential to waiting for α events, subsuming both the Exponential (α=1) and the Chi-squared (α=k/2, β=1/2). The Beta(α,β) lives on [0,1] — precisely where probabilities live — making it the natural conjugate prior for Bernoulli and Binomial likelihoods. The Chi-squared, Student's t, and F distributions are derived from the Normal and Chi-squared distributions, forming the test statistic distributions for hypothesis testing. Each core distribution receives the same systematic treatment: PDF derivation, proofs of E[X] and Var(X), MGF, key properties, and ML connections. The relationship web organizes these distributions around two hubs: the Gamma hub (Exponential, Chi-squared as special cases) and the Normal hub (Chi-squared via Z², Student's t via Z/√(V/ν), F via ratio of Chi-squareds). Four of the five core distributions belong to the exponential family, which Topic 7 will unify."
+formalcalculusPrereqs:
+  - topic: "integration-by-parts"
+    site: "formalcalculus"
+    relationship: "Computing E[X] for the Exponential and Gamma distributions requires integration by parts. The Gamma function recursion Γ(α+1) = αΓ(α) is proved by integration by parts."
+  - topic: "taylor-series"
+    site: "formalcalculus"
+    relationship: "The Normal MGF derivation uses 'completing the square' in the exponent. The Gamma function's properties connect to power series representations."
+  - topic: "sequences-limits"
+    site: "formalcalculus"
+    relationship: "The Gaussian integral ∫e^{−z²/2}dz = √(2π) ensures the Normal PDF normalizes. The Gamma function satisfies Γ(n) = (n−1)! for positive integers, connecting continuous and discrete."
+  - topic: "change-of-variables"
+    site: "formalcalculus"
+    relationship: "The Chi-squared distribution arises as Z² for Z~N(0,1), requiring the Jacobian. The Beta-Gamma connection Y₁/(Y₁+Y₂) ~ Beta(α,β) uses a bivariate change of variables."
+  - topic: "improper-integrals"
+    site: "formalcalculus"
+    relationship: "The Gamma function Γ(α) = ∫₀^∞ t^{α-1}e^{-t}dt and all continuous PDFs on unbounded support are improper integrals."
+formalmlConnections:
+  - topic: "generalized-linear-models"
+    site: "formalml"
+    relationship: "Normal response → linear regression (identity link). Gamma response → Gamma GLM (log link) for positive-valued outcomes like insurance claims and time durations."
+  - topic: "gaussian-processes"
+    site: "formalml"
+    relationship: "The Normal distribution is the marginal of every finite collection of GP outputs. The GP prior is an infinite-dimensional Gaussian."
+  - topic: "variational-inference"
+    site: "formalml"
+    relationship: "Gaussian variational families are the default in VI. The Beta serves as the conjugate prior for Bernoulli likelihood in mean-field approximations."
+  - topic: "normalizing-flows"
+    site: "formalml"
+    relationship: "The standard Normal N(0,I) is the base distribution. The change-of-variables formula transforms it through invertible mappings to model complex densities."
+  - topic: "bayesian-inference"
+    site: "formalml"
+    relationship: "Beta-Bernoulli, Gamma-Poisson, and Normal-Normal are the three canonical conjugate pairs used in Bayesian inference and online learning."
+connections:
+  - topic: "random-variables"
+    relationship: "Topic 3 defined what PDFs, CDFs, and transformations are. This topic catalogs the eight most important continuous PDFs — the specific named distributions that Topic 3's framework was built to describe."
+  - topic: "expectation-moments"
+    relationship: "Topic 4 developed E[X], Var(X), and MGF as tools. This topic applies them systematically: Normal E[X] = μ, Exponential E[X] = 1/λ, Gamma E[X] = α/β, and so on for all eight distributions."
+  - topic: "discrete-distributions"
+    relationship: "Topic 5 established the parallel catalog template with seven discrete distributions. This topic mirrors that template for the continuous case, using the same structure: definition → moments → MGF → key property → ML connection."
+  - topic: "exponential-families"
+    relationship: "Four of the five core distributions here (Normal, Exponential, Gamma, Beta) belong to the exponential family. Their natural parameters, sufficient statistics, and log-partition functions will be identified and unified in that topic."
+  - topic: "multivariate-distributions"
+    relationship: "The multivariate Normal — the star of that topic — generalizes the univariate Normal treated here. Joint, marginal, and conditional densities extend the single-variable PDF framework."
+  - topic: "bayesian-foundations"
+    relationship: "The Beta-Bernoulli conjugate prior introduced here is the simplest instance of Bayesian updating. The full Bayesian framework generalizes this to arbitrary prior-likelihood pairs."
+references:
+  - type: "book"
+    title: "Probability and Measure"
+    author: "Patrick Billingsley"
+    year: 2012
+    edition: "Anniversary Edition"
+    publisher: "Wiley"
+    note: "Chapters 5–6 cover continuous distributions in full measure-theoretic generality, including the Gamma and Beta functions."
+  - type: "book"
+    title: "Probability: Theory and Examples"
+    author: "Rick Durrett"
+    year: 2019
+    edition: "5th"
+    publisher: "Cambridge University Press"
+    note: "Chapter 1 covers continuous distributions and the central limit theorem. Clean treatment of the Normal MGF."
+  - type: "book"
+    title: "Probability and Random Processes"
+    author: "Geoffrey Grimmett & David Stirzaker"
+    year: 2020
+    edition: "4th"
+    publisher: "Oxford University Press"
+    note: "Chapter 4 on continuous random variables covers all major distributions with worked examples. Excellent treatment of the Gamma function."
+  - type: "book"
+    title: "All of Statistics"
+    author: "Larry Wasserman"
+    year: 2004
+    publisher: "Springer"
+    note: "Chapter 2 provides a compact reference for all named distributions with moment formulas and relationships."
+  - type: "book"
+    title: "Statistical Inference"
+    author: "George Casella & Roger L. Berger"
+    year: 2002
+    edition: "2nd"
+    publisher: "Duxbury"
+    note: "Chapter 3 (Common Families of Distributions) is the canonical graduate-level treatment of continuous distributions. Thorough exponential family identification."
+  - type: "book"
+    title: "Pattern Recognition and Machine Learning"
+    author: "Christopher M. Bishop"
+    year: 2006
+    publisher: "Springer"
+    note: "Chapter 2 covers the Normal, Gamma, and Beta in the ML context. Section 2.3 on the Gaussian is the definitive ML-oriented treatment."
+  - type: "book"
+    title: "Bayesian Data Analysis"
+    author: "Andrew Gelman, John B. Carlin, Hal S. Stern, David B. Dunson, Aki Vehtari, & Donald B. Rubin"
+    year: 2013
+    edition: "3rd"
+    publisher: "Chapman & Hall/CRC"
+    note: "Chapter 2 covers the Beta-Bernoulli and Normal-Normal conjugate pairs in detail. The definitive Bayesian textbook."
+  - type: "book"
+    title: "Generalized Linear Models"
+    author: "P. McCullagh & J.A. Nelder"
+    year: 1989
+    edition: "2nd"
+    publisher: "Chapman & Hall/CRC"
+    note: "Chapters 2 and 8 connect the Normal and Gamma to regression models through the exponential family framework."
+---
+
+import DefinitionBlock from '../../components/ui/DefinitionBlock.astro';
+import TheoremBlock from '../../components/ui/TheoremBlock.astro';
+import ProofBlock from '../../components/ui/ProofBlock.astro';
+import ExampleBlock from '../../components/ui/ExampleBlock.astro';
+import RemarkBlock from '../../components/ui/RemarkBlock.astro';
+import ExternalLink from '../../components/ui/ExternalLink.astro';
+
+import ContinuousDistributionCatalogExplorer from '../../components/viz/ContinuousDistributionCatalogExplorer.tsx';
+import NormalPropertiesExplorer from '../../components/viz/NormalPropertiesExplorer.tsx';
+import MemorylessContinuousExplorer from '../../components/viz/MemorylessContinuousExplorer.tsx';
+import GammaFamilyExplorer from '../../components/viz/GammaFamilyExplorer.tsx';
+import BetaPriorPosteriorExplorer from '../../components/viz/BetaPriorPosteriorExplorer.tsx';
+
+## 6.1 The Continuous Distribution Catalog
+
+[Topic 5 — Discrete Distributions](/topics/discrete-distributions) cataloged seven discrete PMFs. We now turn to the continuous side: eight distributions, each arising from a distinct probabilistic mechanism, each receiving the same systematic treatment — PDF, moments, MGF, key property, ML connection.
+
+The difference is calculus, not philosophy. Where the discrete catalog summed PMFs, this one integrates PDFs. The tools we built in [Expectation, Variance & Moments](/topics/expectation-moments) — $E[X] = \int x \, f(x) \, dx$, $\text{Var}(X) = E[X^2] - (E[X])^2$, MGFs — carry over directly. What changes is the palette: these distributions live on continuous supports, their densities are smooth curves, and their moments require the integration techniques from <ExternalLink href="https://formalcalculus.com/topics/integration-by-parts" site="formalcalculus">Integration by Parts</ExternalLink> and <ExternalLink href="https://formalcalculus.com/topics/improper-integrals" site="formalcalculus">Improper Integrals</ExternalLink>.
+
+<RemarkBlock number={1} title="A Parallel Catalog">
+This topic mirrors [Discrete Distributions](/topics/discrete-distributions) by design. Five core distributions (Uniform, Normal, Exponential, Gamma, Beta) are independently motivated with full derivations. Three derived distributions (Chi-squared, Student's t, F) are defined by construction from the Normal and Chi-squared. The core five receive the same template as Topic 5: definition, then $E[X]$ and $\text{Var}(X)$ proofs, then MGF, then key properties, then an ML connection. The derived three share a single section — they are building blocks for hypothesis testing rather than independent modeling choices.
+</RemarkBlock>
+
+<img src="/images/topics/continuous-distributions/continuous-distribution-catalog.png" alt="Gallery of all eight continuous distribution PDFs with E[X] balance-point triangles" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
+
+The interactive explorer below lets you switch between all eight distributions, adjust their parameters, and see how the PDF, CDF, and moments respond.
+
+<ContinuousDistributionCatalogExplorer client:visible />
+
+---
+
+## 6.2 The Uniform Distribution
+
+The Uniform distribution is the continuous version of maximum ignorance: every point in an interval is equally likely. It is the simplest continuous distribution and the starting point for simulation — we can transform Uniform samples into samples from any other distribution via the inverse CDF method.
+
+<DefinitionBlock number={1} title="Continuous Uniform Distribution">
+A random variable $X$ has the **Uniform distribution** on $[a, b]$, written $X \sim \text{Uniform}(a, b)$, if its PDF is
+
+$$
+f(x) = \begin{cases} \frac{1}{b - a} & \text{if } a \le x \le b, \\ 0 & \text{otherwise.} \end{cases}
+$$
+
+The CDF is $F(x) = \frac{x - a}{b - a}$ for $x \in [a, b]$, with $F(x) = 0$ for $x < a$ and $F(x) = 1$ for $x > b$.
+</DefinitionBlock>
+
+The PDF is flat — constant density over the interval, zero outside. The normalization condition $\int_a^b \frac{1}{b-a} \, dx = 1$ is immediate.
+
+<TheoremBlock number={1} title="Uniform Moments and MGF">
+If $X \sim \text{Uniform}(a, b)$, then:
+
+1. $E[X] = \frac{a + b}{2}$
+2. $\text{Var}(X) = \frac{(b - a)^2}{12}$
+3. $M_X(t) = \frac{e^{tb} - e^{ta}}{t(b - a)}$ for $t \ne 0$, and $M_X(0) = 1$.
+</TheoremBlock>
+
+<ProofBlock>
+**Part 1 (Expectation).** By direct integration:
+
+$$
+E[X] = \int_a^b x \cdot \frac{1}{b - a} \, dx = \frac{1}{b - a} \cdot \frac{x^2}{2} \bigg|_a^b = \frac{1}{b - a} \cdot \frac{b^2 - a^2}{2} = \frac{(b + a)(b - a)}{2(b - a)} = \frac{a + b}{2}
+$$
+
+**Part 2 (Variance).** We first compute $E[X^2]$:
+
+$$
+E[X^2] = \int_a^b x^2 \cdot \frac{1}{b - a} \, dx = \frac{1}{b - a} \cdot \frac{x^3}{3} \bigg|_a^b = \frac{b^3 - a^3}{3(b - a)} = \frac{a^2 + ab + b^2}{3}
+$$
+
+Then $\text{Var}(X) = E[X^2] - (E[X])^2$:
+
+$$
+\text{Var}(X) = \frac{a^2 + ab + b^2}{3} - \frac{(a + b)^2}{4} = \frac{4(a^2 + ab + b^2) - 3(a^2 + 2ab + b^2)}{12} = \frac{a^2 - 2ab + b^2}{12} = \frac{(b - a)^2}{12}
+$$
+
+**Part 3 (MGF).** For $t \ne 0$:
+
+$$
+M_X(t) = E[e^{tX}] = \int_a^b e^{tx} \cdot \frac{1}{b - a} \, dx = \frac{1}{b - a} \cdot \frac{e^{tx}}{t} \bigg|_a^b = \frac{e^{tb} - e^{ta}}{t(b - a)}
+$$
+
+At $t = 0$, L'Hopital's rule gives $M_X(0) = 1$.
+
+$\square$
+</ProofBlock>
+
+<RemarkBlock number={2} title="The Uniform Is NOT an Exponential Family Member">
+Unlike the other four core distributions in this topic, the Uniform is **not** a member of the exponential family. The reason: its support $[a, b]$ depends on the parameters. The exponential family requires that the support of the density be independent of the parameters — a condition the Uniform violates. Exponential Families (coming soon) will make this distinction precise.
+</RemarkBlock>
+
+<ExampleBlock number={1} title="Inverse CDF Transform: Generating Exponential Samples">
+If $U \sim \text{Uniform}(0, 1)$ and we define $X = F^{-1}(U) = -\frac{1}{\lambda} \ln(1 - U)$, then $X \sim \text{Exponential}(\lambda)$. This is the **inverse CDF transform** — a fundamental simulation technique.
+
+**Proof.** $P(X \le x) = P\!\left(-\frac{1}{\lambda} \ln(1 - U) \le x\right) = P(U \le 1 - e^{-\lambda x}) = 1 - e^{-\lambda x}$, which is the Exponential CDF. Since $1 - U$ has the same distribution as $U$, we can simplify to $X = -\frac{1}{\lambda} \ln U$.
+
+**ML connection.** Every random number generator starts with Uniform samples. The inverse CDF transform converts them to any target distribution — as long as $F^{-1}$ can be computed. For the Normal, $\Phi^{-1}$ has no closed form, so specialized algorithms (Box-Muller, Ziggurat) are used instead.
+</ExampleBlock>
+
+<img src="/images/topics/continuous-distributions/uniform-distribution.png" alt="Uniform distribution: PDF for different intervals, CDF with quantile mark, inverse CDF transform simulation" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
+
+---
+
+## 6.3 The Normal Distribution
+
+The Normal distribution is the most important distribution in all of statistics. Its centrality comes from the Central Limit Theorem: sums of many independent random variables converge to Normal form, regardless of the original distribution. This makes the Normal the universal approximation for aggregate effects — measurement errors, test scores, stock returns over short intervals, and noise in machine learning models.
+
+<DefinitionBlock number={2} title="Normal Distribution">
+A random variable $X$ has the **Normal distribution** with mean $\mu$ and variance $\sigma^2$, written $X \sim N(\mu, \sigma^2)$, if its PDF is
+
+$$
+f(x) = \frac{1}{\sigma\sqrt{2\pi}} \exp\!\left(-\frac{(x - \mu)^2}{2\sigma^2}\right), \quad x \in \mathbb{R}
+$$
+
+The special case $Z \sim N(0, 1)$ is the **standard Normal**, with PDF $\varphi(z) = \frac{1}{\sqrt{2\pi}} e^{-z^2/2}$ and CDF $\Phi(z) = \int_{-\infty}^z \varphi(t) \, dt$.
+</DefinitionBlock>
+
+The PDF is the familiar bell curve, symmetric about $\mu$. That $\int_{-\infty}^{\infty} e^{-z^2/2} \, dz = \sqrt{2\pi}$ — the Gaussian integral — is a classical result from <ExternalLink href="https://formalcalculus.com/topics/sequences-limits" site="formalcalculus">Sequences & Limits</ExternalLink>.
+
+<img src="/images/topics/continuous-distributions/normal-deep-dive.png" alt="Normal distribution: 68-95-99.7 rule, effect of μ, effect of σ" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
+
+<TheoremBlock number={2} title="Normal Moments">
+If $X \sim N(\mu, \sigma^2)$, then $E[X] = \mu$ and $\text{Var}(X) = \sigma^2$.
+</TheoremBlock>
+
+<ProofBlock>
+**Expectation.** Standardize: let $Z = (X - \mu)/\sigma$, so $X = \mu + \sigma Z$ where $Z \sim N(0, 1)$.
+
+$$
+E[X] = E[\mu + \sigma Z] = \mu + \sigma E[Z]
+$$
+
+Now $E[Z] = \int_{-\infty}^{\infty} z \cdot \varphi(z) \, dz = 0$ by the symmetry of $\varphi$ about zero (the integrand $z \, e^{-z^2/2}$ is an odd function). So $E[X] = \mu$.
+
+**Variance.** $\text{Var}(X) = \sigma^2 \text{Var}(Z)$, so it suffices to show $\text{Var}(Z) = E[Z^2] = 1$. We compute:
+
+$$
+E[Z^2] = \int_{-\infty}^{\infty} z^2 \cdot \frac{1}{\sqrt{2\pi}} e^{-z^2/2} \, dz
+$$
+
+Integrate by parts with $u = z$ and $dv = z \, e^{-z^2/2} \, dz$, giving $v = -e^{-z^2/2}$:
+
+$$
+E[Z^2] = \frac{1}{\sqrt{2\pi}} \left[-z \, e^{-z^2/2}\right]_{-\infty}^{\infty} + \frac{1}{\sqrt{2\pi}} \int_{-\infty}^{\infty} e^{-z^2/2} \, dz
+$$
+
+The boundary term vanishes (the exponential kills the polynomial). The remaining integral is $\sqrt{2\pi}$, so $E[Z^2] = \frac{\sqrt{2\pi}}{\sqrt{2\pi}} = 1$.
+
+Therefore $\text{Var}(X) = \sigma^2 \cdot 1 = \sigma^2$.
+
+$\square$
+</ProofBlock>
+
+<TheoremBlock number={3} title="Normal MGF">
+If $X \sim N(\mu, \sigma^2)$, then $M_X(t) = \exp\!\left(\mu t + \frac{\sigma^2 t^2}{2}\right)$ for all $t \in \mathbb{R}$.
+</TheoremBlock>
+
+<ProofBlock>
+We compute directly, using the completing-the-square technique from <ExternalLink href="https://formalcalculus.com/topics/taylor-series" site="formalcalculus">Taylor Series</ExternalLink>:
+
+$$
+M_X(t) = E[e^{tX}] = \int_{-\infty}^{\infty} e^{tx} \cdot \frac{1}{\sigma\sqrt{2\pi}} \exp\!\left(-\frac{(x - \mu)^2}{2\sigma^2}\right) dx
+$$
+
+Combine the exponents: $tx - \frac{(x-\mu)^2}{2\sigma^2}$. Complete the square in $x$:
+
+$$
+tx - \frac{(x - \mu)^2}{2\sigma^2} = -\frac{1}{2\sigma^2}\left[(x - \mu)^2 - 2\sigma^2 tx\right]
+$$
+
+$$
+= -\frac{1}{2\sigma^2}\left[x^2 - 2(\mu + \sigma^2 t)x + \mu^2\right]
+$$
+
+$$
+= -\frac{(x - (\mu + \sigma^2 t))^2}{2\sigma^2} + \mu t + \frac{\sigma^2 t^2}{2}
+$$
+
+The term $\mu t + \sigma^2 t^2/2$ is constant in $x$ and factors out. The remaining integral is a Normal PDF with mean $\mu + \sigma^2 t$ and variance $\sigma^2$, which integrates to 1:
+
+$$
+M_X(t) = \exp\!\left(\mu t + \frac{\sigma^2 t^2}{2}\right) \cdot \underbrace{\int_{-\infty}^{\infty} \frac{1}{\sigma\sqrt{2\pi}} \exp\!\left(-\frac{(x - (\mu + \sigma^2 t))^2}{2\sigma^2}\right) dx}_{= \, 1} = \exp\!\left(\mu t + \frac{\sigma^2 t^2}{2}\right)
+$$
+
+$\square$
+</ProofBlock>
+
+<TheoremBlock number={4} title="Normal Reproductive Property">
+If $X_1 \sim N(\mu_1, \sigma_1^2)$ and $X_2 \sim N(\mu_2, \sigma_2^2)$ are independent, then
+
+$$
+X_1 + X_2 \sim N(\mu_1 + \mu_2, \, \sigma_1^2 + \sigma_2^2)
+$$
+</TheoremBlock>
+
+<ProofBlock>
+By MGF uniqueness (from [Expectation, Variance & Moments](/topics/expectation-moments)):
+
+$$
+M_{X_1 + X_2}(t) = M_{X_1}(t) \cdot M_{X_2}(t) = \exp\!\left(\mu_1 t + \frac{\sigma_1^2 t^2}{2}\right) \cdot \exp\!\left(\mu_2 t + \frac{\sigma_2^2 t^2}{2}\right)
+$$
+
+$$
+= \exp\!\left((\mu_1 + \mu_2) t + \frac{(\sigma_1^2 + \sigma_2^2) t^2}{2}\right)
+$$
+
+This is the MGF of $N(\mu_1 + \mu_2, \sigma_1^2 + \sigma_2^2)$. Since MGFs uniquely determine distributions, $X_1 + X_2 \sim N(\mu_1 + \mu_2, \sigma_1^2 + \sigma_2^2)$.
+
+$\square$
+</ProofBlock>
+
+The Normal is **closed under addition of independent variables**. This is the reproductive property — and it is the algebraic reason the Normal appears everywhere. Any sum of independent Normal variables is still Normal.
+
+<TheoremBlock number={5} title="Normal Linear Transformation">
+If $X \sim N(\mu, \sigma^2)$ and $a, b$ are constants with $a \ne 0$, then $aX + b \sim N(a\mu + b, \, a^2\sigma^2)$.
+</TheoremBlock>
+
+<ProofBlock>
+By the MGF of $Y = aX + b$:
+
+$$
+M_Y(t) = E[e^{t(aX+b)}] = e^{tb} \cdot E[e^{(ta)X}] = e^{tb} \cdot M_X(at)
+$$
+
+$$
+= e^{tb} \cdot \exp\!\left(\mu(at) + \frac{\sigma^2(at)^2}{2}\right) = \exp\!\left((a\mu + b)t + \frac{a^2\sigma^2 t^2}{2}\right)
+$$
+
+This is the MGF of $N(a\mu + b, a^2\sigma^2)$.
+
+$\square$
+</ProofBlock>
+
+In particular, the **standardization** $Z = (X - \mu)/\sigma \sim N(0, 1)$ is a special case with $a = 1/\sigma$ and $b = -\mu/\sigma$.
+
+<RemarkBlock number={3} title="Normal Exponential Family Form">
+The Normal belongs to the exponential family with natural parameters $\eta_1 = \mu/\sigma^2$ and $\eta_2 = -1/(2\sigma^2)$. The sufficient statistics are $(X, X^2)$. When $\sigma^2$ is known, the single natural parameter $\eta = \mu/\sigma^2$ makes MLE particularly clean: the sufficient statistic is $\bar{X}$, and the MLE is $\hat{\mu} = \bar{X}$. Exponential Families (coming soon) will develop this systematically.
+</RemarkBlock>
+
+<img src="/images/topics/continuous-distributions/normal-cdf-quantiles.png" alt="Standard Normal CDF with key quantiles, area-as-probability shading, CDF steepness versus σ" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
+
+<NormalPropertiesExplorer client:visible />
+
+<ExampleBlock number={2} title="Normal MLE: Why Minimizing Squared Error Is MLE Under Gaussian Noise">
+Suppose we observe data $y_1, \ldots, y_n$ and model $y_i = f(x_i) + \varepsilon_i$ where $\varepsilon_i \sim N(0, \sigma^2)$ independently. The log-likelihood is:
+
+$$
+\ell(\theta) = -\frac{n}{2}\ln(2\pi\sigma^2) - \frac{1}{2\sigma^2} \sum_{i=1}^n (y_i - f(x_i))^2
+$$
+
+Maximizing $\ell(\theta)$ with respect to $\theta$ (the parameters of $f$) is equivalent to minimizing $\sum_{i=1}^n (y_i - f(x_i))^2$. This is why **least squares = MLE under Gaussian noise**. The assumption of Normal errors is baked into every ordinary least squares regression — and when that assumption fails, the MLE changes (e.g., to Laplace errors for $\ell_1$ loss). See <ExternalLink href="https://formalml.com/topics/generalized-linear-models" site="formalml">Generalized Linear Models</ExternalLink> for the general framework.
+</ExampleBlock>
+
+---
+
+## 6.4 The Exponential Distribution
+
+The Exponential distribution models waiting times in a Poisson process: if events arrive at a constant rate $\lambda$, the time between consecutive events is Exponential($\lambda$). Its defining property is **memorylessness** — the time already waited provides no information about the remaining wait.
+
+<DefinitionBlock number={3} title="Exponential Distribution">
+A random variable $X$ has the **Exponential distribution** with rate $\lambda > 0$, written $X \sim \text{Exponential}(\lambda)$, if its PDF is
+
+$$
+f(x) = \lambda e^{-\lambda x}, \quad x \ge 0
+$$
+
+The CDF is $F(x) = 1 - e^{-\lambda x}$ for $x \ge 0$. The mean is $1/\lambda$ and the median is $\ln 2 / \lambda$.
+</DefinitionBlock>
+
+<img src="/images/topics/continuous-distributions/exponential-distribution.png" alt="Exponential distribution: PDF family varying λ, CDF family, memoryless property visualization" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
+
+<TheoremBlock number={6} title="Exponential Moments">
+If $X \sim \text{Exponential}(\lambda)$, then $E[X] = \frac{1}{\lambda}$ and $\text{Var}(X) = \frac{1}{\lambda^2}$.
+</TheoremBlock>
+
+<ProofBlock>
+**Expectation.** Using <ExternalLink href="https://formalcalculus.com/topics/integration-by-parts" site="formalcalculus">integration by parts</ExternalLink> with $u = x$ and $dv = \lambda e^{-\lambda x} dx$:
+
+$$
+E[X] = \int_0^{\infty} x \lambda e^{-\lambda x} \, dx = \left[-x e^{-\lambda x}\right]_0^{\infty} + \int_0^{\infty} e^{-\lambda x} \, dx
+$$
+
+The boundary term vanishes. The remaining integral is $1/\lambda$:
+
+$$
+E[X] = 0 + \frac{1}{\lambda} = \frac{1}{\lambda}
+$$
+
+**Variance.** We need $E[X^2]$. Integrate by parts twice with $u = x^2$:
+
+$$
+E[X^2] = \int_0^{\infty} x^2 \lambda e^{-\lambda x} \, dx = \left[-x^2 e^{-\lambda x}\right]_0^{\infty} + \int_0^{\infty} 2x \, e^{-\lambda x} \, dx = 0 + \frac{2}{\lambda} E[X] = \frac{2}{\lambda^2}
+$$
+
+Therefore $\text{Var}(X) = E[X^2] - (E[X])^2 = \frac{2}{\lambda^2} - \frac{1}{\lambda^2} = \frac{1}{\lambda^2}$.
+
+$\square$
+</ProofBlock>
+
+<TheoremBlock number={7} title="Exponential MGF">
+If $X \sim \text{Exponential}(\lambda)$, then $M_X(t) = \frac{\lambda}{\lambda - t}$ for $t < \lambda$.
+</TheoremBlock>
+
+<ProofBlock>
+Direct computation:
+
+$$
+M_X(t) = \int_0^{\infty} e^{tx} \lambda e^{-\lambda x} \, dx = \lambda \int_0^{\infty} e^{-(\lambda - t)x} \, dx
+$$
+
+For $t < \lambda$, the integral converges:
+
+$$
+M_X(t) = \lambda \cdot \frac{1}{\lambda - t} = \frac{\lambda}{\lambda - t}
+$$
+
+For $t \ge \lambda$, the integral diverges, so the MGF is defined only for $t < \lambda$.
+
+$\square$
+</ProofBlock>
+
+<TheoremBlock number={8} title="Exponential Memoryless Property">
+A continuous random variable $X$ with support $[0, \infty)$ satisfies the memoryless property $P(X > s + t \mid X > s) = P(X > t)$ for all $s, t \ge 0$ if and only if $X \sim \text{Exponential}(\lambda)$ for some $\lambda > 0$.
+</TheoremBlock>
+
+<ProofBlock>
+**Forward direction.** Suppose $X \sim \text{Exponential}(\lambda)$. Then $P(X > x) = e^{-\lambda x}$ for $x \ge 0$. By the definition of conditional probability:
+
+$$
+P(X > s + t \mid X > s) = \frac{P(X > s + t)}{P(X > s)} = \frac{e^{-\lambda(s+t)}}{e^{-\lambda s}} = e^{-\lambda t} = P(X > t)
+$$
+
+**Reverse direction.** Suppose $P(X > s + t \mid X > s) = P(X > t)$ for all $s, t \ge 0$. Let $g(x) = P(X > x)$. Then $g(s + t) = g(s) \cdot g(t)$ for all $s, t \ge 0$. This is Cauchy's functional equation on $[0, \infty)$. Under the mild regularity condition that $g$ is monotone (which follows from $g$ being a survival function), the only solution is $g(x) = e^{-\lambda x}$ for some $\lambda > 0$. This gives $F(x) = 1 - e^{-\lambda x}$, which is the Exponential CDF.
+
+$\square$
+</ProofBlock>
+
+The memoryless property has a vivid interpretation: if you've been waiting 10 minutes for a bus with Exponential interarrival times, the conditional distribution of additional wait time is the same as if you'd just arrived. The past provides no information about the future. This is the continuous analog of the Geometric memoryless property from [Discrete Distributions](/topics/discrete-distributions).
+
+<RemarkBlock number={4} title="Exponential Exponential Family Form">
+The Exponential belongs to the exponential family with natural parameter $\eta = -\lambda$ and sufficient statistic $T(x) = x$. The log-partition function is $A(\eta) = -\ln(-\eta)$, and $E[X] = A'(\eta) = 1/\lambda$. Exponential Families (coming soon) will show how this structure enables conjugate Bayesian inference: the Gamma distribution is the conjugate prior for the Exponential rate parameter.
+</RemarkBlock>
+
+<MemorylessContinuousExplorer client:visible />
+
+<ExampleBlock number={3} title="Exponential Survival Analysis: Constant Hazard">
+In survival analysis, the **hazard function** $h(t) = f(t) / (1 - F(t))$ measures the instantaneous failure rate at time $t$, given survival to $t$. For the Exponential:
+
+$$
+h(t) = \frac{\lambda e^{-\lambda t}}{e^{-\lambda t}} = \lambda
+$$
+
+The hazard is constant — the system does not age. This makes the Exponential a baseline model: real systems wear out ($h(t)$ increasing, Weibull distribution) or burn in ($h(t)$ decreasing). Departures from constant hazard motivate the Gamma and Weibull alternatives. In ML, Exponential survival models appear in customer churn prediction, equipment failure forecasting, and time-to-event modeling.
+</ExampleBlock>
+
+---
+
+## 6.5 The Gamma Distribution
+
+The Gamma distribution generalizes the Exponential in a natural way: if the Exponential models the time until the first event in a Poisson process, the Gamma models the time until the $\alpha$-th event. It subsumes the Exponential ($\alpha = 1$) and the Chi-squared ($\alpha = k/2$, $\beta = 1/2$) as special cases.
+
+Before defining the Gamma distribution, we need the Gamma function — the normalization constant that makes the PDF integrate to 1.
+
+<RemarkBlock number={5} title="The Gamma Function">
+The **Gamma function** is defined for $\alpha > 0$ as
+
+$$
+\Gamma(\alpha) = \int_0^{\infty} t^{\alpha - 1} e^{-t} \, dt
+$$
+
+This is a convergent <ExternalLink href="https://formalcalculus.com/topics/improper-integrals" site="formalcalculus">improper integral</ExternalLink> for all $\alpha > 0$.
+
+**Key properties:**
+
+- **Recursion:** $\Gamma(\alpha + 1) = \alpha \, \Gamma(\alpha)$. This follows from <ExternalLink href="https://formalcalculus.com/topics/integration-by-parts" site="formalcalculus">integration by parts</ExternalLink>: with $u = t^{\alpha}$ and $dv = e^{-t} dt$, the boundary terms vanish and we get $\Gamma(\alpha + 1) = \alpha \int_0^{\infty} t^{\alpha-1} e^{-t} \, dt = \alpha \, \Gamma(\alpha)$.
+
+- **Factorial connection:** Since $\Gamma(1) = \int_0^{\infty} e^{-t} \, dt = 1$, the recursion gives $\Gamma(n) = (n-1)!$ for every positive integer $n$. The Gamma function extends the factorial to non-integer arguments.
+
+- **Half-integer value:** $\Gamma(1/2) = \sqrt{\pi}$. This follows from the substitution $t = u^2/2$, which converts $\Gamma(1/2)$ into the Gaussian integral $\int_{-\infty}^{\infty} e^{-u^2/2} \, du = \sqrt{2\pi}$.
+</RemarkBlock>
+
+<DefinitionBlock number={4} title="Gamma Distribution">
+A random variable $X$ has the **Gamma distribution** with shape $\alpha > 0$ and rate $\beta > 0$, written $X \sim \text{Gamma}(\alpha, \beta)$, if its PDF is
+
+$$
+f(x) = \frac{\beta^{\alpha}}{\Gamma(\alpha)} x^{\alpha - 1} e^{-\beta x}, \quad x > 0
+$$
+
+The normalization follows from the Gamma function: the substitution $u = \beta x$ transforms $\int_0^{\infty} \frac{\beta^\alpha}{\Gamma(\alpha)} x^{\alpha-1} e^{-\beta x} dx$ into $\frac{1}{\Gamma(\alpha)} \int_0^{\infty} u^{\alpha-1} e^{-u} du = 1$.
+</DefinitionBlock>
+
+<img src="/images/topics/continuous-distributions/gamma-family.png" alt="Gamma family: effect of shape α, special cases (Exponential, Chi-squared), sum of Exponentials → Gamma" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
+
+<TheoremBlock number={9} title="Gamma Moments">
+If $X \sim \text{Gamma}(\alpha, \beta)$, then $E[X] = \frac{\alpha}{\beta}$ and $\text{Var}(X) = \frac{\alpha}{\beta^2}$.
+</TheoremBlock>
+
+<ProofBlock>
+**Expectation.** We compute directly, using the Gamma function recursion:
+
+$$
+E[X] = \int_0^{\infty} x \cdot \frac{\beta^{\alpha}}{\Gamma(\alpha)} x^{\alpha - 1} e^{-\beta x} \, dx = \frac{\beta^{\alpha}}{\Gamma(\alpha)} \int_0^{\infty} x^{\alpha} e^{-\beta x} \, dx
+$$
+
+Substituting $u = \beta x$:
+
+$$
+E[X] = \frac{\beta^{\alpha}}{\Gamma(\alpha)} \cdot \frac{1}{\beta^{\alpha + 1}} \int_0^{\infty} u^{\alpha} e^{-u} \, du = \frac{1}{\beta \, \Gamma(\alpha)} \cdot \Gamma(\alpha + 1) = \frac{\alpha \, \Gamma(\alpha)}{\beta \, \Gamma(\alpha)} = \frac{\alpha}{\beta}
+$$
+
+**Variance.** Similarly, $E[X^2] = \frac{\beta^{\alpha}}{\Gamma(\alpha)} \cdot \frac{\Gamma(\alpha + 2)}{\beta^{\alpha+2}} = \frac{\alpha(\alpha+1)}{\beta^2}$.
+
+$$
+\text{Var}(X) = E[X^2] - (E[X])^2 = \frac{\alpha(\alpha + 1)}{\beta^2} - \frac{\alpha^2}{\beta^2} = \frac{\alpha}{\beta^2}
+$$
+
+$\square$
+</ProofBlock>
+
+<TheoremBlock number={10} title="Gamma MGF">
+If $X \sim \text{Gamma}(\alpha, \beta)$, then $M_X(t) = \left(\frac{\beta}{\beta - t}\right)^{\alpha}$ for $t < \beta$.
+</TheoremBlock>
+
+<ProofBlock>
+$$
+M_X(t) = \int_0^{\infty} e^{tx} \cdot \frac{\beta^{\alpha}}{\Gamma(\alpha)} x^{\alpha - 1} e^{-\beta x} \, dx = \frac{\beta^{\alpha}}{\Gamma(\alpha)} \int_0^{\infty} x^{\alpha - 1} e^{-(\beta - t)x} \, dx
+$$
+
+For $t < \beta$, substitute $u = (\beta - t)x$:
+
+$$
+M_X(t) = \frac{\beta^{\alpha}}{\Gamma(\alpha)} \cdot \frac{\Gamma(\alpha)}{(\beta - t)^{\alpha}} = \left(\frac{\beta}{\beta - t}\right)^{\alpha}
+$$
+
+$\square$
+</ProofBlock>
+
+<TheoremBlock number={11} title="Gamma Reproductive Property">
+If $X_1 \sim \text{Gamma}(\alpha_1, \beta)$ and $X_2 \sim \text{Gamma}(\alpha_2, \beta)$ are independent (with the **same rate** $\beta$), then
+
+$$
+X_1 + X_2 \sim \text{Gamma}(\alpha_1 + \alpha_2, \, \beta)
+$$
+</TheoremBlock>
+
+<ProofBlock>
+By MGFs:
+
+$$
+M_{X_1 + X_2}(t) = \left(\frac{\beta}{\beta - t}\right)^{\alpha_1} \cdot \left(\frac{\beta}{\beta - t}\right)^{\alpha_2} = \left(\frac{\beta}{\beta - t}\right)^{\alpha_1 + \alpha_2}
+$$
+
+This is the MGF of $\text{Gamma}(\alpha_1 + \alpha_2, \beta)$.
+
+$\square$
+</ProofBlock>
+
+In particular, if $X_1, \ldots, X_n \sim \text{Exponential}(\beta)$ are independent, then $X_1 + \cdots + X_n \sim \text{Gamma}(n, \beta)$. This confirms the Poisson process interpretation: the sum of $n$ independent Exponential waiting times has a Gamma distribution.
+
+<RemarkBlock number={6} title="Gamma Exponential Family Form">
+The Gamma belongs to the exponential family with natural parameters $\eta_1 = \alpha - 1$ and $\eta_2 = -\beta$, and sufficient statistics $(X, \ln X)$. When $\alpha$ is known, the single natural parameter is $\eta = -\beta$ with sufficient statistic $T(x) = x$, and the conjugate prior for $\beta$ is itself a Gamma. Exponential Families (coming soon) will unify this with the Exponential's exponential family form.
+</RemarkBlock>
+
+<GammaFamilyExplorer client:visible />
+
+<ExampleBlock number={4} title="Gamma GLM: Insurance Claim Amounts">
+Insurance claim amounts are positive and right-skewed — large claims are rare but impactful. The Gamma distribution is a natural model: the shape parameter $\alpha$ controls the skewness, and the rate $\beta$ controls the scale. In a **Gamma GLM**, we model claim amounts $Y_i \sim \text{Gamma}(\alpha, \beta_i)$ with $\ln E[Y_i] = \beta_0 + \beta_1 x_{i1} + \cdots$ (log link), allowing covariates (driver age, vehicle type, region) to affect the expected claim size while maintaining the Gamma's positive support and right skew. See <ExternalLink href="https://formalml.com/topics/generalized-linear-models" site="formalml">Generalized Linear Models</ExternalLink> for the full GLM framework.
+</ExampleBlock>
+
+---
+
+## 6.6 The Beta Distribution
+
+The Beta distribution lives on $[0, 1]$ — precisely the range of a probability parameter. This makes it the natural distribution for modeling uncertainty about unknown probabilities, success rates, and proportions. Its two shape parameters give it remarkable flexibility: it can be uniform, bell-shaped, U-shaped, J-shaped, or heavily skewed.
+
+<DefinitionBlock number={5} title="Beta Distribution">
+A random variable $X$ has the **Beta distribution** with parameters $\alpha > 0$ and $\beta > 0$, written $X \sim \text{Beta}(\alpha, \beta)$, if its PDF is
+
+$$
+f(x) = \frac{\Gamma(\alpha + \beta)}{\Gamma(\alpha)\,\Gamma(\beta)} \, x^{\alpha - 1}(1 - x)^{\beta - 1}, \quad 0 < x < 1
+$$
+
+The normalizing constant $B(\alpha, \beta) = \frac{\Gamma(\alpha)\,\Gamma(\beta)}{\Gamma(\alpha + \beta)}$ is the **Beta function**.
+</DefinitionBlock>
+
+<img src="/images/topics/continuous-distributions/beta-distribution.png" alt="Beta distribution: shape regimes (U, J, bell, uniform), mean as α/(α+β), conjugate prior updating" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
+
+<TheoremBlock number={12} title="Beta Moments">
+If $X \sim \text{Beta}(\alpha, \beta)$, then:
+
+1. $E[X] = \frac{\alpha}{\alpha + \beta}$
+2. $\text{Var}(X) = \frac{\alpha\beta}{(\alpha + \beta)^2(\alpha + \beta + 1)}$
+</TheoremBlock>
+
+<ProofBlock>
+**Expectation.** Let $s = \alpha + \beta$.
+
+$$
+E[X] = \frac{1}{B(\alpha, \beta)} \int_0^1 x \cdot x^{\alpha-1}(1-x)^{\beta-1} \, dx = \frac{1}{B(\alpha, \beta)} \int_0^1 x^{\alpha}(1-x)^{\beta-1} \, dx
+$$
+
+The integral is $B(\alpha + 1, \beta) = \frac{\Gamma(\alpha+1)\,\Gamma(\beta)}{\Gamma(\alpha+\beta+1)}$. Using $\Gamma(\alpha + 1) = \alpha \, \Gamma(\alpha)$ and $\Gamma(\alpha + \beta + 1) = (\alpha + \beta) \, \Gamma(\alpha + \beta)$:
+
+$$
+E[X] = \frac{\Gamma(s)}{\Gamma(\alpha)\,\Gamma(\beta)} \cdot \frac{\alpha \, \Gamma(\alpha) \, \Gamma(\beta)}{s \, \Gamma(s)} = \frac{\alpha}{s} = \frac{\alpha}{\alpha + \beta}
+$$
+
+**Variance.** Similarly, $E[X^2] = \frac{B(\alpha+2, \beta)}{B(\alpha, \beta)} = \frac{\alpha(\alpha+1)}{s(s+1)}$.
+
+$$
+\text{Var}(X) = \frac{\alpha(\alpha+1)}{s(s+1)} - \frac{\alpha^2}{s^2} = \frac{\alpha}{s} \cdot \left(\frac{\alpha + 1}{s + 1} - \frac{\alpha}{s}\right) = \frac{\alpha\beta}{s^2(s + 1)}
+$$
+
+$\square$
+</ProofBlock>
+
+The mean $E[X] = \alpha/(\alpha + \beta)$ has a beautiful interpretation: $\alpha$ is the "number of successes" and $\beta$ is the "number of failures" in the prior's pseudo-data. As we collect real data, $\alpha$ and $\beta$ grow, and the distribution concentrates around the true probability.
+
+<TheoremBlock number={13} title="Beta-Bernoulli Conjugacy">
+If the prior on $\theta$ is $\text{Beta}(\alpha, \beta)$ and we observe $k$ successes in $n$ independent Bernoulli($\theta$) trials, then the posterior is
+
+$$
+\theta \mid \text{data} \sim \text{Beta}(\alpha + k, \, \beta + n - k)
+$$
+</TheoremBlock>
+
+<ProofBlock>
+By Bayes' theorem, the posterior is proportional to the prior times the likelihood:
+
+$$
+p(\theta \mid k) \propto p(k \mid \theta) \cdot p(\theta)
+$$
+
+The Binomial likelihood is $p(k \mid \theta) \propto \theta^k (1-\theta)^{n-k}$. The Beta prior is $p(\theta) \propto \theta^{\alpha-1}(1-\theta)^{\beta-1}$. Multiplying:
+
+$$
+p(\theta \mid k) \propto \theta^k (1-\theta)^{n-k} \cdot \theta^{\alpha-1}(1-\theta)^{\beta-1} = \theta^{(\alpha+k)-1}(1-\theta)^{(\beta+n-k)-1}
+$$
+
+This is the kernel of a $\text{Beta}(\alpha + k, \beta + n - k)$ density. Since the posterior must integrate to 1, the normalizing constant is $B(\alpha + k, \beta + n - k)$.
+
+$\square$
+</ProofBlock>
+
+This is **conjugacy**: the prior and posterior belong to the same family. The update rule is additive: add $k$ to $\alpha$ (successes) and $n - k$ to $\beta$ (failures). The posterior mean is:
+
+$$
+E[\theta \mid k] = \frac{\alpha + k}{\alpha + \beta + n}
+$$
+
+This is a weighted average of the prior mean $\alpha/(\alpha+\beta)$ and the sample proportion $k/n$, with weights proportional to the "sample sizes" $\alpha + \beta$ (prior) and $n$ (data). As $n \to \infty$, the posterior concentrates around the true $\theta$ regardless of the prior — the data overwhelms prior beliefs.
+
+<RemarkBlock number={7} title="Beta Exponential Family Form">
+The Beta belongs to the exponential family with natural parameters $\eta_1 = \alpha - 1$ and $\eta_2 = \beta - 1$, and sufficient statistics $(\ln X, \ln(1-X))$. The log-partition function is $A(\eta_1, \eta_2) = \ln \Gamma(\eta_1 + 1) + \ln \Gamma(\eta_2 + 1) - \ln \Gamma(\eta_1 + \eta_2 + 2)$. Exponential Families (coming soon) will connect this to the Beta-Bernoulli conjugacy via the general theory of conjugate priors.
+</RemarkBlock>
+
+<BetaPriorPosteriorExplorer client:visible />
+
+<ExampleBlock number={5} title="Beta-Bernoulli A/B Testing">
+A company runs an A/B test comparing two button designs. Design A has a $\text{Beta}(1, 1)$ prior (uniform — no prior information about the click rate). After 200 users see Design A, 34 click. The posterior is $\text{Beta}(1 + 34, 1 + 166) = \text{Beta}(35, 167)$.
+
+The posterior mean click rate is $35/202 \approx 0.173$, with a 95% credible interval of approximately $[0.124, 0.231]$.
+
+Design B, with prior $\text{Beta}(1, 1)$ and 42 clicks from 200 users, has posterior $\text{Beta}(43, 159)$, mean $43/202 \approx 0.213$.
+
+The probability that Design B is better, $P(\theta_B > \theta_A \mid \text{data})$, can be computed by Monte Carlo: draw from each posterior, count how often $\theta_B > \theta_A$. This is Bayesian A/B testing — and it starts with the Beta-Bernoulli conjugate pair. Bayesian Foundations (coming soon) will develop the general framework.
+</ExampleBlock>
+
+---
+
+## 6.7 Derived Distributions: Chi-squared, Student's t, and F
+
+The next three distributions are not independently motivated by a random mechanism. Instead, they are **derived** from the Normal distribution through specific constructions. They form the test statistic distributions for classical hypothesis testing.
+
+<DefinitionBlock number={6} title="Chi-squared Distribution">
+If $Z_1, \ldots, Z_k$ are independent $N(0, 1)$ random variables, then
+
+$$
+X = Z_1^2 + Z_2^2 + \cdots + Z_k^2 \sim \chi^2(k)
+$$
+
+has the **Chi-squared distribution** with $k$ degrees of freedom. Equivalently, $\chi^2(k) = \text{Gamma}(k/2, 1/2)$.
+</DefinitionBlock>
+
+The equivalence with $\text{Gamma}(k/2, 1/2)$ follows because $Z^2 \sim \text{Gamma}(1/2, 1/2)$ (proved via the <ExternalLink href="https://formalcalculus.com/topics/change-of-variables" site="formalcalculus">change of variables</ExternalLink> formula), and the Gamma reproductive property gives $Z_1^2 + \cdots + Z_k^2 \sim \text{Gamma}(k/2, 1/2)$.
+
+<img src="/images/topics/continuous-distributions/derived-distributions.png" alt="Chi-squared family, Student's t convergence to Normal, F distribution family" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
+
+<TheoremBlock number={14} title="Chi-squared Moments">
+If $X \sim \chi^2(k)$, then $E[X] = k$ and $\text{Var}(X) = 2k$.
+</TheoremBlock>
+
+<ProofBlock>
+Since $\chi^2(k) = \text{Gamma}(k/2, 1/2)$, we apply the Gamma moment formulas:
+
+$$
+E[X] = \frac{\alpha}{\beta} = \frac{k/2}{1/2} = k
+$$
+
+$$
+\text{Var}(X) = \frac{\alpha}{\beta^2} = \frac{k/2}{1/4} = 2k
+$$
+
+$\square$
+</ProofBlock>
+
+<TheoremBlock number={15} title="Chi-squared MGF">
+If $X \sim \chi^2(k)$, then $M_X(t) = (1 - 2t)^{-k/2}$ for $t < 1/2$.
+</TheoremBlock>
+
+<ProofBlock>
+From the Gamma MGF with $\alpha = k/2$ and $\beta = 1/2$:
+
+$$
+M_X(t) = \left(\frac{1/2}{1/2 - t}\right)^{k/2} = \left(\frac{1}{1 - 2t}\right)^{k/2} = (1 - 2t)^{-k/2}
+$$
+
+$\square$
+</ProofBlock>
+
+<TheoremBlock number={16} title="Chi-squared Reproductive Property">
+If $X_1 \sim \chi^2(k_1)$ and $X_2 \sim \chi^2(k_2)$ are independent, then $X_1 + X_2 \sim \chi^2(k_1 + k_2)$.
+</TheoremBlock>
+
+<ProofBlock>
+This is the Gamma reproductive property with $\beta = 1/2$:
+
+$$
+\text{Gamma}(k_1/2, 1/2) + \text{Gamma}(k_2/2, 1/2) = \text{Gamma}((k_1 + k_2)/2, 1/2) = \chi^2(k_1 + k_2)
+$$
+
+Alternatively, by MGFs: $(1-2t)^{-k_1/2} \cdot (1-2t)^{-k_2/2} = (1-2t)^{-(k_1+k_2)/2}$.
+
+$\square$
+</ProofBlock>
+
+<DefinitionBlock number={7} title="Student's t Distribution">
+If $Z \sim N(0,1)$ and $V \sim \chi^2(\nu)$ are independent, then
+
+$$
+T = \frac{Z}{\sqrt{V/\nu}} \sim t(\nu)
+$$
+
+has **Student's t distribution** with $\nu$ degrees of freedom. Its PDF is:
+
+$$
+f(t) = \frac{\Gamma\!\left(\frac{\nu+1}{2}\right)}{\sqrt{\nu\pi}\;\Gamma\!\left(\frac{\nu}{2}\right)} \left(1 + \frac{t^2}{\nu}\right)^{-(\nu+1)/2}, \quad t \in \mathbb{R}
+$$
+</DefinitionBlock>
+
+The t distribution looks like a Normal but has heavier tails — extreme values are more likely. As $\nu$ increases, the tails thin and the t converges to the standard Normal.
+
+<TheoremBlock number={17} title="Student's t Moments">
+If $T \sim t(\nu)$, then:
+
+1. $E[T] = 0$ for $\nu > 1$ (undefined for $\nu \le 1$)
+2. $\text{Var}(T) = \frac{\nu}{\nu - 2}$ for $\nu > 2$ (infinite for $1 < \nu \le 2$, undefined for $\nu \le 1$)
+</TheoremBlock>
+
+<ProofBlock>
+**Part 1.** The PDF is symmetric about 0: $f(-t) = f(t)$. For $\nu > 1$, $E[|T|] < \infty$ (the tails decay as $|t|^{-(\nu+1)}$, which is integrable when $\nu + 1 > 2$), so $E[T] = 0$ by symmetry.
+
+For $\nu = 1$, $T$ has the Cauchy distribution and $E[|T|] = \infty$, so the mean is undefined.
+
+**Part 2.** For the variance, we use the construction $T = Z/\sqrt{V/\nu}$:
+
+$$
+E[T^2] = E\!\left[\frac{Z^2}{V/\nu}\right] = \nu \cdot E[Z^2] \cdot E\!\left[\frac{1}{V}\right]
+$$
+
+since $Z$ and $V$ are independent, and $E[Z^2] = 1$. For $V \sim \chi^2(\nu) = \text{Gamma}(\nu/2, 1/2)$:
+
+$$
+E[1/V] = \frac{1}{\nu - 2} \quad \text{for } \nu > 2
+$$
+
+(This can be verified by direct integration or by using the inverse moments of the Gamma distribution.) Therefore:
+
+$$
+E[T^2] = \nu \cdot 1 \cdot \frac{1}{\nu - 2} = \frac{\nu}{\nu - 2}
+$$
+
+Since $E[T] = 0$, $\text{Var}(T) = E[T^2] = \nu/(\nu - 2)$.
+
+$\square$
+</ProofBlock>
+
+<TheoremBlock number={18} title="Student's t Converges to Standard Normal">
+As $\nu \to \infty$, the $t(\nu)$ distribution converges to $N(0, 1)$. Specifically, $\text{Var}(T) = \nu/(\nu - 2) \to 1$, and the PDF converges pointwise to $\varphi(t)$.
+</TheoremBlock>
+
+<ProofBlock>
+From the construction $T = Z/\sqrt{V/\nu}$: by the law of large numbers, $V/\nu \to 1$ in probability as $\nu \to \infty$ (since $E[V/\nu] = 1$ and $\text{Var}(V/\nu) = 2/\nu \to 0$). By Slutsky's theorem, $T = Z/\sqrt{V/\nu} \to Z/\sqrt{1} = Z \sim N(0,1)$ in distribution.
+
+$\square$
+</ProofBlock>
+
+This convergence justifies using the Normal instead of the t when the sample size is large — the t correction matters primarily when $\nu$ is small (say, $\nu < 30$).
+
+<DefinitionBlock number={8} title="F Distribution">
+If $U \sim \chi^2(d_1)$ and $V \sim \chi^2(d_2)$ are independent, then
+
+$$
+F = \frac{U/d_1}{V/d_2} \sim F(d_1, d_2)
+$$
+
+has the **F distribution** with $d_1$ and $d_2$ degrees of freedom. It takes values on $(0, \infty)$.
+</DefinitionBlock>
+
+<TheoremBlock number={19} title="F Moments and t-F Connection">
+If $F \sim F(d_1, d_2)$, then:
+
+1. $E[F] = \frac{d_2}{d_2 - 2}$ for $d_2 > 2$
+2. If $T \sim t(\nu)$, then $T^2 \sim F(1, \nu)$.
+</TheoremBlock>
+
+<ProofBlock>
+**Part 1.** Using the construction $F = (U/d_1)/(V/d_2)$:
+
+$$
+E[F] = \frac{d_2}{d_1} \cdot E[U] \cdot E[1/V] = \frac{d_2}{d_1} \cdot d_1 \cdot \frac{1}{d_2 - 2} = \frac{d_2}{d_2 - 2}
+$$
+
+where $E[U] = d_1$ and $E[1/V] = 1/(d_2 - 2)$ for $d_2 > 2$ (as computed in Theorem 17).
+
+**Part 2.** If $T = Z/\sqrt{V/\nu}$ with $Z \sim N(0,1)$, $V \sim \chi^2(\nu)$, then:
+
+$$
+T^2 = \frac{Z^2}{V/\nu} = \frac{Z^2/1}{V/\nu}
+$$
+
+Since $Z^2 \sim \chi^2(1)$ and $V \sim \chi^2(\nu)$ are independent, this is $(U/1)/(V/\nu)$ with $U \sim \chi^2(1)$, which is $F(1, \nu)$ by definition.
+
+$\square$
+</ProofBlock>
+
+The $t$-$F$ connection means that a two-sided $t$-test (rejecting when $|T| > c$) is equivalent to an $F$-test (rejecting when $T^2 > c^2$). Hypothesis Testing (coming soon) will build extensively on all three derived distributions.
+
+---
+
+## 6.8 Relationships Between Distributions
+
+The eight distributions form a rich web of connections. Rather than a single tangled graph, the relationships organize around two hubs.
+
+<RemarkBlock number={8} title="Two-Hub Relationship Structure">
+**The Gamma Hub.** The Gamma distribution subsumes:
+
+- $\text{Exponential}(\lambda) = \text{Gamma}(1, \lambda)$ — shape $\alpha = 1$
+- $\chi^2(k) = \text{Gamma}(k/2, 1/2)$ — shape $\alpha = k/2$, rate $\beta = 1/2$
+- Sum of iid $\text{Exponential}(\beta)$: $X_1 + \cdots + X_n \sim \text{Gamma}(n, \beta)$
+- If $Y_1 \sim \text{Gamma}(\alpha, 1)$ and $Y_2 \sim \text{Gamma}(\beta, 1)$ are independent, then $Y_1/(Y_1 + Y_2) \sim \text{Beta}(\alpha, \beta)$
+
+**The Normal Hub.** The Normal distribution generates:
+
+- $Z^2 \sim \chi^2(1)$ — connects the Normal to the Gamma hub
+- $Z/\sqrt{V/\nu} \sim t(\nu)$ — the Student's t construction
+- $(U/d_1)/(V/d_2) \sim F(d_1, d_2)$ — the F construction from Chi-squareds
+
+The two hubs are connected via the Chi-squared, which belongs to both (it is a Gamma special case and it is a sum of squared Normals).
+
+**Limit relationships:**
+
+- $t(\nu) \to N(0, 1)$ as $\nu \to \infty$
+- $\chi^2(k)/k \to 1$ as $k \to \infty$ (by the law of large numbers)
+- $\text{Gamma}(\alpha, \beta)$ with $\alpha \to \infty$ and $\beta = \alpha/\mu$ converges to $N(\mu, \mu^2/\alpha)$
+</RemarkBlock>
+
+<img src="/images/topics/continuous-distributions/distribution-relationships.png" alt="Relationship web showing Gamma hub and Normal hub with special-case, sum, and limit connections" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
+
+---
+
+## 6.9 Connections to ML
+
+<ExampleBlock number={6} title="KDE with Gaussian Kernel">
+Kernel Density Estimation places a small Normal bump $K_h(x - x_i) = \frac{1}{h}\varphi\!\left(\frac{x - x_i}{h}\right)$ at each data point $x_i$ and averages:
+
+$$
+\hat{f}(x) = \frac{1}{n} \sum_{i=1}^n \frac{1}{h} \varphi\!\left(\frac{x - x_i}{h}\right)
+$$
+
+The bandwidth $h$ controls the bias-variance tradeoff: small $h$ gives a spiky estimate (low bias, high variance), large $h$ gives a smooth estimate (high bias, low variance). The Normal PDF's smoothness and infinite support make it the default kernel. Kernel Density Estimation (coming soon) will develop the full theory, including optimal bandwidth selection.
+</ExampleBlock>
+
+<ExampleBlock number={7} title="The t-Test: Comparing Means with Unknown σ">
+Given $n$ observations from $N(\mu, \sigma^2)$ with $\sigma^2$ unknown, we form:
+
+$$
+T = \frac{\bar{X} - \mu_0}{S/\sqrt{n}} \sim t(n - 1) \quad \text{under } H_0\!: \mu = \mu_0
+$$
+
+where $S$ is the sample standard deviation. The t distribution accounts for the uncertainty in estimating $\sigma$ — its heavier tails (compared to the Normal) make the test less likely to reject when $n$ is small. As $n$ grows, $t(n-1) \approx N(0,1)$ and the distinction vanishes. Hypothesis Testing (coming soon) will develop this rigorously, including the two-sample t-test and its connection to the F distribution.
+</ExampleBlock>
+
+<ExampleBlock number={8} title="Distribution Choice Guide">
+Choosing the right distribution for a modeling problem is a core ML skill:
+
+| Data type | Common choice | Why |
+|-----------|--------------|-----|
+| Continuous, unbounded, symmetric | Normal | CLT, squared-error loss |
+| Continuous, positive, right-skewed | Gamma or Log-Normal | Positive support, flexible skew |
+| Waiting times, constant rate | Exponential | Memoryless property |
+| Proportions, probabilities | Beta | Support on $[0, 1]$, conjugacy |
+| Variance ratios, model comparison | F | Ratio of Chi-squareds |
+| Small-sample means, unknown $\sigma$ | Student's t | Heavier tails than Normal |
+
+The key question is not "which distribution fits best?" but "which generative story matches my data?" The PDF shape is a consequence of the mechanism, not the other way around.
+</ExampleBlock>
+
+<img src="/images/topics/continuous-distributions/ml-connections.png" alt="ML connections: KDE with Gaussian kernel, Beta-Bernoulli A/B testing, t-test rejection region" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
+
+---
+
+## Summary
+
+Eight continuous distributions, two structural hubs, one unifying theme: each distribution arises from a specific probabilistic mechanism, and the tools from [Expectation, Variance & Moments](/topics/expectation-moments) — $E[X]$, $\text{Var}(X)$, MGF — reveal their properties.
+
+| Distribution | PDF kernel | $E[X]$ | $\text{Var}(X)$ | MGF | Exp. Family? |
+|---|---|---|---|---|---|
+| Uniform$(a,b)$ | $\frac{1}{b-a}$ | $\frac{a+b}{2}$ | $\frac{(b-a)^2}{12}$ | $\frac{e^{tb}-e^{ta}}{t(b-a)}$ | No |
+| Normal$(\mu,\sigma^2)$ | $e^{-(x-\mu)^2/(2\sigma^2)}$ | $\mu$ | $\sigma^2$ | $e^{\mu t + \sigma^2 t^2/2}$ | Yes |
+| Exponential$(\lambda)$ | $\lambda e^{-\lambda x}$ | $\frac{1}{\lambda}$ | $\frac{1}{\lambda^2}$ | $\frac{\lambda}{\lambda-t}$ | Yes |
+| Gamma$(\alpha,\beta)$ | $x^{\alpha-1}e^{-\beta x}$ | $\frac{\alpha}{\beta}$ | $\frac{\alpha}{\beta^2}$ | $\left(\frac{\beta}{\beta-t}\right)^\alpha$ | Yes |
+| Beta$(\alpha,\beta)$ | $x^{\alpha-1}(1-x)^{\beta-1}$ | $\frac{\alpha}{\alpha+\beta}$ | $\frac{\alpha\beta}{(\alpha+\beta)^2(\alpha+\beta+1)}$ | — | Yes |
+| $\chi^2(k)$ | $x^{k/2-1}e^{-x/2}$ | $k$ | $2k$ | $(1-2t)^{-k/2}$ | Yes |
+| $t(\nu)$ | $(1+t^2/\nu)^{-(\nu+1)/2}$ | $0$ | $\frac{\nu}{\nu-2}$ | — | No |
+| $F(d_1,d_2)$ | — | $\frac{d_2}{d_2-2}$ | complex | — | No |
+
+**What comes next.** This topic cataloged the continuous distributions. The parallel treatment continues:
+
+- [Exponential Families](/topics/exponential-families) (coming soon) unifies the four exponential family members here with the five from [Discrete Distributions](/topics/discrete-distributions), identifying natural parameters, sufficient statistics, and log-partition functions
+- [Multivariate Distributions](/topics/multivariate-distributions) (coming soon) extends the Normal to the multivariate Normal — the star of that topic — and develops joint, marginal, and conditional densities
+- Maximum Likelihood (coming soon) uses the Normal, Exponential, and Gamma as canonical MLE examples
+- Bayesian Foundations (coming soon) develops the Beta-Bernoulli, Gamma-Poisson, and Normal-Normal conjugate pairs in full generality
+- Order Statistics (coming soon) shows that order statistics of Uniform$(0,1)$ are Beta-distributed
+- Hypothesis Testing (coming soon) uses the Chi-squared, Student's t, and F as test statistic distributions

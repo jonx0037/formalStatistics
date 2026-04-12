@@ -6,7 +6,7 @@
     { "id": "expectation-moments", "label": "Expectation, Variance & Moments", "domain": "foundations-of-probability", "status": "published", "url": "/topics/expectation-moments" },
 
     { "id": "discrete-distributions", "label": "Discrete Distributions", "domain": "core-distributions", "status": "published", "url": "/topics/discrete-distributions" },
-    { "id": "continuous-distributions", "label": "Continuous Distributions", "domain": "core-distributions", "status": "planned", "url": "/topics/continuous-distributions" },
+    { "id": "continuous-distributions", "label": "Continuous Distributions", "domain": "core-distributions", "status": "published", "url": "/topics/continuous-distributions" },
     { "id": "exponential-families", "label": "Exponential Families", "domain": "core-distributions", "status": "planned", "url": "/topics/exponential-families" },
     { "id": "multivariate-distributions", "label": "Multivariate Distributions", "domain": "core-distributions", "status": "planned", "url": "/topics/multivariate-distributions" },
 
@@ -50,6 +50,7 @@
     { "source": "expectation-moments", "target": "discrete-distributions" },
     { "source": "random-variables", "target": "continuous-distributions" },
     { "source": "expectation-moments", "target": "continuous-distributions" },
+    { "source": "discrete-distributions", "target": "continuous-distributions" },
     { "source": "discrete-distributions", "target": "exponential-families" },
     { "source": "continuous-distributions", "target": "exponential-families" },
     { "source": "expectation-moments", "target": "multivariate-distributions" },
