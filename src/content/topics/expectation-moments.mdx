@@ -1,0 +1,866 @@
+---
+title: "Expectation, Variance & Moments"
+subtitle: "The center of mass, the spread, and the shape — the numerical summaries that reduce distributions to the quantities that drive all of statistical inference and machine learning."
+status: "published"
+difficulty: "foundational"
+prerequisites:
+  - "sample-spaces"
+  - "conditional-probability"
+  - "random-variables"
+tags:
+  - "probability"
+  - "expectation"
+  - "variance"
+  - "covariance"
+  - "correlation"
+  - "moments"
+  - "mgf"
+  - "conditional-expectation"
+  - "tower-property"
+  - "inequalities"
+  - "bias-variance"
+domain: "foundations-of-probability"
+videoId: null
+notebookPath: "notebooks/expectation-moments/04_expectation_variance_moments.ipynb"
+githubUrl: "https://github.com/jonx0037/formalStatistics/blob/main/src/content/topics/expectation-moments.mdx"
+datePublished: 2026-04-11
+estimatedReadTime: 55
+abstract: "Expectation E[X] is the center of mass of a distribution — the balance point of the PMF or PDF on a number line. Variance Var(X) = E[(X−μ)²] = E[X²] − (E[X])² measures spread around that center. Covariance Cov(X,Y) = E[XY] − E[X]E[Y] captures linear association, and the correlation coefficient ρ(X,Y) normalizes it to [−1,1]. Linearity of expectation — E[aX + bY] = aE[X] + bE[Y] — holds without any independence assumption and is the single most useful property in probability. Markov's, Chebyshev's, and Jensen's inequalities convert moment information into probability bounds. The conditional expectation E[X|Y] is a random variable: it updates our best guess of X based on what Y reveals. The law of total expectation E[X] = E[E[X|Y]] (tower property) and Eve's law Var(X) = E[Var(X|Y)] + Var(E[X|Y]) decompose unconditional moments into within-group and between-group components. Moment-generating functions M_X(t) = E[e^{tX}] package all moments into one function — M^{(n)}(0) = E[X^n] — and uniquely determine the distribution, making them the engine behind the Central Limit Theorem."
+formalcalculusPrereqs:
+  - topic: "integration-by-parts"
+    site: "formalcalculus"
+    relationship: "Computing E[X] for the Exponential and Gamma distributions requires integration by parts. The formula ∫x·λe^{−λx}dx = 1/λ is a standard application."
+  - topic: "sequences-limits"
+    site: "formalcalculus"
+    relationship: "The absolute convergence condition E[|X|] < ∞ ensures the expectation sum/integral is well-defined. Interchange of limit and expectation (dominated convergence) is used in MGF proofs."
+  - topic: "taylor-series"
+    site: "formalcalculus"
+    relationship: "The MGF expansion M_X(t) = Σ E[X^n] t^n/n! is a Taylor series. The proof that M^{(n)}(0) = E[X^n] uses term-by-term differentiation of the power series."
+formalmlConnections:
+  - topic: "bias-variance-tradeoff"
+    site: "formalml"
+    relationship: "The bias-variance decomposition E[(Y−f̂)²] = Bias² + Variance + Noise is a direct application of Eve's law and the variance decomposition proved here."
+  - topic: "information-theory"
+    site: "formalml"
+    relationship: "Cross-entropy H(p,q) = −E_p[log q] and KL divergence D_KL(p||q) = E_p[log(p/q)] are expectations. Jensen's inequality immediately gives D_KL ≥ 0."
+  - topic: "optimization"
+    site: "formalml"
+    relationship: "The training objective Risk(f) = E[ℓ(Y, f(X))] is an expectation over the data distribution. Stochastic gradient descent estimates ∇E[L] with ∇L on minibatches — linearity of expectation justifies unbiased gradient estimates."
+connections:
+  - topic: "sample-spaces"
+    relationship: "Expectation is integration against the probability measure P from Topic 1. The Kolmogorov axioms ensure the integral is well-defined."
+  - topic: "conditional-probability"
+    relationship: "Conditional expectation E[X|Y] extends conditional probability P(A|B) from events to random variables. The law of total expectation mirrors the law of total probability."
+  - topic: "random-variables"
+    relationship: "Expectation requires PMFs, PDFs, and CDFs from Topic 3. LOTUS uses the distribution of X directly. The expectation preview (Definition 16) in Topic 3 is now proved in full."
+  - topic: "discrete-distributions"
+    relationship: "The expectation and variance formulas developed here will be applied to every named distribution — Binomial E[X] = np, Poisson E[X] = λ, Geometric E[X] = 1/p."
+  - topic: "continuous-distributions"
+    relationship: "Normal E[X] = μ, Var(X) = σ², Exponential E[X] = 1/λ — all computed using the integral formulas and LOTUS from this topic."
+  - topic: "modes-of-convergence"
+    relationship: "Markov and Chebyshev inequalities (§5) are the entry point to convergence theory. The weak law of large numbers follows from Chebyshev applied to the sample mean."
+  - topic: "point-estimation"
+    relationship: "Bias = E[θ̂] − θ and MSE = Var(θ̂) + Bias² are direct applications of expectation and the variance decomposition."
+references:
+  - type: "book"
+    title: "Probability and Measure"
+    author: "Patrick Billingsley"
+    year: 2012
+    edition: "Anniversary Edition"
+    publisher: "Wiley"
+    note: "Chapters 5 and 21 cover expectation and conditional expectation with full measure-theoretic rigor."
+  - type: "book"
+    title: "Probability: Theory and Examples"
+    author: "Rick Durrett"
+    year: 2019
+    edition: "5th"
+    publisher: "Cambridge University Press"
+    note: "Chapter 1 covers expectation, variance, and moment-generating functions. Chapter 4 covers conditional expectation."
+  - type: "book"
+    title: "Probability and Random Processes"
+    author: "Geoffrey Grimmett & David Stirzaker"
+    year: 2020
+    edition: "4th"
+    publisher: "Oxford University Press"
+    note: "Chapter 3 (Discrete) and Chapter 4 (Continuous) cover expectations and generating functions with many worked examples."
+  - type: "book"
+    title: "All of Statistics"
+    author: "Larry Wasserman"
+    year: 2004
+    publisher: "Springer"
+    note: "Compact reference. Chapter 3 covers expectation, variance, and covariance; Chapter 3.5 covers inequalities and moment-generating functions."
+  - type: "book"
+    title: "Statistical Inference"
+    author: "George Casella & Roger L. Berger"
+    year: 2002
+    edition: "2nd"
+    publisher: "Duxbury"
+    note: "Chapter 2 covers expected values and moments with the rigor expected in a graduate statistics course."
+  - type: "book"
+    title: "Pattern Recognition and Machine Learning"
+    author: "Christopher M. Bishop"
+    year: 2006
+    publisher: "Springer"
+    note: "Chapter 1.2 covers expectation and covariance in the ML context. Chapter 3.2 derives the bias-variance decomposition."
+  - type: "book"
+    title: "The Elements of Statistical Learning"
+    author: "Trevor Hastie, Robert Tibshirani & Jerome Friedman"
+    year: 2009
+    edition: "2nd"
+    publisher: "Springer"
+    note: "Chapter 7.3 derives the bias-variance decomposition for prediction error."
+  - type: "article"
+    title: "Variational Inference: A Review for Statisticians"
+    author: "David M. Blei, Alp Kucukelbir & Jon D. McAuliffe"
+    year: 2017
+    publisher: "Journal of the American Statistical Association"
+    note: "Section 2 derives the ELBO using Jensen's inequality. The expectation and conditional expectation machinery from this topic is the foundation."
+---
+
+import DefinitionBlock from '../../components/ui/DefinitionBlock.astro';
+import TheoremBlock from '../../components/ui/TheoremBlock.astro';
+import ProofBlock from '../../components/ui/ProofBlock.astro';
+import ExampleBlock from '../../components/ui/ExampleBlock.astro';
+import RemarkBlock from '../../components/ui/RemarkBlock.astro';
+import ExternalLink from '../../components/ui/ExternalLink.astro';
+
+import ExpectationBalanceExplorer from '../../components/viz/ExpectationBalanceExplorer.tsx';
+import VarianceDecompositionExplorer from '../../components/viz/VarianceDecompositionExplorer.tsx';
+import InequalityExplorer from '../../components/viz/InequalityExplorer.tsx';
+import LawOfTotalExpectationExplorer from '../../components/viz/LawOfTotalExpectationExplorer.tsx';
+import MGFExplorer from '../../components/viz/MGFExplorer.tsx';
+
+## 1. Expectation: The Center of Mass
+
+In [Topic 3](/topics/random-variables), we built the machinery of random variables, PMFs, PDFs, and CDFs — the full description of how probability is distributed over numbers. But a full distribution is a lot of information. Often we need a single number that summarizes the "location" of a distribution: where is the probability concentrated? What value do we "expect" to see?
+
+The **expectation** (or **expected value**, or **mean**) of a random variable answers this question. It is the *center of mass* of the distribution — the balance point. If you placed the PMF bars (or PDF curve) on a number line and balanced it on a fulcrum, the balance point would be $E[X]$.
+
+<DefinitionBlock number={1} title="Expectation (Discrete and Continuous)">
+Let $X$ be a random variable.
+
+**Discrete case.** If $X$ takes values in a countable set $\{x_1, x_2, \ldots\}$ with PMF $p_X$, the *expectation* of $X$ is
+
+$$E[X] = \sum_{i} x_i \, p_X(x_i)$$
+
+provided $\sum_i |x_i| \, p_X(x_i) < \infty$ (absolute convergence).
+
+**Continuous case.** If $X$ has PDF $f_X$, the *expectation* of $X$ is
+
+$$E[X] = \int_{-\infty}^{\infty} x \, f_X(x) \, dx$$
+
+provided $\int_{-\infty}^{\infty} |x| \, f_X(x) \, dx < \infty$ (absolute integrability).
+
+The expectation is also written $\mu$, $\mu_X$, or $\mathbb{E}[X]$.
+</DefinitionBlock>
+
+<RemarkBlock title="Absolute convergence is essential">
+The absolute convergence condition $E[|X|] < \infty$ is not a technicality — without it, the expectation can depend on the order of summation or the way we partition the integral. The **Cauchy distribution** with PDF $f(x) = \frac{1}{\pi(1 + x^2)}$ is the standard example: $\int_{-\infty}^{\infty} |x| f(x) \, dx = \infty$, so $E[X]$ does not exist. If you compute the Cauchy principal value $\lim_{R \to \infty} \int_{-R}^{R} x f(x) \, dx$, you get 0 — but that's a cancellation artifact, not a genuine expectation. The absolute convergence condition from <ExternalLink href="https://formalcalculus.com/topics/sequences-limits" site="formalcalculus" topic="Sequences & Limits" /> ensures the expectation is well-defined regardless of ordering.
+</RemarkBlock>
+
+<img src="/images/topics/expectation-moments/expectation-center-of-mass.png" alt="Three-panel figure showing expectation as center of mass: fair die with E[X]=3.5, loaded die with E[X]=4.85, and Exponential(1.5) with E[X]=0.667, each with a balance-point triangle" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
+
+The expectation is a *weighted average* of the values, weighted by their probabilities. For the fair die, $E[X] = \frac{1}{6}(1 + 2 + 3 + 4 + 5 + 6) = 3.5$. For the loaded die that favors high rolls, the balance point shifts rightward. For a continuous distribution, the sum becomes an integral but the idea is identical: multiply each value by its probability density and integrate.
+
+One of the most useful tools for computing expectations is **LOTUS** — the Law of the Unconscious Statistician. It lets us compute $E[g(X)]$ directly from the distribution of $X$, without first finding the distribution of $g(X)$.
+
+<TheoremBlock number={1} title="LOTUS (Law of the Unconscious Statistician)">
+Let $X$ be a random variable and $g : \mathbb{R} \to \mathbb{R}$ a function.
+
+**Discrete case:** $\displaystyle E[g(X)] = \sum_{x} g(x) \, p_X(x)$
+
+**Continuous case:** $\displaystyle E[g(X)] = \int_{-\infty}^{\infty} g(x) \, f_X(x) \, dx$
+
+provided the sum/integral converges absolutely.
+</TheoremBlock>
+
+<ProofBlock>
+**Discrete case.** Let $Y = g(X)$. We need to show that computing $E[Y]$ via the PMF of $Y$ gives the same result as summing $g(x) \, p_X(x)$ over the support of $X$.
+
+The PMF of $Y$ is $p_Y(y) = P(g(X) = y) = \sum_{x : g(x) = y} p_X(x)$. Therefore:
+
+$$E[Y] = \sum_{y} y \, p_Y(y) = \sum_{y} y \sum_{x : g(x) = y} p_X(x)$$
+
+Swapping the order of summation — every $x$ appears in exactly one group (the group indexed by $y = g(x)$):
+
+$$= \sum_{x} g(x) \, p_X(x)$$
+
+The continuous case follows by the same argument with integrals and the change of variables formula (see <ExternalLink href="https://formalcalculus.com/topics/change-of-variables" site="formalcalculus" topic="Change of Variables" />). $\square$
+</ProofBlock>
+
+LOTUS is called the "law of the unconscious statistician" because students often apply it without thinking — and it works. The name is mildly pejorative, but the theorem is anything but trivial: it saves you from having to derive the distribution of $g(X)$ before computing the expectation.
+
+<ExampleBlock number={1} title="Die roll expectation">
+Roll a fair die. $X \in \{1,2,3,4,5,6\}$ with $p_X(k) = 1/6$ for each $k$.
+
+$$E[X] = \sum_{k=1}^{6} k \cdot \frac{1}{6} = \frac{1}{6}(1 + 2 + 3 + 4 + 5 + 6) = \frac{21}{6} = 3.5$$
+
+Notice that $E[X] = 3.5$ is not a value $X$ can actually take — this is normal. The expectation is the center of mass, not a mode or a median.
+
+Using LOTUS, $E[X^2] = \sum_{k=1}^{6} k^2 \cdot \frac{1}{6} = \frac{1}{6}(1 + 4 + 9 + 16 + 25 + 36) = \frac{91}{6} \approx 15.17$.
+</ExampleBlock>
+
+<ExampleBlock number={2} title="Exponential expectation">
+Let $X \sim \text{Exp}(\lambda)$ with PDF $f_X(x) = \lambda e^{-\lambda x}$ for $x \geq 0$.
+
+$$E[X] = \int_0^{\infty} x \cdot \lambda e^{-\lambda x} \, dx$$
+
+Using integration by parts (with $u = x$, $dv = \lambda e^{-\lambda x} dx$) from <ExternalLink href="https://formalcalculus.com/topics/integration-by-parts" site="formalcalculus" topic="Integration by Parts" />:
+
+$$= \left[-x e^{-\lambda x}\right]_0^{\infty} + \int_0^{\infty} e^{-\lambda x} \, dx = 0 + \frac{1}{\lambda} = \frac{1}{\lambda}$$
+
+An Exponential($\lambda$) random variable has mean $1/\lambda$. If a server processes requests at rate $\lambda = 5$ per second, the mean inter-arrival time is $1/5 = 0.2$ seconds.
+</ExampleBlock>
+
+Use the explorer below to visualize expectation as the balance point. Toggle between discrete and continuous distributions, or enter your own probability values:
+
+<ExpectationBalanceExplorer client:visible />
+
+---
+
+## 2. Properties of Expectation
+
+Expectation is a *linear* operation — and this is its single most powerful property. Linearity holds **without any independence assumption**.
+
+<TheoremBlock number={2} title="Linearity of Expectation">
+For any random variables $X$ and $Y$ (with finite expectations) and constants $a, b \in \mathbb{R}$:
+
+$$E[aX + bY] = a \, E[X] + b \, E[Y]$$
+</TheoremBlock>
+
+<ProofBlock>
+We prove the discrete case; the continuous case is analogous with integrals replacing sums.
+
+Let $(X, Y)$ have joint PMF $p_{X,Y}(x, y)$. Then:
+
+$$E[aX + bY] = \sum_x \sum_y (ax + by) \, p_{X,Y}(x, y)$$
+
+Expanding the sum:
+
+$$= a \sum_x \sum_y x \, p_{X,Y}(x, y) + b \sum_x \sum_y y \, p_{X,Y}(x, y)$$
+
+The inner sum in the first term: $\sum_y p_{X,Y}(x, y) = p_X(x)$ (the marginal PMF of $X$, from [Topic 3](/topics/random-variables)). So:
+
+$$= a \sum_x x \, p_X(x) + b \sum_y y \, p_Y(y) = a \, E[X] + b \, E[Y]$$
+
+No independence was used — only the existence of marginals from the joint. $\square$
+</ProofBlock>
+
+<RemarkBlock title="Linearity requires no independence">
+This is worth emphasizing: $E[X + Y] = E[X] + E[Y]$ always, even when $X$ and $Y$ are dependent. The proof uses only marginalization, not factorization of the joint. This makes linearity enormously useful — we can compute $E[\text{sum}]$ as a sum of expectations even when the summands are tangled together in complex ways. The classic application: expected number of fixed points in a random permutation (Example 3 below).
+</RemarkBlock>
+
+<img src="/images/topics/expectation-moments/linearity-of-expectation.png" alt="Three-panel figure showing linearity of expectation: Bin(5,0.4) PMF, Bin(5,0.6) PMF, and convolution PMF of X+Y with E[X+Y] = E[X]+E[Y]" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
+
+<TheoremBlock number={3} title="Monotonicity">
+If $X \leq Y$ almost surely (i.e., $P(X \leq Y) = 1$), then $E[X] \leq E[Y]$.
+</TheoremBlock>
+
+<ProofBlock>
+Define $Z = Y - X$. Since $X \leq Y$ a.s., we have $Z \geq 0$ a.s. For a nonnegative random variable, $E[Z] = \sum_z z \, p_Z(z) \geq 0$ (every term is nonneg). So $E[Y] - E[X] = E[Y - X] = E[Z] \geq 0$. $\square$
+</ProofBlock>
+
+<TheoremBlock number={4} title="Expectation of Constants">
+For any constant $c \in \mathbb{R}$: $E[c] = c$.
+</TheoremBlock>
+
+The proof is immediate: a constant random variable has PMF concentrated at a single point, so $E[c] = c \cdot 1 = c$.
+
+<TheoremBlock number={5} title="Expectation of Independent Products">
+If $X$ and $Y$ are *independent* random variables with finite expectations, then
+
+$$E[XY] = E[X] \cdot E[Y]$$
+</TheoremBlock>
+
+<ProofBlock>
+Since $X \perp Y$, the joint PMF factors: $p_{X,Y}(x, y) = p_X(x) \cdot p_Y(y)$ (from [Topic 2](/topics/conditional-probability) and [Topic 3](/topics/random-variables)). Then:
+
+$$E[XY] = \sum_x \sum_y xy \, p_{X,Y}(x, y) = \sum_x \sum_y xy \, p_X(x) \, p_Y(y)$$
+
+Factoring:
+
+$$= \left(\sum_x x \, p_X(x)\right) \left(\sum_y y \, p_Y(y)\right) = E[X] \cdot E[Y]$$
+
+$\square$
+</ProofBlock>
+
+<RemarkBlock title="E[XY] = E[X]E[Y] does not imply independence">
+The converse is false. If $X \sim \text{Uniform}\{-1, 0, 1\}$ and $Y = X^2$, then $E[XY] = E[X^3] = 0 = E[X] \cdot E[Y]$, but $X$ and $Y$ are clearly dependent ($Y$ is a deterministic function of $X$). The condition $E[XY] = E[X]E[Y]$ is called *uncorrelatedness* — it is strictly weaker than independence.
+</RemarkBlock>
+
+<ExampleBlock number={3} title="Expected number of matches (linearity without independence)">
+Randomly shuffle $n$ cards labeled $1, \ldots, n$. A **match** (or fixed point) occurs at position $i$ if card $i$ lands in position $i$. Let $M = \sum_{i=1}^{n} X_i$ where $X_i = \mathbf{1}\{\text{card } i \text{ is in position } i\}$.
+
+The $X_i$'s are *dependent* (if card 1 is in position 1, the remaining cards are shuffled among $n - 1$ positions, changing the probabilities for $X_2, \ldots, X_n$). But linearity doesn't care:
+
+$$E[M] = \sum_{i=1}^{n} E[X_i] = \sum_{i=1}^{n} P(\text{card } i \text{ in position } i) = \sum_{i=1}^{n} \frac{1}{n} = 1$$
+
+The expected number of matches is exactly 1, *regardless of $n$*. This surprising result — the same whether you shuffle 10 cards or 10 million — follows effortlessly from linearity.
+</ExampleBlock>
+
+---
+
+## 3. Variance: Measuring Spread
+
+The expectation tells us where a distribution is centered. But two distributions can have the same center and look completely different — one tightly concentrated, the other spread wide. We need a measure of *spread*.
+
+<DefinitionBlock number={2} title="Variance and Standard Deviation">
+The *variance* of a random variable $X$ with mean $\mu = E[X]$ is
+
+$$\text{Var}(X) = E[(X - \mu)^2]$$
+
+The *standard deviation* is $\sigma_X = \sqrt{\text{Var}(X)}$.
+
+Variance is also written $\sigma^2$, $\sigma_X^2$, or $\text{Var}(X)$.
+</DefinitionBlock>
+
+Variance is the *average squared distance from the mean*. It measures how far a random variable typically falls from its expected value. The squaring ensures that deviations above and below the mean both contribute positively. The standard deviation $\sigma$ returns us to the original units (if $X$ is in meters, $\text{Var}(X)$ is in meters$^2$ but $\sigma_X$ is in meters).
+
+<TheoremBlock number={6} title="Variance Decomposition (Computational Formula)">
+$$\text{Var}(X) = E[X^2] - (E[X])^2$$
+</TheoremBlock>
+
+<ProofBlock>
+Expand the definition using linearity:
+
+$$\text{Var}(X) = E[(X - \mu)^2] = E[X^2 - 2\mu X + \mu^2]$$
+
+By linearity of expectation (Theorem 2):
+
+$$= E[X^2] - 2\mu \, E[X] + \mu^2$$
+
+Since $\mu = E[X]$:
+
+$$= E[X^2] - 2(E[X])^2 + (E[X])^2 = E[X^2] - (E[X])^2$$
+
+$\square$
+</ProofBlock>
+
+This computational formula — "the mean of the square minus the square of the mean" — is almost always easier to use than the definition.
+
+<TheoremBlock number={7} title="Properties of Variance">
+1. $\text{Var}(X) \geq 0$, with equality iff $X$ is constant a.s.
+2. $\text{Var}(aX + b) = a^2 \, \text{Var}(X)$ for constants $a, b$
+3. If $X \perp Y$, then $\text{Var}(X + Y) = \text{Var}(X) + \text{Var}(Y)$
+</TheoremBlock>
+
+<ProofBlock>
+**Property 1.** $\text{Var}(X) = E[(X - \mu)^2] \geq 0$ because $(X - \mu)^2 \geq 0$ a.s. If $\text{Var}(X) = 0$, then $E[(X - \mu)^2] = 0$, so $(X - \mu)^2 = 0$ a.s., meaning $X = \mu$ a.s.
+
+**Property 2.** Let $Y = aX + b$. Then $E[Y] = aE[X] + b$, so:
+
+$$\text{Var}(Y) = E[(Y - E[Y])^2] = E[(aX + b - aE[X] - b)^2] = E[a^2(X - E[X])^2] = a^2 \, \text{Var}(X)$$
+
+Adding a constant shifts the distribution but doesn't change the spread. Scaling by $a$ scales the variance by $a^2$.
+
+**Property 3.** By the computational formula, $\text{Var}(X + Y) = E[(X+Y)^2] - (E[X+Y])^2$.
+
+Expanding:
+
+$$E[(X+Y)^2] = E[X^2 + 2XY + Y^2] = E[X^2] + 2E[XY] + E[Y^2]$$
+
+$$(E[X+Y])^2 = (E[X] + E[Y])^2 = (E[X])^2 + 2E[X]E[Y] + (E[Y])^2$$
+
+Subtracting:
+
+$$\text{Var}(X+Y) = \bigl(E[X^2] - (E[X])^2\bigr) + \bigl(E[Y^2] - (E[Y])^2\bigr) + 2\bigl(E[XY] - E[X]E[Y]\bigr)$$
+
+The first two terms are $\text{Var}(X)$ and $\text{Var}(Y)$. The third term is $2\text{Cov}(X,Y)$ (Definition 3 below). When $X \perp Y$, $E[XY] = E[X]E[Y]$ (Theorem 5), so the covariance term vanishes. $\square$
+</ProofBlock>
+
+<RemarkBlock title="Variance does NOT split for dependent variables">
+Property 3 requires independence. In general, $\text{Var}(X + Y) = \text{Var}(X) + \text{Var}(Y) + 2\text{Cov}(X,Y)$. If $X$ and $Y$ are positively correlated ($\text{Cov}(X,Y) > 0$), the variance of their sum is *larger* than the sum of variances. If negatively correlated, it's *smaller*. This is the mathematical foundation of portfolio diversification: combining negatively correlated assets reduces total variance.
+</RemarkBlock>
+
+<img src="/images/topics/expectation-moments/variance-spread.png" alt="Three-panel figure showing variance as spread: Bin(20,0.5) with ±σ band, Bin(20,0.1) vs Bin(20,0.9), and three Normals with different σ" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
+
+<ExampleBlock number={4} title="Die roll variance">
+For a fair die with $E[X] = 3.5$ and $E[X^2] = 91/6 \approx 15.17$:
+
+$$\text{Var}(X) = E[X^2] - (E[X])^2 = \frac{91}{6} - \left(\frac{7}{2}\right)^2 = \frac{91}{6} - \frac{49}{4} = \frac{182 - 147}{12} = \frac{35}{12} \approx 2.92$$
+
+Standard deviation: $\sigma = \sqrt{35/12} \approx 1.71$.
+</ExampleBlock>
+
+<ExampleBlock number={5} title="A/B test: same mean, different variance">
+Variant A: win 5 dollars with probability 0.4, else 0. $E[A] = 2$, $\text{Var}(A) = 0.4 \cdot 25 - 4 = 6$.
+
+Variant B: win 20 dollars with probability 0.1, else 0. $E[B] = 2$, $\text{Var}(B) = 0.1 \cdot 400 - 4 = 36$.
+
+Both have the same mean payout (2 dollars), but Variant B is 6x more variable. In an A/B test, you'd need *far* more samples to detect a treatment effect in B than in A — because the noise-to-signal ratio is much higher. This is why variance matters for experimental design.
+</ExampleBlock>
+
+<VarianceDecompositionExplorer client:visible />
+
+---
+
+## 4. Covariance and Correlation
+
+When we have two random variables, we want to quantify their *linear association*. Do they tend to be large together (positive association) or does one tend to be large when the other is small (negative association)?
+
+<DefinitionBlock number={3} title="Covariance">
+The *covariance* of random variables $X$ and $Y$ is
+
+$$\text{Cov}(X, Y) = E[(X - \mu_X)(Y - \mu_Y)]$$
+
+where $\mu_X = E[X]$ and $\mu_Y = E[Y]$.
+</DefinitionBlock>
+
+<TheoremBlock number={8} title="Computational Formula for Covariance">
+$$\text{Cov}(X, Y) = E[XY] - E[X] \cdot E[Y]$$
+</TheoremBlock>
+
+<ProofBlock>
+Expand the definition:
+
+$$\text{Cov}(X, Y) = E[(X - \mu_X)(Y - \mu_Y)] = E[XY - \mu_X Y - X \mu_Y + \mu_X \mu_Y]$$
+
+By linearity:
+
+$$= E[XY] - \mu_X E[Y] - E[X] \mu_Y + \mu_X \mu_Y = E[XY] - \mu_X \mu_Y - \mu_X \mu_Y + \mu_X \mu_Y$$
+
+$$= E[XY] - E[X] \cdot E[Y]$$
+
+$\square$
+</ProofBlock>
+
+Note that $\text{Cov}(X, X) = E[X^2] - (E[X])^2 = \text{Var}(X)$.
+
+<TheoremBlock number={9} title="Properties of Covariance">
+1. $\text{Cov}(X, Y) = \text{Cov}(Y, X)$ (symmetry)
+2. $\text{Cov}(aX + b, cY + d) = ac \, \text{Cov}(X, Y)$ (bilinearity with constants)
+3. $\text{Var}(X + Y) = \text{Var}(X) + \text{Var}(Y) + 2\text{Cov}(X, Y)$ (general variance of sum)
+4. $\text{Cov}\bigl(\sum_i X_i, \sum_j Y_j\bigr) = \sum_i \sum_j \text{Cov}(X_i, Y_j)$ (multilinearity)
+</TheoremBlock>
+
+The proof of Property 3 was given in Theorem 7. Properties 1, 2, and 4 follow from the definition and linearity of expectation.
+
+<DefinitionBlock number={4} title="Correlation Coefficient">
+The *Pearson correlation coefficient* of $X$ and $Y$ is
+
+$$\rho(X, Y) = \frac{\text{Cov}(X, Y)}{\sigma_X \, \sigma_Y} = \frac{\text{Cov}(X, Y)}{\sqrt{\text{Var}(X) \, \text{Var}(Y)}}$$
+
+provided both variances are positive.
+</DefinitionBlock>
+
+<TheoremBlock number={10} title="Correlation Bounds">
+$$-1 \leq \rho(X, Y) \leq 1$$
+
+with $|\rho(X, Y)| = 1$ if and only if $Y = aX + b$ for some constants $a, b$ (i.e., $X$ and $Y$ are related by a perfect linear function).
+</TheoremBlock>
+
+<ProofBlock>
+Consider the random variable $Z = X/\sigma_X - t \cdot Y/\sigma_Y$ for some real number $t$. Since $\text{Var}(Z) \geq 0$:
+
+$$0 \leq \text{Var}(Z) = \text{Var}(X/\sigma_X) - 2t \, \text{Cov}(X/\sigma_X, Y/\sigma_Y) + t^2 \, \text{Var}(Y/\sigma_Y)$$
+
+$$= 1 - 2t\rho + t^2$$
+
+This quadratic in $t$ is nonneg for all $t$, so its discriminant must be $\leq 0$:
+
+$$4\rho^2 - 4 \leq 0 \implies \rho^2 \leq 1 \implies -1 \leq \rho \leq 1$$
+
+Equality holds when $\text{Var}(Z) = 0$ for some $t$, meaning $Z$ is constant a.s., i.e., $X/\sigma_X = tY/\sigma_Y + c$. $\square$
+</ProofBlock>
+
+<RemarkBlock title="Zero covariance from independence; converse false">
+Independence $\implies$ $\text{Cov}(X,Y) = 0$ $\implies$ $\rho(X,Y) = 0$ (Theorem 5). But the converse fails: uncorrelatedness ($\rho = 0$) does *not* imply independence. The example from Remark 3 ($X$ uniform on $\{-1, 0, 1\}$, $Y = X^2$) has $\rho = 0$ but complete functional dependence. Correlation measures *linear* association only — it can miss nonlinear dependencies entirely. This distinction matters in ML: two features can be uncorrelated yet carry highly redundant information through nonlinear relationships.
+</RemarkBlock>
+
+<img src="/images/topics/expectation-moments/covariance-correlation.png" alt="Three-panel scatter plot showing correlation: ρ=0.85 (positive), ρ=0 (zero), and ρ=−0.75 (negative)" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
+
+---
+
+## 5. Standard Inequalities
+
+Probability bounds are the bread and butter of theoretical statistics and machine learning. When we can't compute exact probabilities, we use inequalities to bound them from above. The three workhorses are Markov, Chebyshev, and Jensen.
+
+<TheoremBlock number={11} title="Markov's Inequality">
+If $X \geq 0$ a.s. and $a > 0$, then
+
+$$P(X \geq a) \leq \frac{E[X]}{a}$$
+</TheoremBlock>
+
+<ProofBlock>
+Since $X \geq 0$:
+
+$$E[X] = \int_0^{\infty} x \, f_X(x) \, dx \geq \int_a^{\infty} x \, f_X(x) \, dx \geq a \int_a^{\infty} f_X(x) \, dx = a \, P(X \geq a)$$
+
+Dividing both sides by $a$: $P(X \geq a) \leq E[X]/a$. $\square$
+</ProofBlock>
+
+Markov's inequality is *very* weak — but it uses almost no information (only $E[X]$ and $X \geq 0$). The bound is tight: for a Bernoulli variable with $P(X = n) = 1/n$ and $P(X = 0) = 1 - 1/n$, $P(X \geq n) = 1/n$ and $E[X]/n = 1/n$.
+
+<TheoremBlock number={12} title="Chebyshev's Inequality">
+For any random variable $X$ with $E[X] = \mu$ and $\text{Var}(X) = \sigma^2 < \infty$:
+
+$$P(|X - \mu| \geq k\sigma) \leq \frac{1}{k^2}$$
+
+for any $k > 0$. Equivalently, $P(|X - \mu| \geq \varepsilon) \leq \text{Var}(X)/\varepsilon^2$.
+</TheoremBlock>
+
+<ProofBlock>
+Apply Markov's inequality to the nonneg random variable $(X - \mu)^2$ with threshold $\varepsilon^2$:
+
+$$P(|X - \mu| \geq \varepsilon) = P((X - \mu)^2 \geq \varepsilon^2) \leq \frac{E[(X - \mu)^2]}{\varepsilon^2} = \frac{\text{Var}(X)}{\varepsilon^2}$$
+
+Setting $\varepsilon = k\sigma$ gives $P(|X - \mu| \geq k\sigma) \leq 1/k^2$. $\square$
+</ProofBlock>
+
+Chebyshev uses both the mean *and* the variance, so it's tighter than Markov. At $k = 2$ standard deviations: Chebyshev gives $\leq 25\%$, while for the normal distribution the true probability is $\approx 4.6\%$. At $k = 3$: Chebyshev gives $\leq 11.1\%$; normal gives $\approx 0.3\%$. Chebyshev applies to *any* distribution — that's why it's loose for the well-behaved normal.
+
+<ExampleBlock number={6} title="Chebyshev in practice">
+A quality control process produces items with mean weight $\mu = 100$g and standard deviation $\sigma = 2$g. What fraction of items can weigh more than 106g?
+
+Using Chebyshev with $k = 3$ (since $|106 - 100| = 6 = 3\sigma$):
+
+$$P(|X - 100| \geq 6) \leq \frac{1}{3^2} = \frac{1}{9} \approx 11.1\%$$
+
+If we know the weights are normally distributed, the true probability is $P(|Z| \geq 3) \approx 0.27\%$ — 40x smaller. Chebyshev's power is that it works *regardless* of the distribution shape.
+</ExampleBlock>
+
+<TheoremBlock number={13} title="Jensen's Inequality">
+If $g$ is a *convex* function and $E[X]$ exists, then
+
+$$g(E[X]) \leq E[g(X)]$$
+
+If $g$ is *concave*, the inequality reverses: $g(E[X]) \geq E[g(X)]$.
+</TheoremBlock>
+
+<ProofBlock>
+Since $g$ is convex, it lies above every tangent line. At the point $\mu = E[X]$, there exists a slope $m$ (a subgradient) such that for all $x$:
+
+$$g(x) \geq g(\mu) + m(x - \mu)$$
+
+Taking expectations of both sides (which preserves the inequality by monotonicity, Theorem 3):
+
+$$E[g(X)] \geq g(\mu) + m \, E[X - \mu] = g(\mu) + m \cdot 0 = g(\mu) = g(E[X])$$
+
+$\square$
+</ProofBlock>
+
+<ExampleBlock number={7} title="Jensen and the AM-GM inequality">
+Let $g(x) = -\log(x)$ (convex on $(0, \infty)$). Jensen gives:
+
+$$-\log(E[X]) \leq E[-\log(X)] = -E[\log(X)]$$
+
+So $\log(E[X]) \geq E[\log(X)]$, or equivalently $E[X] \geq e^{E[\log X]}$. For $n$ equal-probability values $x_1, \ldots, x_n$:
+
+$$\frac{x_1 + \cdots + x_n}{n} \geq (x_1 \cdots x_n)^{1/n}$$
+
+This is the **arithmetic-mean ≥ geometric-mean** inequality — a pure consequence of Jensen.
+
+**ML application:** Jensen's inequality with $g(x) = -\log(x)$ is exactly what gives us the evidence lower bound (ELBO) in variational inference: $\log p(\mathbf{x}) \geq E_q[\log p(\mathbf{x}, \mathbf{z}) - \log q(\mathbf{z})]$. See <ExternalLink href="https://formalml.com/topics/information-theory" site="formalml" topic="Information Theory" /> for the full derivation.
+</ExampleBlock>
+
+<img src="/images/topics/expectation-moments/standard-inequalities.png" alt="Three-panel figure showing Markov on Exponential, Chebyshev on Normal, and Jensen with convex function x² and tangent line" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
+
+<InequalityExplorer client:visible />
+
+---
+
+## 6. Conditional Expectation
+
+In [Topic 2](/topics/conditional-probability), we developed conditional probability $P(A \mid B)$ — the probability of an event given partial information. Now we extend this idea from events to random variables. The **conditional expectation** $E[X \mid Y]$ is our best guess of $X$ given what $Y$ tells us.
+
+<DefinitionBlock number={5} title="Conditional Expectation Given an Event">
+If $B$ is an event with $P(B) > 0$, the conditional expectation of $X$ given $B$ is
+
+$$E[X \mid B] = \sum_x x \, P(X = x \mid B) \quad \text{(discrete)}$$
+
+$$E[X \mid B] = \int_{-\infty}^{\infty} x \, f_{X|B}(x) \, dx \quad \text{(continuous)}$$
+
+This is just the ordinary expectation computed using the conditional distribution.
+</DefinitionBlock>
+
+<DefinitionBlock number={6} title="Conditional Expectation as a Function">
+For discrete $X$ and $Y$ with joint PMF $p_{X,Y}$:
+
+$$E[X \mid Y = y] = \sum_x x \, p_{X|Y}(x \mid y) = \sum_x x \, \frac{p_{X,Y}(x, y)}{p_Y(y)}$$
+
+For continuous $X$ and $Y$ with joint PDF $f_{X,Y}$:
+
+$$E[X \mid Y = y] = \int_{-\infty}^{\infty} x \, f_{X|Y}(x \mid y) \, dx = \int_{-\infty}^{\infty} x \, \frac{f_{X,Y}(x, y)}{f_Y(y)} \, dx$$
+
+Here $E[X \mid Y = y]$ is a *function of $y$* — we write it as $h(y) = E[X \mid Y = y]$.
+</DefinitionBlock>
+
+<DefinitionBlock number={7} title="Conditional Expectation as a Random Variable">
+The *conditional expectation* $E[X \mid Y]$ is the random variable obtained by evaluating the function $h(y) = E[X \mid Y = y]$ at $Y$:
+
+$$E[X \mid Y] = h(Y)$$
+
+This is a random variable — it inherits its randomness from $Y$. Different realizations of $Y$ produce different "best guesses" of $X$.
+</DefinitionBlock>
+
+The progression from Definition 5 to Definition 7 is crucial: we start with a number ($E[X \mid B]$), then a function of $y$ ($E[X \mid Y = y]$), then a *random variable* ($E[X \mid Y]$). The random variable interpretation is what makes the tower property (Theorem 14) meaningful — we can take *expectations of conditional expectations*.
+
+<img src="/images/topics/expectation-moments/conditional-expectation.png" alt="Three-panel figure showing conditional expectation: joint scatter with E[X|Y=y] line, conditional PDF slices at y=2,3,4, and histogram of E[X|Y] as random variable" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
+
+<ExampleBlock number={8} title="Bivariate normal conditional expectation">
+Let $(X, Y)$ be bivariate normal with means $\mu_X, \mu_Y$, standard deviations $\sigma_X, \sigma_Y$, and correlation $\rho$. From [Topic 3, §8](/topics/random-variables):
+
+$$E[X \mid Y = y] = \mu_X + \rho \frac{\sigma_X}{\sigma_Y}(y - \mu_Y)$$
+
+This is a *linear* function of $y$ — it's the regression line. The slope is $\rho \sigma_X / \sigma_Y$, and when $\rho = 0$, the conditional mean equals the unconditional mean $\mu_X$ (knowing $Y$ provides no information about $X$).
+
+The conditional variance is $\text{Var}(X \mid Y = y) = \sigma_X^2(1 - \rho^2)$, which does *not* depend on $y$. This homoscedasticity is special to the bivariate normal.
+</ExampleBlock>
+
+---
+
+## 7. The Law of Total Expectation and Eve's Law
+
+The **law of total expectation** (also called the **tower property** or **Adam's law**) is one of the most powerful tools in probability. It says: to compute $E[X]$, first compute $E[X \mid Y]$ for each value of $Y$, then average over $Y$.
+
+<TheoremBlock number={14} title="Law of Total Expectation (Tower Property)">
+$$E[X] = E[E[X \mid Y]]$$
+
+More precisely, if $Y$ is discrete with values $\{y_1, y_2, \ldots\}$:
+
+$$E[X] = \sum_j E[X \mid Y = y_j] \, P(Y = y_j)$$
+</TheoremBlock>
+
+<ProofBlock>
+We prove the discrete case. Start with the right side:
+
+$$\sum_j E[X \mid Y = y_j] \, P(Y = y_j) = \sum_j \left(\sum_i x_i \, P(X = x_i \mid Y = y_j)\right) P(Y = y_j)$$
+
+By the definition of conditional probability, $P(X = x_i \mid Y = y_j) \cdot P(Y = y_j) = P(X = x_i, Y = y_j)$:
+
+$$= \sum_j \sum_i x_i \, P(X = x_i, Y = y_j)$$
+
+Swapping the order of summation:
+
+$$= \sum_i x_i \sum_j P(X = x_i, Y = y_j) = \sum_i x_i \, P(X = x_i) = E[X]$$
+
+The last step uses the law of total probability: $\sum_j P(X = x_i, Y = y_j) = P(X = x_i)$ (marginalizing out $Y$). $\square$
+</ProofBlock>
+
+Notice the parallel with the law of total probability from [Topic 2](/topics/conditional-probability): $P(A) = \sum_j P(A \mid B_j) P(B_j)$. The tower property is the same idea applied to expectations.
+
+<TheoremBlock number={15} title="Law of Total Variance (Eve's Law)">
+$$\text{Var}(X) = E[\text{Var}(X \mid Y)] + \text{Var}(E[X \mid Y])$$
+
+In words: total variance = expected within-group variance + between-group variance.
+</TheoremBlock>
+
+<ProofBlock>
+Use the computational formula $\text{Var}(X) = E[X^2] - (E[X])^2$ and apply the tower property to both terms.
+
+By the tower property: $E[X^2] = E[E[X^2 \mid Y]]$ and $E[X] = E[E[X \mid Y]]$.
+
+Now note that $\text{Var}(X \mid Y) = E[X^2 \mid Y] - (E[X \mid Y])^2$ (the computational formula applied conditionally). So:
+
+$$E[X^2 \mid Y] = \text{Var}(X \mid Y) + (E[X \mid Y])^2$$
+
+Taking expectations: $E[X^2] = E[\text{Var}(X \mid Y)] + E[(E[X \mid Y])^2]$.
+
+Therefore:
+
+$$\text{Var}(X) = E[X^2] - (E[X])^2$$
+
+$$= E[\text{Var}(X \mid Y)] + E[(E[X \mid Y])^2] - (E[E[X \mid Y]])^2$$
+
+The last two terms are $E[Z^2] - (E[Z])^2$ where $Z = E[X \mid Y]$, which is $\text{Var}(Z) = \text{Var}(E[X \mid Y])$.
+
+$$= E[\text{Var}(X \mid Y)] + \text{Var}(E[X \mid Y])$$
+
+$\square$
+</ProofBlock>
+
+Eve's law is the mathematical foundation of **ANOVA** (analysis of variance): total variation decomposes into within-group and between-group components. In ML, it underlies the bias-variance decomposition (§9).
+
+<img src="/images/topics/expectation-moments/total-expectation-eves-law.png" alt="Three-panel figure showing tower property on mixture histogram, Eve's law stacked bar chart with within/between/total decomposition" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
+
+<ExampleBlock number={9} title="Mixture model (tower property)">
+A company has two customer segments: Casual (60%) with mean spending of 50, and Power Users (40%) with mean spending of 120. Let $Y$ indicate the segment.
+
+$$E[\text{Spending}] = E[\text{Spending} \mid \text{Casual}] \cdot P(\text{Casual}) + E[\text{Spending} \mid \text{Power}] \cdot P(\text{Power})$$
+
+$$= 50 \cdot 0.6 + 120 \cdot 0.4 = 30 + 48 = 78$$
+
+The unconditional mean is a weighted average of the conditional means.
+</ExampleBlock>
+
+<ExampleBlock number={10} title="Mixture model (Eve's law decomposition)">
+Continuing Example 9, suppose $\text{Var}(\text{Spending} \mid \text{Casual}) = 400$ (standard deviation 20) and $\text{Var}(\text{Spending} \mid \text{Power}) = 2500$ (standard deviation 50).
+
+**Within-group variance** (expected conditional variance):
+
+$$E[\text{Var}(\text{Spending} \mid Y)] = 400 \cdot 0.6 + 2500 \cdot 0.4 = 240 + 1000 = 1240$$
+
+**Between-group variance** (variance of conditional means): The conditional means are 50 and 120, with weights 0.6 and 0.4. Their mean is 78 (from Example 9).
+
+$$\text{Var}(E[\text{Spending} \mid Y]) = (50 - 78)^2 \cdot 0.6 + (120 - 78)^2 \cdot 0.4 = 784 \cdot 0.6 + 1764 \cdot 0.4 = 470.4 + 705.6 = 1176$$
+
+**Total variance:** $1240 + 1176 = 2416$.
+
+About half the variance comes from *within* segments (customers vary within their segment) and half from *between* segments (the segments have different means).
+</ExampleBlock>
+
+<LawOfTotalExpectationExplorer client:visible />
+
+---
+
+## 8. Moment-Generating Functions
+
+A **moment-generating function** (MGF) packages all the moments of a distribution — $E[X]$, $E[X^2]$, $E[X^3]$, and so on — into a single function. It's the probabilist's version of the Laplace transform.
+
+<DefinitionBlock number={8} title="Moment-Generating Function">
+The *moment-generating function* (MGF) of a random variable $X$ is
+
+$$M_X(t) = E[e^{tX}]$$
+
+defined for all $t \in \mathbb{R}$ where the expectation exists. Explicitly:
+
+$$M_X(t) = \sum_x e^{tx} p_X(x) \quad \text{(discrete)}$$
+
+$$M_X(t) = \int_{-\infty}^{\infty} e^{tx} f_X(x) \, dx \quad \text{(continuous)}$$
+</DefinitionBlock>
+
+The name "moment-generating function" is literal: the $n$th derivative of $M_X(t)$ evaluated at $t = 0$ gives the $n$th moment $E[X^n]$.
+
+<TheoremBlock number={16} title="Moments from the MGF">
+If $M_X(t)$ exists in an open interval around $t = 0$, then
+
+$$M_X^{(n)}(0) = E[X^n]$$
+
+where $M_X^{(n)}$ denotes the $n$th derivative.
+</TheoremBlock>
+
+<ProofBlock>
+Expand $e^{tX}$ in its Taylor series (from <ExternalLink href="https://formalcalculus.com/topics/taylor-series" site="formalcalculus" topic="Taylor Series" />):
+
+$$M_X(t) = E[e^{tX}] = E\left[\sum_{n=0}^{\infty} \frac{(tX)^n}{n!}\right] = \sum_{n=0}^{\infty} \frac{E[X^n]}{n!} \, t^n$$
+
+(The interchange of expectation and sum is justified by the assumption that $M_X$ exists in an interval around 0, which provides the absolute convergence needed.)
+
+This is a power series in $t$ with coefficients $E[X^n]/n!$. By the Taylor coefficient formula:
+
+$$\frac{M_X^{(n)}(0)}{n!} = \frac{E[X^n]}{n!}$$
+
+So $M_X^{(n)}(0) = E[X^n]$. In particular:
+- $M_X(0) = 1$ (always)
+- $M_X'(0) = E[X]$ (the mean)
+- $M_X''(0) = E[X^2]$, so $\text{Var}(X) = M_X''(0) - (M_X'(0))^2$
+
+$\square$
+</ProofBlock>
+
+<TheoremBlock number={17} title="Uniqueness of the MGF">
+If $M_X(t) = M_Y(t)$ for all $t$ in some open interval $(-\delta, \delta)$ around 0, then $X$ and $Y$ have the same distribution.
+</TheoremBlock>
+
+This uniqueness theorem is what makes MGFs a powerful proof tool: if you can show two random variables have the same MGF, you've shown they have the same distribution. We'll use this in the proof of the Central Limit Theorem (Modes of Convergence, coming soon).
+
+<TheoremBlock number={18} title="MGF of Independent Sums">
+If $X$ and $Y$ are independent, then
+
+$$M_{X+Y}(t) = M_X(t) \cdot M_Y(t)$$
+</TheoremBlock>
+
+<ProofBlock>
+$$M_{X+Y}(t) = E[e^{t(X+Y)}] = E[e^{tX} \cdot e^{tY}]$$
+
+Since $X \perp Y$, the functions $e^{tX}$ and $e^{tY}$ are independent (functions of independent variables are independent). By Theorem 5:
+
+$$= E[e^{tX}] \cdot E[e^{tY}] = M_X(t) \cdot M_Y(t)$$
+
+$\square$
+</ProofBlock>
+
+<ExampleBlock number={11} title="Bernoulli MGF">
+$X \sim \text{Bernoulli}(p)$:
+
+$$M_X(t) = E[e^{tX}] = e^{t \cdot 0}(1-p) + e^{t \cdot 1} p = (1 - p) + pe^t$$
+
+Check: $M_X'(0) = pe^0 = p = E[X]$. $\checkmark$
+</ExampleBlock>
+
+<ExampleBlock number={12} title="Normal MGF">
+$X \sim \mathcal{N}(\mu, \sigma^2)$. By completing the square in the exponent of the integral (a standard technique):
+
+$$M_X(t) = \exp\left(\mu t + \frac{\sigma^2 t^2}{2}\right)$$
+
+Check: $M_X'(t) = (\mu + \sigma^2 t) M_X(t)$, so $M_X'(0) = \mu$. $M_X''(0) = \sigma^2 + \mu^2$, so $\text{Var}(X) = \sigma^2 + \mu^2 - \mu^2 = \sigma^2$. $\checkmark$
+</ExampleBlock>
+
+<ExampleBlock number={13} title="Exponential MGF">
+$X \sim \text{Exp}(\lambda)$:
+
+$$M_X(t) = \int_0^{\infty} e^{tx} \lambda e^{-\lambda x} \, dx = \lambda \int_0^{\infty} e^{-({\lambda - t})x} \, dx = \frac{\lambda}{\lambda - t}$$
+
+for $t < \lambda$ (the integral diverges for $t \geq \lambda$).
+
+Check: $M_X'(t) = \lambda/(\lambda - t)^2$, so $M_X'(0) = 1/\lambda = E[X]$. $\checkmark$
+</ExampleBlock>
+
+<ExampleBlock number={14} title="Sum of independent normals via MGF">
+If $X \sim \mathcal{N}(\mu_1, \sigma_1^2)$ and $Y \sim \mathcal{N}(\mu_2, \sigma_2^2)$ are independent, then by Theorem 18:
+
+$$M_{X+Y}(t) = M_X(t) \cdot M_Y(t) = e^{\mu_1 t + \sigma_1^2 t^2/2} \cdot e^{\mu_2 t + \sigma_2^2 t^2/2} = e^{(\mu_1 + \mu_2)t + (\sigma_1^2 + \sigma_2^2)t^2/2}$$
+
+By the uniqueness theorem (Theorem 17), this is the MGF of $\mathcal{N}(\mu_1 + \mu_2, \sigma_1^2 + \sigma_2^2)$. Therefore:
+
+$$X + Y \sim \mathcal{N}(\mu_1 + \mu_2, \sigma_1^2 + \sigma_2^2)$$
+
+Independent normals sum to a normal — the mean adds, the variance adds. This is a property unique to the normal distribution and underlies much of classical statistics.
+</ExampleBlock>
+
+<img src="/images/topics/expectation-moments/moment-generating-functions.png" alt="Three-panel figure showing MGFs of Bernoulli, Normal, and Exponential; derivatives at zero extracting moments; product of MGFs for sum of independent normals" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
+
+<MGFExplorer client:visible />
+
+---
+
+## 9. Connections to ML
+
+Every concept in this topic has a direct counterpart in machine learning. Let us highlight the central connection: the **bias-variance decomposition**.
+
+<TheoremBlock number={19} title="Conditional Expectation Minimizes MSE">
+Among all functions $g(Y)$ of $Y$, the conditional expectation $E[X \mid Y]$ minimizes the mean squared error:
+
+$$E[X \mid Y] = \arg\min_{g} E[(X - g(Y))^2]$$
+</TheoremBlock>
+
+This is why supervised learning works: the optimal prediction of $Y$ given features $X$ (under squared loss) is $E[Y \mid X]$. Every regression model is an approximation to this conditional expectation.
+
+The **bias-variance decomposition** connects Eve's law (Theorem 15) to prediction error. For an estimator $\hat{f}(x)$ of a target $f(x) = E[Y \mid X = x]$:
+
+$$E[(Y - \hat{f}(X))^2] = \underbrace{(E[\hat{f}(X)] - f(X))^2}_{\text{Bias}^2} + \underbrace{E[(\hat{f}(X) - E[\hat{f}(X)])^2]}_{\text{Variance}} + \underbrace{E[(Y - f(X))^2]}_{\text{Irreducible noise}}$$
+
+This is Eve's law in disguise: the total prediction error decomposes into a systematic component (bias) and a variability component (variance), plus noise that no model can remove.
+
+<img src="/images/topics/expectation-moments/bias-variance-decomposition.png" alt="Three-panel figure showing polynomial fits: degree-1 (high bias, low variance), degree-5 (balanced), degree-15 (low bias, high variance) with Bias² and Var annotations" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
+
+| Concept from this topic | ML application |
+|---|---|
+| $E[X]$ (expectation) | Risk = $E[\ell(Y, \hat{f}(X))]$ — the expected loss that training minimizes |
+| Linearity of $E$ | SGD: $E[\nabla L_i] = \nabla E[L]$ — minibatch gradients are unbiased (<ExternalLink href="https://formalml.com/topics/optimization" site="formalml" topic="Optimization" />) |
+| $\text{Var}(X)$ | Variance of estimator determines confidence interval width |
+| Eve's law | Bias-variance decomposition of prediction error (<ExternalLink href="https://formalml.com/topics/bias-variance-tradeoff" site="formalml" topic="Bias-Variance Tradeoff" />) |
+| $E[X \mid Y]$ | Optimal prediction function under squared loss |
+| Jensen's inequality | ELBO $\leq \log p(\mathbf{x})$ in variational inference (<ExternalLink href="https://formalml.com/topics/information-theory" site="formalml" topic="Information Theory" />) |
+| MGF uniqueness | Proof of Central Limit Theorem (Modes of Convergence, coming soon) |
+| Chebyshev's inequality | PAC learning bounds; weak law of large numbers (Modes of Convergence, coming soon) |
+
+---
+
+## 10. Summary
+
+This topic completes **Track 1: Foundations of Probability**. We now have the complete toolkit:
+
+| Topic | Core objects | Core results |
+|---|---|---|
+| [Sample Spaces](/topics/sample-spaces) | $(\Omega, \mathcal{F}, P)$ | Kolmogorov axioms, inclusion-exclusion |
+| [Conditional Probability](/topics/conditional-probability) | $P(A \mid B)$ | Bayes' theorem, independence, total probability |
+| [Random Variables](/topics/random-variables) | $X : \Omega \to \mathbb{R}$, PMF, PDF, CDF | Distributions, joint/marginal/conditional, transformations |
+| **Expectation & Moments** | $E[X]$, $\text{Var}(X)$, $\text{Cov}(X,Y)$, $M_X(t)$ | Linearity, variance decomposition, Chebyshev, Jensen, tower property, Eve's law, MGF uniqueness |
+
+**What comes next.** Track 1's machinery feeds directly into five parallel tracks:
+
+- **Discrete Distributions** and **Continuous Distributions** (coming soon) apply the expectation and variance formulas to every named distribution — Binomial, Poisson, Normal, Exponential, Gamma, Beta.
+- **Modes of Convergence** (coming soon) uses Markov and Chebyshev as the starting point for the law of large numbers and the central limit theorem.
+- **Point Estimation** (coming soon) defines bias as $E[\hat{\theta}] - \theta$ and MSE as $\text{Var}(\hat{\theta}) + \text{Bias}^2$.
+- **Method of Moments** (coming soon) equates sample moments $\bar{X}, \overline{X^2}, \ldots$ to population moments $E[X], E[X^2], \ldots$.
