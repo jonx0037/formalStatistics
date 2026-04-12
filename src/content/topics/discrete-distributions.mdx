@@ -1,0 +1,873 @@
+---
+title: "Discrete Distributions"
+subtitle: "Bernoulli, Binomial, Geometric, Negative Binomial, Poisson, Hypergeometric, and Discrete Uniform — the named PMFs that appear everywhere in statistical modeling and machine learning, each derived from a distinct probabilistic mechanism."
+status: "published"
+difficulty: "foundational"
+prerequisites:
+  - "random-variables"
+  - "expectation-moments"
+tags:
+  - "probability"
+  - "discrete-distributions"
+  - "bernoulli"
+  - "binomial"
+  - "geometric"
+  - "negative-binomial"
+  - "poisson"
+  - "hypergeometric"
+  - "pgf"
+  - "exponential-family"
+  - "count-data"
+domain: "core-distributions"
+videoId: null
+notebookPath: "notebooks/discrete-distributions/05_discrete_distributions.ipynb"
+githubUrl: "https://github.com/jonx0037/formalStatistics/blob/main/src/content/topics/discrete-distributions.mdx"
+datePublished: 2026-04-12
+estimatedReadTime: 50
+abstract: "Seven discrete distributions arise from seven distinct probabilistic mechanisms. The Bernoulli(p) models a single binary trial; the Binomial(n,p) counts successes in n independent trials; the Geometric(p) waits for the first success; the Negative Binomial(r,p) waits for the r-th; the Poisson(λ) counts rare events at a constant rate; the Hypergeometric(N,K,n) counts successes when sampling without replacement; and the Discrete Uniform assigns equal probability to every outcome. Each distribution receives the same systematic treatment: PMF derivation, proofs of E[X] and Var(X), MGF, key properties, and ML connections. The Poisson limit theorem shows Binomial(n, λ/n) → Poisson(λ) as n → ∞. The Geometric distribution is the only discrete distribution with the memoryless property. Probability-generating functions G(s) = E[s^X] provide a tool tailored to discrete variables, with the compound distribution formula G_S(s) = G_N(G_X(s)) as its signature application. Five of the seven distributions — Bernoulli, Binomial, Geometric, Negative Binomial, and Poisson — belong to the exponential family, which Topic 7 will unify."
+formalcalculusPrereqs:
+  - topic: "sequences-limits"
+    site: "formalcalculus"
+    relationship: "The geometric series ∑r^k = 1/(1−r) and its derivatives are used in Geometric and Negative Binomial moment derivations. The limit (1−λ/n)^n → e^{−λ} drives the Poisson limit theorem."
+  - topic: "taylor-series"
+    site: "formalcalculus"
+    relationship: "The exponential power series e^x = ∑x^k/k! verifies that the Poisson PMF sums to 1 and drives MGF derivations for the Poisson distribution."
+formalmlConnections:
+  - topic: "logistic-regression"
+    site: "formalml"
+    relationship: "Logistic regression models Y|X ~ Bernoulli(σ(β^T X)). The natural parameter η = log(p/(1−p)) = β^T X is the log-odds, directly from the exponential family form. Cross-entropy loss is the negative Bernoulli log-likelihood."
+  - topic: "generalized-linear-models"
+    site: "formalml"
+    relationship: "Poisson regression (log link, count response) and Negative Binomial regression (overdispersed counts) use these distributions as the response family in GLMs."
+  - topic: "naive-bayes"
+    site: "formalml"
+    relationship: "Bernoulli Naive Bayes models binary feature vectors as independent Bernoulli random variables given the class label."
+connections:
+  - topic: "random-variables"
+    relationship: "Topic 3 defined what PMFs, CDFs, and support sets are. This topic catalogs the seven most important discrete PMFs — the specific named distributions that Topic 3's framework was built to describe."
+  - topic: "expectation-moments"
+    relationship: "Topic 4 developed E[X], Var(X), and MGF as tools. This topic applies them systematically: Binomial E[X] = np, Poisson E[X] = λ, Geometric E[X] = 1/p, and so on for all seven distributions."
+  - topic: "continuous-distributions"
+    relationship: "The continuous analog of this catalog — Normal, Exponential, Gamma, Beta, Uniform — applies the same systematic treatment to continuous distributions."
+  - topic: "exponential-families"
+    relationship: "Five of the seven distributions here belong to the exponential family. Their natural parameters, sufficient statistics, and log-partition functions will be identified and unified in that topic."
+  - topic: "central-limit-theorem"
+    relationship: "The Normal approximation to the Binomial, foreshadowed in the Binomial section, is proved rigorously using moment-generating functions in the CLT topic."
+references:
+  - type: "book"
+    title: "Probability and Measure"
+    author: "Patrick Billingsley"
+    year: 2012
+    edition: "Anniversary Edition"
+    publisher: "Wiley"
+    note: "Chapters 5 and 6 cover distributions including Poisson and binomial in full measure-theoretic generality."
+  - type: "book"
+    title: "Probability: Theory and Examples"
+    author: "Rick Durrett"
+    year: 2019
+    edition: "5th"
+    publisher: "Cambridge University Press"
+    note: "Chapter 1 covers discrete distributions, generating functions, and the Poisson limit theorem."
+  - type: "book"
+    title: "Probability and Random Processes"
+    author: "Geoffrey Grimmett & David Stirzaker"
+    year: 2020
+    edition: "4th"
+    publisher: "Oxford University Press"
+    note: "Chapter 3 on discrete random variables covers all seven distributions with extensive worked examples and exercises."
+  - type: "book"
+    title: "All of Statistics"
+    author: "Larry Wasserman"
+    year: 2004
+    publisher: "Springer"
+    note: "Chapter 2 provides a compact reference for all named distributions with moment formulas."
+  - type: "book"
+    title: "Statistical Inference"
+    author: "George Casella & Roger L. Berger"
+    year: 2002
+    edition: "2nd"
+    publisher: "Duxbury"
+    note: "Chapter 3 covers common families of distributions. Excellent treatment of exponential family identification."
+  - type: "book"
+    title: "Pattern Recognition and Machine Learning"
+    author: "Christopher M. Bishop"
+    year: 2006
+    publisher: "Springer"
+    note: "Chapter 2 covers Bernoulli, Binomial, and Multinomial distributions in the ML context, with exponential family identification."
+  - type: "book"
+    title: "Generalized Linear Models"
+    author: "P. McCullagh & J.A. Nelder"
+    year: 1989
+    edition: "2nd"
+    publisher: "Chapman & Hall/CRC"
+    note: "The canonical reference for GLMs. Chapters 4 (Binomial) and 6 (Poisson) connect these distributions to regression models."
+  - type: "book"
+    title: "Negative Binomial Regression"
+    author: "Joseph M. Hilbe"
+    year: 2011
+    edition: "2nd"
+    publisher: "Cambridge University Press"
+    note: "Comprehensive treatment of NB regression for overdispersed count data. Chapters 1–4 cover the NB distribution and its relationship to Poisson."
+---
+
+import DefinitionBlock from '../../components/ui/DefinitionBlock.astro';
+import TheoremBlock from '../../components/ui/TheoremBlock.astro';
+import ProofBlock from '../../components/ui/ProofBlock.astro';
+import ExampleBlock from '../../components/ui/ExampleBlock.astro';
+import RemarkBlock from '../../components/ui/RemarkBlock.astro';
+import ExternalLink from '../../components/ui/ExternalLink.astro';
+
+import DistributionCatalogExplorer from '../../components/viz/DistributionCatalogExplorer.tsx';
+import MemorylessPropertyExplorer from '../../components/viz/MemorylessPropertyExplorer.tsx';
+import PoissonLimitExplorer from '../../components/viz/PoissonLimitExplorer.tsx';
+import SamplingComparisonExplorer from '../../components/viz/SamplingComparisonExplorer.tsx';
+import PGFExplorer from '../../components/viz/PGFExplorer.tsx';
+
+## 5.1 The Discrete Distribution Catalog
+
+In [Topic 3](/topics/random-variables), we built the general framework: random variables as measurable functions, PMFs as probability assignments over countable supports, CDFs as cumulative summaries, and measurability as the bridge from probability spaces to number lines. In [Topic 4](/topics/expectation-moments), we built the tools: expectation as center of mass, variance as spread, covariance as linear association, and moment-generating functions as the engine for proving distributional results.
+
+Those topics answered the question *what is a distribution?* This topic answers a different question: **which distributions matter, and why?**
+
+The answer is seven specific PMFs, each arising from a distinct probabilistic mechanism. The Bernoulli models a single yes/no trial. The Binomial counts successes across independent trials. The Geometric waits for the first success. The Negative Binomial waits for the $r$-th. The Poisson counts rare events at a constant rate. The Hypergeometric counts successes when sampling without replacement. And the Discrete Uniform assigns equal probability to every outcome in a finite set.
+
+<RemarkBlock title="A catalog, not a narrative">
+Topics 1–4 followed a linear arc — each concept building toward the next. This topic is structurally different: it's a **parallel catalog**. Each distribution gets the same systematic treatment (PMF → E[X] proof → Var(X) proof → MGF → key properties → ML connection), and the value comes from seeing how the same tools from Topics 3–4 produce different results when applied to different mechanisms. The repetition is the point — it's how you internalize the tools.
+</RemarkBlock>
+
+<img src="/images/topics/discrete-distributions/discrete-distribution-catalog.png" alt="Gallery of PMF bar charts for all seven discrete distributions with E[X] balance-point triangles" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
+
+The table below summarizes what we're about to build. For each distribution, the "mechanism" column describes the experiment that produces it, the "parameters" column identifies what you need to specify, and the "support" column lists which values the random variable can take.
+
+| Distribution | Mechanism | Parameters | Support |
+|---|---|---|---|
+| Bernoulli | Single binary trial | $p \in (0,1)$ | $\{0, 1\}$ |
+| Binomial | $n$ independent trials, count successes | $n \in \mathbb{N}$, $p \in (0,1)$ | $\{0, 1, \ldots, n\}$ |
+| Geometric | Trials until first success | $p \in (0,1)$ | $\{1, 2, 3, \ldots\}$ |
+| Negative Binomial | Trials until $r$-th success | $r \in \mathbb{N}$, $p \in (0,1)$ | $\{r, r+1, r+2, \ldots\}$ |
+| Poisson | Count of rare events at rate $\lambda$ | $\lambda > 0$ | $\{0, 1, 2, \ldots\}$ |
+| Hypergeometric | Sample without replacement | $N, K, n \in \mathbb{N}$ | $\{\max(0, n-N+K), \ldots, \min(n, K)\}$ |
+| Discrete Uniform | Equal probability on finite set | $a, b \in \mathbb{Z}$ | $\{a, a+1, \ldots, b\}$ |
+
+Five of these seven distributions — Bernoulli, Binomial, Geometric, Negative Binomial, and Poisson — belong to the **exponential family**. We'll flag this for each one as we go, and Exponential Families (coming soon) will unify the pattern.
+
+<DistributionCatalogExplorer client:visible />
+
+---
+
+## 5.2 The Bernoulli Distribution
+
+The simplest possible random experiment: a single trial with two outcomes. Flip a coin, check if a user clicks, test whether a component passes quality control. The outcome is 1 (success) with probability $p$ and 0 (failure) with probability $1 - p$.
+
+<DefinitionBlock number={1} title="Bernoulli Distribution">
+A random variable $X$ has the **Bernoulli distribution** with parameter $p \in (0, 1)$, written $X \sim \text{Bernoulli}(p)$, if its PMF is
+
+$$p_X(k) = p^k (1-p)^{1-k}, \quad k \in \{0, 1\}$$
+
+Equivalently: $P(X = 1) = p$ and $P(X = 0) = 1 - p = q$.
+</DefinitionBlock>
+
+The PMF is trivially a valid probability mass function: it assigns non-negative values to exactly two outcomes, and $p + (1-p) = 1$. Throughout this topic, we write $q = 1 - p$ for brevity.
+
+<TheoremBlock number={1} title="Bernoulli Moments and MGF">
+If $X \sim \text{Bernoulli}(p)$, then:
+
+1. $E[X] = p$
+2. $\text{Var}(X) = p(1-p) = pq$
+3. $M_X(t) = q + pe^t$
+</TheoremBlock>
+
+<ProofBlock>
+**Expectation.** Since $X$ takes only two values:
+
+$$E[X] = 0 \cdot P(X = 0) + 1 \cdot P(X = 1) = 0 \cdot q + 1 \cdot p = p$$
+
+**Variance.** First compute the second moment. Since $X \in \{0, 1\}$, we have $X^2 = X$, so $E[X^2] = E[X] = p$. By the variance shortcut from [Topic 4](/topics/expectation-moments):
+
+$$\text{Var}(X) = E[X^2] - (E[X])^2 = p - p^2 = p(1-p)$$
+
+**MGF.** By definition of the moment-generating function:
+
+$$M_X(t) = E[e^{tX}] = e^{t \cdot 0} \cdot q + e^{t \cdot 1} \cdot p = q + pe^t$$
+
+This is defined for all $t \in \mathbb{R}$. $\square$
+</ProofBlock>
+
+<RemarkBlock title="Bernoulli exponential family form">
+We can rewrite the Bernoulli PMF as
+
+$$p_X(k) = (1-p) \exp\!\left(k \ln \frac{p}{1-p}\right)$$
+
+This is the exponential family form with **natural parameter** $\eta = \ln(p/(1-p))$ — the **logit** of $p$. The inverse map $p = 1/(1 + e^{-\eta})$ is the **sigmoid function**. This connection is why logistic regression uses the Bernoulli distribution: the model is $Y \mid X \sim \text{Bernoulli}(\sigma(\beta^T X))$, where $\sigma$ is the sigmoid (see <ExternalLink href="https://formalml.com/topics/logistic-regression" site="formalml" topic="Logistic Regression" />).
+</RemarkBlock>
+
+<ExampleBlock number={1} title="Bernoulli as logistic regression foundation">
+In binary classification, we model the response as $Y \mid X \sim \text{Bernoulli}(p(X))$ where $p(X) = \sigma(\beta^T X)$. The negative log-likelihood of a single observation $(x_i, y_i)$ is:
+
+$$-\ln p(y_i \mid x_i) = -[y_i \ln \hat{p}_i + (1 - y_i) \ln(1 - \hat{p}_i)]$$
+
+This is the **cross-entropy loss** — the loss function you minimize in logistic regression is literally the negative Bernoulli log-likelihood. Every gradient descent step in logistic regression is doing maximum likelihood estimation for Bernoulli parameters.
+</ExampleBlock>
+
+<img src="/images/topics/discrete-distributions/bernoulli-binomial.png" alt="Three-panel figure: Bernoulli PMF varying p, Binomial PMF varying p with fixed n=15, and Binomial PMF varying n with fixed p=0.3" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
+
+---
+
+## 5.3 The Binomial Distribution
+
+What happens when we repeat a Bernoulli trial $n$ independent times and count the total number of successes? The answer is the Binomial distribution — the most natural generalization of Bernoulli.
+
+<DefinitionBlock number={2} title="Binomial Distribution">
+A random variable $X$ has the **Binomial distribution** with parameters $n \in \mathbb{N}$ and $p \in (0,1)$, written $X \sim \text{Binomial}(n, p)$, if its PMF is
+
+$$p_X(k) = \binom{n}{k} p^k (1-p)^{n-k}, \quad k \in \{0, 1, \ldots, n\}$$
+
+where $\binom{n}{k} = \frac{n!}{k!(n-k)!}$ is the binomial coefficient.
+</DefinitionBlock>
+
+The PMF counts exactly the probability of getting $k$ specific successes (each contributing $p$) and $n-k$ specific failures (each contributing $q = 1-p$), multiplied by $\binom{n}{k}$ because we don't care *which* trials are the successes — only how many. The binomial theorem confirms the PMF sums to 1: $\sum_{k=0}^n \binom{n}{k} p^k q^{n-k} = (p + q)^n = 1$.
+
+<TheoremBlock number={2} title="Binomial as Sum of Bernoullis">
+If $X_1, X_2, \ldots, X_n \overset{\text{iid}}{\sim} \text{Bernoulli}(p)$ and $X = X_1 + X_2 + \cdots + X_n$, then $X \sim \text{Binomial}(n, p)$.
+</TheoremBlock>
+
+<ProofBlock>
+We need $P(X = k) = \binom{n}{k} p^k q^{n-k}$. The event $\{X = k\}$ means exactly $k$ of the $n$ independent Bernoulli trials are 1 and $n - k$ are 0. There are $\binom{n}{k}$ ways to choose which $k$ trials succeed. For any specific such pattern, the probability is $p^k q^{n-k}$ by independence. Summing over all $\binom{n}{k}$ patterns gives $P(X = k) = \binom{n}{k} p^k q^{n-k}$. $\square$
+</ProofBlock>
+
+This representation is not just a derivation trick — it's the key to computing moments.
+
+<TheoremBlock number={3} title="Binomial Expectation">
+If $X \sim \text{Binomial}(n, p)$, then $E[X] = np$.
+</TheoremBlock>
+
+<ProofBlock>
+**Via linearity (the elegant proof).** Write $X = X_1 + \cdots + X_n$ where each $X_i \sim \text{Bernoulli}(p)$. By linearity of expectation — which does not require independence:
+
+$$E[X] = E[X_1] + E[X_2] + \cdots + E[X_n] = np$$
+
+**Direct PMF proof.** We can also verify directly from the PMF. The $k = 0$ term vanishes, so:
+
+$$E[X] = \sum_{k=1}^n k \binom{n}{k} p^k q^{n-k}$$
+
+Using the identity $k \binom{n}{k} = n \binom{n-1}{k-1}$ and substituting $j = k - 1$:
+
+$$= n \sum_{j=0}^{n-1} \binom{n-1}{j} p^{j+1} q^{(n-1)-j} = np \sum_{j=0}^{n-1} \binom{n-1}{j} p^j q^{(n-1)-j} = np \cdot 1 = np$$
+
+where the last step uses the binomial theorem. $\square$
+</ProofBlock>
+
+<TheoremBlock number={4} title="Binomial Variance and MGF">
+If $X \sim \text{Binomial}(n, p)$, then:
+
+1. $\text{Var}(X) = np(1-p) = npq$
+2. $M_X(t) = (q + pe^t)^n$
+</TheoremBlock>
+
+<ProofBlock>
+**Variance.** Since $X = X_1 + \cdots + X_n$ with the $X_i$ independent, the variance is additive:
+
+$$\text{Var}(X) = \text{Var}(X_1) + \cdots + \text{Var}(X_n) = n \cdot pq = npq$$
+
+**MGF.** Again using the iid Bernoulli representation:
+
+$$M_X(t) = E[e^{tX}] = E[e^{t(X_1 + \cdots + X_n)}] = \prod_{i=1}^n E[e^{tX_i}] = (q + pe^t)^n$$
+
+where the product factorization uses independence, and each factor is the Bernoulli MGF. $\square$
+</ProofBlock>
+
+<TheoremBlock number={5} title="Binomial Reproductive Property">
+If $X \sim \text{Binomial}(n_1, p)$ and $Y \sim \text{Binomial}(n_2, p)$ are independent (same $p$), then
+
+$$X + Y \sim \text{Binomial}(n_1 + n_2, p)$$
+</TheoremBlock>
+
+<ProofBlock>
+By the MGF uniqueness theorem from [Topic 4](/topics/expectation-moments):
+
+$$M_{X+Y}(t) = M_X(t) \cdot M_Y(t) = (q + pe^t)^{n_1} \cdot (q + pe^t)^{n_2} = (q + pe^t)^{n_1 + n_2}$$
+
+This is the MGF of $\text{Binomial}(n_1 + n_2, p)$, so by uniqueness, $X + Y \sim \text{Binomial}(n_1 + n_2, p)$. $\square$
+</ProofBlock>
+
+<ExampleBlock number={2} title="A/B testing: confidence interval for conversion rate">
+An e-commerce site runs an A/B test: 1200 users see design A, with 84 conversions. The sample proportion $\hat{p} = 84/1200 = 0.07$ estimates the Binomial parameter $p$. By the Central Limit Theorem (coming in [Modes of Convergence](/topics/modes-of-convergence)), an approximate 95% confidence interval is
+
+$$\hat{p} \pm 1.96 \sqrt{\frac{\hat{p}(1 - \hat{p})}{n}} = 0.07 \pm 0.014$$
+
+so we're 95% confident the true conversion rate is between 5.6% and 8.4%. The $\sqrt{\hat{p}(1-\hat{p})/n}$ in the denominator is $\sqrt{\text{Var}(\hat{p})} = \sqrt{pq/n}$ — the Binomial variance formula, divided by $n$, is doing all the work.
+</ExampleBlock>
+
+---
+
+## 5.4 The Geometric Distribution
+
+The Binomial fixes $n$ (number of trials) and counts successes. The Geometric flips the question: we keep running independent Bernoulli trials until the *first* success. How long do we wait?
+
+<DefinitionBlock number={3} title="Geometric Distribution">
+A random variable $X$ has the **Geometric distribution** with parameter $p \in (0, 1)$, written $X \sim \text{Geometric}(p)$, if its PMF is
+
+$$p_X(k) = p(1-p)^{k-1}, \quad k \in \{1, 2, 3, \ldots\}$$
+
+Here $X$ counts the number of trials until (and including) the first success.
+</DefinitionBlock>
+
+<RemarkBlock title="Two conventions for the Geometric">
+Some textbooks define $X$ as the number of *failures* before the first success, giving $P(X = k) = p(1-p)^k$ for $k = 0, 1, 2, \ldots$ with $E[X] = (1-p)/p$. We use the *trials until first success* convention (support starts at 1) because it parallels the Negative Binomial more naturally: NegBin counts trials until the $r$-th success, and Geometric is the $r = 1$ case. Always check which convention a text uses — the formulas for E[X] and Var(X) differ.
+</RemarkBlock>
+
+The PMF sums to 1 by the geometric series: $\sum_{k=1}^{\infty} p q^{k-1} = p \cdot \frac{1}{1 - q} = 1$, using the series formula from <ExternalLink href="https://formalcalculus.com/topics/sequences-limits" site="formalcalculus" topic="Sequences & Limits" />.
+
+<TheoremBlock number={6} title="Geometric Expectation">
+If $X \sim \text{Geometric}(p)$, then $E[X] = 1/p$.
+</TheoremBlock>
+
+<ProofBlock>
+We need $\sum_{k=1}^{\infty} k p q^{k-1}$. Factor out $p$ and use the derivative of the geometric series. Since $\sum_{k=0}^{\infty} q^k = \frac{1}{1-q}$, differentiating both sides with respect to $q$:
+
+$$\sum_{k=1}^{\infty} k q^{k-1} = \frac{1}{(1-q)^2} = \frac{1}{p^2}$$
+
+Therefore:
+
+$$E[X] = p \sum_{k=1}^{\infty} k q^{k-1} = p \cdot \frac{1}{p^2} = \frac{1}{p}$$
+
+Sanity check: if $p = 1$ (certain success), $E[X] = 1$ — one trial suffices. If $p = 0.01$ (rare success), $E[X] = 100$ — we expect to wait 100 trials. $\square$
+</ProofBlock>
+
+<TheoremBlock number={7} title="Geometric Variance and MGF">
+If $X \sim \text{Geometric}(p)$, then:
+
+1. $\text{Var}(X) = \frac{1-p}{p^2} = \frac{q}{p^2}$
+2. $M_X(t) = \frac{pe^t}{1 - qe^t}$, defined for $t < -\ln(1-p)$
+</TheoremBlock>
+
+<ProofBlock>
+**Variance.** We need $E[X^2]$. Using LOTUS and the second derivative of the geometric series:
+
+$$E[X^2] = \sum_{k=1}^{\infty} k^2 p q^{k-1}$$
+
+Write $k^2 = k(k-1) + k$, so $E[X^2] = E[X(X-1)] + E[X]$. For $E[X(X-1)]$:
+
+$$E[X(X-1)] = p \sum_{k=2}^{\infty} k(k-1) q^{k-1} = pq \sum_{k=2}^{\infty} k(k-1) q^{k-2}$$
+
+The sum $\sum_{k=2}^{\infty} k(k-1) q^{k-2} = \frac{2}{(1-q)^3} = \frac{2}{p^3}$ (second derivative of geometric series). So $E[X(X-1)] = pq \cdot \frac{2}{p^3} = \frac{2q}{p^2}$.
+
+$$\text{Var}(X) = E[X^2] - (E[X])^2 = \left(\frac{2q}{p^2} + \frac{1}{p}\right) - \frac{1}{p^2} = \frac{2q + p - 1}{p^2} = \frac{q}{p^2}$$
+
+**MGF.** By definition:
+
+$$M_X(t) = \sum_{k=1}^{\infty} e^{tk} p q^{k-1} = pe^t \sum_{k=1}^{\infty} (qe^t)^{k-1} = \frac{pe^t}{1 - qe^t}$$
+
+The geometric series converges when $|qe^t| < 1$, i.e., $t < \ln(1/q) = -\ln(1-p)$. $\square$
+</ProofBlock>
+
+Now the most important structural property of the Geometric distribution — the one that makes it unique among discrete distributions.
+
+<TheoremBlock number={8} title="Memoryless Property of the Geometric Distribution">
+The Geometric distribution is the *only* discrete distribution with the **memoryless property**: for all $s, t \in \{0, 1, 2, \ldots\}$,
+
+$$P(X > s + t \mid X > s) = P(X > t)$$
+
+That is, given that we've already waited $s$ trials without success, the remaining waiting time has the same distribution as if we started fresh.
+</TheoremBlock>
+
+<ProofBlock>
+**The Geometric is memoryless.** The survival function is $P(X > n) = q^n$ (probability of $n$ consecutive failures). Then:
+
+$$P(X > s + t \mid X > s) = \frac{P(X > s + t)}{P(X > s)} = \frac{q^{s+t}}{q^s} = q^t = P(X > t)$$
+
+**Uniqueness.** Suppose $X$ takes values in $\{1, 2, \ldots\}$ and satisfies $P(X > s + t \mid X > s) = P(X > t)$ for all $s, t \geq 0$. Let $g(n) = P(X > n)$, so $g(0) = 1$. The memoryless property gives $g(s + t) = g(s) g(t)$. The only function satisfying this Cauchy functional equation on the non-negative integers with $g(0) = 1$ and $0 < g(1) < 1$ is $g(n) = g(1)^n$. Setting $q = g(1)$ gives $P(X > n) = q^n$, which is exactly the Geometric survival function with $p = 1 - q$. $\square$
+</ProofBlock>
+
+<img src="/images/topics/discrete-distributions/geometric-memoryless.png" alt="Three-panel figure: Geometric PMF for various p, memoryless property P(X=k|X>5) overlay, and survival function on log scale showing linearity" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
+
+The memoryless property means that Bernoulli trials have no "momentum" — the fact that you've failed 100 times doesn't make the 101st trial any more likely to succeed. This is the mathematical content of "the coin has no memory."
+
+<MemorylessPropertyExplorer client:visible />
+
+<ExampleBlock number={3} title="Expected trials until first click">
+A display ad has a click-through rate of $p = 0.02$. The number of impressions until the first click follows $X \sim \text{Geometric}(0.02)$. Expected impressions: $E[X] = 1/0.02 = 50$. Standard deviation: $\sigma = \sqrt{q/p^2} = \sqrt{0.98/0.0004} \approx 49.5$.
+
+The memoryless property is practically important here: if an ad has been shown 100 times without a click, the expected number of *additional* impressions until first click is still 50 — the past doesn't help predict the future, because each impression is an independent Bernoulli trial.
+</ExampleBlock>
+
+---
+
+## 5.5 The Negative Binomial Distribution
+
+The Geometric waits for the first success. The Negative Binomial generalizes: wait for the $r$-th success.
+
+<DefinitionBlock number={4} title="Negative Binomial Distribution">
+A random variable $X$ has the **Negative Binomial distribution** with parameters $r \in \mathbb{N}$ and $p \in (0,1)$, written $X \sim \text{NegBin}(r, p)$, if its PMF is
+
+$$p_X(k) = \binom{k-1}{r-1} p^r (1-p)^{k-r}, \quad k \in \{r, r+1, r+2, \ldots\}$$
+
+Here $X$ counts the total number of trials until (and including) the $r$-th success.
+</DefinitionBlock>
+
+The PMF logic: on trial $k$, the $r$-th success occurs. That means exactly $r - 1$ successes in the first $k - 1$ trials (there are $\binom{k-1}{r-1}$ ways to arrange these), each contributing $p^{r-1} q^{k-r}$, and then a final success on trial $k$ contributing $p$. Total: $\binom{k-1}{r-1} p^r q^{k-r}$.
+
+Note: $\text{NegBin}(1, p) = \text{Geometric}(p)$. Setting $r = 1$ gives $\binom{k-1}{0} p q^{k-1} = p q^{k-1}$, which is exactly the Geometric PMF.
+
+<TheoremBlock number={9} title="Negative Binomial as Sum of Geometrics">
+If $Y_1, Y_2, \ldots, Y_r \overset{\text{iid}}{\sim} \text{Geometric}(p)$ and $X = Y_1 + Y_2 + \cdots + Y_r$, then $X \sim \text{NegBin}(r, p)$.
+</TheoremBlock>
+
+<ProofBlock>
+Think of $Y_i$ as the number of trials from the $(i-1)$-th success to the $i$-th success. By the memoryless property of the Geometric, after each success the process "resets" — the remaining waiting time is independent of the past. So $Y_1, \ldots, Y_r$ are independent, and $X = Y_1 + \cdots + Y_r$ is the total number of trials until the $r$-th success.
+
+To verify the PMF, we can use MGFs. The MGF of $Y_i$ is $pe^t/(1 - qe^t)$, so by independence:
+
+$$M_X(t) = \left(\frac{pe^t}{1 - qe^t}\right)^r$$
+
+This uniquely determines the NegBin$(r, p)$ distribution. $\square$
+</ProofBlock>
+
+<TheoremBlock number={10} title="Negative Binomial Moments and MGF">
+If $X \sim \text{NegBin}(r, p)$, then:
+
+1. $E[X] = r/p$
+2. $\text{Var}(X) = rq/p^2$
+3. $M_X(t) = \left(\frac{pe^t}{1 - qe^t}\right)^r$, defined for $t < -\ln(1-p)$
+</TheoremBlock>
+
+<ProofBlock>
+Write $X = Y_1 + \cdots + Y_r$ with $Y_i \overset{\text{iid}}{\sim} \text{Geometric}(p)$. By linearity:
+
+$$E[X] = r \cdot E[Y_1] = r \cdot \frac{1}{p} = \frac{r}{p}$$
+
+By independence:
+
+$$\text{Var}(X) = r \cdot \text{Var}(Y_1) = r \cdot \frac{q}{p^2} = \frac{rq}{p^2}$$
+
+The MGF follows from the product of $r$ independent Geometric MGFs, as shown in Theorem 9. $\square$
+</ProofBlock>
+
+<img src="/images/topics/discrete-distributions/negative-binomial.png" alt="Three-panel figure: NegBin PMF varying r, NegBin PMF varying p, and Geometric = NegBin(r=1) overlap" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
+
+A key feature of the Negative Binomial is that $\text{Var}(X) = rq/p^2 = E[X] \cdot q/p = E[X] \cdot (E[X]/r)$, which means the variance is always larger than the mean when $q > 0$. This **overdispersion** (variance exceeding the mean) makes the Negative Binomial the go-to alternative when Poisson is too restrictive.
+
+<ExampleBlock number={4} title="RNA-seq count modeling with overdispersion">
+In RNA-seq experiments, gene expression is measured as read counts. If counts followed a Poisson model, $\text{Var}(Y) = E[Y]$. But biological replicates consistently show $\text{Var}(Y) > E[Y]$ — overdispersion due to biological variability between samples. Tools like DESeq2 model counts as $Y \sim \text{NegBin}(\mu, r)$, where the dispersion parameter $r$ captures the excess variability. As $r \to \infty$, $\text{NegBin} \to \text{Poisson}$, so the Poisson model is a special case — and a testable hypothesis.
+</ExampleBlock>
+
+---
+
+## 5.6 The Poisson Distribution
+
+The Poisson distribution arises in a completely different way from the Bernoulli family. Instead of counting successes in a fixed number of trials, it counts events occurring at a *constant average rate* in a continuous interval — photons hitting a detector, customers arriving at a store, typos per page, mutations per genome.
+
+<DefinitionBlock number={5} title="Poisson Distribution">
+A random variable $X$ has the **Poisson distribution** with parameter $\lambda > 0$, written $X \sim \text{Poisson}(\lambda)$, if its PMF is
+
+$$p_X(k) = \frac{e^{-\lambda} \lambda^k}{k!}, \quad k \in \{0, 1, 2, \ldots\}$$
+
+The parameter $\lambda$ is both the mean and the variance (equidispersion).
+</DefinitionBlock>
+
+The PMF sums to 1 because $\sum_{k=0}^{\infty} \lambda^k / k! = e^{\lambda}$ (the exponential power series from <ExternalLink href="https://formalcalculus.com/topics/taylor-series" site="formalcalculus" topic="Taylor Series" />), so $\sum_{k=0}^{\infty} e^{-\lambda} \lambda^k / k! = e^{-\lambda} \cdot e^{\lambda} = 1$.
+
+But where does this PMF come from? The answer is the Poisson limit theorem — arguably the most beautiful limit in discrete probability.
+
+<TheoremBlock number={11} title="Poisson Limit Theorem">
+If $X_n \sim \text{Binomial}(n, \lambda/n)$ with $\lambda > 0$ fixed, then for each $k \in \{0, 1, 2, \ldots\}$:
+
+$$\lim_{n \to \infty} P(X_n = k) = \frac{e^{-\lambda} \lambda^k}{k!}$$
+
+That is, $\text{Binomial}(n, \lambda/n) \xrightarrow{n \to \infty} \text{Poisson}(\lambda)$.
+</TheoremBlock>
+
+<ProofBlock>
+Fix $k$ and compute $P(X_n = k)$ with $p = \lambda/n$:
+
+$$P(X_n = k) = \binom{n}{k} \left(\frac{\lambda}{n}\right)^k \left(1 - \frac{\lambda}{n}\right)^{n-k}$$
+
+Rewrite the binomial coefficient:
+
+$$= \frac{\lambda^k}{k!} \cdot \frac{n(n-1) \cdots (n-k+1)}{n^k} \cdot \left(1 - \frac{\lambda}{n}\right)^n \cdot \left(1 - \frac{\lambda}{n}\right)^{-k}$$
+
+Now take $n \to \infty$ with $k$ and $\lambda$ fixed. The three factors converge:
+
+$$\frac{n(n-1) \cdots (n-k+1)}{n^k} = 1 \cdot \left(1 - \frac{1}{n}\right) \cdots \left(1 - \frac{k-1}{n}\right) \to 1$$
+
+$$\left(1 - \frac{\lambda}{n}\right)^n \to e^{-\lambda}$$
+
+$$\left(1 - \frac{\lambda}{n}\right)^{-k} \to 1$$
+
+The limit $(1 - \lambda/n)^n \to e^{-\lambda}$ uses the characterization of $e$ from <ExternalLink href="https://formalcalculus.com/topics/sequences-limits" site="formalcalculus" topic="Sequences & Limits" />. Combining:
+
+$$\lim_{n \to \infty} P(X_n = k) = \frac{\lambda^k}{k!} \cdot 1 \cdot e^{-\lambda} \cdot 1 = \frac{e^{-\lambda} \lambda^k}{k!}$$
+
+which is the Poisson PMF. $\square$
+</ProofBlock>
+
+<img src="/images/topics/discrete-distributions/poisson-limit-theorem.png" alt="Three-panel figure: Poisson PMFs for λ=1,3,7,15; Binomial(n,5/n)→Poisson(5) convergence; mean-variance equidispersion plot" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
+
+<PoissonLimitExplorer client:visible />
+
+<TheoremBlock number={12} title="Poisson Equidispersion">
+If $X \sim \text{Poisson}(\lambda)$, then $E[X] = \text{Var}(X) = \lambda$.
+</TheoremBlock>
+
+<ProofBlock>
+**Expectation.** By LOTUS:
+
+$$E[X] = \sum_{k=0}^{\infty} k \cdot \frac{e^{-\lambda} \lambda^k}{k!} = \sum_{k=1}^{\infty} \frac{e^{-\lambda} \lambda^k}{(k-1)!}$$
+
+Substituting $j = k - 1$:
+
+$$= e^{-\lambda} \lambda \sum_{j=0}^{\infty} \frac{\lambda^j}{j!} = e^{-\lambda} \lambda \cdot e^{\lambda} = \lambda$$
+
+**Variance.** Compute $E[X(X-1)]$ first:
+
+$$E[X(X-1)] = \sum_{k=2}^{\infty} k(k-1) \frac{e^{-\lambda} \lambda^k}{k!} = e^{-\lambda} \lambda^2 \sum_{j=0}^{\infty} \frac{\lambda^j}{j!} = \lambda^2$$
+
+So $E[X^2] = E[X(X-1)] + E[X] = \lambda^2 + \lambda$, and:
+
+$$\text{Var}(X) = E[X^2] - (E[X])^2 = \lambda^2 + \lambda - \lambda^2 = \lambda$$
+
+The mean equals the variance — this is the **equidispersion** property. $\square$
+</ProofBlock>
+
+<TheoremBlock number={13} title="Poisson MGF">
+If $X \sim \text{Poisson}(\lambda)$, then $M_X(t) = e^{\lambda(e^t - 1)}$, defined for all $t \in \mathbb{R}$.
+</TheoremBlock>
+
+<ProofBlock>
+$$M_X(t) = E[e^{tX}] = \sum_{k=0}^{\infty} e^{tk} \frac{e^{-\lambda} \lambda^k}{k!} = e^{-\lambda} \sum_{k=0}^{\infty} \frac{(\lambda e^t)^k}{k!} = e^{-\lambda} \cdot e^{\lambda e^t} = e^{\lambda(e^t - 1)}$$
+
+where we recognized the sum as the Taylor series of $e^{\lambda e^t}$. $\square$
+</ProofBlock>
+
+<TheoremBlock number={14} title="Poisson Reproductive Property">
+If $X \sim \text{Poisson}(\lambda_1)$ and $Y \sim \text{Poisson}(\lambda_2)$ are independent, then
+
+$$X + Y \sim \text{Poisson}(\lambda_1 + \lambda_2)$$
+</TheoremBlock>
+
+<ProofBlock>
+By MGF uniqueness:
+
+$$M_{X+Y}(t) = M_X(t) \cdot M_Y(t) = e^{\lambda_1(e^t - 1)} \cdot e^{\lambda_2(e^t - 1)} = e^{(\lambda_1 + \lambda_2)(e^t - 1)}$$
+
+This is the Poisson$(\lambda_1 + \lambda_2)$ MGF. $\square$
+</ProofBlock>
+
+<ExampleBlock number={5} title="Website event counting">
+A website receives an average of $\lambda = 12$ clicks per minute. Model the count in any minute as $X \sim \text{Poisson}(12)$. Then $P(X = 0) = e^{-12} \approx 6 \times 10^{-6}$ — essentially no chance of a minute with zero clicks. The probability of an unusually high burst: $P(X \geq 20)$ can be computed by summing the PMF tail.
+
+By the reproductive property, the count in a 5-minute window follows $\text{Poisson}(60)$. The equidispersion property ($\text{Var} = \text{mean}$) gives $\sigma = \sqrt{60} \approx 7.7$, so a count of 75 or more ($\approx 2\sigma$ above the mean) would be suspicious — a signal worth investigating for bot traffic.
+</ExampleBlock>
+
+---
+
+## 5.7 The Hypergeometric Distribution
+
+Every distribution so far assumes either independent trials (Bernoulli, Binomial, Geometric, NegBin) or a rate process (Poisson). The Hypergeometric breaks the independence assumption: it models sampling **without replacement** from a finite population.
+
+<DefinitionBlock number={6} title="Hypergeometric Distribution">
+A random variable $X$ has the **Hypergeometric distribution** with parameters $N$ (population size), $K$ (number of success states), and $n$ (number of draws), written $X \sim \text{Hypergeometric}(N, K, n)$, if its PMF is
+
+$$p_X(k) = \frac{\binom{K}{k}\binom{N-K}{n-k}}{\binom{N}{n}}, \quad k \in \{\max(0, n-N+K), \ldots, \min(n, K)\}$$
+</DefinitionBlock>
+
+The PMF counts combinatorially: choose $k$ successes from $K$ available ($\binom{K}{k}$ ways), choose $n - k$ failures from $N - K$ available ($\binom{N-K}{n-k}$ ways), divide by total ways to choose $n$ items from $N$ ($\binom{N}{n}$). The support bounds ensure non-negative binomial coefficients.
+
+<TheoremBlock number={15} title="Hypergeometric Expectation">
+If $X \sim \text{Hypergeometric}(N, K, n)$, then $E[X] = nK/N$.
+</TheoremBlock>
+
+<ProofBlock>
+Define indicator variables $X_i = 1$ if the $i$-th draw is a success. Then $X = X_1 + \cdots + X_n$. By symmetry, $P(X_i = 1) = K/N$ for every $i$ — each draw is equally likely to pick any of the $N$ items, regardless of order. By linearity:
+
+$$E[X] = \sum_{i=1}^n E[X_i] = n \cdot \frac{K}{N}$$
+
+Note this is the *same* as $\text{Binomial}(n, K/N)$ — the mean doesn't know whether we're sampling with or without replacement. $\square$
+</ProofBlock>
+
+<TheoremBlock number={16} title="Hypergeometric Variance and Finite Population Correction">
+If $X \sim \text{Hypergeometric}(N, K, n)$, then
+
+$$\text{Var}(X) = n \cdot \frac{K}{N} \cdot \frac{N-K}{N} \cdot \frac{N-n}{N-1}$$
+
+The factor $\frac{N-n}{N-1}$ is the **finite population correction** (FPC).
+</TheoremBlock>
+
+<ProofBlock>
+Using the indicator decomposition $X = X_1 + \cdots + X_n$:
+
+$$\text{Var}(X) = \sum_{i=1}^n \text{Var}(X_i) + 2 \sum_{i < j} \text{Cov}(X_i, X_j)$$
+
+Each $X_i$ is Bernoulli with $p = K/N$, so $\text{Var}(X_i) = \frac{K}{N}\left(1 - \frac{K}{N}\right)$.
+
+For the covariance, $P(X_i = 1, X_j = 1) = \frac{K}{N} \cdot \frac{K-1}{N-1}$, so:
+
+$$\text{Cov}(X_i, X_j) = \frac{K(K-1)}{N(N-1)} - \left(\frac{K}{N}\right)^2 = \frac{K}{N} \cdot \frac{N-K}{N} \cdot \frac{-1}{N-1}$$
+
+Combining $n$ variance terms and $\binom{n}{2}$ covariance terms yields the result. The FPC factor $(N-n)/(N-1)$ reduces the variance compared to Binomial: sampling without replacement reduces uncertainty because each draw provides more information. $\square$
+</ProofBlock>
+
+<RemarkBlock title="The 5% rule for finite population correction">
+When $n/N < 0.05$ (sampling less than 5% of the population), the FPC is $(N-n)/(N-1) > 0.95$, and the Binomial approximation $\text{Var}(X) \approx npq$ is within 5% of the truth. This is why opinion polls of 1000 people can represent millions: $n/N$ is tiny, so whether we sample with or without replacement barely matters.
+</RemarkBlock>
+
+<TheoremBlock number={17} title="Hypergeometric Converges to Binomial">
+If $N \to \infty$ with $K/N = p$ fixed and $n$ fixed, then
+
+$$\text{Hypergeometric}(N, Np, n) \to \text{Binomial}(n, p)$$
+
+in the sense that the PMF converges pointwise.
+</TheoremBlock>
+
+<ProofBlock>
+Fix $k$ and compute:
+
+$$\frac{\binom{Np}{k}\binom{N - Np}{n-k}}{\binom{N}{n}} = \frac{(Np)! \, (N(1-p))! \, n! \, (N-n)!}{k! \, (Np - k)! \, (n-k)! \, (N(1-p) - n + k)! \, N!}$$
+
+As $N \to \infty$, using Stirling-type asymptotics on the factorials, the ratio of falling factorials converges:
+
+$$\frac{(Np)(Np-1)\cdots(Np-k+1)}{N(N-1)\cdots(N-k+1)} \to p^k$$
+
+and similarly for the failure terms, giving $\binom{n}{k} p^k (1-p)^{n-k}$ in the limit. $\square$
+</ProofBlock>
+
+<img src="/images/topics/discrete-distributions/hypergeometric-binomial-comparison.png" alt="Three-panel figure: Hypergeometric PMFs, convergence to Binomial as N grows, and FPC curve with 5% rule annotation" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
+
+<SamplingComparisonExplorer client:visible />
+
+<ExampleBlock number={6} title="Fisher's exact test for drug trials">
+A clinical trial tests whether a drug reduces infection. Out of $N = 20$ patients, $K = 8$ recover. If the drug were irrelevant, the $n = 10$ treated patients' recoveries would follow $X \sim \text{Hypergeometric}(20, 8, 10)$. If 7 of the 10 treated patients recovered, the p-value is $P(X \geq 7)$ under this null — computed exactly from the Hypergeometric PMF, with no normal approximation needed. This is **Fisher's exact test**: the gold standard for small-sample $2 \times 2$ contingency tables, and a standard tool in gene set enrichment analysis (GSEA).
+</ExampleBlock>
+
+---
+
+## 5.8 The Discrete Uniform Distribution
+
+The simplest discrete distribution: every outcome in a finite set is equally likely.
+
+<DefinitionBlock number={7} title="Discrete Uniform Distribution">
+A random variable $X$ has the **Discrete Uniform distribution** on $\{a, a+1, \ldots, b\}$, written $X \sim \text{DiscreteUniform}(a, b)$, if its PMF is
+
+$$p_X(k) = \frac{1}{b - a + 1} = \frac{1}{n}, \quad k \in \{a, a+1, \ldots, b\}$$
+
+where $n = b - a + 1$ is the number of outcomes.
+</DefinitionBlock>
+
+<TheoremBlock number={18} title="Discrete Uniform Moments">
+If $X \sim \text{DiscreteUniform}(a, b)$ with $n = b - a + 1$, then:
+
+1. $E[X] = \frac{a + b}{2}$ (the midpoint)
+2. $\text{Var}(X) = \frac{n^2 - 1}{12}$
+</TheoremBlock>
+
+<ProofBlock>
+**Expectation.** By symmetry of the uniform distribution around its midpoint:
+
+$$E[X] = \frac{1}{n} \sum_{k=a}^{b} k = \frac{1}{n} \cdot \frac{n(a + b)}{2} = \frac{a + b}{2}$$
+
+using the arithmetic series formula.
+
+**Variance.** Shift to $Y = X - a \sim \text{DiscreteUniform}(0, n-1)$ so $E[Y] = (n-1)/2$. Then:
+
+$$E[Y^2] = \frac{1}{n} \sum_{j=0}^{n-1} j^2 = \frac{(n-1)(2n-1)}{6}$$
+
+using the sum-of-squares formula. Therefore:
+
+$$\text{Var}(Y) = \frac{(n-1)(2n-1)}{6} - \left(\frac{n-1}{2}\right)^2 = \frac{(n-1)(2n-1)}{6} - \frac{(n-1)^2}{4}$$
+
+$$= \frac{(n-1)[2(2n-1) - 3(n-1)]}{12} = \frac{(n-1)(n+1)}{12} = \frac{n^2 - 1}{12}$$
+
+Since $\text{Var}(X) = \text{Var}(Y)$ (variance is shift-invariant), the result holds for any $a, b$. For a fair die ($a = 1, b = 6, n = 6$): $E[X] = 3.5$, $\text{Var}(X) = 35/12 \approx 2.917$. $\square$
+</ProofBlock>
+
+<img src="/images/topics/discrete-distributions/discrete-uniform.png" alt="Three-panel figure: Uniform PMFs for three supports, step CDF, and entropy H=log(n) with landmarks" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
+
+<RemarkBlock title="Maximum entropy and non-informative priors">
+Among all distributions on a finite set $\{a, \ldots, b\}$, the Discrete Uniform **maximizes entropy**: $H(X) = \log n$. Entropy $H(X) = -\sum p(k) \log p(k)$ measures uncertainty, and the uniform distribution is the one that assumes the *least* — no value is favored over any other. This makes it the canonical **non-informative prior** in Bayesian statistics when all you know is the support. It's also the foundation for random initialization in ML: shuffling training data, random feature selection in bagging, and hash-based tricks all use discrete uniform randomness.
+</RemarkBlock>
+
+---
+
+## 5.9 Probability-Generating Functions
+
+[Topic 4](/topics/expectation-moments) introduced the moment-generating function $M_X(t) = E[e^{tX}]$ as a tool for packaging moments and proving distributional results. For discrete random variables taking non-negative integer values, there's an even more natural generating function: the **probability-generating function**.
+
+<DefinitionBlock number={8} title="Probability-Generating Function">
+Let $X$ be a non-negative integer-valued random variable with PMF $p_X$. The **probability-generating function** (PGF) of $X$ is
+
+$$G_X(s) = E[s^X] = \sum_{k=0}^{\infty} p_X(k) \, s^k, \quad |s| \leq 1$$
+
+The coefficients of the power series are the probabilities: $p_X(k) = G_X^{(k)}(0) / k!$.
+</DefinitionBlock>
+
+The PGF is related to the MGF by $G_X(s) = M_X(\ln s)$ and $M_X(t) = G_X(e^t)$. But the PGF has a key advantage for discrete variables: its coefficients *are* the probabilities. It's a power series whose coefficient of $s^k$ is $P(X = k)$.
+
+<TheoremBlock number={19} title="Moments from the PGF">
+If $G_X(s)$ is the PGF of $X$, then:
+
+1. $G_X'(1) = E[X]$
+2. $G_X^{(r)}(1) = E[X(X-1) \cdots (X-r+1)]$ (the $r$-th factorial moment)
+3. $\text{Var}(X) = G_X''(1) + G_X'(1) - [G_X'(1)]^2$
+</TheoremBlock>
+
+<ProofBlock>
+Differentiate $G_X(s) = \sum_k p_X(k) s^k$ term by term:
+
+$$G_X'(s) = \sum_{k=1}^{\infty} k \, p_X(k) \, s^{k-1}$$
+
+Evaluating at $s = 1$: $G_X'(1) = \sum_k k \, p_X(k) = E[X]$.
+
+For the second derivative:
+
+$$G_X''(s) = \sum_{k=2}^{\infty} k(k-1) \, p_X(k) \, s^{k-2}$$
+
+So $G_X''(1) = E[X(X-1)]$. Since $\text{Var}(X) = E[X^2] - (E[X])^2 = E[X(X-1)] + E[X] - (E[X])^2$:
+
+$$\text{Var}(X) = G_X''(1) + G_X'(1) - [G_X'(1)]^2$$
+
+The general $r$-th derivative follows by induction. $\square$
+</ProofBlock>
+
+Here are the PGFs for our seven distributions:
+
+| Distribution | PGF $G(s)$ |
+|---|---|
+| $\text{Bernoulli}(p)$ | $q + ps$ |
+| $\text{Binomial}(n, p)$ | $(q + ps)^n$ |
+| $\text{Geometric}(p)$ | $ps/(1 - qs)$ |
+| $\text{NegBin}(r, p)$ | $(ps/(1-qs))^r$ |
+| $\text{Poisson}(\lambda)$ | $e^{\lambda(s-1)}$ |
+| $\text{DiscreteUniform}(0, n-1)$ | $(1 - s^n)/(n(1 - s))$ |
+
+<img src="/images/topics/discrete-distributions/probability-generating-functions.png" alt="Three-panel figure: PGF curves for four distributions, moment extraction via derivatives (Poisson demo), and compound distribution simulation" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
+
+<TheoremBlock number={20} title="PGF Sum Property">
+If $X$ and $Y$ are independent non-negative integer-valued random variables, then
+
+$$G_{X+Y}(s) = G_X(s) \cdot G_Y(s)$$
+</TheoremBlock>
+
+<ProofBlock>
+$G_{X+Y}(s) = E[s^{X+Y}] = E[s^X s^Y] = E[s^X] \cdot E[s^Y] = G_X(s) \cdot G_Y(s)$, where the third equality uses independence. $\square$
+</ProofBlock>
+
+The real payoff of PGFs is the **compound distribution formula** — the reason PGFs exist as a separate tool rather than just being a notational variant of MGFs.
+
+<TheoremBlock number={21} title="Compound Distribution Formula">
+Let $N$ be a non-negative integer-valued random variable, and let $X_1, X_2, \ldots$ be iid non-negative integer-valued random variables, independent of $N$. Define the random sum $S = X_1 + X_2 + \cdots + X_N$ (with $S = 0$ when $N = 0$). Then
+
+$$G_S(s) = G_N(G_X(s))$$
+</TheoremBlock>
+
+<ProofBlock>
+Condition on $N$:
+
+$$G_S(s) = E[s^S] = \sum_{n=0}^{\infty} E[s^S \mid N = n] \cdot P(N = n) = \sum_{n=0}^{\infty} E[s^{X_1 + \cdots + X_n}] \cdot P(N = n)$$
+
+Since $X_1, \ldots, X_n$ are iid and independent of $N$:
+
+$$= \sum_{n=0}^{\infty} [G_X(s)]^n \cdot P(N = n) = E[(G_X(s))^N] = G_N(G_X(s))$$
+
+The last step recognizes $\sum_n [G_X(s)]^n P(N = n) = E[z^N]$ evaluated at $z = G_X(s)$, which is $G_N(z) = G_N(G_X(s))$. $\square$
+</ProofBlock>
+
+<PGFExplorer client:visible />
+
+<ExampleBlock number={7} title="Poisson thinning via compound distributions">
+A Poisson process produces $N \sim \text{Poisson}(\lambda)$ events per unit time. Each event is independently "kept" with probability $p$ (and discarded with probability $1-p$). The number of retained events is $S = X_1 + \cdots + X_N$ where $X_i \sim \text{Bernoulli}(p)$.
+
+Applying the compound formula:
+
+$$G_S(s) = G_N(G_X(s)) = e^{\lambda(G_X(s) - 1)} = e^{\lambda((q + ps) - 1)} = e^{\lambda p(s - 1)}$$
+
+This is the PGF of $\text{Poisson}(\lambda p)$! Thinning a Poisson process by probability $p$ gives another Poisson process with rate $\lambda p$. This result is used in practice for network traffic modeling, rare event simulation, and the "thinning" algorithm for simulating non-homogeneous Poisson processes.
+</ExampleBlock>
+
+---
+
+## 5.10 Relationships Between Distributions
+
+The seven distributions are not isolated — they form a web of connections through special cases, sums, and limiting relationships. The diagram below captures these connections.
+
+<img src="/images/topics/discrete-distributions/distribution-relationships.png" alt="Relationship web diagram: nodes for all 7 distributions, arrows for sums, limits, and special cases, with exponential family boundary" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
+
+**Special cases:**
+- $\text{Bernoulli}(p) = \text{Binomial}(1, p)$
+- $\text{Geometric}(p) = \text{NegBin}(1, p)$
+
+**Sum relationships** (independent, same $p$):
+- $\sum_{i=1}^n \text{Bernoulli}(p) \sim \text{Binomial}(n, p)$
+- $\sum_{i=1}^r \text{Geometric}(p) \sim \text{NegBin}(r, p)$
+
+**Reproductive properties** (independent, same $p$ or $\lambda$):
+- $\text{Binomial}(n_1, p) + \text{Binomial}(n_2, p) \sim \text{Binomial}(n_1 + n_2, p)$
+- $\text{Poisson}(\lambda_1) + \text{Poisson}(\lambda_2) \sim \text{Poisson}(\lambda_1 + \lambda_2)$
+- $\text{NegBin}(r_1, p) + \text{NegBin}(r_2, p) \sim \text{NegBin}(r_1 + r_2, p)$
+
+**Limit relationships:**
+- $\text{Binomial}(n, \lambda/n) \to \text{Poisson}(\lambda)$ as $n \to \infty$ (Poisson limit theorem)
+- $\text{Hypergeometric}(N, Np, n) \to \text{Binomial}(n, p)$ as $N \to \infty$ (infinite population limit)
+
+<RemarkBlock title="Five of seven are exponential family members">
+Bernoulli, Binomial, Geometric, Negative Binomial, and Poisson all belong to the **exponential family** — distributions whose PMFs can be written as $p(k \mid \theta) = h(k) \exp(\eta(\theta) \cdot T(k) - A(\theta))$. The Hypergeometric does *not* belong because its support $\{\max(0, n-N+K), \ldots, \min(n, K)\}$ depends on the parameter $N$ — violating the requirement that the support is fixed. The Discrete Uniform does not belong because it has no free parameter controlling the shape (only the support). Exponential Families (coming soon) will make this precise and show why exponential family membership matters for estimation, testing, and GLMs.
+</RemarkBlock>
+
+---
+
+## 5.11 Connections to ML
+
+Every distribution in this topic appears in machine learning — not as an abstract exercise, but as a modeling choice that shapes loss functions, estimators, and inference procedures.
+
+<img src="/images/topics/discrete-distributions/ml-connections.png" alt="Three-panel figure: logistic regression sigmoid with Bernoulli data, A/B test sampling distribution, and Poisson vs NegBin overdispersion fit" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
+
+**Binary classification** (Bernoulli): Logistic regression models $Y \mid X \sim \text{Bernoulli}(\sigma(\beta^T X))$. Cross-entropy loss = negative Bernoulli log-likelihood. The logit link $\eta = \ln(p/(1-p))$ comes directly from the exponential family natural parameter (see <ExternalLink href="https://formalml.com/topics/logistic-regression" site="formalml" topic="Logistic Regression" />).
+
+**A/B testing** (Binomial): The sample proportion $\hat{p} = X/n$ is the MLE of the Binomial parameter. Confidence intervals use $\text{Var}(\hat{p}) = pq/n$. Power calculations for determining sample sizes reduce to Binomial tail probabilities.
+
+**Count regression** (Poisson, NegBin): Poisson regression models $Y \mid X \sim \text{Poisson}(\exp(\beta^T X))$ via the log link. When data are overdispersed ($\text{Var}(Y) > E[Y]$), Negative Binomial regression provides the fix. The variance function $\text{Var}(Y) = \mu + \mu^2/r$ interpolates between Poisson ($r \to \infty$) and pure quadratic variance ($r$ finite) — see <ExternalLink href="https://formalml.com/topics/generalized-linear-models" site="formalml" topic="Generalized Linear Models" />.
+
+**Sampling and exact tests** (Hypergeometric): Fisher's exact test uses the Hypergeometric to compute exact p-values for $2 \times 2$ tables. Gene set enrichment analysis (GSEA) asks whether a gene set is overrepresented in a ranked list — a Hypergeometric calculation.
+
+**Random initialization** (Discrete Uniform): Shuffling training data, selecting features in random forests, hash-based tricks for dimensionality reduction — all use discrete uniform randomness as a foundation (see <ExternalLink href="https://formalml.com/topics/naive-bayes" site="formalml" topic="Naive Bayes" />).
+
+<ExampleBlock number={8} title="Distribution choice flowchart for count data">
+When modeling count data in ML, the choice of distribution matters:
+
+1. **Binary outcome** (0 or 1)? → **Bernoulli** / Logistic regression
+2. **Fixed number of trials** ($n$ known), independent, same $p$? → **Binomial**
+3. **Event counts** in a continuous interval, no upper bound? → **Poisson** (check equidispersion: if $\text{Var} \gg \text{Mean}$, use **Negative Binomial**)
+4. **Waiting time** until the $r$-th success? → **Negative Binomial** (Geometric if $r = 1$)
+5. **Sampling without replacement** from a finite population? → **Hypergeometric**
+6. **No prior information**, finite outcomes? → **Discrete Uniform**
+
+The choice determines the loss function, the link function, and the variance structure of your model. Getting it wrong — using Poisson when data are overdispersed, for instance — leads to overconfident inference and unreliable p-values.
+</ExampleBlock>
+
+---
+
+## Summary
+
+We've cataloged seven discrete distributions, each arising from a distinct probabilistic mechanism. Here's the reference table:
+
+| Distribution | PMF | $E[X]$ | $\text{Var}(X)$ | MGF $M_X(t)$ | Exp. Family? |
+|---|---|---|---|---|---|
+| $\text{Bern}(p)$ | $p^k q^{1-k}$ | $p$ | $pq$ | $q + pe^t$ | Yes |
+| $\text{Binom}(n,p)$ | $\binom{n}{k}p^k q^{n-k}$ | $np$ | $npq$ | $(q+pe^t)^n$ | Yes |
+| $\text{Geom}(p)$ | $pq^{k-1}$ | $1/p$ | $q/p^2$ | $pe^t/(1-qe^t)$ | Yes |
+| $\text{NB}(r,p)$ | $\binom{k-1}{r-1}p^r q^{k-r}$ | $r/p$ | $rq/p^2$ | $(pe^t/(1-qe^t))^r$ | Yes |
+| $\text{Pois}(\lambda)$ | $e^{-\lambda}\lambda^k/k!$ | $\lambda$ | $\lambda$ | $e^{\lambda(e^t-1)}$ | Yes |
+| $\text{HGeom}(N,K,n)$ | $\frac{\binom{K}{k}\binom{N-K}{n-k}}{\binom{N}{n}}$ | $nK/N$ | $npq \cdot \text{FPC}$ | (no closed form) | No |
+| $\text{DUnif}(a,b)$ | $1/n$ | $(a+b)/2$ | $(n^2-1)/12$ | $\frac{e^{ta}(1-e^{tn})}{n(1-e^t)}$ | No |
+
+**Key structural insights:**
+- The Bernoulli is the atom from which Binomial and Geometric are built
+- The Poisson arises as the limit of the Binomial for rare events
+- The Hypergeometric reduces to the Binomial when the population is large
+- Five of seven distributions belong to the exponential family — the unifying framework of Exponential Families (coming soon)
+- PGFs provide a dedicated tool for discrete distributions, with the compound distribution formula as its signature application
+
+**What comes next.** This topic cataloged the discrete distributions. The parallel treatment continues:
+
+- [Continuous Distributions](/topics/continuous-distributions) (coming soon) applies the same systematic approach to Normal, Exponential, Gamma, Beta, and Uniform — the continuous counterparts
+- [Exponential Families](/topics/exponential-families) (coming soon) unifies the five exponential family members here with their continuous counterparts, identifying natural parameters, sufficient statistics, and log-partition functions
+- [Modes of Convergence](/topics/modes-of-convergence) (coming soon) makes the Poisson limit theorem rigorous using convergence in distribution, and uses the Binomial + Chebyshev to prove the weak law of large numbers

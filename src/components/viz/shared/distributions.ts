@@ -9,6 +9,9 @@
  * Topic 3: Bernoulli, Binomial, Geometric, Poisson PMFs;
  *          Uniform, Normal, Exponential PDFs; all CDFs and quantiles;
  *          bivariate normal; conditional normal; numerical integration.
+ * Topic 5: Negative Binomial, Hypergeometric, Discrete Uniform PMFs/CDFs;
+ *          MGFs for Geometric/NegBin/DiscreteUniform; PGFs for all six;
+ *          closed-form moment functions for all seven discrete distributions.
  */
 
 // ── Types ───────────────────────────────────────────────────────────────────
@@ -97,6 +100,18 @@ export function binomialCoeff(n: number, k: number): number {
   return Math.round(Math.exp(lnGamma(n + 1) - lnGamma(k + 1) - lnGamma(n - k + 1)));
 }
 
+/**
+ * Log of binomial coefficient: ln C(n, k) = lnΓ(n+1) − lnΓ(k+1) − lnΓ(n−k+1).
+ * Returns the raw log value for use in log-space PMF computations
+ * (Hypergeometric, Negative Binomial) where exponentiating intermediate
+ * binomial coefficients would overflow.
+ */
+export function logComb(n: number, k: number): number {
+  if (k < 0 || k > n) return -Infinity;
+  if (k === 0 || k === n) return 0;
+  return lnGamma(n + 1) - lnGamma(k + 1) - lnGamma(n - k + 1);
+}
+
 // ── Discrete PMFs ───────────────────────────────────────────────────────────
 
 /**
@@ -141,7 +156,44 @@ export function pmfPoisson(k: number, lambda: number): number {
   return Math.exp(logP);
 }
 
-// ── Continuous PDFs ─────────────────────────────────────────────────────────
+/**
+ * Negative Binomial PMF: P(X = k) = C(k-1, r-1) p^r (1-p)^(k-r).
+ * k = number of trials until r-th success, k = r, r+1, r+2, ...
+ * Uses log-space for numerical stability with large r.
+ */
+export function pmfNegativeBinomial(k: number, r: number, p: number): number {
+  if (!Number.isInteger(k) || k < r) return 0;
+  if (p === 0) return 0;
+  if (p === 1) return k === r ? 1 : 0;
+  const logP = logComb(k - 1, r - 1) + r * Math.log(p) + (k - r) * Math.log(1 - p);
+  return Math.exp(logP);
+}
+
+/**
+ * Hypergeometric PMF: P(X = k) = C(K,k) C(N-K, n-k) / C(N, n).
+ * N = population, K = success states, n = draws, k = observed successes.
+ * Uses log-space for numerical stability with large N.
+ */
+export function pmfHypergeometric(k: number, N: number, K: number, n: number): number {
+  if (!Number.isInteger(k)) return 0;
+  if (N < 0 || K < 0 || K > N || n < 0 || n > N) return 0;
+  const lo = Math.max(0, n - (N - K));
+  const hi = Math.min(n, K);
+  if (k < lo || k > hi) return 0;
+  const logP = logComb(K, k) + logComb(N - K, n - k) - logComb(N, n);
+  return Math.exp(logP);
+}
+
+/**
+ * Discrete Uniform PMF: P(X = k) = 1/(b - a + 1) for k ∈ {a, a+1, ..., b}.
+ */
+export function pmfDiscreteUniform(k: number, a: number, b: number): number {
+  if (b < a) return 0;
+  if (!Number.isInteger(k) || k < a || k > b) return 0;
+  return 1 / (b - a + 1);
+}
+
+// ── Continuous PDFs ───────────────────────────────────────────────────────────
 
 /**
  * Uniform PDF on [a, b].
@@ -275,7 +327,46 @@ export function cdfPoisson(k: number, lambda: number): number {
   return Math.min(sum, 1);
 }
 
-// ── Quantile (Inverse CDF) Functions ────────────────────────────────────────
+/**
+ * Negative Binomial CDF: P(X ≤ k) = Σ_{i=r}^{⌊k⌋} pmfNegBin(i, r, p).
+ */
+export function cdfNegativeBinomial(k: number, r: number, p: number): number {
+  if (k < r) return 0;
+  const kFloor = Math.floor(k);
+  let sum = 0;
+  for (let i = r; i <= kFloor; i++) {
+    sum += pmfNegativeBinomial(i, r, p);
+  }
+  return Math.min(sum, 1);
+}
+
+/**
+ * Hypergeometric CDF: P(X ≤ k) = Σ pmfHypergeometric over valid range.
+ */
+export function cdfHypergeometric(k: number, N: number, K: number, n: number): number {
+  const lo = Math.max(0, n - (N - K));
+  if (k < lo) return 0;
+  const hi = Math.min(n, K);
+  if (k >= hi) return 1;
+  const kFloor = Math.floor(k);
+  let sum = 0;
+  for (let i = lo; i <= kFloor; i++) {
+    sum += pmfHypergeometric(i, N, K, n);
+  }
+  return Math.min(sum, 1);
+}
+
+/**
+ * Discrete Uniform CDF: P(X ≤ k) = (⌊k⌋ - a + 1) / (b - a + 1).
+ */
+export function cdfDiscreteUniform(k: number, a: number, b: number): number {
+  if (b < a) return 0;
+  if (k < a) return 0;
+  if (k >= b) return 1;
+  return (Math.floor(k) - a + 1) / (b - a + 1);
+}
+
+// ── Quantile (Inverse CDF) Functions ─────────────────────────────────────────
 
 /**
  * Standard normal quantile Φ⁻¹(p).
@@ -411,4 +502,140 @@ export function trapezoidalIntegral(
     sum += f(a + i * h);
   }
   return sum * h;
+}
+
+// ── MGFs (Topic 5) ─────────────────────────────────────────────────────────
+
+/**
+ * Geometric MGF: M(t) = pe^t / (1 − qe^t), defined for t < −ln(1−p).
+ */
+export function mgfGeometric(t: number, p: number): number {
+  const q = 1 - p;
+  if (t >= -Math.log(q)) return Infinity;
+  return (p * Math.exp(t)) / (1 - q * Math.exp(t));
+}
+
+/**
+ * Negative Binomial MGF: M(t) = (pe^t / (1 − qe^t))^r, t < −ln(1−p).
+ */
+export function mgfNegativeBinomial(t: number, r: number, p: number): number {
+  const q = 1 - p;
+  if (t >= -Math.log(q)) return Infinity;
+  return Math.pow((p * Math.exp(t)) / (1 - q * Math.exp(t)), r);
+}
+
+/**
+ * Discrete Uniform MGF: M(t) = e^{ta}(1 − e^{nt}) / (n(1 − e^t)).
+ * At t = 0, uses L'Hôpital: M(0) = 1.
+ * n = b − a + 1 is the support size.
+ */
+export function mgfDiscreteUniform(t: number, a: number, b: number): number {
+  const n = b - a + 1;
+  if (Math.abs(t) < 1e-12) return 1;
+  return (Math.exp(t * a) * (1 - Math.exp(n * t))) / (n * (1 - Math.exp(t)));
+}
+
+// ── PGFs (Topic 5) ─────────────────────────────────────────────────────────
+
+/**
+ * Bernoulli PGF: G(s) = (1−p) + ps.
+ */
+export function pgfBernoulli(s: number, p: number): number {
+  if (s === 1) return 1;
+  return (1 - p) + p * s;
+}
+
+/**
+ * Binomial PGF: G(s) = ((1−p) + ps)^n.
+ */
+export function pgfBinomial(s: number, n: number, p: number): number {
+  if (s === 1) return 1;
+  return Math.pow((1 - p) + p * s, n);
+}
+
+/**
+ * Geometric PGF: G(s) = ps / (1 − (1−p)s), |s| < 1/q.
+ * For the {1,2,...} convention, G(0) = 0.
+ */
+export function pgfGeometric(s: number, p: number): number {
+  if (s === 1) return 1;
+  const q = 1 - p;
+  const denom = 1 - q * s;
+  if (denom <= 0) return Infinity;
+  return (p * s) / denom;
+}
+
+/**
+ * Negative Binomial PGF: G(s) = (ps / (1 − qs))^r, |s| < 1/q.
+ */
+export function pgfNegativeBinomial(s: number, r: number, p: number): number {
+  if (s === 1) return 1;
+  const q = 1 - p;
+  const denom = 1 - q * s;
+  if (denom <= 0) return Infinity;
+  return Math.pow((p * s) / denom, r);
+}
+
+/**
+ * Poisson PGF: G(s) = e^{λ(s−1)}.
+ */
+export function pgfPoisson(s: number, lambda: number): number {
+  if (s === 1) return 1;
+  return Math.exp(lambda * (s - 1));
+}
+
+/**
+ * Discrete Uniform PGF: G(s) = s^a (1 − s^n) / (n(1 − s)) for s ≠ 1.
+ * At s = 1, returns 1 (L'Hôpital). n = b − a + 1.
+ */
+export function pgfDiscreteUniform(s: number, a: number, b: number): number {
+  if (s === 1) return 1;
+  const n = b - a + 1;
+  return (Math.pow(s, a) * (1 - Math.pow(s, n))) / (n * (1 - s));
+}
+
+// ── Closed-Form Moment Functions (Topic 5) ─────────────────────────────────
+
+/** Bernoulli E[X] = p. */
+export function expectationBernoulli(p: number): number { return p; }
+/** Bernoulli Var(X) = p(1−p). */
+export function varianceBernoulli(p: number): number { return p * (1 - p); }
+
+/** Binomial E[X] = np. */
+export function expectationBinomial(n: number, p: number): number { return n * p; }
+/** Binomial Var(X) = np(1−p). */
+export function varianceBinomial(n: number, p: number): number { return n * p * (1 - p); }
+
+/** Geometric E[X] = 1/p (trials until first success). */
+export function expectationGeometric(p: number): number { return 1 / p; }
+/** Geometric Var(X) = (1−p)/p². */
+export function varianceGeometric(p: number): number { return (1 - p) / (p * p); }
+
+/** Negative Binomial E[X] = r/p. */
+export function expectationNegBin(r: number, p: number): number { return r / p; }
+/** Negative Binomial Var(X) = r(1−p)/p². */
+export function varianceNegBin(r: number, p: number): number { return r * (1 - p) / (p * p); }
+
+/** Poisson E[X] = λ. */
+export function expectationPoisson(lambda: number): number { return lambda; }
+/** Poisson Var(X) = λ (equidispersion). */
+export function variancePoisson(lambda: number): number { return lambda; }
+
+/** Hypergeometric E[X] = nK/N. */
+export function expectationHypergeometric(N: number, K: number, n: number): number {
+  return n * K / N;
+}
+/** Hypergeometric Var(X) = n·K(N−K)(N−n) / (N²(N−1)). */
+export function varianceHypergeometric(N: number, K: number, n: number): number {
+  return (n * K * (N - K) * (N - n)) / (N * N * (N - 1));
+}
+
+/** Discrete Uniform E[X] = (a+b)/2. */
+export function expectationDiscreteUniform(a: number, b: number): number {
+  return (a + b) / 2;
+}
+/** Discrete Uniform Var(X) = ((b−a+1)² − 1) / 12. */
+export function varianceDiscreteUniform(a: number, b: number): number {
+  const n = b - a + 1;
+  return (n * n - 1) / 12;
 }
