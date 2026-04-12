@@ -4,8 +4,7 @@ import {
   pdfUniform, pdfNormal, pdfExponential, pdfGamma, pdfBeta,
   pdfChi2, pdfStudentT, pdfF,
   cdfUniform, cdfNormal, cdfExponential, cdfGamma, cdfBeta,
-  cdfChi2,
-  cdfStdNormal,
+  cdfChi2, cdfStudentT, cdfF,
   expectationUniform, expectationNormal, expectationExponential,
   expectationGamma, expectationBeta, expectationChi2,
   expectationStudentT, expectationF,
@@ -39,19 +38,8 @@ function evalCDF(key: string, x: number, p: Record<string, number>): number {
     case 'Gamma': return cdfGamma(x, p.alpha, p.beta);
     case 'Beta': return cdfBeta(x, p.a, p.b);
     case 'Chi2': return cdfChi2(x, p.k);
-    case 'StudentT': {
-      // Numerical CDF via trapezoidal for t distribution
-      let sum = 0.5;
-      const n = 200;
-      const h = x / n;
-      if (x > 0) {
-        for (let i = 1; i <= n; i++) sum += pdfStudentT(i * h, p.nu) * h;
-      } else {
-        for (let i = 1; i <= Math.abs(n); i++) sum -= pdfStudentT(-i * Math.abs(h), p.nu) * Math.abs(h);
-      }
-      return Math.max(0, Math.min(1, sum));
-    }
-    case 'F': return cdfGamma(x, p.d1 / 2, p.d2 / (2 * (p.d2 > 0 ? 1 : 1))); // Approximate via Gamma
+    case 'StudentT': return cdfStudentT(x, p.nu);
+    case 'F': return cdfF(x, p.d1, p.d2);
     default: return 0;
   }
 }

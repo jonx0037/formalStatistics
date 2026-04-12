@@ -110,7 +110,7 @@ export const continuousDistributionConfigs: ContinuousDistributionConfig[] = [
     ],
     supportRange: () => [-6, 6],
     color: '#0891b2',
-    mgfFormula: '\\text{(exists only for } \\nu > 1\\text{)}',
+    mgfFormula: '\\text{(does not exist)}',
     expFamily: false,
   },
   {

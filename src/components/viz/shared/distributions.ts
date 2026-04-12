@@ -708,16 +708,20 @@ export function pdfF(x: number, d1: number, d2: number): number {
 
 /**
  * Gamma CDF via numerical integration: P(X ≤ x) = ∫₀ˣ pdfGamma(t, α, β) dt.
- * For α < 1, starts at ε = 1e-10 to avoid the PDF singularity at 0.
+ * For α < 1, starts at ε = 1e-10 to avoid the PDF singularity at 0
+ * and uses more subintervals for better accuracy near the singularity.
  */
 export function cdfGamma(x: number, alpha: number, beta: number): number {
   if (x <= 0 || alpha <= 0 || beta <= 0) return 0;
   const eps = alpha < 1 ? 1e-10 : 0;
-  return Math.min(trapezoidalIntegral(t => pdfGamma(t, alpha, beta), eps, x, 200), 1);
+  const steps = alpha < 0.5 ? 500 : 200;
+  return Math.min(trapezoidalIntegral(t => pdfGamma(t, alpha, beta), eps, x, steps), 1);
 }
 
 /**
  * Beta CDF via numerical integration: P(X ≤ x) = ∫₀ˣ pdfBeta(t, α, β) dt.
+ * Uses more subintervals when shape parameters are small (< 0.5)
+ * to handle the singularity at the boundaries.
  */
 export function cdfBeta(x: number, a: number, b: number): number {
   if (x <= 0 || a <= 0 || b <= 0) return 0;
@@ -725,7 +729,8 @@ export function cdfBeta(x: number, a: number, b: number): number {
   const lo = 1e-10;
   const hi = Math.min(x, 1 - 1e-10);
   if (hi <= lo) return 0;
-  return Math.min(trapezoidalIntegral(t => pdfBeta(t, a, b), lo, hi, 200), 1);
+  const steps = (a < 0.5 || b < 0.5) ? 500 : 200;
+  return Math.min(trapezoidalIntegral(t => pdfBeta(t, a, b), lo, hi, steps), 1);
 }
 
 /**
@@ -733,6 +738,31 @@ export function cdfBeta(x: number, a: number, b: number): number {
  */
 export function cdfChi2(x: number, k: number): number {
   return cdfGamma(x, k / 2, 0.5);
+}
+
+/**
+ * Student's t CDF via numerical integration from -∞ to x.
+ * Uses symmetry: for x ≥ 0, P(T ≤ x) = 0.5 + ∫₀ˣ pdfStudentT(t, ν) dt.
+ * For x < 0, P(T ≤ x) = 1 − P(T ≤ −x) by symmetry.
+ */
+export function cdfStudentT(x: number, nu: number): number {
+  if (nu <= 0) return 0;
+  if (x === 0) return 0.5;
+  if (x > 0) {
+    return Math.min(0.5 + trapezoidalIntegral(t => pdfStudentT(t, nu), 0, x, 200), 1);
+  }
+  return Math.max(1 - cdfStudentT(-x, nu), 0);
+}
+
+/**
+ * F-distribution CDF via the regularized incomplete beta function.
+ * P(F ≤ x) = I_{d₁x/(d₁x+d₂)}(d₁/2, d₂/2), which is cdfBeta evaluated
+ * at the transformed argument.
+ */
+export function cdfF(x: number, d1: number, d2: number): number {
+  if (x <= 0 || d1 <= 0 || d2 <= 0) return 0;
+  const u = (d1 * x) / (d1 * x + d2);
+  return cdfBeta(u, d1 / 2, d2 / 2);
 }
 
 // ── Continuous Quantiles (Topic 6) ─────────────────────────────────────────
@@ -845,8 +875,8 @@ export function varianceStudentT(nu: number): number {
   return nu / (nu - 2);
 }
 
-/** F E[X] = d₂/(d₂−2) (defined for d₂ > 2). */
-export function expectationF(d1: number, d2: number): number {
+/** F E[X] = d₂/(d₂−2) (defined for d₂ > 2). d₁ is not used but kept for API consistency. */
+export function expectationF(_d1: number, d2: number): number {
   if (d2 <= 2) return NaN;
   return d2 / (d2 - 2);
 }

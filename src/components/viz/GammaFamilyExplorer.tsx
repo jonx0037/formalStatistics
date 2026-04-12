@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useResizeObserver } from './shared/useResizeObserver';
 import { pdfGamma, pdfExponential, pdfChi2, expectationGamma, varianceGamma } from './shared/distributions';
 
@@ -65,9 +65,13 @@ export default function GammaFamilyExplorer() {
     // Generate sum-of-Exponentials samples using inverse CDF
     const nSamples = 2000;
     const samples: number[] = [];
-    // Simple LCG PRNG for deterministic results
+    // Simple LCG PRNG for deterministic results.
+    // Clamp away from 0 to prevent -log(0) = Infinity.
     let seed = 42;
-    const nextRand = () => { seed = (seed * 1664525 + 1013904223) & 0xffffffff; return (seed >>> 0) / 0xffffffff; };
+    const nextRand = () => {
+      seed = (seed * 1664525 + 1013904223) & 0xffffffff;
+      return Math.max((seed >>> 0) / 0x100000000, Number.EPSILON);
+    };
 
     for (let s = 0; s < nSamples; s++) {
       let total = 0;

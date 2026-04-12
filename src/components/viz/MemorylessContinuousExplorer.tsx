@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useResizeObserver } from './shared/useResizeObserver';
-import { pdfExponential, cdfExponential, pdfGamma } from './shared/distributions';
+import { pdfExponential, pdfGamma } from './shared/distributions';
 
 const MARGIN = { top: 10, right: 15, bottom: 30, left: 50 };
 const NUM_POINTS = 300;

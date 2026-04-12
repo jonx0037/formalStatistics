@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback, useRef } from 'react';
 import { useResizeObserver } from './shared/useResizeObserver';
-import { pdfBeta, cdfBeta, quantileBeta, expectationBeta, varianceBeta } from './shared/distributions';
+import { pdfBeta, quantileBeta, expectationBeta } from './shared/distributions';
 import { conjugatePriorPresets } from '../../data/continuous-distributions-data';
 
 const MARGIN = { top: 10, right: 15, bottom: 30, left: 50 };
@@ -52,23 +52,23 @@ export default function BetaPriorPosteriorExplorer() {
     return data;
   }, [postAlpha, postBeta]);
 
-  // Likelihood curve (scaled for display)
+  // Likelihood curve (scaled for display).
+  // Subtracts the max log-likelihood (at the MLE θ̂ = k/n) before exponentiating
+  // to prevent underflow when n is large.
   const likelihoodCurve = useMemo(() => {
-    if (!showLikelihood) return null;
-    const data: { x: number; y: number }[] = [];
-    let maxL = 0;
+    if (!showLikelihood || activeN === 0) return null;
+    const logLs: number[] = [];
+    const xs: number[] = [];
     for (let i = 0; i <= NUM_POINTS; i++) {
       const theta = 0.001 + (i / NUM_POINTS) * 0.998;
-      const logL = activeK * Math.log(theta) + (activeN - activeK) * Math.log(1 - theta);
-      data.push({ x: theta, y: Math.exp(logL) });
-      maxL = Math.max(maxL, data[data.length - 1].y);
+      xs.push(theta);
+      logLs.push(activeK * Math.log(theta) + (activeN - activeK) * Math.log(1 - theta));
     }
+    const maxLogL = Math.max(...logLs);
+    const data = xs.map((x, i) => ({ x, y: Math.exp(logLs[i] - maxLogL) }));
     // Scale to match posterior height
     const postMax = Math.max(...posteriorCurve.map((d) => d.y));
-    if (maxL > 0) {
-      const scale = postMax / maxL;
-      data.forEach((d) => { d.y *= scale; });
-    }
+    data.forEach((d) => { d.y *= postMax; });
     return data;
   }, [showLikelihood, activeK, activeN, posteriorCurve]);
 
