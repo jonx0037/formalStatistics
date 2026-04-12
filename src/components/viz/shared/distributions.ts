@@ -12,6 +12,10 @@
  * Topic 5: Negative Binomial, Hypergeometric, Discrete Uniform PMFs/CDFs;
  *          MGFs for Geometric/NegBin/DiscreteUniform; PGFs for all six;
  *          closed-form moment functions for all seven discrete distributions.
+ * Topic 6: Gamma, Beta, Chi-squared, Student's t, F PDFs/CDFs;
+ *          Beta quantile via bisection; continuous MGFs (Uniform, Normal,
+ *          Exponential, Gamma, Chi-squared); closed-form moment functions
+ *          for all eight continuous distributions.
  */
 
 // ── Types ───────────────────────────────────────────────────────────────────
@@ -638,4 +642,216 @@ export function expectationDiscreteUniform(a: number, b: number): number {
 export function varianceDiscreteUniform(a: number, b: number): number {
   const n = b - a + 1;
   return (n * n - 1) / 12;
+}
+
+// ── Continuous PDFs (Topic 6) ──────────────────────────────────────────────
+
+/**
+ * Gamma(α, β) PDF using shape-rate parameterization.
+ * f(x) = β^α / Γ(α) · x^{α−1} e^{−βx}, x > 0.
+ * Computed in log space to avoid overflow for large α.
+ */
+export function pdfGamma(x: number, alpha: number, beta: number): number {
+  if (x <= 0 || alpha <= 0 || beta <= 0) return 0;
+  const logPdf = alpha * Math.log(beta) - lnGamma(alpha)
+    + (alpha - 1) * Math.log(x) - beta * x;
+  return Math.exp(logPdf);
+}
+
+/**
+ * Beta(α, β) PDF on (0, 1).
+ * f(x) = x^{α−1}(1−x)^{β−1} / B(α,β), where B(α,β) = Γ(α)Γ(β)/Γ(α+β).
+ * Computed in log space.
+ */
+export function pdfBeta(x: number, a: number, b: number): number {
+  if (x <= 0 || x >= 1 || a <= 0 || b <= 0) return 0;
+  const logPdf = lnGamma(a + b) - lnGamma(a) - lnGamma(b)
+    + (a - 1) * Math.log(x) + (b - 1) * Math.log(1 - x);
+  return Math.exp(logPdf);
+}
+
+/**
+ * Chi-squared(k) PDF = Gamma(k/2, 1/2).
+ */
+export function pdfChi2(x: number, k: number): number {
+  return pdfGamma(x, k / 2, 0.5);
+}
+
+/**
+ * Student's t(ν) PDF.
+ * f(x) = Γ((ν+1)/2) / (√(νπ) Γ(ν/2)) · (1 + x²/ν)^{−(ν+1)/2}.
+ * Computed in log space.
+ */
+export function pdfStudentT(x: number, nu: number): number {
+  if (nu <= 0) return 0;
+  const logPdf = lnGamma((nu + 1) / 2) - lnGamma(nu / 2)
+    - 0.5 * Math.log(nu * Math.PI)
+    - ((nu + 1) / 2) * Math.log(1 + (x * x) / nu);
+  return Math.exp(logPdf);
+}
+
+/**
+ * F(d₁, d₂) PDF. x > 0.
+ * f(x) = √((d₁x)^d₁ · d₂^d₂ / (d₁x+d₂)^{d₁+d₂}) / (x · B(d₁/2, d₂/2)).
+ * Computed entirely in log space.
+ */
+export function pdfF(x: number, d1: number, d2: number): number {
+  if (x <= 0 || d1 <= 0 || d2 <= 0) return 0;
+  const logPdf = lnGamma((d1 + d2) / 2) - lnGamma(d1 / 2) - lnGamma(d2 / 2)
+    + (d1 / 2) * Math.log(d1 / d2)
+    + (d1 / 2 - 1) * Math.log(x)
+    - ((d1 + d2) / 2) * Math.log(1 + (d1 / d2) * x);
+  return Math.exp(logPdf);
+}
+
+// ── Continuous CDFs (Topic 6) ──────────────────────────────────────────────
+
+/**
+ * Gamma CDF via numerical integration: P(X ≤ x) = ∫₀ˣ pdfGamma(t, α, β) dt.
+ * For α < 1, starts at ε = 1e-10 to avoid the PDF singularity at 0.
+ */
+export function cdfGamma(x: number, alpha: number, beta: number): number {
+  if (x <= 0 || alpha <= 0 || beta <= 0) return 0;
+  const eps = alpha < 1 ? 1e-10 : 0;
+  return Math.min(trapezoidalIntegral(t => pdfGamma(t, alpha, beta), eps, x, 200), 1);
+}
+
+/**
+ * Beta CDF via numerical integration: P(X ≤ x) = ∫₀ˣ pdfBeta(t, α, β) dt.
+ */
+export function cdfBeta(x: number, a: number, b: number): number {
+  if (x <= 0 || a <= 0 || b <= 0) return 0;
+  if (x >= 1) return 1;
+  const lo = 1e-10;
+  const hi = Math.min(x, 1 - 1e-10);
+  if (hi <= lo) return 0;
+  return Math.min(trapezoidalIntegral(t => pdfBeta(t, a, b), lo, hi, 200), 1);
+}
+
+/**
+ * Chi-squared CDF = cdfGamma(x, k/2, 1/2).
+ */
+export function cdfChi2(x: number, k: number): number {
+  return cdfGamma(x, k / 2, 0.5);
+}
+
+// ── Continuous Quantiles (Topic 6) ─────────────────────────────────────────
+
+/**
+ * Beta quantile via bisection on cdfBeta.
+ * Returns x such that cdfBeta(x, a, b) ≈ p.
+ * 50 iterations provides ~15 digits of precision.
+ */
+export function quantileBeta(p: number, a: number, b: number): number {
+  if (p <= 0) return 0;
+  if (p >= 1) return 1;
+  let lo = 0;
+  let hi = 1;
+  for (let i = 0; i < 50; i++) {
+    const mid = (lo + hi) / 2;
+    if (cdfBeta(mid, a, b) < p) {
+      lo = mid;
+    } else {
+      hi = mid;
+    }
+  }
+  return (lo + hi) / 2;
+}
+
+// ── Continuous MGFs (Topic 6) ──────────────────────────────────────────────
+
+/**
+ * Uniform(a, b) MGF: M(t) = (e^{tb} − e^{ta}) / (t(b−a)).
+ * At t ≈ 0, returns 1 (L'Hôpital).
+ */
+export function mgfUniform(t: number, a: number, b: number): number {
+  if (Math.abs(t) < 1e-12) return 1;
+  return (Math.exp(t * b) - Math.exp(t * a)) / (t * (b - a));
+}
+
+/**
+ * Normal(μ, σ²) MGF: M(t) = exp(μt + σ²t²/2).
+ */
+export function mgfNormal(t: number, mu: number, sigma2: number): number {
+  return Math.exp(mu * t + sigma2 * t * t / 2);
+}
+
+/**
+ * Exponential(λ) MGF: M(t) = λ/(λ−t), defined for t < λ.
+ */
+export function mgfExponential(t: number, lambda: number): number {
+  if (t >= lambda) return Infinity;
+  return lambda / (lambda - t);
+}
+
+/**
+ * Gamma(α, β) MGF: M(t) = (β/(β−t))^α, defined for t < β.
+ */
+export function mgfGamma(t: number, alpha: number, beta: number): number {
+  if (t >= beta) return Infinity;
+  return Math.pow(beta / (beta - t), alpha);
+}
+
+/**
+ * Chi-squared(k) MGF: M(t) = (1−2t)^{−k/2}, defined for t < 1/2.
+ */
+export function mgfChi2(t: number, k: number): number {
+  if (t >= 0.5) return Infinity;
+  return Math.pow(1 - 2 * t, -k / 2);
+}
+
+// ── Closed-Form Moment Functions (Topic 6) ─────────────────────────────────
+
+/** Uniform E[X] = (a+b)/2. */
+export function expectationUniform(a: number, b: number): number { return (a + b) / 2; }
+/** Uniform Var(X) = (b−a)²/12. */
+export function varianceUniform(a: number, b: number): number { return (b - a) * (b - a) / 12; }
+
+/** Normal E[X] = μ. */
+export function expectationNormal(mu: number): number { return mu; }
+/** Normal Var(X) = σ². */
+export function varianceNormal(sigma2: number): number { return sigma2; }
+
+/** Exponential E[X] = 1/λ. */
+export function expectationExponential(lambda: number): number { return 1 / lambda; }
+/** Exponential Var(X) = 1/λ². */
+export function varianceExponential(lambda: number): number { return 1 / (lambda * lambda); }
+
+/** Gamma E[X] = α/β. */
+export function expectationGamma(alpha: number, beta: number): number { return alpha / beta; }
+/** Gamma Var(X) = α/β². */
+export function varianceGamma(alpha: number, beta: number): number { return alpha / (beta * beta); }
+
+/** Beta E[X] = α/(α+β). */
+export function expectationBeta(a: number, b: number): number { return a / (a + b); }
+/** Beta Var(X) = αβ/((α+β)²(α+β+1)). */
+export function varianceBeta(a: number, b: number): number {
+  const s = a + b;
+  return (a * b) / (s * s * (s + 1));
+}
+
+/** Chi-squared E[X] = k. */
+export function expectationChi2(k: number): number { return k; }
+/** Chi-squared Var(X) = 2k. */
+export function varianceChi2(k: number): number { return 2 * k; }
+
+/** Student's t E[X] = 0 (defined for ν > 1). */
+export function expectationStudentT(nu: number): number {
+  return nu > 1 ? 0 : NaN;
+}
+/** Student's t Var(X) = ν/(ν−2) (defined for ν > 2). */
+export function varianceStudentT(nu: number): number {
+  if (nu <= 2) return NaN;
+  return nu / (nu - 2);
+}
+
+/** F E[X] = d₂/(d₂−2) (defined for d₂ > 2). */
+export function expectationF(d1: number, d2: number): number {
+  if (d2 <= 2) return NaN;
+  return d2 / (d2 - 2);
+}
+/** F Var(X) = 2d₂²(d₁+d₂−2) / (d₁(d₂−2)²(d₂−4)) (defined for d₂ > 4). */
+export function varianceF(d1: number, d2: number): number {
+  if (d2 <= 4) return NaN;
+  return (2 * d2 * d2 * (d1 + d2 - 2)) / (d1 * (d2 - 2) * (d2 - 2) * (d2 - 4));
 }
