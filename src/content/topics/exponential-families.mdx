@@ -135,7 +135,7 @@ This is not a coincidence, and it is not merely a notational convenience. The fa
 3. **Conjugate priors exist.** For every exponential family likelihood, there is a natural conjugate prior that yields a posterior in the same family — with hyperparameters updated by a clean additive rule.
 4. **Generalized linear models are tractable.** The GLM framework — logistic regression, Poisson regression, Gamma regression — requires an exponential family response distribution. The canonical link function comes directly from $A'$.
 
-The seven distributions that are *not* exponential family members — Hypergeometric, Discrete Uniform, Continuous Uniform, Chi-squared (as a standalone), Student's $t$, and $F$ — fail for specific structural reasons that we will make precise in Section 7.4. (The Chi-squared is a special case of the Gamma and inherits exponential family membership through that route, but its degrees-of-freedom parameter $k$ is typically a fixed integer, not an estimated parameter.)
+The distributions that are *not* exponential family members — Hypergeometric, Discrete Uniform, Continuous Uniform, Student's $t$, and $F$ — fail for specific structural reasons that we will make precise in Section 7.4. The Chi-squared distribution, by contrast, *is* a special case of the Gamma and therefore belongs to the exponential family; we do not count it separately among the nine because its degrees-of-freedom parameter $k$ is typically treated as a fixed integer, not an estimated parameter.
 
 <img src="/images/topics/exponential-families/exponential-family-overview.png" alt="Grid of 9 exponential family members: 5 discrete and 4 continuous PMFs/PDFs with natural parameter annotations" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
 
@@ -256,7 +256,7 @@ Reading off:
 - $h(k) = 1$
 - $\eta(p) = \log(1 - p)$
 - $T(k) = k$
-- $A(\eta) = -\log(1 - e^\eta)$
+- $A(\eta) = \eta - \log(1 - e^\eta)$
 
 Since $p \in (0, 1)$, we have $1 - p \in (0, 1)$, so $\eta = \log(1-p) < 0$. The natural parameter space is $\eta \in (-\infty, 0)$.
 </RemarkBlock>
@@ -283,9 +283,9 @@ Reading off:
 - $h(k) = \binom{k-1}{r-1}$
 - $\eta(p) = \log(1 - p)$
 - $T(k) = k$
-- $A(\eta) = -r \log(1 - e^\eta)$
+- $A(\eta) = r\eta - r\log(1 - e^\eta)$
 
-The natural parameter space is $\eta < 0$, identical to the Geometric. This makes sense: the Geometric is the Negative Binomial with $r = 1$, and setting $r = 1$ in $A(\eta) = -r\log(1 - e^\eta)$ recovers the Geometric log-partition function exactly.
+The natural parameter space is $\eta < 0$, identical to the Geometric. This makes sense: the Geometric is the Negative Binomial with $r = 1$, and setting $r = 1$ in $A(\eta) = r\eta - r\log(1 - e^\eta)$ recovers the Geometric log-partition function exactly when $T(k) = k$.
 </RemarkBlock>
 
 ### 7.3.5 Poisson
@@ -911,8 +911,8 @@ The exponential family is the single most important structural concept in parame
 |---|---|---|---|---|---|
 | Bernoulli$(p)$ | $1$ | $\log\!\frac{p}{1-p}$ | $x$ | $\log(1+e^\eta)$ | 1 |
 | Binomial$(n,p)$ | $\binom{n}{k}$ | $\log\!\frac{p}{1-p}$ | $k$ | $n\log(1+e^\eta)$ | 1 |
-| Geometric$(p)$ | $1$ | $\log(1-p)$ | $k$ | $-\log(1-e^\eta)$ | 1 |
-| NegBin$(r,p)$ | $\binom{k-1}{r-1}$ | $\log(1-p)$ | $k$ | $-r\log(1-e^\eta)$ | 1 |
+| Geometric$(p)$ | $1$ | $\log(1-p)$ | $k$ | $\eta - \log(1-e^\eta)$ | 1 |
+| NegBin$(r,p)$ | $\binom{k-1}{r-1}$ | $\log(1-p)$ | $k$ | $r\eta - r\log(1-e^\eta)$ | 1 |
 | Poisson$(\lambda)$ | $1/k!$ | $\log\lambda$ | $k$ | $e^\eta$ | 1 |
 | Normal$(\mu,\sigma^2)$ | $\frac{1}{\sqrt{2\pi}}$ | $(\frac{\mu}{\sigma^2}, -\frac{1}{2\sigma^2})$ | $(x, x^2)$ | $-\frac{\eta_1^2}{4\eta_2} - \frac{1}{2}\log(-2\eta_2)$ | 2 |
 | Exponential$(\lambda)$ | $1$ | $-\lambda$ | $x$ | $-\log(-\eta)$ | 1 |

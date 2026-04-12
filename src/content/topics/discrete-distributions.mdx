@@ -809,7 +809,7 @@ The seven distributions are not isolated — they form a web of connections thro
 - $\text{Hypergeometric}(N, Np, n) \to \text{Binomial}(n, p)$ as $N \to \infty$ (infinite population limit)
 
 <RemarkBlock title="Five of seven are exponential family members">
-Bernoulli, Binomial, Geometric, Negative Binomial, and Poisson all belong to the **exponential family** — distributions whose PMFs can be written as $p(k \mid \theta) = h(k) \exp(\eta(\theta) \cdot T(k) - A(\theta))$. The Hypergeometric does *not* belong because its support $\{\max(0, n-N+K), \ldots, \min(n, K)\}$ depends on the parameter $N$ — violating the requirement that the support is fixed. The Discrete Uniform does not belong because it has no free parameter controlling the shape (only the support). [Exponential Families](/topics/exponential-families) makes this precise and shows why exponential family membership matters for estimation, testing, and GLMs.
+Bernoulli, Binomial, Geometric, Negative Binomial, and Poisson all belong to the **exponential family** — distributions whose PMFs can be written as $p(k \mid \theta) = h(k) \exp(\eta(\theta) \cdot T(k) - A(\theta))$. The Hypergeometric does *not* belong because its support $\{\max(0, n-N+K), \ldots, \min(n, K)\}$ depends on the parameter $N$ — violating the requirement that the support is fixed. The Discrete Uniform does not belong because its support $\{1, \ldots, m\}$ depends on the parameter $m$, also violating the fixed-support requirement. [Exponential Families](/topics/exponential-families) makes this precise and shows why exponential family membership matters for estimation, testing, and GLMs.
 </RemarkBlock>
 
 ---

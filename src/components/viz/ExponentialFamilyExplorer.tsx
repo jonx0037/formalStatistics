@@ -133,13 +133,13 @@ function computeLogPartition(dist: string, params: Record<string, number>) {
     };
   }
 
-  // NegBin (fixed r): eta = log(1-p), A(eta) = -r*log(1-e^eta)
+  // NegBin (fixed r): eta = log(1-p), A(eta) = r*eta - r*log(1-e^eta)
   if (dist === 'NegBin') {
     const { r, p } = params;
     const eta = Math.log(1 - p);
     return {
       eta,
-      A: -r * Math.log(1 - Math.exp(eta)),
+      A: r * eta - r * Math.log(1 - Math.exp(eta)),
       Aprime: r / p,
       Adoubleprime: r * (1 - p) / (p * p),
     };
