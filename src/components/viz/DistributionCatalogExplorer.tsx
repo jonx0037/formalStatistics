@@ -3,7 +3,7 @@ import { useResizeObserver } from './shared/useResizeObserver';
 import {
   pmfBernoulli, pmfBinomial, pmfGeometric, pmfPoisson,
   pmfNegativeBinomial, pmfHypergeometric, pmfDiscreteUniform,
-  cdfBernoulli, cdfBinomial, cdfGeometric, cdfPoisson,
+  cdfBinomial, cdfGeometric, cdfPoisson,
   cdfNegativeBinomial, cdfHypergeometric, cdfDiscreteUniform,
   expectationBernoulli, expectationBinomial, expectationGeometric,
   expectationNegBin, expectationPoisson, expectationHypergeometric,
@@ -182,11 +182,13 @@ export default function DistributionCatalogExplorer() {
       const next = { ...prev, [name]: value };
       // Clamp dependent params for Hypergeometric
       if (config.key === 'Hypergeometric') {
-        if (name === 'N') next.K = Math.min(next.K, value - 1);
-        if (name === 'N' || name === 'K') next.n = Math.min(next.n, next.N);
+        next.K = Math.min(Math.max(0, next.K), next.N);
+        next.n = Math.min(Math.max(0, next.n), next.N);
       }
-      if (config.key === 'DiscreteUniform' && name === 'a') {
-        next.b = Math.max(next.b, value + 1);
+      // Clamp DiscreteUniform: ensure b > a regardless of which slider changed
+      if (config.key === 'DiscreteUniform') {
+        if (name === 'a') next.b = Math.max(next.b, value + 1);
+        if (name === 'b') next.b = Math.max(next.b, next.a + 1);
       }
       return next;
     });

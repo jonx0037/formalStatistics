@@ -176,6 +176,7 @@ export function pmfNegativeBinomial(k: number, r: number, p: number): number {
  */
 export function pmfHypergeometric(k: number, N: number, K: number, n: number): number {
   if (!Number.isInteger(k)) return 0;
+  if (N < 0 || K < 0 || K > N || n < 0 || n > N) return 0;
   const lo = Math.max(0, n - (N - K));
   const hi = Math.min(n, K);
   if (k < lo || k > hi) return 0;
@@ -187,11 +188,12 @@ export function pmfHypergeometric(k: number, N: number, K: number, n: number): n
  * Discrete Uniform PMF: P(X = k) = 1/(b - a + 1) for k ∈ {a, a+1, ..., b}.
  */
 export function pmfDiscreteUniform(k: number, a: number, b: number): number {
+  if (b < a) return 0;
   if (!Number.isInteger(k) || k < a || k > b) return 0;
   return 1 / (b - a + 1);
 }
 
-// ── Continuous PDFs ───────────────────────────────���─────────────────────────
+// ── Continuous PDFs ───────────────────────────────────────────────────────────
 
 /**
  * Uniform PDF on [a, b].
@@ -358,12 +360,13 @@ export function cdfHypergeometric(k: number, N: number, K: number, n: number): n
  * Discrete Uniform CDF: P(X ≤ k) = (⌊k⌋ - a + 1) / (b - a + 1).
  */
 export function cdfDiscreteUniform(k: number, a: number, b: number): number {
+  if (b < a) return 0;
   if (k < a) return 0;
   if (k >= b) return 1;
   return (Math.floor(k) - a + 1) / (b - a + 1);
 }
 
-// ── Quantile (Inverse CDF) Functions ───────────────────────────────────��────
+// ── Quantile (Inverse CDF) Functions ─────────────────────────────────────────
 
 /**
  * Standard normal quantile Φ⁻¹(p).
@@ -552,7 +555,7 @@ export function pgfBinomial(s: number, n: number, p: number): number {
 
 /**
  * Geometric PGF: G(s) = ps / (1 − (1−p)s), |s| < 1/q.
- * At s = 0, returns p(0) = P(X=1) evaluated correctly since k starts at 1.
+ * For the {1,2,...} convention, G(0) = 0.
  */
 export function pgfGeometric(s: number, p: number): number {
   if (s === 1) return 1;
@@ -588,7 +591,6 @@ export function pgfPoisson(s: number, lambda: number): number {
 export function pgfDiscreteUniform(s: number, a: number, b: number): number {
   if (s === 1) return 1;
   const n = b - a + 1;
-  if (Math.abs(s) < 1e-15) return 0;
   return (Math.pow(s, a) * (1 - Math.pow(s, n))) / (n * (1 - s));
 }
 

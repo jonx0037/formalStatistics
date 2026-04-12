@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useResizeObserver } from './shared/useResizeObserver';
-import { pmfGeometric, cdfGeometric } from './shared/distributions';
+import { pmfGeometric } from './shared/distributions';
 
 const MARGIN = { top: 10, right: 15, bottom: 30, left: 50 };
 
@@ -216,7 +216,7 @@ export default function MemorylessPropertyExplorer() {
             ))}
           </tbody>
         </table>
-        <div className="mt-2 text-gray-500 italic">The past doesn't help predict the future �� the trials are independent.</div>
+        <div className="mt-2 text-gray-500 italic">The past doesn't help predict the future — the trials are independent.</div>
       </div>
     </div>
   );
