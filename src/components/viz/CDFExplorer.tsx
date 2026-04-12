@@ -2,16 +2,8 @@ import { useState, useMemo, useCallback } from 'react';
 import { useResizeObserver } from './shared/useResizeObserver';
 import {
   cdfBinomial, cdfNormal, cdfUniform, cdfExponential, cdfGeometric, cdfPoisson,
-  pmfBinomial, pdfNormal, pdfUniform, pdfExponential,
 } from './shared/distributions';
 import { distributionColors } from './shared/colorScales';
-
-// ── Types ──────────────────────────────────────────────────────────────────
-
-interface PanelConfig {
-  type: 'discrete' | 'continuous';
-  distributions: { name: string; params: Record<string, number> }[];
-}
 
 const DISCRETE_DISTS = [
   { name: 'Binomial', params: { n: 10, p: 0.3 } },

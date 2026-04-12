@@ -13,7 +13,7 @@ export interface RVMappingPreset {
 /** Preset random variable mappings for RandomVariableMappingExplorer. */
 export const rvMappingPresets: RVMappingPreset[] = [
   {
-    name: 'Die Roll',
+    name: 'Die Roll (Identity)',
     omega: ['1', '2', '3', '4', '5', '6'],
     mappings: {
       'Identity X(ω) = ω': { '1': 1, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6 },

@@ -45,7 +45,7 @@ function getDiscreteRange(name: string, params: Record<string, number>): number[
 
 function evalPDF(name: string, x: number, params: Record<string, number>): number {
   switch (name) {
-    case 'Uniform': return pdfUniform(x, params.a, params.b);
+    case 'Uniform': return pdfUniform(x, Math.min(params.a, params.b), Math.max(params.a, params.b));
     case 'Normal': return pdfNormal(x, params.mu, params.sigma2);
     case 'Exponential': return pdfExponential(x, params.lambda);
     default: return 0;
@@ -54,7 +54,11 @@ function evalPDF(name: string, x: number, params: Record<string, number>): numbe
 
 function getContinuousRange(name: string, params: Record<string, number>): [number, number] {
   switch (name) {
-    case 'Uniform': return [params.a - 0.5, params.b + 0.5];
+    case 'Uniform': {
+      const lo = Math.min(params.a, params.b);
+      const hi = Math.max(params.a, params.b);
+      return [lo - 0.5, hi + 0.5];
+    }
     case 'Normal': {
       const sd = Math.sqrt(params.sigma2);
       return [params.mu - 4 * sd, params.mu + 4 * sd];
@@ -220,7 +224,6 @@ export default function PMFPDFExplorer() {
   // ── Render ──────────────────────────────────────────────────────────────
 
   const currentParams = mode === 'discrete' ? discreteParams : continuousParams;
-  const currentPreset = mode === 'discrete' ? discretePreset : continuousPreset;
   const currentRanges = mode === 'discrete' ? discretePreset.paramRanges : continuousPreset.paramRanges;
 
   // Build PDF path
@@ -260,15 +263,13 @@ export default function PMFPDFExplorer() {
         <div className="flex rounded-lg border" style={{ borderColor: 'var(--color-border)' }}>
           <button
             onClick={() => setMode('discrete')}
-            className={`px-3 py-1 text-sm font-medium ${mode === 'discrete' ? 'bg-blue-600 text-white' : ''}`}
-            style={mode !== 'discrete' ? { color: 'var(--color-text)' } : {}}
+            className={mode === 'discrete' ? 'px-3 py-1 text-sm font-medium bg-blue-600 text-white' : 'px-3 py-1 text-sm font-medium bg-transparent'}
           >
             Discrete (PMF)
           </button>
           <button
             onClick={() => setMode('continuous')}
-            className={`px-3 py-1 text-sm font-medium ${mode === 'continuous' ? 'bg-blue-600 text-white' : ''}`}
-            style={mode !== 'continuous' ? { color: 'var(--color-text)' } : {}}
+            className={mode === 'continuous' ? 'px-3 py-1 text-sm font-medium bg-blue-600 text-white' : 'px-3 py-1 text-sm font-medium bg-transparent'}
           >
             Continuous (PDF)
           </button>

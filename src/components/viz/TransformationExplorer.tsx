@@ -2,8 +2,6 @@ import { useState, useMemo, useCallback } from 'react';
 import { useResizeObserver } from './shared/useResizeObserver';
 import {
   pdfNormal, pdfUniform, pdfExponential,
-  cdfNormal, cdfUniform, cdfExponential,
-  quantileStdNormal, quantileExponential,
 } from './shared/distributions';
 import { transformationPresets } from '../../data/random-variables-data';
 import { distributionColors } from './shared/colorScales';
@@ -288,7 +286,7 @@ export default function TransformationExplorer() {
         {/* Right: Transformed histogram */}
         <div>
           <div className="mb-1 text-center text-xs font-medium">
-            {transform.name}: {transform.formula}
+            {transform.name}{source === transform.source ? `: ${transform.formula}` : ''}
           </div>
           <svg width={panelW} height={panelH} className="block">
             {/* Baseline */}

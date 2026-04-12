@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useResizeObserver } from './shared/useResizeObserver';
-import { rvMappingPresets, type RVMappingPreset } from '../../data/random-variables-data';
+import { rvMappingPresets } from '../../data/random-variables-data';
 
 // ── Colors ─────────────────────────────────────────────────────────────────
 
@@ -255,9 +255,9 @@ export default function RandomVariableMappingExplorer() {
         <table className="w-full text-sm" style={{ borderColor: 'var(--color-border)' }}>
           <thead>
             <tr className="border-b" style={{ borderColor: 'var(--color-border)' }}>
-              <th className="px-2 py-1 text-left">Value $x$</th>
-              <th className="px-2 py-1 text-left">Pre-image $X^{'{-1}'}(\{'{x}\}'})$</th>
-              <th className="px-2 py-1 text-left">$P(X = x)$</th>
+              <th className="px-2 py-1 text-left">Value x</th>
+              <th className="px-2 py-1 text-left">Pre-image X⁻¹({'{'}{'{'}x{'}'}{'}'})</th>
+              <th className="px-2 py-1 text-left">P(X = x)</th>
             </tr>
           </thead>
           <tbody>

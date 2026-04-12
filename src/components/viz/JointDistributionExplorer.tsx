@@ -17,13 +17,11 @@ const MARGINAL_H = 40; // height for marginal density plots
 
 function DiscreteModePanel({
   panelSize, showMarginals, showConditional, conditionY,
-  onConditionYChange,
 }: {
   panelSize: number;
   showMarginals: boolean;
   showConditional: boolean;
   conditionY: number;
-  onConditionYChange: (y: number) => void;
 }) {
   const gridSize = 6;
   const plotSize = panelSize - MARGIN.left - MARGIN.right;
@@ -395,15 +393,13 @@ export default function JointDistributionExplorer() {
         <div className="flex rounded-lg border" style={{ borderColor: 'var(--color-border)' }}>
           <button
             onClick={() => setMode('discrete')}
-            className={`px-3 py-1 text-sm font-medium ${mode === 'discrete' ? 'bg-blue-600 text-white' : ''}`}
-            style={mode !== 'discrete' ? { color: 'var(--color-text)' } : {}}
+            className={mode === 'discrete' ? 'px-3 py-1 text-sm font-medium bg-blue-600 text-white' : 'px-3 py-1 text-sm font-medium bg-transparent'}
           >
             Discrete (Two Dice)
           </button>
           <button
             onClick={() => setMode('continuous')}
-            className={`px-3 py-1 text-sm font-medium ${mode === 'continuous' ? 'bg-blue-600 text-white' : ''}`}
-            style={mode !== 'continuous' ? { color: 'var(--color-text)' } : {}}
+            className={mode === 'continuous' ? 'px-3 py-1 text-sm font-medium bg-blue-600 text-white' : 'px-3 py-1 text-sm font-medium bg-transparent'}
           >
             Continuous (Bivariate Normal)
           </button>
@@ -500,7 +496,6 @@ export default function JointDistributionExplorer() {
           showMarginals={showMarginals}
           showConditional={showConditional}
           conditionY={conditionY}
-          onConditionYChange={setConditionY}
         />
       ) : (
         <ContinuousModePanel
