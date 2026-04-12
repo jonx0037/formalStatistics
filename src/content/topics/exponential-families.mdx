@@ -1,0 +1,937 @@
+---
+title: "Exponential Families"
+subtitle: "Nine distributions, one canonical form — the unifying framework that makes sufficient statistics, MLE, conjugate priors, and GLMs tractable."
+status: "published"
+difficulty: "intermediate"
+prerequisites:
+  - "discrete-distributions"
+  - "continuous-distributions"
+tags:
+  - "probability"
+  - "exponential-family"
+  - "natural-parameter"
+  - "sufficient-statistics"
+  - "log-partition-function"
+  - "conjugate-prior"
+  - "mle"
+  - "glm"
+  - "canonical-form"
+domain: "core-distributions"
+videoId: null
+notebookPath: "notebooks/exponential-families/07_exponential_families.ipynb"
+githubUrl: "https://github.com/jonx0037/formalStatistics/blob/main/src/content/topics/exponential-families.mdx"
+datePublished: 2026-04-12
+estimatedReadTime: 40
+abstract: "The exponential family is the single most important structural concept in parametric statistics. Nine of the sixteen distributions cataloged in Topics 5–6 — Bernoulli, Binomial, Geometric, Negative Binomial, Poisson, Normal, Exponential, Gamma, and Beta — share a common algebraic form: f(x|θ) = h(x) exp(η(θ)·T(x) − A(θ)). This canonical factorization, in which data and parameters interact only through the product η·T, is the structural reason why sufficient statistics are finite-dimensional, why MLE reduces to a moment-matching equation, why conjugate priors exist, and why generalized linear models are tractable. The log-partition function A(η) is the central object: its first derivative gives E[T(X)], its second derivative gives Var(T(X)), and its convexity guarantees the concavity of the log-likelihood. This topic converts all nine members to canonical form, derives the general conjugate prior theorem, establishes the universal MLE recipe A'(η̂) = T̄, and connects the framework to GLMs — setting up four downstream topics across Tracks 4, 6, and 7."
+formalcalculusPrereqs:
+  - topic: "taylor-series"
+    site: "formalcalculus"
+    relationship: "The log-partition function's moment-generating properties use Taylor expansion arguments. The relationship between A(η) and the moment-generating function connects to power series."
+formalmlConnections:
+  - topic: "information-geometry"
+    site: "formalml"
+    relationship: "The Fisher information I(η) = A''(η) defines a Riemannian metric on the parameter space. Natural gradient descent uses this metric for parameter-invariant optimization."
+  - topic: "generalized-linear-models"
+    site: "formalml"
+    relationship: "Every GLM requires an exponential family response distribution. The canonical link function is (A')⁻¹. Logistic, Poisson, and Gamma regression are instances."
+  - topic: "variational-inference"
+    site: "formalml"
+    relationship: "Exponential family variational distributions enable natural gradient VI. The ELBO has a closed-form expectation when both the prior and variational distribution are in the same exponential family."
+connections:
+  - topic: "discrete-distributions"
+    relationship: "Topic 5 cataloged seven discrete distributions and flagged five as exponential family members. This topic converts those five to canonical form and explains why the other two (Hypergeometric, Discrete Uniform) are excluded."
+  - topic: "continuous-distributions"
+    relationship: "Topic 6 cataloged eight continuous distributions and flagged four as exponential family members. This topic converts those four to canonical form and explains why the Uniform and derived distributions (t, F) are excluded."
+  - topic: "sufficient-statistics"
+    relationship: "The exponential family structure immediately reveals sufficient statistics via Fisher–Neyman factorization. T(x) in the canonical form is the sufficient statistic, and the full treatment of Rao–Blackwell and completeness builds on this foundation."
+  - topic: "maximum-likelihood"
+    relationship: "In exponential families, MLE reduces to solving A'(η̂) = T̄ — a moment-matching equation with a unique solution guaranteed by the convexity of A(η). This is the starting point for asymptotic MLE theory."
+  - topic: "generalized-linear-models"
+    relationship: "The GLM framework requires an exponential family response distribution. The canonical link function connects the linear predictor to the natural parameter. This topic establishes why GLMs are tractable."
+  - topic: "bayesian-foundations"
+    relationship: "Every exponential family has a natural conjugate prior. The general conjugate prior theorem derived here — with updated hyperparameters χ₀' = χ₀ + nT̄, ν₀' = ν₀ + n — is the foundation for conjugate Bayesian inference."
+references:
+  - type: "book"
+    title: "Statistical Inference"
+    author: "George Casella & Roger L. Berger"
+    year: 2002
+    edition: "2nd"
+    publisher: "Duxbury"
+    isbn: "978-0-534-24312-8"
+    url: "https://www.cengage.com/c/statistical-inference-2e-casella/"
+    note: "Chapter 3 (Common Families of Distributions) provides the canonical graduate-level treatment of exponential families, sufficient statistics, and complete families."
+  - type: "book"
+    title: "Mathematical Statistics: Basic Ideas and Selected Topics"
+    author: "Peter J. Bickel & Kjell A. Doksum"
+    year: 2015
+    edition: "2nd"
+    publisher: "Chapman and Hall/CRC"
+    isbn: "978-1-498-72380-0"
+    url: "https://www.routledge.com/Mathematical-Statistics-Basic-Ideas-and-Selected-Topics/Bickel-Doksum/p/book/9781498723800"
+    note: "Chapter 1 provides detailed exponential family theory including curved exponential families and the distinction between full and curved families."
+  - type: "book"
+    title: "Generalized Linear Models"
+    author: "Peter McCullagh & John A. Nelder"
+    year: 1989
+    edition: "2nd"
+    publisher: "Chapman and Hall"
+    isbn: "978-0-412-31760-6"
+    url: "https://www.routledge.com/Generalized-Linear-Models/McCullagh-Nelder/p/book/9780412317606"
+    note: "Chapters 2–3 build GLM theory directly on the exponential family framework. The canonical link function and variance function are central concepts."
+  - type: "book"
+    title: "Pattern Recognition and Machine Learning"
+    author: "Christopher M. Bishop"
+    year: 2006
+    publisher: "Springer"
+    isbn: "978-0-387-31073-2"
+    url: "https://www.microsoft.com/en-us/research/people/cmbishop/prml-book/"
+    note: "Chapter 2 presents exponential families in the ML context, connecting to conjugate priors and Bayesian inference."
+  - type: "book"
+    title: "Information and Exponential Families in Statistical Theory"
+    author: "Ole E. Barndorff-Nielsen"
+    year: 2014
+    edition: "2nd"
+    publisher: "Wiley"
+    isbn: "978-1-118-85750-5"
+    url: "https://www.wiley.com/en-us/Information+and+Exponential+Families+in+Statistical+Theory-p-9781118857502"
+    note: "The definitive monograph on exponential families. Covers the full theory including differential geometry of the parameter space."
+  - type: "book"
+    title: "Exponential Families in Theory and Practice"
+    author: "Bradley Efron"
+    year: 2022
+    publisher: "Cambridge University Press"
+    isbn: "978-1-108-48858-7"
+    url: "https://www.cambridge.org/us/academic/subjects/statistics-probability/statistical-theory-and-methods/exponential-families-theory-and-practice"
+    note: "Modern treatment with applications to high-dimensional statistics, Bayesian inference, and machine learning."
+---
+
+import DefinitionBlock from '../../components/ui/DefinitionBlock.astro';
+import TheoremBlock from '../../components/ui/TheoremBlock.astro';
+import ProofBlock from '../../components/ui/ProofBlock.astro';
+import ExampleBlock from '../../components/ui/ExampleBlock.astro';
+import RemarkBlock from '../../components/ui/RemarkBlock.astro';
+import ExternalLink from '../../components/ui/ExternalLink.astro';
+
+import ExponentialFamilyExplorer from '../../components/viz/ExponentialFamilyExplorer.tsx';
+import CanonicalFormConverter from '../../components/viz/CanonicalFormConverter.tsx';
+import LogPartitionExplorer from '../../components/viz/LogPartitionExplorer.tsx';
+import ConjugatePriorExplorer from '../../components/viz/ConjugatePriorExplorer.tsx';
+import GLMCanonicalLinkExplorer from '../../components/viz/GLMCanonicalLinkExplorer.tsx';
+
+## 7.1 The Exponential Family (Why Unify?)
+
+[Topic 5 — Discrete Distributions](/topics/discrete-distributions) cataloged seven discrete PMFs and flagged five as exponential family members. [Topic 6 — Continuous Distributions](/topics/continuous-distributions) cataloged eight continuous PDFs and flagged four more. In both cases, the exponential family membership was noted in passing — a remark here, a flag there — without explaining what that membership *means* or why it matters.
+
+This topic answers that question. Nine of the sixteen distributions from Topics 5-6 — Bernoulli, Binomial, Geometric, Negative Binomial, Poisson, Normal, Exponential, Gamma, and Beta — share a single algebraic form:
+
+$$
+f(x \mid \theta) = h(x) \exp\!\bigl(\eta(\theta) \cdot T(x) - A(\theta)\bigr)
+$$
+
+This is not a coincidence, and it is not merely a notational convenience. The factorization above — in which the data $x$ and the parameter $\theta$ interact *only* through the inner product $\eta(\theta) \cdot T(x)$ — is the structural reason behind four of the most important results in parametric statistics:
+
+1. **Sufficient statistics are finite-dimensional.** The function $T(x)$ captures everything the data has to say about $\theta$. No matter how large the sample, a fixed-dimensional summary suffices.
+2. **MLE reduces to moment matching.** The maximum likelihood estimate satisfies $A'(\hat{\eta}) = \bar{T}$, where $\bar{T}$ is the sample mean of the sufficient statistics. One equation, universal across all nine distributions.
+3. **Conjugate priors exist.** For every exponential family likelihood, there is a natural conjugate prior that yields a posterior in the same family — with hyperparameters updated by a clean additive rule.
+4. **Generalized linear models are tractable.** The GLM framework — logistic regression, Poisson regression, Gamma regression — requires an exponential family response distribution. The canonical link function comes directly from $A'$.
+
+The seven distributions that are *not* exponential family members — Hypergeometric, Discrete Uniform, Continuous Uniform, Chi-squared (as a standalone), Student's $t$, and $F$ — fail for specific structural reasons that we will make precise in Section 7.4. (The Chi-squared is a special case of the Gamma and inherits exponential family membership through that route, but its degrees-of-freedom parameter $k$ is typically a fixed integer, not an estimated parameter.)
+
+<img src="/images/topics/exponential-families/exponential-family-overview.png" alt="Grid of 9 exponential family members: 5 discrete and 4 continuous PMFs/PDFs with natural parameter annotations" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
+
+The interactive explorer below lets you select any of the nine members, adjust parameters, and see the canonical form decomposition live — with the four components $h(x)$, $\eta(\theta)$, $T(x)$, and $A(\theta)$ color-coded in the formula.
+
+<ExponentialFamilyExplorer client:visible />
+
+---
+
+## 7.2 The Canonical Form
+
+Before we can unify nine distributions, we need a precise definition of the form they share. We start with the one-parameter case to build intuition, then generalize.
+
+<DefinitionBlock number={1} title="Definition 7.1 (One-Parameter Exponential Family)">
+A family of distributions indexed by a scalar parameter $\theta \in \Theta$ is a **one-parameter exponential family** if the PMF or PDF can be written as
+
+$$
+f(x \mid \theta) = h(x) \exp\!\bigl(\eta(\theta) \cdot T(x) - A(\theta)\bigr)
+$$
+
+where:
+
+- $h(x) \geq 0$ is a **base measure** that depends only on the data, not on $\theta$
+- $\eta(\theta)$ is the **natural parameter** (also called the canonical parameter), a function of $\theta$ alone
+- $T(x)$ is the **sufficient statistic**, a function of the data alone
+- $A(\theta) = \log \int h(x) \exp\!\bigl(\eta(\theta) \cdot T(x)\bigr) \, d\mu(x)$ is the **log-partition function** (also called the cumulant function), which ensures the density integrates to 1
+
+The key structural feature is that $\theta$ and $x$ interact *only* through the product $\eta(\theta) \cdot T(x)$. Everything else separates cleanly: $h(x)$ absorbs the data-only terms, and $A(\theta)$ absorbs the parameter-only normalization.
+</DefinitionBlock>
+
+When $\eta(\theta) = \theta$ — that is, when the natural parameter *is* the parameter — we say the family is in **natural** or **canonical** parameterization. This is always achievable by reparameterizing from $\theta$ to $\eta$.
+
+The generalization to multiple parameters is immediate.
+
+<DefinitionBlock number={2} title="Definition 7.2 (k-Parameter Exponential Family)">
+A family of distributions indexed by a parameter vector $\boldsymbol{\theta} \in \Theta \subseteq \mathbb{R}^k$ is a **$k$-parameter exponential family** if the PMF or PDF can be written as
+
+$$
+f(x \mid \boldsymbol{\theta}) = h(x) \exp\!\bigl(\boldsymbol{\eta}(\boldsymbol{\theta}) \cdot \mathbf{T}(x) - A(\boldsymbol{\theta})\bigr)
+$$
+
+where $\boldsymbol{\eta}(\boldsymbol{\theta}) = (\eta_1(\boldsymbol{\theta}), \ldots, \eta_k(\boldsymbol{\theta}))$ is a vector of natural parameters, $\mathbf{T}(x) = (T_1(x), \ldots, T_k(x))$ is a vector of sufficient statistics, and the dot product $\boldsymbol{\eta} \cdot \mathbf{T} = \sum_{j=1}^k \eta_j T_j$ replaces the scalar product. The log-partition function $A(\boldsymbol{\theta})$ normalizes the distribution.
+
+The **dimension** of the exponential family is $k$ — the number of natural parameters. The Bernoulli, Geometric, Poisson, and Exponential are one-dimensional ($k = 1$). The Normal, Gamma, and Beta are two-dimensional ($k = 2$). The Binomial and Negative Binomial are one-dimensional when $n$ (resp. $r$) is fixed.
+</DefinitionBlock>
+
+<RemarkBlock number={1} title="The Support Must Not Depend on the Parameter">
+A critical requirement — often stated implicitly — is that the **support** of $f(x \mid \theta)$ must be independent of $\theta$. The set of $x$ values where $f(x \mid \theta) > 0$ must be the same for all $\theta \in \Theta$.
+
+Why? Because $h(x)$ is the only factor that can restrict the support (by being zero), and $h(x)$ does not depend on $\theta$. If the support depends on $\theta$, we would need an indicator function $\mathbf{1}_{\{x \in S(\theta)\}}$ that cannot be absorbed into the $\eta \cdot T$ structure.
+
+This is exactly why the Uniform$(a, b)$ distribution fails to be an exponential family member, as we will see in Section 7.4.
+</RemarkBlock>
+
+<img src="/images/topics/exponential-families/canonical-form-anatomy.png" alt="Anatomy of the canonical form: h(x), eta, T(x), A(eta) components labeled with Bernoulli and Normal worked examples" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
+
+---
+
+## 7.3 Converting Distributions to Canonical Form
+
+We now convert all nine exponential family members to canonical form. The method is the same in every case: start with the known PMF or PDF from [Discrete Distributions](/topics/discrete-distributions) or [Continuous Distributions](/topics/continuous-distributions), take the logarithm, separate the terms that involve only $x$, only $\theta$, and both $x$ and $\theta$, then read off $h(x)$, $\eta(\theta)$, $T(x)$, and $A(\theta)$.
+
+These conversions are compressed — the full PMF/PDF derivations live in Topics 5-6, so we start from the final expressions and focus on the algebraic rearrangement.
+
+### 7.3.1 Bernoulli
+
+<RemarkBlock number={2} title="Bernoulli Canonical Form">
+The Bernoulli$(p)$ PMF is $f(x \mid p) = p^x (1-p)^{1-x}$ for $x \in \{0, 1\}$. Taking the logarithm:
+
+$$
+\log f(x \mid p) = x \log p + (1 - x) \log(1 - p) = x \log\!\frac{p}{1-p} + \log(1-p)
+$$
+
+Reading off the components:
+
+- $h(x) = 1$
+- $\eta(p) = \log\!\frac{p}{1-p}$ (the **log-odds**, also called the **logit**)
+- $T(x) = x$
+- $A(\eta) = \log(1 + e^\eta)$ (the **softplus** function)
+
+The natural parameter $\eta$ ranges over all of $\mathbb{R}$: as $p \to 0$, $\eta \to -\infty$; as $p \to 1$, $\eta \to +\infty$. The inverse map is $p = e^\eta / (1 + e^\eta) = \sigma(\eta)$, the **logistic function** — and this is exactly why logistic regression uses the logit link.
+</RemarkBlock>
+
+### 7.3.2 Binomial (fixed $n$)
+
+<RemarkBlock number={3} title="Binomial Canonical Form">
+The Binomial$(n, p)$ PMF is $f(k \mid p) = \binom{n}{k} p^k (1-p)^{n-k}$ for $k \in \{0, 1, \ldots, n\}$, with $n$ fixed. Taking the logarithm:
+
+$$
+\log f(k \mid p) = \log\binom{n}{k} + k \log\!\frac{p}{1-p} + n \log(1 - p)
+$$
+
+Reading off:
+
+- $h(k) = \binom{n}{k}$
+- $\eta(p) = \log\!\frac{p}{1-p}$ (same logit as Bernoulli)
+- $T(k) = k$
+- $A(\eta) = n \log(1 + e^\eta)$
+
+The Binomial with fixed $n$ is a one-parameter exponential family in $p$. When both $n$ and $p$ are unknown, the family is no longer exponential in the standard sense because $n$ enters through $\binom{n}{k}$, which couples data and parameters outside the $\eta \cdot T$ structure.
+</RemarkBlock>
+
+### 7.3.3 Geometric
+
+<RemarkBlock number={4} title="Geometric Canonical Form">
+The Geometric$(p)$ PMF is $f(k \mid p) = p(1-p)^{k-1}$ for $k \in \{1, 2, 3, \ldots\}$ (counting the trial on which the first success occurs). Taking the logarithm:
+
+$$
+\log f(k \mid p) = \log p + (k - 1) \log(1 - p) = k \log(1 - p) + \log p - \log(1 - p)
+$$
+
+$$
+= k \log(1 - p) + \log\!\frac{p}{1-p}
+$$
+
+Reading off:
+
+- $h(k) = 1$
+- $\eta(p) = \log(1 - p)$
+- $T(k) = k$
+- $A(\eta) = -\log(1 - e^\eta)$
+
+Since $p \in (0, 1)$, we have $1 - p \in (0, 1)$, so $\eta = \log(1-p) < 0$. The natural parameter space is $\eta \in (-\infty, 0)$.
+</RemarkBlock>
+
+### 7.3.4 Negative Binomial (fixed $r$)
+
+<RemarkBlock number={5} title="Negative Binomial Canonical Form">
+The Negative Binomial$(r, p)$ PMF is $f(k \mid p) = \binom{k-1}{r-1} p^r (1-p)^{k-r}$ for $k \in \{r, r+1, r+2, \ldots\}$, with $r$ fixed. Taking the logarithm:
+
+$$
+\log f(k \mid p) = \log\binom{k-1}{r-1} + r \log p + (k - r) \log(1 - p)
+$$
+
+$$
+= \log\binom{k-1}{r-1} + k \log(1 - p) + r \log p - r \log(1 - p)
+$$
+
+$$
+= \log\binom{k-1}{r-1} + k \log(1 - p) + r \log\!\frac{p}{1-p}
+$$
+
+Reading off:
+
+- $h(k) = \binom{k-1}{r-1}$
+- $\eta(p) = \log(1 - p)$
+- $T(k) = k$
+- $A(\eta) = -r \log(1 - e^\eta)$
+
+The natural parameter space is $\eta < 0$, identical to the Geometric. This makes sense: the Geometric is the Negative Binomial with $r = 1$, and setting $r = 1$ in $A(\eta) = -r\log(1 - e^\eta)$ recovers the Geometric log-partition function exactly.
+</RemarkBlock>
+
+### 7.3.5 Poisson
+
+<RemarkBlock number={6} title="Poisson Canonical Form">
+The Poisson$(\lambda)$ PMF is $f(k \mid \lambda) = \frac{\lambda^k e^{-\lambda}}{k!}$ for $k \in \{0, 1, 2, \ldots\}$. Taking the logarithm:
+
+$$
+\log f(k \mid \lambda) = k \log \lambda - \lambda - \log(k!)
+$$
+
+Reading off:
+
+- $h(k) = \frac{1}{k!}$
+- $\eta(\lambda) = \log \lambda$
+- $T(k) = k$
+- $A(\eta) = e^\eta = \lambda$
+
+The natural parameter $\eta = \log \lambda$ ranges over all of $\mathbb{R}$ (since $\lambda > 0$). The log-partition function $A(\eta) = e^\eta$ is the exponential function itself — making the Poisson the cleanest example for studying $A$ and its derivatives.
+</RemarkBlock>
+
+### 7.3.6 Normal
+
+<RemarkBlock number={7} title="Normal Canonical Form">
+The Normal$(\mu, \sigma^2)$ PDF is $f(x \mid \mu, \sigma^2) = \frac{1}{\sigma\sqrt{2\pi}} \exp\!\left(-\frac{(x - \mu)^2}{2\sigma^2}\right)$ for $x \in \mathbb{R}$. This is a two-parameter family. Expanding the exponent:
+
+$$
+-\frac{(x - \mu)^2}{2\sigma^2} = -\frac{x^2}{2\sigma^2} + \frac{\mu x}{\sigma^2} - \frac{\mu^2}{2\sigma^2}
+$$
+
+So the full log-density is:
+
+$$
+\log f(x \mid \mu, \sigma^2) = \frac{\mu}{\sigma^2} \cdot x + \left(-\frac{1}{2\sigma^2}\right) \cdot x^2 - \frac{\mu^2}{2\sigma^2} - \log(\sigma\sqrt{2\pi})
+$$
+
+Reading off:
+
+- $h(x) = \frac{1}{\sqrt{2\pi}}$
+- $\boldsymbol{\eta} = \left(\frac{\mu}{\sigma^2}, \; -\frac{1}{2\sigma^2}\right)$, so $\eta_1 = \mu/\sigma^2$ and $\eta_2 = -1/(2\sigma^2)$
+- $\mathbf{T}(x) = (x, \; x^2)$
+- $A(\boldsymbol{\eta}) = \frac{\mu^2}{2\sigma^2} + \log \sigma = -\frac{\eta_1^2}{4\eta_2} - \frac{1}{2}\log(-2\eta_2)$
+
+The natural parameter space is $\eta_1 \in \mathbb{R}$, $\eta_2 < 0$. When $\sigma^2$ is known, the Normal reduces to a one-parameter exponential family with natural parameter $\eta = \mu/\sigma^2$, sufficient statistic $T(x) = x$, and log-partition function $A(\eta) = \sigma^2 \eta^2 / 2$.
+</RemarkBlock>
+
+### 7.3.7 Exponential
+
+<RemarkBlock number={8} title="Exponential Canonical Form">
+The Exponential$(\lambda)$ PDF is $f(x \mid \lambda) = \lambda e^{-\lambda x}$ for $x \geq 0$. Taking the logarithm:
+
+$$
+\log f(x \mid \lambda) = \log \lambda - \lambda x = (-\lambda) \cdot x - (-\log \lambda)
+$$
+
+Reading off:
+
+- $h(x) = 1$ for $x \geq 0$
+- $\eta(\lambda) = -\lambda$
+- $T(x) = x$
+- $A(\eta) = -\log(-\eta)$
+
+The natural parameter $\eta = -\lambda < 0$ (since $\lambda > 0$). Note the sign: the natural parameter is the *negative* of the rate. This is a one-parameter exponential family with natural parameter space $\eta \in (-\infty, 0)$.
+</RemarkBlock>
+
+### 7.3.8 Gamma
+
+<RemarkBlock number={9} title="Gamma Canonical Form">
+The Gamma$(\alpha, \beta)$ PDF is $f(x \mid \alpha, \beta) = \frac{\beta^\alpha}{\Gamma(\alpha)} x^{\alpha - 1} e^{-\beta x}$ for $x > 0$. Taking the logarithm:
+
+$$
+\log f(x \mid \alpha, \beta) = (\alpha - 1) \log x + (-\beta) \cdot x - \log \Gamma(\alpha) + \alpha \log \beta
+$$
+
+This is a two-parameter family. Reading off:
+
+- $h(x) = 1$ for $x > 0$
+- $\boldsymbol{\eta} = (\alpha - 1, \; -\beta)$, so $\eta_1 = \alpha - 1$ and $\eta_2 = -\beta$
+- $\mathbf{T}(x) = (\log x, \; x)$
+- $A(\boldsymbol{\eta}) = \log \Gamma(\eta_1 + 1) - (\eta_1 + 1) \log(-\eta_2)$
+
+The natural parameter space is $\eta_1 > -1$, $\eta_2 < 0$. Setting $\alpha = 1$ (i.e., $\eta_1 = 0$) and keeping only the second component recovers the Exponential canonical form: $\eta = -\beta = -\lambda$, $T(x) = x$, $A(\eta) = -\log(-\eta)$. The Gamma genuinely subsumes the Exponential as a special case, and the canonical forms are consistent.
+</RemarkBlock>
+
+### 7.3.9 Beta
+
+<RemarkBlock number={10} title="Beta Canonical Form">
+The Beta$(\alpha, \beta)$ PDF is $f(x \mid \alpha, \beta) = \frac{1}{B(\alpha, \beta)} x^{\alpha - 1} (1 - x)^{\beta - 1}$ for $x \in (0, 1)$. Taking the logarithm:
+
+$$
+\log f(x \mid \alpha, \beta) = (\alpha - 1) \log x + (\beta - 1) \log(1 - x) - \log B(\alpha, \beta)
+$$
+
+Reading off:
+
+- $h(x) = 1$ for $x \in (0, 1)$
+- $\boldsymbol{\eta} = (\alpha - 1, \; \beta - 1)$, so $\eta_1 = \alpha - 1$ and $\eta_2 = \beta - 1$
+- $\mathbf{T}(x) = (\log x, \; \log(1 - x))$
+- $A(\boldsymbol{\eta}) = \log B(\eta_1 + 1, \eta_2 + 1) = \log \Gamma(\eta_1 + 1) + \log \Gamma(\eta_2 + 1) - \log \Gamma(\eta_1 + \eta_2 + 2)$
+
+The natural parameter space is $\eta_1 > -1$, $\eta_2 > -1$. The sufficient statistics $T_1(x) = \log x$ and $T_2(x) = \log(1 - x)$ are the log-data and the log-complement — both of which appear naturally in the Beta-Bernoulli conjugate updating that we will derive in Section 7.7.
+</RemarkBlock>
+
+<img src="/images/topics/exponential-families/canonical-form-summary.png" alt="Summary table of all 9 exponential family members with their canonical form components h, eta, T, A" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
+
+The converter below lets you step through the algebraic transformation for each distribution, with color-coded components matching the canonical form.
+
+<CanonicalFormConverter client:visible />
+
+---
+
+## 7.4 Why Some Distributions Are NOT Exponential Families
+
+Not every distribution fits the canonical form. Of the sixteen distributions cataloged in Topics 5-6, seven are excluded. Understanding *why* they fail sharpens our understanding of what the exponential family structure actually requires.
+
+<RemarkBlock number={11} title="Structural Failures: Student's t and F">
+The Student's $t(\nu)$ PDF is proportional to $(1 + t^2/\nu)^{-(\nu+1)/2}$, and the $F(d_1, d_2)$ PDF involves a similar power-of-a-polynomial structure. In both cases, the parameter ($\nu$, or $d_1, d_2$) appears as an *exponent* on a function of $x$. There is no way to factor the log-density into a sum $\eta(\theta) \cdot T(x)$ plus separate functions of $x$ and $\theta$ alone.
+
+Concretely, for the $t(\nu)$ distribution:
+
+$$
+\log f(t \mid \nu) = -\frac{\nu + 1}{2} \log\!\left(1 + \frac{t^2}{\nu}\right) + C(\nu)
+$$
+
+The term $-\frac{\nu + 1}{2} \log(1 + t^2/\nu)$ cannot be written as $\eta(\nu) \cdot T(t)$ because $\nu$ appears both as a multiplicative factor ($(\nu+1)/2$) and inside the argument of the logarithm ($t^2/\nu$). This double entanglement of data and parameter prevents the factorization.
+
+The same issue affects the $F$ distribution. Both are derived from the Normal and Chi-squared via ratios and transformations that destroy the exponential family structure.
+</RemarkBlock>
+
+<ExampleBlock number={1} title="Why Uniform(a, b) Fails: Parameter-Dependent Support">
+The Continuous Uniform$(a, b)$ has PDF
+
+$$
+f(x \mid a, b) = \frac{1}{b - a} \cdot \mathbf{1}_{[a, b]}(x)
+$$
+
+where $\mathbf{1}_{[a, b]}(x)$ is the indicator function that equals 1 when $a \leq x \leq b$ and 0 otherwise. The support of $f$ is the interval $[a, b]$, which depends on the parameters $a$ and $b$.
+
+We can try to force this into exponential family form by taking the log:
+
+$$
+\log f(x \mid a, b) = -\log(b - a) + \log \mathbf{1}_{[a, b]}(x)
+$$
+
+The indicator $\log \mathbf{1}_{[a, b]}(x)$ equals 0 when $x \in [a, b]$ and $-\infty$ otherwise. This indicator depends on *both* $x$ and $\theta = (a, b)$, but it cannot be written as $\eta(\theta) \cdot T(x)$ — it is a hard constraint, not a smooth inner product.
+
+The Discrete Uniform fails for exactly the same reason: its support $\{a, a+1, \ldots, b\}$ depends on the parameters. The Hypergeometric fails similarly: its support $\{\max(0, n - N + K), \ldots, \min(n, K)\}$ depends on $(N, K, n)$.
+
+This is the content of Remark 7.1: the support of an exponential family density must be independent of the parameter. Parameter-dependent support is the most common reason a distribution fails the exponential family test.
+</ExampleBlock>
+
+<img src="/images/topics/exponential-families/non-members-support.png" alt="Three-panel comparison: Uniform support varies with a,b; Exponential support is fixed at [0,infinity); decision tree for exponential family membership" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
+
+---
+
+## 7.5 The Log-Partition Function
+
+The log-partition function $A(\eta)$ is the most important single object in exponential family theory. Its name comes from statistical mechanics, where $\exp(A(\eta))$ is the *partition function* — the normalizing constant that ensures probabilities sum (or integrate) to 1. But $A(\eta)$ does far more than normalize. Its derivatives generate the moments of the sufficient statistic.
+
+<TheoremBlock number={1} title="Theorem 7.1 (Log-Partition and Moments)">
+Let $f(x \mid \eta) = h(x) \exp(\eta \cdot T(x) - A(\eta))$ be a one-parameter exponential family in natural parameterization. Then:
+
+1. $A'(\eta) = E_\eta[T(X)]$
+2. $A''(\eta) = \text{Var}_\eta(T(X))$
+
+In words: the first derivative of the log-partition function gives the expected value of the sufficient statistic, and the second derivative gives its variance.
+</TheoremBlock>
+
+<ProofBlock>
+**Part 1.** The density integrates to 1 for all $\eta$ in the natural parameter space:
+
+$$
+\int h(x) \exp\!\bigl(\eta \cdot T(x) - A(\eta)\bigr) \, d\mu(x) = 1
+$$
+
+Multiply both sides by $\exp(A(\eta))$:
+
+$$
+\int h(x) \exp\!\bigl(\eta \cdot T(x)\bigr) \, d\mu(x) = \exp\!\bigl(A(\eta)\bigr)
+$$
+
+Differentiate both sides with respect to $\eta$. On the left, we differentiate under the integral sign (justified by the smoothness of exponential families on the interior of the natural parameter space — see Barndorff-Nielsen, Ch. 8):
+
+$$
+\int h(x) \cdot T(x) \cdot \exp\!\bigl(\eta \cdot T(x)\bigr) \, d\mu(x) = A'(\eta) \cdot \exp\!\bigl(A(\eta)\bigr)
+$$
+
+Divide both sides by $\exp(A(\eta))$:
+
+$$
+\int T(x) \cdot h(x) \exp\!\bigl(\eta \cdot T(x) - A(\eta)\bigr) \, d\mu(x) = A'(\eta)
+$$
+
+The left side is $\int T(x) \cdot f(x \mid \eta) \, d\mu(x) = E_\eta[T(X)]$. Therefore $A'(\eta) = E_\eta[T(X)]$.
+
+**Part 2.** Differentiate the normalization identity a second time. Starting from
+
+$$
+\int h(x) \cdot T(x) \cdot \exp\!\bigl(\eta \cdot T(x)\bigr) \, d\mu(x) = A'(\eta) \cdot \exp\!\bigl(A(\eta)\bigr)
+$$
+
+we differentiate both sides with respect to $\eta$ again. On the left:
+
+$$
+\int h(x) \cdot T(x)^2 \cdot \exp\!\bigl(\eta \cdot T(x)\bigr) \, d\mu(x)
+$$
+
+On the right, by the product rule:
+
+$$
+A''(\eta) \cdot \exp\!\bigl(A(\eta)\bigr) + A'(\eta)^2 \cdot \exp\!\bigl(A(\eta)\bigr)
+$$
+
+Divide both sides by $\exp(A(\eta))$:
+
+$$
+\int T(x)^2 \cdot f(x \mid \eta) \, d\mu(x) = A''(\eta) + A'(\eta)^2
+$$
+
+The left side is $E_\eta[T(X)^2]$. Since $A'(\eta) = E_\eta[T(X)]$, we have:
+
+$$
+E_\eta[T(X)^2] = A''(\eta) + \bigl(E_\eta[T(X)]\bigr)^2
+$$
+
+Rearranging: $A''(\eta) = E_\eta[T(X)^2] - \bigl(E_\eta[T(X)]\bigr)^2 = \text{Var}_\eta(T(X))$.
+
+$\square$
+</ProofBlock>
+
+Let us verify this on the cleanest example. For the Poisson, $A(\eta) = e^\eta$, so $A'(\eta) = e^\eta = \lambda$ and $A''(\eta) = e^\eta = \lambda$. We know $E[X] = \lambda$ and $\text{Var}(X) = \lambda$ for the Poisson — both confirmed by the log-partition derivatives. For the Bernoulli, $A(\eta) = \log(1 + e^\eta)$, so $A'(\eta) = e^\eta/(1 + e^\eta) = p$ and $A''(\eta) = e^\eta/(1 + e^\eta)^2 = p(1-p)$, matching $E[X] = p$ and $\text{Var}(X) = p(1-p)$.
+
+<RemarkBlock number={12} title="Convexity of A and Its Consequences">
+Since $A''(\eta) = \text{Var}_\eta(T(X)) \geq 0$ (variance is nonnegative), the log-partition function $A(\eta)$ is **convex**. Moreover, $A''(\eta) > 0$ whenever $T(X)$ is not degenerate (i.e., $T(X)$ takes more than one value with positive probability), so $A(\eta)$ is **strictly convex** for all standard exponential families.
+
+This has three major consequences:
+
+1. **The log-likelihood is concave.** For a sample $x_1, \ldots, x_n$, the log-likelihood in natural parameterization is $\ell(\eta) = \eta \cdot \sum_i T(x_i) - n \cdot A(\eta) + \text{const}$. Since $A(\eta)$ is convex, $-nA(\eta)$ is concave, and $\ell(\eta)$ is a linear function plus a concave function — hence concave. This guarantees that any local maximum of the log-likelihood is the global maximum.
+
+2. **The MLE is unique** (when it exists). A strictly concave function has at most one maximum. Combined with existence conditions (the observed sufficient statistic lies in the interior of the convex hull of possible sufficient statistics), this gives both existence and uniqueness of the MLE.
+
+3. **The mean-to-natural parameter map is invertible.** The function $\mu(\eta) = A'(\eta)$ is strictly increasing (since $A'' > 0$), so it has an inverse $\eta(\mu) = (A')^{-1}(\mu)$. This invertibility is what makes the dual parameterization — sometimes called the mean parameterization — well-defined.
+</RemarkBlock>
+
+<img src="/images/topics/exponential-families/log-partition-properties.png" alt="Three-panel: Poisson A(eta) = e^eta, Bernoulli softplus, convexity across members" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
+
+The explorer below lets you drag a point along the $\eta$ axis and watch $A(\eta)$, $A'(\eta) = E[T(X)]$, and $A''(\eta) = \text{Var}(T(X))$ update in real time. The tangent line at each point has slope $E[T(X)]$.
+
+<LogPartitionExplorer client:visible />
+
+---
+
+## 7.6 Sufficient Statistics from Exponential Families
+
+The canonical form immediately reveals the sufficient statistic $T(x)$ — but *why* is $T(x)$ sufficient? The answer comes from the Fisher-Neyman factorization theorem, which states that $T$ is sufficient for $\theta$ if and only if the density factors as a function of $T$ and $\theta$ times a function of $x$ alone.
+
+<TheoremBlock number={2} title="Theorem 7.2 (Fisher-Neyman Factorization for Exponential Families)">
+In any exponential family $f(x \mid \theta) = h(x) \exp(\eta(\theta) \cdot T(x) - A(\theta))$, the statistic $T(X)$ is **sufficient** for $\theta$.
+
+For an i.i.d. sample $X_1, \ldots, X_n$ from this family, the sum $\sum_{i=1}^n T(X_i)$ is sufficient for $\theta$.
+</TheoremBlock>
+
+<ProofBlock>
+The Fisher-Neyman factorization theorem (which Sufficient Statistics (coming soon) will develop in full generality) states that $T(X)$ is sufficient for $\theta$ if and only if the joint density factors as
+
+$$
+f(x \mid \theta) = g(T(x), \theta) \cdot h(x)
+$$
+
+where $g$ depends on $x$ only through $T(x)$, and $h$ depends only on $x$.
+
+For an exponential family, the density is already in this form:
+
+$$
+f(x \mid \theta) = \underbrace{\exp\!\bigl(\eta(\theta) \cdot T(x) - A(\theta)\bigr)}_{g(T(x), \theta)} \cdot \underbrace{h(x)}_{h(x)}
+$$
+
+The first factor depends on $x$ only through $T(x)$ (since the data enters only via the inner product $\eta(\theta) \cdot T(x)$). The second factor $h(x)$ depends only on $x$, not on $\theta$. The factorization is immediate.
+
+For an i.i.d. sample, the joint density is $\prod_{i=1}^n f(x_i \mid \theta) = \left(\prod_{i=1}^n h(x_i)\right) \exp\!\left(\eta(\theta) \cdot \sum_{i=1}^n T(x_i) - nA(\theta)\right)$. The same factorization holds with $\sum_{i=1}^n T(x_i)$ playing the role of the sufficient statistic and $\prod_{i=1}^n h(x_i)$ playing the role of the data-only factor.
+
+$\square$
+</ProofBlock>
+
+The power of this result is *dimensional reduction*. No matter how large the sample, a fixed-dimensional summary suffices:
+
+- **Bernoulli:** $T(x) = x$, so $\sum T(x_i) = \sum x_i$ — the number of successes. One number summarizes $n$ binary observations.
+- **Normal (known $\sigma^2$):** $T(x) = x$, so $\sum T(x_i) = \sum x_i$, or equivalently $\bar{x}$. One number summarizes $n$ continuous observations.
+- **Normal (unknown $\mu$ and $\sigma^2$):** $\mathbf{T}(x) = (x, x^2)$, so the sufficient statistics are $\sum x_i$ and $\sum x_i^2$. Two numbers summarize the entire sample.
+- **Poisson:** $T(k) = k$, so $\sum T(k_i) = \sum k_i$ — the total count. One number.
+
+This is not a feature of specific distributions — it is a *structural consequence* of the exponential family form. Sufficient Statistics (coming soon) will develop the full theory, including the Rao-Blackwell theorem (sufficient statistics yield optimal estimators) and completeness (no redundancy in the sufficient statistic).
+
+<img src="/images/topics/exponential-families/sufficient-statistics.png" alt="Bernoulli n observations to 1 sufficient statistic, Normal n observations to 2, general dimension reduction diagram" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
+
+---
+
+## 7.7 Conjugate Priors from Exponential Families
+
+One of the most elegant consequences of the exponential family structure is the existence of conjugate priors. A **conjugate prior** for a likelihood is a prior distribution such that the posterior belongs to the same family as the prior — just with updated parameters. This makes Bayesian updating algebraically tractable: multiply the prior by the likelihood, and read off the new parameters without computing a normalizing integral.
+
+The remarkable fact is that *every* exponential family has a natural conjugate prior. The general form is a direct consequence of the canonical representation.
+
+<TheoremBlock number={3} title="Theorem 7.3 (Conjugate Prior for Exponential Families)">
+Let $f(x \mid \eta) = h(x) \exp(\eta \cdot T(x) - A(\eta))$ be a one-parameter exponential family in natural parameterization. The **conjugate prior** for $\eta$ has the form
+
+$$
+\pi(\eta \mid \chi_0, \nu_0) \propto \exp\!\bigl(\chi_0 \cdot \eta - \nu_0 \cdot A(\eta)\bigr)
+$$
+
+where $\chi_0$ and $\nu_0 > 0$ are hyperparameters.
+
+Given an i.i.d. sample $x_1, \ldots, x_n$, the posterior is in the same family with updated hyperparameters:
+
+$$
+\chi_0' = \chi_0 + n\bar{T}, \quad \nu_0' = \nu_0 + n
+$$
+
+where $\bar{T} = \frac{1}{n} \sum_{i=1}^n T(x_i)$ is the sample mean of the sufficient statistics.
+</TheoremBlock>
+
+<ProofBlock>
+The likelihood for an i.i.d. sample $x_1, \ldots, x_n$ from an exponential family is:
+
+$$
+L(\eta) = \prod_{i=1}^n f(x_i \mid \eta) = \prod_{i=1}^n h(x_i) \cdot \exp\!\left(\eta \sum_{i=1}^n T(x_i) - nA(\eta)\right)
+$$
+
+The product $\prod h(x_i)$ does not depend on $\eta$ and will be absorbed into the proportionality constant. Writing $S = \sum_{i=1}^n T(x_i) = n\bar{T}$:
+
+$$
+L(\eta) \propto \exp\!\bigl(\eta \cdot S - n \cdot A(\eta)\bigr)
+$$
+
+Multiply by the conjugate prior $\pi(\eta \mid \chi_0, \nu_0) \propto \exp(\chi_0 \cdot \eta - \nu_0 \cdot A(\eta))$:
+
+$$
+\pi(\eta \mid x_1, \ldots, x_n) \propto L(\eta) \cdot \pi(\eta \mid \chi_0, \nu_0)
+$$
+
+$$
+\propto \exp\!\bigl(\eta \cdot S - n \cdot A(\eta)\bigr) \cdot \exp\!\bigl(\chi_0 \cdot \eta - \nu_0 \cdot A(\eta)\bigr)
+$$
+
+$$
+= \exp\!\bigl((\chi_0 + S) \cdot \eta - (\nu_0 + n) \cdot A(\eta)\bigr)
+$$
+
+$$
+= \exp\!\bigl((\chi_0 + n\bar{T}) \cdot \eta - (\nu_0 + n) \cdot A(\eta)\bigr)
+$$
+
+This is the same functional form as the prior, with $\chi_0$ replaced by $\chi_0' = \chi_0 + n\bar{T}$ and $\nu_0$ replaced by $\nu_0' = \nu_0 + n$. The posterior is therefore in the conjugate family.
+
+The hyperparameter $\nu_0$ acts as a **pseudo-sample size**: it measures how much weight the prior carries relative to the data. After observing $n$ real data points, the effective sample size increases from $\nu_0$ to $\nu_0 + n$. The hyperparameter $\chi_0$ acts as a **pseudo-sufficient-statistic sum**: it represents the "data" implied by the prior, and it is updated additively by the observed sufficient statistic sum $n\bar{T}$.
+
+$\square$
+</ProofBlock>
+
+The theorem above is the *general* result. Let us see it in action for three specific conjugate pairs.
+
+<ExampleBlock number={2} title="Beta-Bernoulli Conjugate Updating">
+For the Bernoulli with natural parameter $\eta = \text{logit}(p)$ and log-partition $A(\eta) = \log(1 + e^\eta)$, the conjugate prior is
+
+$$
+\pi(p \mid \alpha_0, \beta_0) = \frac{1}{B(\alpha_0, \beta_0)} p^{\alpha_0 - 1} (1 - p)^{\beta_0 - 1} = \text{Beta}(\alpha_0, \beta_0)
+$$
+
+Given $n$ Bernoulli observations with $k$ successes (so $\bar{T} = k/n$), the posterior is:
+
+$$
+\pi(p \mid \text{data}) = \text{Beta}(\alpha_0 + k, \; \beta_0 + n - k)
+$$
+
+In the general framework: $\chi_0 = \alpha_0 - 1$ (pseudo-successes minus 1), $\nu_0 = \alpha_0 + \beta_0 - 2$ (pseudo-sample-size minus 2), and the update rule gives $\chi_0' = \chi_0 + k$, $\nu_0' = \nu_0 + n$. The Beta parameterization absorbs the offsets.
+
+The posterior mean is $\frac{\alpha_0 + k}{\alpha_0 + \beta_0 + n}$ — a weighted average of the prior mean $\frac{\alpha_0}{\alpha_0 + \beta_0}$ and the sample proportion $\frac{k}{n}$, with weights proportional to the pseudo-sample size and the real sample size.
+</ExampleBlock>
+
+<ExampleBlock number={3} title="Gamma-Poisson Conjugate Updating">
+For the Poisson with natural parameter $\eta = \log \lambda$ and log-partition $A(\eta) = e^\eta = \lambda$, the conjugate prior for $\lambda$ is
+
+$$
+\pi(\lambda \mid \alpha_0, \beta_0) = \frac{\beta_0^{\alpha_0}}{\Gamma(\alpha_0)} \lambda^{\alpha_0 - 1} e^{-\beta_0 \lambda} = \text{Gamma}(\alpha_0, \beta_0)
+$$
+
+Given $n$ Poisson observations with total count $S = \sum_{i=1}^n k_i$, the posterior is:
+
+$$
+\pi(\lambda \mid \text{data}) = \text{Gamma}(\alpha_0 + S, \; \beta_0 + n)
+$$
+
+The update rule is clean: $\alpha_0$ accumulates the total count, $\beta_0$ accumulates the number of observations. The posterior mean is $\frac{\alpha_0 + S}{\beta_0 + n}$ — a weighted average of the prior mean $\alpha_0/\beta_0$ and the sample mean $S/n$.
+</ExampleBlock>
+
+<ExampleBlock number={4} title="Normal-Normal Conjugate Updating (Precision-Weighted Average)">
+For the Normal with known variance $\sigma^2$, the natural parameter is $\eta = \mu/\sigma^2$ and the log-partition is $A(\eta) = \sigma^2 \eta^2/2$. The conjugate prior for $\mu$ is
+
+$$
+\pi(\mu \mid \mu_0, \sigma_0^2) = \text{Normal}(\mu_0, \sigma_0^2)
+$$
+
+Given $n$ Normal observations with sample mean $\bar{x}$, the posterior is:
+
+$$
+\pi(\mu \mid \text{data}) = \text{Normal}(\mu_n, \sigma_n^2)
+$$
+
+where the posterior variance and mean are given by the **precision-weighted average**:
+
+$$
+\frac{1}{\sigma_n^2} = \frac{1}{\sigma_0^2} + \frac{n}{\sigma^2}
+$$
+
+$$
+\mu_n = \sigma_n^2 \left(\frac{\mu_0}{\sigma_0^2} + \frac{n\bar{x}}{\sigma^2}\right)
+$$
+
+The posterior precision (inverse variance) is the sum of the prior precision and the data precision. The posterior mean is the precision-weighted average of the prior mean and the sample mean. As $n \to \infty$, the data precision dominates and $\mu_n \to \bar{x}$ — the posterior concentrates on the MLE, regardless of the prior. This is a concrete instance of *posterior consistency*.
+</ExampleBlock>
+
+<img src="/images/topics/exponential-families/conjugate-priors.png" alt="Three-panel: Beta-Bernoulli, Gamma-Poisson, and Normal-Normal prior-to-posterior updating" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
+
+The explorer below lets you experiment with all three conjugate pairs. Adjust the prior hyperparameters, add data, and watch the posterior concentrate.
+
+<ConjugatePriorExplorer client:visible />
+
+---
+
+## 7.8 Maximum Likelihood in Exponential Families
+
+The log-partition function's properties give us a universal recipe for maximum likelihood estimation that applies to all nine exponential family members simultaneously.
+
+<TheoremBlock number={4} title="Theorem 7.4 (Universal MLE Recipe)">
+Let $X_1, \ldots, X_n$ be an i.i.d. sample from a one-parameter exponential family $f(x \mid \eta) = h(x) \exp(\eta \cdot T(x) - A(\eta))$. The maximum likelihood estimator $\hat{\eta}$ satisfies
+
+$$
+A'(\hat{\eta}) = \bar{T}
+$$
+
+where $\bar{T} = \frac{1}{n} \sum_{i=1}^n T(X_i)$ is the sample mean of the sufficient statistics. When $\bar{T}$ lies in the interior of the range of $A'$, this equation has a unique solution.
+</TheoremBlock>
+
+<ProofBlock>
+The log-likelihood for an i.i.d. sample is:
+
+$$
+\ell(\eta) = \sum_{i=1}^n \log f(x_i \mid \eta) = \sum_{i=1}^n \log h(x_i) + \eta \sum_{i=1}^n T(x_i) - n A(\eta)
+$$
+
+The first sum does not depend on $\eta$. Writing $S = \sum_{i=1}^n T(x_i) = n\bar{T}$:
+
+$$
+\ell(\eta) = \eta \cdot n\bar{T} - nA(\eta) + \text{const}
+$$
+
+Differentiate with respect to $\eta$ and set to zero:
+
+$$
+\ell'(\eta) = n\bar{T} - nA'(\eta) = 0
+$$
+
+$$
+A'(\hat{\eta}) = \bar{T}
+$$
+
+This is the score equation. It says: find the parameter value $\hat{\eta}$ such that the model's expected sufficient statistic $E_{\hat{\eta}}[T(X)] = A'(\hat{\eta})$ equals the observed sufficient statistic $\bar{T}$. This is **moment matching** — the MLE equates the theoretical and empirical moments of the sufficient statistic.
+
+**Existence.** By Theorem 7.1, $A'(\eta) = E_\eta[T(X)]$. The range of $A'$ is an open interval (by the strict convexity of $A$ and the intermediate value theorem). If $\bar{T}$ lies in this interval, the equation $A'(\eta) = \bar{T}$ has a solution.
+
+**Uniqueness.** Since $A''(\eta) = \text{Var}_\eta(T(X)) > 0$, the function $A'$ is strictly increasing. A strictly increasing function can hit each value at most once, so the solution $\hat{\eta}$ is unique.
+
+**Global maximum.** The second derivative of the log-likelihood is $\ell''(\eta) = -nA''(\eta) < 0$, so the log-likelihood is strictly concave. Any critical point is the unique global maximum.
+
+$\square$
+</ProofBlock>
+
+The universal recipe $A'(\hat{\eta}) = \bar{T}$ specializes to every distribution's MLE formula. Let us verify the four most important cases.
+
+<ExampleBlock number={5} title="Poisson MLE">
+For the Poisson: $\eta = \log \lambda$, $T(k) = k$, $A(\eta) = e^\eta$, so $A'(\eta) = e^\eta = \lambda$. The MLE equation $A'(\hat{\eta}) = \bar{T}$ becomes
+
+$$
+e^{\hat{\eta}} = \bar{k} \implies \hat{\lambda} = \bar{k}
+$$
+
+The Poisson MLE is the sample mean — the most natural estimator one could imagine, and now we see it is a consequence of the exponential family structure. The existence condition is $\bar{k} > 0$, which holds whenever at least one observation is nonzero.
+</ExampleBlock>
+
+<ExampleBlock number={6} title="Bernoulli MLE">
+For the Bernoulli: $\eta = \text{logit}(p)$, $T(x) = x$, $A(\eta) = \log(1 + e^\eta)$, so $A'(\eta) = e^\eta/(1 + e^\eta) = p$. The MLE equation becomes
+
+$$
+\hat{p} = \bar{x} = \frac{k}{n}
+$$
+
+where $k = \sum x_i$ is the number of successes. The sample proportion is the MLE for the Bernoulli probability — again, a universally known result that falls out automatically from $A'(\hat{\eta}) = \bar{T}$.
+</ExampleBlock>
+
+<ExampleBlock number={7} title="Exponential MLE">
+For the Exponential: $\eta = -\lambda$, $T(x) = x$, $A(\eta) = -\log(-\eta)$, so $A'(\eta) = -1/\eta = 1/\lambda$. The MLE equation becomes
+
+$$
+\frac{1}{\hat{\lambda}} = \bar{x} \implies \hat{\lambda} = \frac{1}{\bar{x}}
+$$
+
+The MLE for the Exponential rate is the reciprocal of the sample mean. The existence condition is $\bar{x} > 0$, which holds for any sample from a continuous positive distribution.
+</ExampleBlock>
+
+<ExampleBlock number={8} title="Normal MLE (Known Variance)">
+For the Normal with known $\sigma^2$: $\eta = \mu/\sigma^2$, $T(x) = x$, $A(\eta) = \sigma^2 \eta^2/2$, so $A'(\eta) = \sigma^2 \eta = \mu$. The MLE equation becomes
+
+$$
+\hat{\mu} = \bar{x}
+$$
+
+The sample mean is the MLE for the Normal mean — the single most foundational result in point estimation, and it requires exactly one line once we have the exponential family machinery. Maximum Likelihood (coming soon) will develop the general theory, including asymptotic properties and the multiparameter case.
+</ExampleBlock>
+
+<img src="/images/topics/exponential-families/mle-recipe.png" alt="Three-panel: Poisson log-likelihood, Normal log-likelihood, universal MLE recipe flowchart" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
+
+---
+
+## 7.9 Connection to Generalized Linear Models
+
+The exponential family is not just a theoretical convenience — it is the *structural foundation* of generalized linear models (GLMs), arguably the most widely used class of statistical models in applied science and industry. Every GLM has three components: a **random component** (the response distribution), a **systematic component** (the linear predictor $\boldsymbol{x}^T \boldsymbol{\beta}$), and a **link function** connecting them. The exponential family determines the first and third components.
+
+<RemarkBlock number={13} title="GLM Variance Functions">
+For any exponential family member, the **variance function** $V(\mu)$ expresses the variance of the response as a function of its mean:
+
+$$
+V(\mu) = A''\!\bigl((A')^{-1}(\mu)\bigr)
+$$
+
+The variance function characterizes the mean-variance relationship and determines the behavior of the GLM. For the Normal, $V(\mu) = \sigma^2$ (constant variance). For the Poisson, $V(\mu) = \mu$ (variance equals the mean). For the Bernoulli, $V(\mu) = \mu(1 - \mu)$ (variance is maximized at $p = 1/2$). For the Gamma, $V(\mu) = \mu^2$ (variance grows quadratically with the mean).
+
+These variance functions dictate when each GLM is appropriate: Poisson regression for count data where variance scales with the mean, Gamma regression for positive continuous data where variance scales with the square of the mean, logistic regression for binary data with the bell-shaped variance curve.
+</RemarkBlock>
+
+<ExampleBlock number={9} title="GLM Canonical Links">
+The **canonical link function** for a GLM is $g(\mu) = (A')^{-1}(\mu) = \eta$, which maps the mean response $\mu$ directly to the natural parameter $\eta$. When we use the canonical link, the linear predictor equals the natural parameter: $\boldsymbol{x}^T \boldsymbol{\beta} = \eta$.
+
+| Distribution | Canonical link $g(\mu)$ | Link name | GLM |
+|---|---|---|---|
+| Normal | $g(\mu) = \mu$ | Identity | Linear regression |
+| Bernoulli | $g(\mu) = \log\!\frac{\mu}{1-\mu}$ | Logit | Logistic regression |
+| Poisson | $g(\mu) = \log \mu$ | Log | Poisson regression |
+| Gamma | $g(\mu) = 1/\mu$ | Inverse | Gamma regression |
+
+**Linear regression** is the Normal GLM with identity link: $E[Y \mid \boldsymbol{x}] = \boldsymbol{x}^T \boldsymbol{\beta}$. The mean *is* the linear predictor.
+
+**Logistic regression** is the Bernoulli GLM with logit link: $\log\!\frac{P(Y=1 \mid \boldsymbol{x})}{P(Y=0 \mid \boldsymbol{x})} = \boldsymbol{x}^T \boldsymbol{\beta}$. The log-odds is the linear predictor.
+
+**Poisson regression** is the Poisson GLM with log link: $\log E[Y \mid \boldsymbol{x}] = \boldsymbol{x}^T \boldsymbol{\beta}$. The log-mean is the linear predictor.
+
+In each case, the canonical link emerges directly from the exponential family structure — it is the function $\eta(\mu) = (A')^{-1}(\mu)$ that maps from the mean parameterization to the natural parameterization. Generalized Linear Models (coming soon) will develop the full theory, including non-canonical links, iteratively reweighted least squares, and deviance analysis.
+</ExampleBlock>
+
+<ExampleBlock number={11} title="Variance Functions and Their Implications">
+The variance function $V(\mu)$ determines the *weight structure* of the GLM. In weighted least squares terms, the weight for observation $i$ is inversely proportional to $V(\mu_i)$:
+
+| Distribution | $V(\mu)$ | Behavior | Implication |
+|---|---|---|---|
+| Normal | $\sigma^2$ (constant) | Constant variance | OLS is optimal |
+| Poisson | $\mu$ | Variance = mean | Overdispersion is common |
+| Bernoulli | $\mu(1-\mu)$ | Variance peaks at $\mu = 0.5$ | Observations near $p = 0$ or $p = 1$ are more informative |
+| Gamma | $\mu^2$ | Variance $\propto$ mean$^2$ | Coefficient of variation is constant |
+
+When the variance function does not match the data's actual mean-variance relationship, we get misspecification. Poisson regression with $V(\mu) = \mu$ applied to overdispersed count data (where the true variance is $c\mu$ for some $c > 1$) produces correct point estimates but anticonservative standard errors. The Negative Binomial, with $V(\mu) = \mu + \mu^2/r$, is the standard remedy.
+</ExampleBlock>
+
+<img src="/images/topics/exponential-families/glm-connections.png" alt="Three-panel: linear regression (Normal), logistic regression (Bernoulli), Poisson regression" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
+
+<GLMCanonicalLinkExplorer client:visible />
+
+---
+
+## 7.10 Connections to ML
+
+The exponential family is not an abstract mathematical curiosity — it is the structural backbone of modern machine learning. Cross-entropy loss, Fisher information, natural gradients, and variational inference all trace back to the canonical form.
+
+<ExampleBlock number={10} title="Cross-Entropy Loss Is Bernoulli Negative Log-Likelihood">
+The binary cross-entropy loss used in every classification neural network is
+
+$$
+\mathcal{L}(y, \hat{p}) = -\bigl[y \log \hat{p} + (1 - y) \log(1 - \hat{p})\bigr]
+$$
+
+This is *exactly* the negative log-likelihood of a single Bernoulli observation $y$ with parameter $\hat{p}$:
+
+$$
+-\log f(y \mid \hat{p}) = -\bigl[y \log \hat{p} + (1 - y) \log(1 - \hat{p})\bigr]
+$$
+
+In natural parameterization, with $\eta = \text{logit}(\hat{p})$, the loss becomes $-\eta y + \log(1 + e^\eta) = A(\eta) - \eta T(y)$, which is the exponential family negative log-likelihood up to a constant.
+
+When a neural network's final layer applies a sigmoid activation $\sigma(\boldsymbol{x}^T\boldsymbol{w}) = \hat{p}$ and is trained with binary cross-entropy, it is performing maximum likelihood estimation for a Bernoulli exponential family model with natural parameter $\eta = \boldsymbol{x}^T\boldsymbol{w}$. This is logistic regression. The entire deep learning classification pipeline — softmax output, cross-entropy loss, gradient descent — is exponential family MLE in disguise.
+</ExampleBlock>
+
+<ExampleBlock number={12} title="Fisher Information and Information Geometry">
+The **Fisher information** for a one-parameter exponential family in natural parameterization is
+
+$$
+I(\eta) = E_\eta\!\left[\left(\frac{\partial}{\partial \eta} \log f(X \mid \eta)\right)^2\right] = A''(\eta) = \text{Var}_\eta(T(X))
+$$
+
+This is a consequence of Theorem 7.1: the Fisher information equals the second derivative of the log-partition function, which equals the variance of the sufficient statistic. For an i.i.d. sample of size $n$, the Fisher information is $nI(\eta) = nA''(\eta)$.
+
+The Fisher information defines a **Riemannian metric** on the parameter space. The "distance" between two parameter values $\eta_1$ and $\eta_2$ is not the Euclidean distance $|\eta_1 - \eta_2|$ but the *geodesic distance* measured by $I(\eta)$. This is the starting point of <ExternalLink href="https://formalml.com/topics/information-geometry" site="formalml">Information Geometry</ExternalLink>, which studies the differential geometry of statistical models.
+
+**Natural gradient descent** replaces the standard gradient update $\eta_{t+1} = \eta_t - \alpha \nabla \ell$ with the *natural gradient* $\eta_{t+1} = \eta_t - \alpha I(\eta_t)^{-1} \nabla \ell$. This rescales the gradient by the inverse Fisher information, making the update invariant to reparameterization. For exponential families, the natural gradient has a clean form because $I(\eta) = A''(\eta)$ is readily computable. <ExternalLink href="https://formalml.com/topics/variational-inference" site="formalml">Variational Inference</ExternalLink> exploits this: when the variational distribution is an exponential family, the natural gradient of the ELBO has a closed-form update.
+</ExampleBlock>
+
+<img src="/images/topics/exponential-families/ml-connections.png" alt="Three-panel: cross-entropy loss, variance functions, unification web with exponential family at center" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
+
+---
+
+## Summary
+
+The exponential family is the single most important structural concept in parametric statistics. Nine distributions, one canonical form, and four major consequences: sufficient statistics, conjugate priors, a universal MLE recipe, and the GLM framework.
+
+| Distribution | $h(x)$ | $\eta(\theta)$ | $T(x)$ | $A(\eta)$ | Dim |
+|---|---|---|---|---|---|
+| Bernoulli$(p)$ | $1$ | $\log\!\frac{p}{1-p}$ | $x$ | $\log(1+e^\eta)$ | 1 |
+| Binomial$(n,p)$ | $\binom{n}{k}$ | $\log\!\frac{p}{1-p}$ | $k$ | $n\log(1+e^\eta)$ | 1 |
+| Geometric$(p)$ | $1$ | $\log(1-p)$ | $k$ | $-\log(1-e^\eta)$ | 1 |
+| NegBin$(r,p)$ | $\binom{k-1}{r-1}$ | $\log(1-p)$ | $k$ | $-r\log(1-e^\eta)$ | 1 |
+| Poisson$(\lambda)$ | $1/k!$ | $\log\lambda$ | $k$ | $e^\eta$ | 1 |
+| Normal$(\mu,\sigma^2)$ | $\frac{1}{\sqrt{2\pi}}$ | $(\frac{\mu}{\sigma^2}, -\frac{1}{2\sigma^2})$ | $(x, x^2)$ | $-\frac{\eta_1^2}{4\eta_2} - \frac{1}{2}\log(-2\eta_2)$ | 2 |
+| Exponential$(\lambda)$ | $1$ | $-\lambda$ | $x$ | $-\log(-\eta)$ | 1 |
+| Gamma$(\alpha,\beta)$ | $1$ | $(\alpha-1, -\beta)$ | $(\log x, x)$ | $\log\Gamma(\eta_1+1) - (\eta_1+1)\log(-\eta_2)$ | 2 |
+| Beta$(\alpha,\beta)$ | $1$ | $(\alpha-1, \beta-1)$ | $(\log x, \log(1-x))$ | $\log B(\eta_1+1, \eta_2+1)$ | 2 |
+
+**The log-partition function $A(\eta)$ is the central object.** Its first derivative gives $E[T(X)]$, its second derivative gives $\text{Var}(T(X))$ and the Fisher information $I(\eta)$, and its convexity guarantees the concavity of the log-likelihood.
+
+**The canonical form determines the MLE.** The universal recipe $A'(\hat{\eta}) = \bar{T}$ — match the model's expected sufficient statistic to the sample's observed sufficient statistic — yields every distribution's MLE formula in one line.
+
+**The canonical form determines conjugate priors.** Every exponential family has a natural conjugate prior with the update rule $\chi_0' = \chi_0 + n\bar{T}$, $\nu_0' = \nu_0 + n$, specializing to Beta-Bernoulli, Gamma-Poisson, and Normal-Normal.
+
+**The canonical form determines GLMs.** The canonical link function $(A')^{-1}$ connects the linear predictor to the natural parameter. Logistic regression, Poisson regression, and Gamma regression are all instances.
+
+**What comes next.** This topic established the unifying framework. The downstream topics build on it:
+
+- Sufficient Statistics (coming soon) develops the full theory of data reduction, including the Rao-Blackwell theorem and completeness, building directly on the sufficient statistic $T(x)$ identified here
+- Maximum Likelihood (coming soon) develops the asymptotic theory of MLE — consistency, asymptotic normality, efficiency — using the exponential family as the primary example class
+- Bayesian Foundations (coming soon) develops the full Bayesian framework, with the conjugate prior theorem from Section 7.7 as the starting point for conjugate inference
+- Generalized Linear Models (coming soon) develops the complete GLM framework — estimation via IRLS, deviance, model diagnostics — requiring the exponential family response distribution established here
+
+For the connections to machine learning at scale, see <ExternalLink href="https://formalml.com/topics/information-geometry" site="formalml">Information Geometry</ExternalLink> (Fisher information as Riemannian metric, natural gradient descent), <ExternalLink href="https://formalml.com/topics/generalized-linear-models" site="formalml">Generalized Linear Models</ExternalLink> (logistic, Poisson, and Gamma regression), and <ExternalLink href="https://formalml.com/topics/variational-inference" site="formalml">Variational Inference</ExternalLink> (exponential family variational distributions and natural gradient VI).

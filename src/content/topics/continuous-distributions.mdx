@@ -214,7 +214,7 @@ $\square$
 </ProofBlock>
 
 <RemarkBlock number={2} title="The Uniform Is NOT an Exponential Family Member">
-Unlike the other four core distributions in this topic, the Uniform is **not** a member of the exponential family. The reason: its support $[a, b]$ depends on the parameters. The exponential family requires that the support of the density be independent of the parameters — a condition the Uniform violates. Exponential Families (coming soon) will make this distinction precise.
+Unlike the other four core distributions in this topic, the Uniform is **not** a member of the exponential family. The reason: its support $[a, b]$ depends on the parameters. The exponential family requires that the support of the density be independent of the parameters — a condition the Uniform violates. [Exponential Families](/topics/exponential-families) makes this distinction precise.
 </RemarkBlock>
 
 <ExampleBlock number={1} title="Inverse CDF Transform: Generating Exponential Samples">
@@ -362,7 +362,7 @@ $\square$
 In particular, the **standardization** $Z = (X - \mu)/\sigma \sim N(0, 1)$ is a special case with $a = 1/\sigma$ and $b = -\mu/\sigma$.
 
 <RemarkBlock number={3} title="Normal Exponential Family Form">
-The Normal belongs to the exponential family with natural parameters $\eta_1 = \mu/\sigma^2$ and $\eta_2 = -1/(2\sigma^2)$. The sufficient statistics are $(X, X^2)$. When $\sigma^2$ is known, the single natural parameter $\eta = \mu/\sigma^2$ makes MLE particularly clean: the sufficient statistic is $\bar{X}$, and the MLE is $\hat{\mu} = \bar{X}$. Exponential Families (coming soon) will develop this systematically.
+The Normal belongs to the exponential family with natural parameters $\eta_1 = \mu/\sigma^2$ and $\eta_2 = -1/(2\sigma^2)$. The sufficient statistics are $(X, X^2)$. When $\sigma^2$ is known, the single natural parameter $\eta = \mu/\sigma^2$ makes MLE particularly clean: the sufficient statistic is $\bar{X}$, and the MLE is $\hat{\mu} = \bar{X}$. [Exponential Families](/topics/exponential-families) develops this systematically.
 </RemarkBlock>
 
 <img src="/images/topics/continuous-distributions/normal-cdf-quantiles.png" alt="Standard Normal CDF with key quantiles, area-as-probability shading, CDF steepness versus σ" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
@@ -466,7 +466,7 @@ $\square$
 The memoryless property has a vivid interpretation: if you've been waiting 10 minutes for a bus with Exponential interarrival times, the conditional distribution of additional wait time is the same as if you'd just arrived. The past provides no information about the future. This is the continuous analog of the Geometric memoryless property from [Discrete Distributions](/topics/discrete-distributions).
 
 <RemarkBlock number={4} title="Exponential Exponential Family Form">
-The Exponential belongs to the exponential family with natural parameter $\eta = -\lambda$ and sufficient statistic $T(x) = x$. The log-partition function is $A(\eta) = -\ln(-\eta)$, and $E[X] = A'(\eta) = 1/\lambda$. Exponential Families (coming soon) will show how this structure enables conjugate Bayesian inference: the Gamma distribution is the conjugate prior for the Exponential rate parameter.
+The Exponential belongs to the exponential family with natural parameter $\eta = -\lambda$ and sufficient statistic $T(x) = x$. The log-partition function is $A(\eta) = -\ln(-\eta)$, and $E[X] = A'(\eta) = 1/\lambda$. [Exponential Families](/topics/exponential-families) shows how this structure enables conjugate Bayesian inference: the Gamma distribution is the conjugate prior for the Exponential rate parameter.
 </RemarkBlock>
 
 <MemorylessContinuousExplorer client:visible />
@@ -586,7 +586,7 @@ $\square$
 In particular, if $X_1, \ldots, X_n \sim \text{Exponential}(\beta)$ are independent, then $X_1 + \cdots + X_n \sim \text{Gamma}(n, \beta)$. This confirms the Poisson process interpretation: the sum of $n$ independent Exponential waiting times has a Gamma distribution.
 
 <RemarkBlock number={6} title="Gamma Exponential Family Form">
-The Gamma belongs to the exponential family with natural parameters $\eta_1 = \alpha - 1$ and $\eta_2 = -\beta$, and sufficient statistics $(X, \ln X)$. When $\alpha$ is known, the single natural parameter is $\eta = -\beta$ with sufficient statistic $T(x) = x$, and the conjugate prior for $\beta$ is itself a Gamma. Exponential Families (coming soon) will unify this with the Exponential's exponential family form.
+The Gamma belongs to the exponential family with natural parameters $\eta_1 = \alpha - 1$ and $\eta_2 = -\beta$, and sufficient statistics $(X, \ln X)$. When $\alpha$ is known, the single natural parameter is $\eta = -\beta$ with sufficient statistic $T(x) = x$, and the conjugate prior for $\beta$ is itself a Gamma. [Exponential Families](/topics/exponential-families) unifies this with the Exponential's exponential family form.
 </RemarkBlock>
 
 <GammaFamilyExplorer client:visible />
@@ -679,7 +679,7 @@ $$
 This is a weighted average of the prior mean $\alpha/(\alpha+\beta)$ and the sample proportion $k/n$, with weights proportional to the "sample sizes" $\alpha + \beta$ (prior) and $n$ (data). As $n \to \infty$, the posterior concentrates around the true $\theta$ regardless of the prior — the data overwhelms prior beliefs.
 
 <RemarkBlock number={7} title="Beta Exponential Family Form">
-The Beta belongs to the exponential family with natural parameters $\eta_1 = \alpha - 1$ and $\eta_2 = \beta - 1$, and sufficient statistics $(\ln X, \ln(1-X))$. The log-partition function is $A(\eta_1, \eta_2) = \ln \Gamma(\eta_1 + 1) + \ln \Gamma(\eta_2 + 1) - \ln \Gamma(\eta_1 + \eta_2 + 2)$. Exponential Families (coming soon) will connect this to the Beta-Bernoulli conjugacy via the general theory of conjugate priors.
+The Beta belongs to the exponential family with natural parameters $\eta_1 = \alpha - 1$ and $\eta_2 = \beta - 1$, and sufficient statistics $(\ln X, \ln(1-X))$. The log-partition function is $A(\eta_1, \eta_2) = \ln \Gamma(\eta_1 + 1) + \ln \Gamma(\eta_2 + 1) - \ln \Gamma(\eta_1 + \eta_2 + 2)$. [Exponential Families](/topics/exponential-families) connects this to the Beta-Bernoulli conjugacy via the general theory of conjugate priors.
 </RemarkBlock>
 
 <BetaPriorPosteriorExplorer client:visible />
@@ -955,7 +955,7 @@ Eight continuous distributions, two structural hubs, one unifying theme: each di
 
 **What comes next.** This topic cataloged the continuous distributions. The parallel treatment continues:
 
-- [Exponential Families](/topics/exponential-families) (coming soon) unifies the four exponential family members here with the five from [Discrete Distributions](/topics/discrete-distributions), identifying natural parameters, sufficient statistics, and log-partition functions
+- [Exponential Families](/topics/exponential-families) unifies the four exponential family members here with the five from [Discrete Distributions](/topics/discrete-distributions), identifying natural parameters, sufficient statistics, and log-partition functions
 - [Multivariate Distributions](/topics/multivariate-distributions) (coming soon) extends the Normal to the multivariate Normal — the star of that topic — and develops joint, marginal, and conditional densities
 - Maximum Likelihood (coming soon) uses the Normal, Exponential, and Gamma as canonical MLE examples
 - Bayesian Foundations (coming soon) develops the Beta-Bernoulli, Gamma-Poisson, and Normal-Normal conjugate pairs in full generality

@@ -149,7 +149,7 @@ The table below summarizes what we're about to build. For each distribution, the
 | Hypergeometric | Sample without replacement | $N, K, n \in \mathbb{N}$ | $\{\max(0, n-N+K), \ldots, \min(n, K)\}$ |
 | Discrete Uniform | Equal probability on finite set | $a, b \in \mathbb{Z}$ | $\{a, a+1, \ldots, b\}$ |
 
-Five of these seven distributions — Bernoulli, Binomial, Geometric, Negative Binomial, and Poisson — belong to the **exponential family**. We'll flag this for each one as we go, and Exponential Families (coming soon) will unify the pattern.
+Five of these seven distributions — Bernoulli, Binomial, Geometric, Negative Binomial, and Poisson — belong to the **exponential family**. We'll flag this for each one as we go, and [Exponential Families](/topics/exponential-families) unifies the pattern.
 
 <DistributionCatalogExplorer client:visible />
 
@@ -809,7 +809,7 @@ The seven distributions are not isolated — they form a web of connections thro
 - $\text{Hypergeometric}(N, Np, n) \to \text{Binomial}(n, p)$ as $N \to \infty$ (infinite population limit)
 
 <RemarkBlock title="Five of seven are exponential family members">
-Bernoulli, Binomial, Geometric, Negative Binomial, and Poisson all belong to the **exponential family** — distributions whose PMFs can be written as $p(k \mid \theta) = h(k) \exp(\eta(\theta) \cdot T(k) - A(\theta))$. The Hypergeometric does *not* belong because its support $\{\max(0, n-N+K), \ldots, \min(n, K)\}$ depends on the parameter $N$ — violating the requirement that the support is fixed. The Discrete Uniform does not belong because it has no free parameter controlling the shape (only the support). Exponential Families (coming soon) will make this precise and show why exponential family membership matters for estimation, testing, and GLMs.
+Bernoulli, Binomial, Geometric, Negative Binomial, and Poisson all belong to the **exponential family** — distributions whose PMFs can be written as $p(k \mid \theta) = h(k) \exp(\eta(\theta) \cdot T(k) - A(\theta))$. The Hypergeometric does *not* belong because its support $\{\max(0, n-N+K), \ldots, \min(n, K)\}$ depends on the parameter $N$ — violating the requirement that the support is fixed. The Discrete Uniform does not belong because it has no free parameter controlling the shape (only the support). [Exponential Families](/topics/exponential-families) makes this precise and shows why exponential family membership matters for estimation, testing, and GLMs.
 </RemarkBlock>
 
 ---
@@ -863,11 +863,11 @@ We've cataloged seven discrete distributions, each arising from a distinct proba
 - The Bernoulli is the atom from which Binomial and Geometric are built
 - The Poisson arises as the limit of the Binomial for rare events
 - The Hypergeometric reduces to the Binomial when the population is large
-- Five of seven distributions belong to the exponential family — the unifying framework of Exponential Families (coming soon)
+- Five of seven distributions belong to the exponential family — the unifying framework of [Exponential Families](/topics/exponential-families)
 - PGFs provide a dedicated tool for discrete distributions, with the compound distribution formula as its signature application
 
 **What comes next.** This topic cataloged the discrete distributions. The parallel treatment continues:
 
 - [Continuous Distributions](/topics/continuous-distributions) applies the same systematic approach to Normal, Exponential, Gamma, Beta, and Uniform — the continuous counterparts
-- [Exponential Families](/topics/exponential-families) (coming soon) unifies the five exponential family members here with their continuous counterparts, identifying natural parameters, sufficient statistics, and log-partition functions
+- [Exponential Families](/topics/exponential-families) unifies the five exponential family members here with their continuous counterparts, identifying natural parameters, sufficient statistics, and log-partition functions
 - [Modes of Convergence](/topics/modes-of-convergence) (coming soon) makes the Poisson limit theorem rigorous using convergence in distribution, and uses the Binomial + Chebyshev to prove the weak law of large numbers
