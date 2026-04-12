@@ -187,18 +187,12 @@ function twoTailProbability(
       return Math.min(1, Math.max(0, lower + upper));
     }
     case 'Uniform': {
-      // P(X < lower) + P(X > upper)
-      let prob = 0;
-      if (lowerBound > p.a) {
-        prob += (Math.min(lowerBound, p.b) - p.a) / (p.b - p.a);
-      }
-      if (upperBound < p.b) {
-        prob += (p.b - Math.max(upperBound, p.a)) / (p.b - p.a);
-      }
-      // If both tails extend beyond support, entire mass is outside
-      if (lowerBound <= p.a && upperBound >= p.b) return 0;
-      // Clamp at full complement
-      return Math.min(1, Math.max(0, 1 - prob < 0 ? 0 : 1 - (1 - prob < 0 ? 1 : 1 - prob)));
+      const width = p.b - p.a;
+      if (width <= 0) return 0;
+      // P(X < lowerBound) + P(X > upperBound)
+      const leftTail = lowerBound <= p.a ? 0 : lowerBound >= p.b ? 1 : (lowerBound - p.a) / width;
+      const rightTail = upperBound >= p.b ? 0 : upperBound <= p.a ? 1 : (p.b - upperBound) / width;
+      return Math.min(1, Math.max(0, leftTail + rightTail));
     }
     default: {
       const [lo, hi] = getXRange(preset);
@@ -219,32 +213,6 @@ function twoTailProbability(
   }
 }
 
-// Fix the Uniform two-tail: we actually want P(|X - mu| >= epsilon)
-function twoTailProbabilityFixed(
-  preset: InequalityPreset,
-  mean: number,
-  epsilon: number,
-): number {
-  const p = preset.params;
-
-  if (preset.distribution === 'Uniform') {
-    const lowerBound = mean - epsilon;
-    const upperBound = mean + epsilon;
-    // P(X < lowerBound) + P(X > upperBound)
-    let leftTail = 0;
-    let rightTail = 0;
-    if (lowerBound > p.a) {
-      leftTail = (Math.min(lowerBound, p.b) - p.a) / (p.b - p.a);
-    }
-    if (upperBound < p.b) {
-      rightTail = (p.b - Math.max(upperBound, p.a)) / (p.b - p.a);
-    }
-    if (lowerBound <= p.a && upperBound >= p.b) return 0;
-    return Math.min(1, Math.max(0, leftTail + rightTail));
-  }
-
-  return twoTailProbability(preset, mean, epsilon);
-}
 
 // ── Slider range helpers ────────────────────────────────────────────────────
 
@@ -663,7 +631,7 @@ function ChebyshevPanel({
   const epsilon = k * sigma;
   const chebyshev = chebyshevBound(variance, epsilon);
   const trueProb = useMemo(
-    () => twoTailProbabilityFixed(preset, mean, epsilon),
+    () => twoTailProbability(preset, mean, epsilon),
     [preset, mean, epsilon],
   );
 

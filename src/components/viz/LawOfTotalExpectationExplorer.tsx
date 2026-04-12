@@ -1,8 +1,7 @@
-import { useState, useMemo, useCallback, useRef } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useResizeObserver } from './shared/useResizeObserver';
-import { pdfNormal } from './shared/distributions';
 import {
-  conditionalExpectationBVN, conditionalVarianceBVN, stdDev,
+  conditionalExpectationBVN, conditionalVarianceBVN,
 } from './shared/moments';
 import { mixtureModelPresets } from '../../data/expectation-moments-data';
 import type { MixtureSegment } from '../../data/expectation-moments-data';
@@ -50,7 +49,6 @@ function generateMixtureSamples(segments: MixtureSegment[], n: number = 2000): n
   };
 
   const samples: number[] = [];
-  const labels: number[] = [];
   for (let i = 0; i < n; i++) {
     const u = rand();
     let cumWeight = 0;
@@ -61,7 +59,6 @@ function generateMixtureSamples(segments: MixtureSegment[], n: number = 2000): n
     }
     const seg = segments[segIdx];
     samples.push(seg.mean + seg.std * randn());
-    labels.push(segIdx);
   }
   return samples;
 }
@@ -113,8 +110,7 @@ function generateBVNSamples(
 }
 
 export default function LawOfTotalExpectationExplorer() {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const { width: containerWidth } = useResizeObserver(containerRef);
+  const { ref: containerRef, width: containerWidth } = useResizeObserver<HTMLDivElement>();
   const svgWidth = Math.max(300, containerWidth - 32);
   const svgHeight = 300;
   const plotW = svgWidth - MARGIN.left - MARGIN.right;

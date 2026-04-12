@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useRef } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useResizeObserver } from './shared/useResizeObserver';
 import {
   pdfNormal, pdfExponential, pdfUniform,
@@ -7,7 +7,7 @@ import {
 import {
   expectationDiscrete, varianceDiscrete,
   expectationContinuous, varianceContinuous,
-  expectationDiscreteG, stdDev,
+  expectationDiscreteG,
 } from './shared/moments';
 import { expectationPresets } from '../../data/expectation-moments-data';
 import type { DiscreteDistribution, ContinuousDistribution } from './shared/moments';
@@ -38,8 +38,7 @@ function getContinuousRange(name: string, params: Record<string, number>): [numb
 }
 
 export default function ExpectationBalanceExplorer() {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const { width: containerWidth } = useResizeObserver(containerRef);
+  const { ref: containerRef, width: containerWidth } = useResizeObserver<HTMLDivElement>();
   const svgWidth = Math.max(300, containerWidth - 32);
   const svgHeight = 280;
   const plotW = svgWidth - MARGIN.left - MARGIN.right;

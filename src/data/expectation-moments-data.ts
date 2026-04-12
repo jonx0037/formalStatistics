@@ -102,7 +102,7 @@ export const expectationPresets = {
   ] as ContinuousPreset[],
 };
 
-// ── MGF Presets (MGFExplorer) ────��──────────────────────────────────────────
+// ── MGF Presets (MGFExplorer) ────────────────────────────────────────────────
 
 export interface MGFParamDef {
   name: string;
@@ -183,7 +183,7 @@ export const mgfPresets: MGFPreset[] = [
   },
 ];
 
-// ── Inequality Presets (InequalityExplorer) ───��──────────────────────────────
+// ── Inequality Presets (InequalityExplorer) ──────────────────────────────────
 
 export interface InequalityPreset {
   name: string;
