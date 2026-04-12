@@ -211,7 +211,7 @@ This $\sigma$-algebra "sees" the partition $\{\{1,2\}, \{3,4\}\}$ but cannot dis
 <ExampleBlock number={4} title="The Borel σ-algebra on ℝ">
 On $\Omega = \mathbb{R}$, the *Borel $\sigma$-algebra* $\mathcal{B}(\mathbb{R})$ is the smallest $\sigma$-algebra containing all open intervals $(a, b)$. It contains all open sets, all closed sets, all countable intersections of open sets ($G_\delta$ sets), all countable unions of closed sets ($F_\sigma$ sets), and more. This is the standard $\sigma$-algebra for probability on $\mathbb{R}$ — the one you use 99% of the time.
 
-**Why this matters for ML:** When you write "$X \sim \mathcal{N}(\mu, \sigma^2)$," you are implicitly working with the Borel $\sigma$-algebra on $\mathbb{R}$. The measurability requirement — that a random variable must pull Borel sets back to events in your $\sigma$-algebra — is what makes statements like "$P(X \leq t)$" well-defined. We'll formalize this in Random Variables & Distributions (coming soon).
+**Why this matters for ML:** When you write "$X \sim \mathcal{N}(\mu, \sigma^2)$," you are implicitly working with the Borel $\sigma$-algebra on $\mathbb{R}$. The measurability requirement — that a random variable must pull Borel sets back to events in your $\sigma$-algebra — is what makes statements like "$P(X \leq t)$" well-defined. We'll formalize this in [Random Variables & Distribution Functions](/topics/random-variables).
 </ExampleBlock>
 
 <img src="/images/topics/sample-spaces/sigma-algebra-examples.png" alt="Three sigma-algebra examples: trivial, partition, and power set" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
