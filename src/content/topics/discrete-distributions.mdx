@@ -291,7 +291,7 @@ This is the MGF of $\text{Binomial}(n_1 + n_2, p)$, so by uniqueness, $X + Y \si
 </ProofBlock>
 
 <ExampleBlock number={2} title="A/B testing: confidence interval for conversion rate">
-An e-commerce site runs an A/B test: 1200 users see design A, with 84 conversions. The sample proportion $\hat{p} = 84/1200 = 0.07$ estimates the Binomial parameter $p$. By the Central Limit Theorem (coming in [Modes of Convergence](/topics/modes-of-convergence)), an approximate 95% confidence interval is
+An e-commerce site runs an A/B test: 1200 users see design A, with 84 conversions. The sample proportion $\hat{p} = 84/1200 = 0.07$ estimates the Binomial parameter $p$. By the Central Limit Theorem (see [Modes of Convergence](/topics/modes-of-convergence) for the framework and [Central Limit Theorem](/topics/central-limit-theorem) (coming soon) for the full proof), an approximate 95% confidence interval is
 
 $$\hat{p} \pm 1.96 \sqrt{\frac{\hat{p}(1 - \hat{p})}{n}} = 0.07 \pm 0.014$$
 
@@ -870,4 +870,4 @@ We've cataloged seven discrete distributions, each arising from a distinct proba
 
 - [Continuous Distributions](/topics/continuous-distributions) applies the same systematic approach to Normal, Exponential, Gamma, Beta, and Uniform — the continuous counterparts
 - [Exponential Families](/topics/exponential-families) unifies the five exponential family members here with their continuous counterparts, identifying natural parameters, sufficient statistics, and log-partition functions
-- [Modes of Convergence](/topics/modes-of-convergence) (coming soon) makes the Poisson limit theorem rigorous using convergence in distribution, and uses the Binomial + Chebyshev to prove the weak law of large numbers
+- [Modes of Convergence](/topics/modes-of-convergence) makes the Poisson limit theorem rigorous using convergence in distribution, and previews the weak law of large numbers via Chebyshev
