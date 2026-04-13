@@ -4,7 +4,7 @@ import {
   sampleGaussianCopula, cdfStudentT,
   quantileStdNormal, quantileExponential, quantileBeta, quantileUniform,
   pdfExponential, pdfBeta, pdfUniform, pdfStdNormal,
-  cholesky2x2,
+  cholesky2x2, sampleGammaShape,
 } from './shared/distributions';
 import { copulaMarginals } from '../../data/multivariate-distributions-data';
 import type { MarginalKey } from '../../data/multivariate-distributions-data';
@@ -63,8 +63,8 @@ function sampleStudentTCopula(n: number, rho: number, nu: number, rng = Math.ran
   const samples: number[][] = [];
 
   for (let i = 0; i < n; i++) {
-    // Standard normals via Box-Muller
-    const u1 = rng(), u2 = rng();
+    // Standard normals via Box-Muller (clamp to avoid log(0))
+    const u1 = Math.max(rng(), Number.EPSILON), u2 = rng();
     const z1 = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
     const z2 = Math.sqrt(-2 * Math.log(u1)) * Math.sin(2 * Math.PI * u2);
 
@@ -72,14 +72,8 @@ function sampleStudentTCopula(n: number, rho: number, nu: number, rng = Math.ran
     const y1 = L[0][0] * z1;
     const y2 = L[1][0] * z1 + L[1][1] * z2;
 
-    // Chi-squared(nu) / nu
-    let chiSq = 0;
-    for (let j = 0; j < nu; j++) {
-      const a = rng(), b = rng();
-      const w = Math.sqrt(-2 * Math.log(a)) * Math.cos(2 * Math.PI * b);
-      chiSq += w * w;
-    }
-    const v = chiSq / nu;
+    // Chi-squared(nu) / nu via Gamma(nu/2, 1): χ²(ν) ~ 2·Gamma(ν/2, 1)
+    const v = (2 * sampleGammaShape(nu / 2, rng)) / nu;
     const sqrtV = Math.sqrt(v);
 
     // Student-t marginals
@@ -351,7 +345,7 @@ export default function CopulaExplorer() {
             <span className="font-medium">{'\u03C1'}</span>
             <input
               type="range"
-              min={0}
+              min={-0.95}
               max={0.95}
               step={0.05}
               value={rho}

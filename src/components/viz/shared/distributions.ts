@@ -982,7 +982,7 @@ export function cholesky2x2(M: number[][]): number[][] {
 export function pdfMultivariateNormal(
   x: number[], mu: number[], SigmaInv: number[][], SigmaDet: number, p: number,
 ): number {
-  if (SigmaDet <= 0) return 0;
+  if (SigmaDet <= 0 || x.length !== p || mu.length !== p) return 0;
   const diff = x.map((xi, i) => xi - mu[i]);
   const Sinv_diff = matVecMul(SigmaInv, diff);
   let quadForm = 0;
@@ -1009,13 +1009,15 @@ export function conditionalMVNParams(
   const q = mu1.length;  // dimension of X₁
   const r = mu2.length;  // dimension of X₂
 
-  // Σ₂₂⁻¹ — for interactive use, r is typically 1 or 2
+  // Σ₂₂⁻¹ — supported for r = 1 or r = 2 (interactive bivariate/trivariate cases)
   let Sigma22Inv: number[][];
   if (r === 1) {
     const s = Sigma22[0][0];
     Sigma22Inv = s > 1e-15 ? [[1 / s]] : [[0]];
-  } else {
+  } else if (r === 2) {
     Sigma22Inv = matInverse2x2(Sigma22);
+  } else {
+    throw new Error(`conditionalMVNParams only supports mu2.length of 1 or 2; received ${r}.`);
   }
 
   // Σ₁₂ Σ₂₂⁻¹ — q×r matrix
@@ -1168,7 +1170,7 @@ export function varianceDirichlet(alpha: number[]): number[] {
  * Uses Marsaglia-Tsang method for α ≥ 1, with Ahrens-Dieter boost for α < 1.
  * Internal helper for sampleDirichlet.
  */
-function sampleGammaShape(alpha: number, rng: () => number): number {
+export function sampleGammaShape(alpha: number, rng: () => number): number {
   if (alpha < 1) {
     // Ahrens-Dieter: if Y ~ Gamma(α+1, 1), then Y · U^(1/α) ~ Gamma(α, 1)
     const y = sampleGammaShape(alpha + 1, rng);
@@ -1183,15 +1185,15 @@ function sampleGammaShape(alpha: number, rng: () => number): number {
     let x: number;
     let v: number;
     do {
-      // Box-Muller for standard normal
-      const u1 = rng();
+      // Box-Muller for standard normal (clamp to avoid log(0))
+      const u1 = Math.max(rng(), Number.EPSILON);
       const u2 = rng();
       x = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
       v = 1 + c * x;
     } while (v <= 0);
 
     v = v * v * v;
-    const u = rng();
+    const u = Math.max(rng(), Number.EPSILON);
     if (u < 1 - 0.0331 * (x * x) * (x * x)) return d * v;
     if (Math.log(u) < 0.5 * x * x + d * (1 - v + Math.log(v))) return d * v;
   }
@@ -1205,6 +1207,12 @@ function sampleGammaShape(alpha: number, rng: () => number): number {
  */
 export function sampleDirichlet(alpha: number[], rng: () => number = Math.random): number[] {
   const k = alpha.length;
+  // Validate all concentration parameters are positive
+  for (let j = 0; j < k; j++) {
+    if (!Number.isFinite(alpha[j]) || alpha[j] <= 0) {
+      return new Array(k).fill(1 / k); // safe fallback for invalid input
+    }
+  }
   const y = new Array<number>(k);
   let sum = 0;
   for (let j = 0; j < k; j++) {
@@ -1222,20 +1230,26 @@ export function sampleDirichlet(alpha: number[], rng: () => number = Math.random
  * Returns n×p array of Uniform(0,1) values with the specified dependence.
  * Apply marginal inverse CDFs to get the desired marginal distributions.
  *
+ * Current implementation supports only bivariate (2×2) correlation
+ * matrices, matching the needs of CopulaExplorer.
+ *
  * Algorithm: Z = L·ε where ε ~ N(0,I), L = cholesky(R). Then U = Φ(Z).
  */
 export function sampleGaussianCopula(
   n: number, R: number[][], rng: () => number = Math.random,
 ): number[][] {
   const p = R.length;
-  const L = cholesky2x2(R); // works for 2×2 (CopulaExplorer is bivariate)
+  if (p !== 2 || R.some(row => row.length !== 2)) {
+    throw new Error('sampleGaussianCopula currently supports only 2×2 correlation matrices.');
+  }
+  const L = cholesky2x2(R);
 
   const samples: number[][] = [];
   for (let i = 0; i < n; i++) {
-    // Generate p independent standard normals via Box-Muller
+    // Generate p independent standard normals via Box-Muller (clamp to avoid log(0))
     const z: number[] = new Array(p);
     for (let j = 0; j < p; j += 2) {
-      const u1 = rng();
+      const u1 = Math.max(rng(), Number.EPSILON);
       const u2 = rng();
       const r = Math.sqrt(-2 * Math.log(u1));
       z[j] = r * Math.cos(2 * Math.PI * u2);

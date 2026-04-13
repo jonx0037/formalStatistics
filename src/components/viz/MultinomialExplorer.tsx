@@ -538,11 +538,9 @@ export default function MultinomialExplorer() {
               <th className="pb-1.5 px-2 text-left font-semibold opacity-70">Category</th>
               <th className="pb-1.5 px-2 font-semibold opacity-70">E[X<sub>j</sub>] = np<sub>j</sub></th>
               <th className="pb-1.5 px-2 font-semibold opacity-70">Var(X<sub>j</sub>) = np<sub>j</sub>(1-p<sub>j</sub>)</th>
-              {[1, 2].map((j) => (
-                <th key={j} className="pb-1.5 px-2 font-semibold opacity-70">
-                  Cov(X<sub>j</sub>, X<sub>{j + 1}</sub>)
-                </th>
-              ))}
+              <th className="pb-1.5 px-2 font-semibold opacity-70" colSpan={2}>
+                Cov(X<sub>i</sub>, X<sub>j</sub>)
+              </th>
             </tr>
           </thead>
           <tbody>

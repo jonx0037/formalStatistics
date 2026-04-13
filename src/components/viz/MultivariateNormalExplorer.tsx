@@ -187,7 +187,7 @@ export default function MultivariateNormalExplorer() {
     const rng = mulberry32(42);
     const pts: { sx: number; sy: number }[] = [];
     for (let i = 0; i < SAMPLE_COUNT; i++) {
-      const u1 = rng();
+      const u1 = Math.max(rng(), Number.EPSILON);
       const u2 = rng();
       const z1 = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
       const z2 = Math.sqrt(-2 * Math.log(u1)) * Math.sin(2 * Math.PI * u2);
