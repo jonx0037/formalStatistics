@@ -444,7 +444,7 @@ The log-partition function $A(\boldsymbol{\eta}) = \frac{1}{2}\boldsymbol{\mu}^T
      class="w-full rounded-lg border my-6"
      style="border-color: var(--color-border);" />
 
-{/* MultivariateNormalExplorer will be embedded here */}
+<MultivariateNormalExplorer client:visible />
 
 ---
 
@@ -580,7 +580,7 @@ When $\rho = 0$, the conditional mean is just $\mu_1$ (knowing $X_2$ tells us no
 
 The conditional MVN formula is the workhorse behind Gaussian process prediction. In a GP, we observe function values $\mathbf{f}_{\text{obs}}$ at training inputs and want to predict function values $\mathbf{f}_*$ at new inputs. The GP prior places a joint MVN on $(\mathbf{f}_*, \mathbf{f}_{\text{obs}})^T$, and the posterior predictive $\mathbf{f}_* \mid \mathbf{f}_{\text{obs}}$ is given *exactly* by the conditional MVN formula: $\boldsymbol{\mu}_{1|2}$ is the posterior mean and $\boldsymbol{\Sigma}_{1|2}$ is the posterior covariance. See <ExternalLink href="https://formalml.com/topics/gaussian-processes" site="formalml">Gaussian Processes</ExternalLink> for the full development.
 
-{/* ConditionalMVNExplorer will be embedded here */}
+<ConditionalMVNExplorer client:visible />
 
 ---
 
@@ -715,7 +715,7 @@ The natural parameters are the **log-odds ratios** $\eta_j = \log(p_j / p_k)$ fo
      class="w-full rounded-lg border my-6"
      style="border-color: var(--color-border);" />
 
-{/* MultinomialExplorer will be embedded here */}
+<MultinomialExplorer client:visible />
 
 ---
 
@@ -847,7 +847,7 @@ with posterior means $(18/56, 20/56, 18/56) \approx (0.321, 0.357, 0.321)$. The 
 
 The Dirichlet-Multinomial conjugacy is the backbone of **Latent Dirichlet Allocation** (LDA), the foundational topic model in NLP. In LDA, each document's topic proportions are drawn from a $\text{Dir}(\boldsymbol{\alpha})$, and the word counts for each topic follow a Multinomial. The conjugacy makes the posterior over topic proportions tractable, enabling variational inference and collapsed Gibbs sampling. See <ExternalLink href="https://formalml.com/topics/variational-inference" site="formalml">Variational Inference</ExternalLink> for the full treatment.
 
-{/* DirichletSimplexExplorer will be embedded here */}
+<DirichletSimplexExplorer client:visible />
 
 ---
 
@@ -1086,7 +1086,7 @@ The coefficient of (upper) tail dependence is defined as $\lambda_U = \lim_{u \t
      class="w-full rounded-lg border my-6"
      style="border-color: var(--color-border);" />
 
-{/* CopulaExplorer will be embedded here */}
+<CopulaExplorer client:visible />
 
 ---
 
