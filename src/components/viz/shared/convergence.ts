@@ -188,8 +188,8 @@ export function empiricalDeviationProb(
  */
 export function typewriterInterval(n: number): { a: number; b: number } {
   // Find the row k: solve 1 + k(k-1)/2 <= n, i.e. k(k-1)/2 < n
-  // k = ceil((-1 + sqrt(1 + 8*(n-1))) / 2) but we clamp to avoid float issues
-  const k = Math.ceil((-1 + Math.sqrt(1 + 8 * (n - 1))) / 2);
+  // k = ceil((-1 + sqrt(1 + 8*n)) / 2), with max(1, ...) to handle n=1
+  const k = Math.max(1, Math.ceil((-1 + Math.sqrt(1 + 8 * n)) / 2));
   // Offset within row k (0-based)
   const rowStart = 1 + (k * (k - 1)) / 2;
   const j = n - rowStart;
@@ -234,7 +234,7 @@ export function normalSample(
   sigma: number = 1,
   rng: () => number = Math.random
 ): number {
-  const u1 = rng();
+  const u1 = Math.max(rng(), Number.EPSILON); // clamp to avoid log(0)
   const u2 = rng();
   const z = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
   return mu + sigma * z;
@@ -253,8 +253,9 @@ export function exponentialSample(
 }
 
 /**
- * Generate a Poisson(λ) sample using the Knuth algorithm.
- * Efficient for λ ≤ 30; for larger λ a normal approximation could be used.
+ * Generate a Poisson(λ) sample.
+ * Uses Knuth's algorithm for λ ≤ 30 and a Normal approximation for λ > 30
+ * (where Knuth underflows because Math.exp(-λ) → 0 for λ > ~745).
  * @param lambda — rate parameter (> 0)
  * @param rng — uniform [0,1) generator (default Math.random)
  */
@@ -262,6 +263,10 @@ export function poissonSample(
   lambda: number,
   rng: () => number = Math.random
 ): number {
+  if (lambda > 30) {
+    // Normal approximation: Poisson(λ) ≈ round(N(λ, λ))
+    return Math.max(0, Math.round(normalSample(lambda, Math.sqrt(lambda), rng)));
+  }
   const L = Math.exp(-lambda);
   let k = 0;
   let p = 1;

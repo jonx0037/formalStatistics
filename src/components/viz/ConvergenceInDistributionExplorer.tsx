@@ -339,6 +339,16 @@ export default function ConvergenceInDistributionExplorer() {
     return { ...sim, limitCDF };
   }, [exampleId, n, cltDist, cltSeed]);
 
+  // ── CLT family simulations (memoized to avoid recomputing on every render) ─
+
+  const cltFamilySims = useMemo(() => {
+    if (exampleId !== 'clt-preview') return null;
+    return FAMILY_N_VALUES.map((fN) => ({
+      n: fN,
+      sim: runCLTSimulation(fN, cltDist, cltSeed + fN),
+    }));
+  }, [exampleId, cltDist, cltSeed]);
+
   // ── KS stat ───────────────────────────────────────────────────────────────
 
   const ksStat = useMemo(() => {
@@ -570,8 +580,7 @@ export default function ConvergenceInDistributionExplorer() {
                 opacity={FAMILY_ALPHAS[i]}
               />
             ))}
-            {showFamily && exampleId === 'clt-preview' && FAMILY_N_VALUES.map((fN, i) => {
-              const sim = runCLTSimulation(fN, cltDist, cltSeed + fN);
+            {showFamily && exampleId === 'clt-preview' && cltFamilySims?.map(({ n: fN, sim }, i) => {
               const pts = sim.ecdfPts;
               // Build step path from empirical CDF points
               const path = pts

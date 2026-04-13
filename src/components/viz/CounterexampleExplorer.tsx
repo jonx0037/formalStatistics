@@ -86,7 +86,6 @@ interface TypewriterState {
   step: number;
   hitCount: number;
   isPlaying: boolean;
-  history: boolean[]; // true = hit at step i
 }
 
 function TypewriterTab({ containerW, chartH }: { containerW: number; chartH: number }) {
@@ -95,10 +94,11 @@ function TypewriterTab({ containerW, chartH }: { containerW: number; chartH: num
     step: 0,
     hitCount: 0,
     isPlaying: false,
-    history: [],
   }));
   const [speed, setSpeed] = useState(200);
 
+  // History stored as ref to avoid O(n) spread on every animation frame
+  const historyRef = useRef<boolean[]>([]);
   const animRef = useRef<number | null>(null);
   const lastTimeRef = useRef<number>(0);
   const speedRef = useRef<number>(speed);
@@ -114,11 +114,11 @@ function TypewriterTab({ containerW, chartH }: { containerW: number; chartH: num
       if (nextStep > 500) return prev; // Cap at 500 steps
       const { a, b } = typewriterInterval(nextStep);
       const hit = prev.u >= a && prev.u < b;
+      historyRef.current.push(hit);
       return {
         ...prev,
         step: nextStep,
         hitCount: prev.hitCount + (hit ? 1 : 0),
-        history: [...prev.history, hit],
       };
     });
   }, []);
@@ -147,12 +147,12 @@ function TypewriterTab({ containerW, chartH }: { containerW: number; chartH: num
 
   const reset = useCallback(() => {
     pause();
+    historyRef.current = [];
     setState({
       u: Math.random(),
       step: 0,
       hitCount: 0,
       isPlaying: false,
-      history: [],
     });
   }, [pause]);
 
@@ -169,9 +169,9 @@ function TypewriterTab({ containerW, chartH }: { containerW: number; chartH: num
     ? (state.u >= currentInterval.a && state.u < currentInterval.b)
     : false;
 
-  // Row k for current step
+  // Row k for current step — derive from typewriterInterval for consistency
   const currentK = state.step > 0
-    ? Math.ceil((-1 + Math.sqrt(1 + 8 * (state.step - 1))) / 2)
+    ? Math.max(1, Math.ceil((-1 + Math.sqrt(1 + 8 * state.step)) / 2))
     : 0;
 
   // Bar height of the interval [0,1]
@@ -333,10 +333,10 @@ function TypewriterTab({ containerW, chartH }: { containerW: number; chartH: num
         </text>
 
         {/* Recent hit-rate visualization */}
-        {state.history.length > 0 && (() => {
+        {historyRef.current.length > 0 && (() => {
           const dotSize = 4;
           const dotsPerRow = Math.floor((barW - 20) / (dotSize + 2));
-          const lastN = state.history.slice(-Math.min(state.history.length, dotsPerRow));
+          const lastN = historyRef.current.slice(-Math.min(historyRef.current.length, dotsPerRow));
           const dotY = barY + barH + 64;
           return (
             <g>
@@ -537,15 +537,6 @@ function EscapeTab({ containerW, chartH: baseH }: { containerW: number; chartH: 
             </g>
           );
         })()}
-
-        {/* E[Xn] = 1 dashed line */}
-        <line
-          x1={MARGIN.left + 4} x2={MARGIN.left + plotW - 4}
-          y1={toSvgY(eXn / n)} y2={toSvgY(eXn / n)}
-          stroke={EXPECTATION_COLOR}
-          strokeWidth={0}
-          strokeDasharray="6,3"
-        />
 
         {/* P(Xn != 0) curve (small inset in top-right) */}
         {(() => {

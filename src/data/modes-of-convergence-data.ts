@@ -184,11 +184,11 @@ export const samplePathPresets: SamplePathPreset[] = [
     defaultEpsilon: 0.5,
   },
   {
-    name: 'Escape to infinity (in prob, NOT L\u00b9)',
+    name: 'Escape to infinity (a.s., NOT L\u00b9)',
     id: 'escape',
-    description: 'X_n = n \u00b7 1(U < 1/n) \u2014 converges to 0 in probability, but E[X_n] = 1 always',
+    description: 'X_n = n \u00b7 1(U < 1/n) \u2014 converges to 0 a.s., but E[X_n] = 1 always',
     target: 0,
-    convergenceMode: 'prob',
+    convergenceMode: 'as',
     defaultEpsilon: 0.5,
   },
 ];
