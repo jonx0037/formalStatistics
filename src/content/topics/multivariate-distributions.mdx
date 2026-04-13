@@ -1,0 +1,1167 @@
+---
+title: "Multivariate Distributions"
+subtitle: "Joint, marginal, conditional densities in p dimensions, the multivariate Normal, Multinomial, Dirichlet, copulas — dependence beyond correlation."
+status: "published"
+difficulty: "intermediate"
+prerequisites:
+  - "expectation-moments"
+  - "continuous-distributions"
+tags:
+  - "probability"
+  - "multivariate-normal"
+  - "multinomial"
+  - "dirichlet"
+  - "copula"
+  - "covariance-matrix"
+  - "mahalanobis-distance"
+  - "joint-distribution"
+  - "conditional-distribution"
+  - "schur-complement"
+domain: "core-distributions"
+videoId: null
+notebookPath: "notebooks/multivariate-distributions/08_multivariate_distributions.ipynb"
+githubUrl: "https://github.com/jonx0037/formalStatistics/blob/main/src/content/topics/multivariate-distributions.mdx"
+datePublished: 2026-04-13
+estimatedReadTime: 50
+abstract: "Nearly every ML model operates on vectors of random variables — feature vectors, weight vectors, latent representations. This topic generalizes the bivariate framework from Topic 3 to p dimensions: joint densities f_X(x) on R^p, marginals via integration over subsets, and conditional densities f_{X_1|X_2} via the ratio f_X / f_{X_2}. The multivariate Normal N_p(μ, Σ) is the centerpiece — its marginals are Normal, linear transforms preserve normality, and uncorrelated components are independent. The conditional MVN formula μ_{1|2} = μ_1 + Σ_12 Σ_22^{-1}(x_2 - μ_2) with Σ_{1|2} = Σ_11 - Σ_12 Σ_22^{-1} Σ_21 (the Schur complement) is the workhorse result that powers Gaussian processes and Kalman filters. The Multinomial Mult(n, p) counts outcomes across k categories — the natural generalization of the Binomial whose negative covariance Cov(X_i, X_j) = -np_i p_j reflects the fixed-total constraint. The Dirichlet Dir(α) is a distribution over probability vectors on the simplex — the conjugate prior for the Multinomial, powering LDA topic models. Covariance matrices encode the geometry of multivariate distributions: their eigendecomposition is PCA, and the Mahalanobis distance d_M^2 ~ χ^2_p provides a scale-invariant notion of distance. Copulas (Sklar's theorem) decompose the joint CDF into marginals + dependence structure, enabling the same marginals with different dependence patterns."
+formalcalculusPrereqs:
+  - topic: "multivariable-integration"
+    site: "formalcalculus"
+    relationship: "Marginalizing a p-dimensional joint density requires iterated integrals over R^{p-q}. The general framework in §2 assumes Fubini's theorem for exchanging the order of integration."
+  - topic: "change-of-variables"
+    site: "formalcalculus"
+    relationship: "The multivariate change of variables formula (§8) uses the Jacobian determinant. The whitening transform and Cholesky decomposition are special cases of affine changes of variables."
+  - topic: "eigenvalues-eigenvectors"
+    site: "formalcalculus"
+    relationship: "The spectral decomposition Σ = QΛQ^T gives the principal axes of the MVN distribution. Eigenvalues are the variances along principal axes. This is the mathematical core of PCA."
+formalmlConnections:
+  - topic: "gaussian-processes"
+    site: "formalml"
+    relationship: "A GP defines a joint MVN over function values at any finite set of inputs. The conditional MVN formula from §4 IS the GP prediction formula — conditional mean = posterior mean, conditional covariance = posterior uncertainty."
+  - topic: "principal-component-analysis"
+    site: "formalml"
+    relationship: "PCA is the eigendecomposition of the sample covariance matrix. The eigenvectors are the principal directions, and the eigenvalues are the explained variances. The MVN geometry from §7 makes this concrete."
+  - topic: "variational-inference"
+    site: "formalml"
+    relationship: "The default variational family is the multivariate Normal — full-covariance or diagonal (mean-field). The reparameterization trick for VAEs uses the Cholesky sampling formula from §8: z = μ + Lε where ε ~ N(0,I)."
+  - topic: "normalizing-flows"
+    site: "formalml"
+    relationship: "Normalizing flows learn an invertible transform g from N(0,I) to a complex target. The change of variables formula f_Y(y) = f_Z(g^{-1}(y)) |det J| from §8 is the core mathematical tool."
+  - topic: "bayesian-neural-networks"
+    site: "formalml"
+    relationship: "Weight priors w ~ N_p(0, σ²I) are multivariate Normal. The posterior p(w|D) is approximately MVN for well-specified models. The Laplace approximation uses the Hessian as the inverse covariance."
+connections:
+  - topic: "random-variables"
+    relationship: "Topic 3 introduced joint/marginal/conditional distributions for the bivariate case (Definitions 8–14). This topic generalizes to p dimensions. The JointDistributionExplorer in Topic 3 visualized bivariate distributions; this topic's components visualize p-dimensional structure."
+  - topic: "expectation-moments"
+    relationship: "Topic 4 developed E[X], Var(X), Cov(X,Y), and conditional expectation. This topic extends covariance to the p×p covariance matrix Σ and conditional expectation to the block matrix partition formula."
+  - topic: "continuous-distributions"
+    relationship: "Topic 6 treated the univariate Normal in depth. This topic generalizes to the p-dimensional MVN — the star of the topic, as promised in Topic 6."
+  - topic: "exponential-families"
+    relationship: "The MVN and Multinomial are both exponential family members. The Dirichlet is the conjugate prior for the Multinomial, extending the conjugate prior theory from Topic 7."
+  - topic: "bayesian-computation"
+    relationship: "Multivariate posteriors are the starting point for MCMC and variational methods. The conditional MVN powers Gibbs sampling. The Wishart distribution (Remark in §7) is the conjugate prior for the MVN covariance matrix."
+references:
+  - type: "book"
+    title: "Probability and Statistics"
+    author: "Morris H. DeGroot & Mark J. Schervish"
+    year: 2012
+    edition: "4th"
+    publisher: "Pearson"
+    isbn: "978-0-321-50046-5"
+    url: "https://www.pearson.com/en-us/subject-catalog/p/probability-and-statistics/P200000006218"
+    note: "Chapters 4–5 cover joint distributions and the multivariate Normal with excellent geometric intuition."
+  - type: "book"
+    title: "Statistical Inference"
+    author: "George Casella & Roger L. Berger"
+    year: 2002
+    edition: "2nd"
+    publisher: "Cengage"
+    isbn: "978-0-534-24312-8"
+    url: "https://www.cengage.com/c/statistical-inference-2e-casella/9780534243128/"
+    note: "Chapter 4 covers multivariate distributions rigorously. The conditional MVN derivation via completing the square is particularly clear."
+  - type: "book"
+    title: "An Introduction to Copulas"
+    author: "Roger B. Nelsen"
+    year: 2006
+    edition: "2nd"
+    publisher: "Springer"
+    isbn: "978-0-387-28659-4"
+    url: "https://link.springer.com/book/10.1007/0-387-28678-0"
+    note: "The standard reference on copula theory. Sklar's theorem, properties, and examples."
+  - type: "book"
+    title: "Bayesian Data Analysis"
+    author: "Andrew Gelman, John B. Carlin, Hal S. Stern, David B. Dunson, Aki Vehtari & Donald B. Rubin"
+    year: 2013
+    edition: "3rd"
+    publisher: "CRC Press"
+    isbn: "978-1-4398-4095-5"
+    url: "http://www.stat.columbia.edu/~gelman/book/"
+    note: "Chapter 3 covers multivariate models. The Dirichlet-Multinomial conjugacy and hierarchical models are essential for Topic 8's Bayesian connections."
+  - type: "book"
+    title: "Pattern Recognition and Machine Learning"
+    author: "Christopher M. Bishop"
+    year: 2006
+    publisher: "Springer"
+    isbn: "978-0-387-31073-2"
+    url: "https://www.microsoft.com/en-us/research/people/cmbishop/prml-book/"
+    note: "Chapter 2 covers the multivariate Normal, marginals, conditionals, and the Wishart distribution. Essential for the ML perspective."
+  - type: "book"
+    title: "Latent Dirichlet Allocation"
+    author: "David M. Blei, Andrew Y. Ng & Michael I. Jordan"
+    year: 2003
+    journal: "Journal of Machine Learning Research"
+    volume: "3"
+    pages: "993-1022"
+    url: "https://www.jmlr.org/papers/volume3/blei03a/blei03a.pdf"
+    note: "The foundational LDA paper. Uses the Dirichlet distribution as the prior for topic mixtures."
+---
+
+import DefinitionBlock from '../../components/ui/DefinitionBlock.astro';
+import TheoremBlock from '../../components/ui/TheoremBlock.astro';
+import ProofBlock from '../../components/ui/ProofBlock.astro';
+import ExampleBlock from '../../components/ui/ExampleBlock.astro';
+import RemarkBlock from '../../components/ui/RemarkBlock.astro';
+import ExternalLink from '../../components/ui/ExternalLink.astro';
+
+import MultivariateNormalExplorer from '../../components/viz/MultivariateNormalExplorer.tsx';
+import ConditionalMVNExplorer from '../../components/viz/ConditionalMVNExplorer.tsx';
+import MultinomialExplorer from '../../components/viz/MultinomialExplorer.tsx';
+import DirichletSimplexExplorer from '../../components/viz/DirichletSimplexExplorer.tsx';
+import CopulaExplorer from '../../components/viz/CopulaExplorer.tsx';
+
+## 8.1 From Bivariate to *p* Dimensions
+
+Consider a neural network with 1,000 weights. Each weight is a random variable — uncertain before training, updated by data during training, distributed across a posterior after training. To describe the joint uncertainty of all 1,000 weights simultaneously, we need a distribution on $\mathbb{R}^{1000}$. A single-variable Normal will not do. Neither will 1,000 independent single-variable Normals — because the weights are correlated (constraining one weight constrains others through the shared loss landscape). We need the full *joint* distribution: a function that assigns probability to every region of $\mathbb{R}^{1000}$ at once, capturing all the dependencies.
+
+This is not an exotic requirement. Nearly every ML model operates on *vectors* of random variables:
+
+- **Feature vectors** $\mathbf{x} \in \mathbb{R}^p$ — the input to every supervised learning model. The joint distribution of features determines which classifiers work and which fail.
+- **Weight vectors** $\mathbf{w} \in \mathbb{R}^p$ — the parameters of a linear model, neural network, or Gaussian process. Bayesian inference places a prior distribution on $\mathbf{w}$ and computes a posterior, both of which are multivariate distributions.
+- **Latent representations** $\mathbf{z} \in \mathbb{R}^d$ — the hidden variables in a variational autoencoder, the topic proportions in LDA, the factors in a factor model. The generative process *starts* with a draw from a multivariate distribution over $\mathbf{z}$.
+
+[Topic 3 — Random Variables](/topics/random-variables) introduced joint distributions for the bivariate case: two random variables $X$ and $Y$ with a joint PDF $f_{X,Y}(x, y)$, marginals obtained by integrating out one variable, and conditional distributions obtained by dividing (Definitions 8-14). That bivariate machinery is the right starting point, but it covers only $p = 2$. The real world hands us $p = 10$, $p = 100$, $p = 10{,}000$.
+
+This topic generalizes everything from the bivariate case to $p$ dimensions. The ideas are the same — joint, marginal, conditional, independence — but the notation shifts from integrals over $\mathbb{R}$ to integrals over $\mathbb{R}^{p-q}$, from scalar variances to covariance *matrices*, and from scalar conditioning formulas to *block matrix* partitions. The payoff is enormous: the conditional multivariate Normal formula that we derive in Section 8.4 is the exact formula that powers Gaussian process prediction, Kalman filtering, and Bayesian linear regression. The Dirichlet distribution that we define in Section 8.6 is the prior that powers LDA topic models. The covariance matrix geometry of Section 8.7 is the mathematical foundation of PCA.
+
+<img src="/images/topics/multivariate-distributions/multivariate-overview.png"
+     alt="Overview of multivariate distributions: MVN contours at different correlations, Multinomial scatter with expected value, and Dirichlet samples on the simplex"
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+---
+
+## 8.2 The General *p*-Dimensional Framework
+
+We begin with the general definitions. These are direct extensions of the bivariate definitions from [Topic 3](/topics/random-variables), but stated for an arbitrary dimension $p$. The key prerequisite is comfort with iterated integrals over $\mathbb{R}^p$ — see <ExternalLink href="https://formalcalculus.com/topics/multivariable-integration" site="formalcalculus">Multivariable Integration</ExternalLink> for Fubini's theorem and the mechanics of integrating over subsets of $\mathbb{R}^p$.
+
+<DefinitionBlock number={1} title="Joint PDF in p Dimensions">
+A continuous random vector $\mathbf{X} = (X_1, X_2, \ldots, X_p)^T$ has a **joint probability density function** $f_{\mathbf{X}} : \mathbb{R}^p \to [0, \infty)$ if, for every (measurable) region $A \subseteq \mathbb{R}^p$,
+
+$$
+P(\mathbf{X} \in A) = \int_A f_{\mathbf{X}}(\mathbf{x}) \, d\mathbf{x} = \int_A f_{\mathbf{X}}(x_1, x_2, \ldots, x_p) \, dx_1 \, dx_2 \cdots dx_p
+$$
+
+The density must satisfy $f_{\mathbf{X}}(\mathbf{x}) \geq 0$ for all $\mathbf{x} \in \mathbb{R}^p$ and
+
+$$
+\int_{\mathbb{R}^p} f_{\mathbf{X}}(\mathbf{x}) \, d\mathbf{x} = 1
+$$
+
+When $p = 2$, this recovers the bivariate joint PDF $f_{X,Y}(x, y)$ from Topic 3 (Definition 8). The extension to $p > 2$ is notational: we replace double integrals with $p$-fold integrals.
+</DefinitionBlock>
+
+<DefinitionBlock number={2} title="Marginal Density via Integration">
+Given a random vector $\mathbf{X} = (X_1, \ldots, X_p)^T$ with joint PDF $f_{\mathbf{X}}$, the **marginal density** of a subvector $\mathbf{X}_1 = (X_1, \ldots, X_q)^T$ (where $1 \leq q < p$) is obtained by integrating the joint density over all components not in $\mathbf{X}_1$:
+
+$$
+f_{\mathbf{X}_1}(x_1, \ldots, x_q) = \int_{\mathbb{R}^{p-q}} f_{\mathbf{X}}(x_1, \ldots, x_q, x_{q+1}, \ldots, x_p) \, dx_{q+1} \cdots dx_p
+$$
+
+In words: to find the density of a subset of the variables, *integrate out* the rest. This is the $p$-dimensional generalization of Topic 3's marginal formula (Definition 9), where we integrated out one variable over $\mathbb{R}$.
+
+The order of integration does not matter (by Fubini's theorem), so we can marginalize in any order. To get the marginal of $X_3$ alone from a joint density on $(X_1, X_2, X_3, X_4)$, we integrate out $X_1$, $X_2$, and $X_4$ in any convenient order.
+</DefinitionBlock>
+
+<DefinitionBlock number={3} title="Conditional Density of Subvectors">
+Partition the random vector as $\mathbf{X} = (\mathbf{X}_1^T, \mathbf{X}_2^T)^T$, where $\mathbf{X}_1$ is $q$-dimensional and $\mathbf{X}_2$ is $(p - q)$-dimensional. The **conditional density** of $\mathbf{X}_1$ given $\mathbf{X}_2 = \mathbf{x}_2$ is
+
+$$
+f_{\mathbf{X}_1 | \mathbf{X}_2}(\mathbf{x}_1 \mid \mathbf{x}_2) = \frac{f_{\mathbf{X}}(\mathbf{x}_1, \mathbf{x}_2)}{f_{\mathbf{X}_2}(\mathbf{x}_2)}
+$$
+
+provided $f_{\mathbf{X}_2}(\mathbf{x}_2) > 0$.
+
+This is the ratio of the joint density to the marginal density of the conditioning variables — the same ratio as in the bivariate case (Topic 3, Definition 10), now applied to subvectors of arbitrary dimension. The conditional density $f_{\mathbf{X}_1 | \mathbf{X}_2}(\cdot \mid \mathbf{x}_2)$ is a proper density in $\mathbf{x}_1$ for each fixed $\mathbf{x}_2$: it integrates to 1 over $\mathbb{R}^q$.
+</DefinitionBlock>
+
+<DefinitionBlock number={4} title="Mutual Independence">
+The random variables $X_1, X_2, \ldots, X_p$ are **mutually independent** if and only if the joint density factors as the product of all marginal densities:
+
+$$
+f_{\mathbf{X}}(x_1, x_2, \ldots, x_p) = f_{X_1}(x_1) \cdot f_{X_2}(x_2) \cdots f_{X_p}(x_p) = \prod_{j=1}^p f_{X_j}(x_j)
+$$
+
+for all $(x_1, \ldots, x_p) \in \mathbb{R}^p$.
+
+Mutual independence is strictly stronger than *pairwise* independence (every pair $(X_i, X_j)$ is independent). Topic 2 ([Conditional Probability](/topics/conditional-probability)) discussed this distinction for events; the same distinction holds for random variables. When $p > 2$, verifying that all $\binom{p}{2}$ pairs are independent does *not* guarantee mutual independence — the joint must factor as a product of all $p$ marginals.
+</DefinitionBlock>
+
+The chain rule for densities tells us how to decompose any joint density into a product of conditionals. This is the density analog of the chain rule for probabilities from [Topic 2](/topics/conditional-probability).
+
+<TheoremBlock number={1} title="General Chain Rule for Densities">
+For any random vector $\mathbf{X} = (X_1, X_2, \ldots, X_p)^T$ with a joint density, the joint PDF factors as
+
+$$
+f_{\mathbf{X}}(x_1, x_2, \ldots, x_p) = f_{X_1}(x_1) \cdot f_{X_2 | X_1}(x_2 \mid x_1) \cdot f_{X_3 | X_1, X_2}(x_3 \mid x_1, x_2) \cdots f_{X_p | X_1, \ldots, X_{p-1}}(x_p \mid x_1, \ldots, x_{p-1})
+$$
+
+$$
+= \prod_{j=1}^p f_{X_j | X_1, \ldots, X_{j-1}}(x_j \mid x_1, \ldots, x_{j-1})
+$$
+
+where $f_{X_1 | \emptyset} \equiv f_{X_1}$ (the first factor is the marginal).
+</TheoremBlock>
+
+<ProofBlock>
+We proceed by induction on $p$, using the definition of conditional density (Definition 3) at each step.
+
+**Base case ($p = 2$).** By Definition 3,
+
+$$
+f_{X_1, X_2}(x_1, x_2) = f_{X_2 | X_1}(x_2 \mid x_1) \cdot f_{X_1}(x_1)
+$$
+
+This is the definition of the conditional density rearranged.
+
+**Inductive step.** Assume the result holds for $p - 1$ variables:
+
+$$
+f_{X_1, \ldots, X_{p-1}}(x_1, \ldots, x_{p-1}) = \prod_{j=1}^{p-1} f_{X_j | X_1, \ldots, X_{j-1}}(x_j \mid x_1, \ldots, x_{j-1})
+$$
+
+Now partition $\mathbf{X}$ as $(\mathbf{X}_1^T, X_p)^T$ where $\mathbf{X}_1 = (X_1, \ldots, X_{p-1})^T$. By Definition 3 applied to this partition:
+
+$$
+f_{\mathbf{X}}(x_1, \ldots, x_p) = f_{X_p | X_1, \ldots, X_{p-1}}(x_p \mid x_1, \ldots, x_{p-1}) \cdot f_{X_1, \ldots, X_{p-1}}(x_1, \ldots, x_{p-1})
+$$
+
+Substituting the inductive hypothesis for $f_{X_1, \ldots, X_{p-1}}$:
+
+$$
+f_{\mathbf{X}}(x_1, \ldots, x_p) = f_{X_p | X_1, \ldots, X_{p-1}}(x_p \mid x_1, \ldots, x_{p-1}) \cdot \prod_{j=1}^{p-1} f_{X_j | X_1, \ldots, X_{j-1}}(x_j \mid x_1, \ldots, x_{j-1})
+$$
+
+$$
+= \prod_{j=1}^{p} f_{X_j | X_1, \ldots, X_{j-1}}(x_j \mid x_1, \ldots, x_{j-1})
+$$
+
+The result follows by induction.
+</ProofBlock>
+
+The chain rule is not merely a formula — it is the theoretical foundation of *autoregressive models*. When a language model generates text token by token, computing $P(\text{token}_t \mid \text{token}_1, \ldots, \text{token}_{t-1})$ at each step, it is implementing the chain rule for the joint distribution of the token sequence. The factorization order matters in practice (left-to-right vs. right-to-left vs. arbitrary), even though mathematically any ordering gives the same joint.
+
+<img src="/images/topics/multivariate-distributions/marginalization-conditioning-chain-rule.png"
+     alt="Three-panel diagram: joint contours with marginal PDFs, conditional density slices, and chain rule factorization tree"
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+---
+
+## 8.3 The Multivariate Normal Distribution
+
+The univariate Normal $\mathcal{N}(\mu, \sigma^2)$ was the star of [Topic 6 — Continuous Distributions](/topics/continuous-distributions). Its multivariate generalization $\mathcal{N}_p(\boldsymbol{\mu}, \boldsymbol{\Sigma})$ is the single most important distribution in all of statistics and machine learning. It appears as the prior on Bayesian linear regression weights, the variational family in variational inference, the base distribution in normalizing flows, the finite-dimensional projection of a Gaussian process, and the asymptotic distribution of virtually every well-behaved estimator. If you internalize one distribution from this topic, make it this one.
+
+Before the definition, let us build intuition. In one dimension, a Normal distribution is specified by its center $\mu$ and its spread $\sigma^2$. In two dimensions, we still need a center — now a vector $\boldsymbol{\mu} = (\mu_1, \mu_2)^T$ — but the "spread" becomes richer. We need not just the variance of each coordinate ($\sigma_1^2$ and $\sigma_2^2$), but also the *covariance* between them ($\sigma_{12}$). Positive covariance stretches the distribution along the diagonal; negative covariance stretches it along the anti-diagonal. The contours of equal density, which are circles for independent equal-variance Normals, become *ellipses* whose orientation and eccentricity are controlled by the covariance. In $p$ dimensions, the contours are *ellipsoids* in $\mathbb{R}^p$, and the full covariance structure is captured by a $p \times p$ matrix $\boldsymbol{\Sigma}$.
+
+<DefinitionBlock number={5} title="Multivariate Normal Distribution">
+A random vector $\mathbf{X} = (X_1, X_2, \ldots, X_p)^T$ has the **multivariate Normal distribution** with mean vector $\boldsymbol{\mu} \in \mathbb{R}^p$ and $p \times p$ positive definite covariance matrix $\boldsymbol{\Sigma}$, written $\mathbf{X} \sim \mathcal{N}_p(\boldsymbol{\mu}, \boldsymbol{\Sigma})$, if its joint PDF is
+
+$$
+f_{\mathbf{X}}(\mathbf{x}) = (2\pi)^{-p/2} |\boldsymbol{\Sigma}|^{-1/2} \exp\!\left(-\frac{1}{2} (\mathbf{x} - \boldsymbol{\mu})^T \boldsymbol{\Sigma}^{-1} (\mathbf{x} - \boldsymbol{\mu})\right)
+$$
+
+where $|\boldsymbol{\Sigma}|$ denotes the determinant of $\boldsymbol{\Sigma}$.
+
+The term $(\mathbf{x} - \boldsymbol{\mu})^T \boldsymbol{\Sigma}^{-1} (\mathbf{x} - \boldsymbol{\mu})$ in the exponent is a *quadratic form* — a scalar that measures how far $\mathbf{x}$ is from $\boldsymbol{\mu}$, weighted by $\boldsymbol{\Sigma}^{-1}$. This is the squared Mahalanobis distance (Definition 9). The contours of constant density are the sets where this quadratic form is constant, which are ellipsoids centered at $\boldsymbol{\mu}$.
+
+When $p = 1$, we recover the univariate Normal: $\boldsymbol{\mu} = \mu$, $\boldsymbol{\Sigma} = \sigma^2$, and the exponent becomes $-(x - \mu)^2 / (2\sigma^2)$.
+</DefinitionBlock>
+
+The MVN has a collection of remarkable properties that make it uniquely tractable. No other distribution enjoys all six of the properties below simultaneously.
+
+<TheoremBlock number={2} title="Properties of the Multivariate Normal">
+Let $\mathbf{X} \sim \mathcal{N}_p(\boldsymbol{\mu}, \boldsymbol{\Sigma})$. Then:
+
+1. **Marginals are Normal.** Every subvector of $\mathbf{X}$ is also multivariate Normal. In particular, each component $X_j \sim \mathcal{N}(\mu_j, \Sigma_{jj})$.
+
+2. **Linear transformations preserve normality.** If $\mathbf{A}$ is a $q \times p$ matrix and $\mathbf{b} \in \mathbb{R}^q$, then $\mathbf{Y} = \mathbf{A}\mathbf{X} + \mathbf{b} \sim \mathcal{N}_q(\mathbf{A}\boldsymbol{\mu} + \mathbf{b}, \mathbf{A}\boldsymbol{\Sigma}\mathbf{A}^T)$.
+
+3. **Uncorrelated implies independent.** If $\text{Cov}(X_i, X_j) = 0$ for all $i \neq j$ (equivalently, $\boldsymbol{\Sigma}$ is diagonal), then $X_1, \ldots, X_p$ are mutually independent. This equivalence between uncorrelatedness and independence is *unique* to the multivariate Normal — it fails for every other distribution.
+
+4. **Moment-generating function.** $M_{\mathbf{X}}(\mathbf{t}) = E[e^{\mathbf{t}^T \mathbf{X}}] = \exp\!\left(\mathbf{t}^T \boldsymbol{\mu} + \frac{1}{2} \mathbf{t}^T \boldsymbol{\Sigma} \mathbf{t}\right)$ for all $\mathbf{t} \in \mathbb{R}^p$.
+
+5. **Sum of independent Normals.** If $\mathbf{X} \sim \mathcal{N}_p(\boldsymbol{\mu}_X, \boldsymbol{\Sigma}_X)$ and $\mathbf{Y} \sim \mathcal{N}_p(\boldsymbol{\mu}_Y, \boldsymbol{\Sigma}_Y)$ are independent, then $\mathbf{X} + \mathbf{Y} \sim \mathcal{N}_p(\boldsymbol{\mu}_X + \boldsymbol{\mu}_Y, \boldsymbol{\Sigma}_X + \boldsymbol{\Sigma}_Y)$.
+
+6. **Characteristic function.** $\varphi_{\mathbf{X}}(\mathbf{t}) = E[e^{i\mathbf{t}^T \mathbf{X}}] = \exp\!\left(i\mathbf{t}^T \boldsymbol{\mu} - \frac{1}{2} \mathbf{t}^T \boldsymbol{\Sigma} \mathbf{t}\right)$, which is the MGF with $\mathbf{t}$ replaced by $i\mathbf{t}$ and exists for all $\mathbf{t} \in \mathbb{R}^p$.
+</TheoremBlock>
+
+<ProofBlock>
+**Proof of Property 1 (Marginals are Normal).**
+
+We prove that the marginal distribution of $\mathbf{X}_1 = (X_1, \ldots, X_q)^T$ is $\mathcal{N}_q(\boldsymbol{\mu}_1, \boldsymbol{\Sigma}_{11})$, where $\boldsymbol{\mu}_1 = (\mu_1, \ldots, \mu_q)^T$ and $\boldsymbol{\Sigma}_{11}$ is the upper-left $q \times q$ block of $\boldsymbol{\Sigma}$.
+
+Partition $\mathbf{X} = (\mathbf{X}_1^T, \mathbf{X}_2^T)^T$, $\boldsymbol{\mu} = (\boldsymbol{\mu}_1^T, \boldsymbol{\mu}_2^T)^T$, and
+
+$$
+\boldsymbol{\Sigma} = \begin{pmatrix} \boldsymbol{\Sigma}_{11} & \boldsymbol{\Sigma}_{12} \\ \boldsymbol{\Sigma}_{21} & \boldsymbol{\Sigma}_{22} \end{pmatrix}
+$$
+
+The marginal density of $\mathbf{X}_1$ is obtained by integrating out $\mathbf{X}_2$:
+
+$$
+f_{\mathbf{X}_1}(\mathbf{x}_1) = \int_{\mathbb{R}^{p-q}} f_{\mathbf{X}}(\mathbf{x}_1, \mathbf{x}_2) \, d\mathbf{x}_2
+$$
+
+The exponent in the joint density is the quadratic form $Q = (\mathbf{x} - \boldsymbol{\mu})^T \boldsymbol{\Sigma}^{-1} (\mathbf{x} - \boldsymbol{\mu})$. Using the block matrix inverse formula, we can write
+
+$$
+\boldsymbol{\Sigma}^{-1} = \begin{pmatrix} \boldsymbol{\Sigma}^{11} & \boldsymbol{\Sigma}^{12} \\ \boldsymbol{\Sigma}^{21} & \boldsymbol{\Sigma}^{22} \end{pmatrix}
+$$
+
+where $\boldsymbol{\Sigma}^{22} = (\boldsymbol{\Sigma}_{22} - \boldsymbol{\Sigma}_{21}\boldsymbol{\Sigma}_{11}^{-1}\boldsymbol{\Sigma}_{12})^{-1}$ and $\boldsymbol{\Sigma}^{11} = (\boldsymbol{\Sigma}_{11} - \boldsymbol{\Sigma}_{12}\boldsymbol{\Sigma}_{22}^{-1}\boldsymbol{\Sigma}_{21})^{-1}$.
+
+Expanding the quadratic form $Q$ by completing the square in $\mathbf{x}_2$, we can separate the terms involving $\mathbf{x}_2$ from those involving only $\mathbf{x}_1$. Define $\mathbf{a}_2 = \boldsymbol{\mu}_2 + \boldsymbol{\Sigma}_{21}\boldsymbol{\Sigma}_{11}^{-1}(\mathbf{x}_1 - \boldsymbol{\mu}_1)$ and $\mathbf{S}_{2|1} = \boldsymbol{\Sigma}_{22} - \boldsymbol{\Sigma}_{21}\boldsymbol{\Sigma}_{11}^{-1}\boldsymbol{\Sigma}_{12}$. Then
+
+$$
+Q = (\mathbf{x}_1 - \boldsymbol{\mu}_1)^T \boldsymbol{\Sigma}_{11}^{-1} (\mathbf{x}_1 - \boldsymbol{\mu}_1) + (\mathbf{x}_2 - \mathbf{a}_2)^T \mathbf{S}_{2|1}^{-1} (\mathbf{x}_2 - \mathbf{a}_2)
+$$
+
+The first term depends only on $\mathbf{x}_1$. The second term is a quadratic form in $\mathbf{x}_2$ centered at $\mathbf{a}_2$. When we integrate over $\mathbf{x}_2$:
+
+$$
+\int_{\mathbb{R}^{p-q}} \exp\!\left(-\frac{1}{2}(\mathbf{x}_2 - \mathbf{a}_2)^T \mathbf{S}_{2|1}^{-1} (\mathbf{x}_2 - \mathbf{a}_2)\right) d\mathbf{x}_2 = (2\pi)^{(p-q)/2} |\mathbf{S}_{2|1}|^{1/2}
+$$
+
+because the integrand is the kernel of a $\mathcal{N}_{p-q}(\mathbf{a}_2, \mathbf{S}_{2|1})$ density and integrates to the reciprocal of the normalizing constant.
+
+Combining the normalizing constants:
+
+$$
+f_{\mathbf{X}_1}(\mathbf{x}_1) = (2\pi)^{-p/2} |\boldsymbol{\Sigma}|^{-1/2} \cdot (2\pi)^{(p-q)/2} |\mathbf{S}_{2|1}|^{1/2} \cdot \exp\!\left(-\frac{1}{2}(\mathbf{x}_1 - \boldsymbol{\mu}_1)^T \boldsymbol{\Sigma}_{11}^{-1} (\mathbf{x}_1 - \boldsymbol{\mu}_1)\right)
+$$
+
+The determinant identity $|\boldsymbol{\Sigma}| = |\boldsymbol{\Sigma}_{11}| \cdot |\mathbf{S}_{2|1}|$ (which follows from the block determinant formula) gives
+
+$$
+|\boldsymbol{\Sigma}|^{-1/2} \cdot |\mathbf{S}_{2|1}|^{1/2} = |\boldsymbol{\Sigma}_{11}|^{-1/2}
+$$
+
+and $(2\pi)^{-p/2} \cdot (2\pi)^{(p-q)/2} = (2\pi)^{-q/2}$. Therefore
+
+$$
+f_{\mathbf{X}_1}(\mathbf{x}_1) = (2\pi)^{-q/2} |\boldsymbol{\Sigma}_{11}|^{-1/2} \exp\!\left(-\frac{1}{2}(\mathbf{x}_1 - \boldsymbol{\mu}_1)^T \boldsymbol{\Sigma}_{11}^{-1} (\mathbf{x}_1 - \boldsymbol{\mu}_1)\right)
+$$
+
+This is the PDF of $\mathcal{N}_q(\boldsymbol{\mu}_1, \boldsymbol{\Sigma}_{11})$. The marginal of any subvector is Normal with mean and covariance given by the corresponding subvector and submatrix.
+</ProofBlock>
+
+<ProofBlock>
+**Proof of Property 2 (Linear transformations preserve normality).**
+
+Let $\mathbf{Y} = \mathbf{A}\mathbf{X} + \mathbf{b}$ where $\mathbf{A}$ is $q \times p$ and $\mathbf{b} \in \mathbb{R}^q$. We use the moment-generating function. The MGF of $\mathbf{Y}$ at $\mathbf{t} \in \mathbb{R}^q$ is
+
+$$
+M_{\mathbf{Y}}(\mathbf{t}) = E\!\left[e^{\mathbf{t}^T \mathbf{Y}}\right] = E\!\left[e^{\mathbf{t}^T(\mathbf{A}\mathbf{X} + \mathbf{b})}\right] = e^{\mathbf{t}^T \mathbf{b}} \cdot E\!\left[e^{(\mathbf{A}^T \mathbf{t})^T \mathbf{X}}\right]
+$$
+
+The expectation on the right is $M_{\mathbf{X}}(\mathbf{A}^T \mathbf{t})$, which by Property 4 of the MVN equals
+
+$$
+M_{\mathbf{X}}(\mathbf{A}^T \mathbf{t}) = \exp\!\left((\mathbf{A}^T \mathbf{t})^T \boldsymbol{\mu} + \frac{1}{2}(\mathbf{A}^T \mathbf{t})^T \boldsymbol{\Sigma} (\mathbf{A}^T \mathbf{t})\right)
+$$
+
+$$
+= \exp\!\left(\mathbf{t}^T \mathbf{A}\boldsymbol{\mu} + \frac{1}{2}\mathbf{t}^T \mathbf{A}\boldsymbol{\Sigma}\mathbf{A}^T \mathbf{t}\right)
+$$
+
+Therefore
+
+$$
+M_{\mathbf{Y}}(\mathbf{t}) = \exp\!\left(\mathbf{t}^T(\mathbf{A}\boldsymbol{\mu} + \mathbf{b}) + \frac{1}{2}\mathbf{t}^T (\mathbf{A}\boldsymbol{\Sigma}\mathbf{A}^T) \mathbf{t}\right)
+$$
+
+This is the MGF of $\mathcal{N}_q(\mathbf{A}\boldsymbol{\mu} + \mathbf{b}, \mathbf{A}\boldsymbol{\Sigma}\mathbf{A}^T)$. Since the MGF uniquely determines the distribution (when it exists in a neighborhood of the origin, which it does for the Normal), we conclude $\mathbf{Y} \sim \mathcal{N}_q(\mathbf{A}\boldsymbol{\mu} + \mathbf{b}, \mathbf{A}\boldsymbol{\Sigma}\mathbf{A}^T)$.
+
+Note that Property 1 (marginals are Normal) is a special case: extracting a subvector is a linear transformation with $\mathbf{A}$ as a selection matrix (rows of the identity matrix) and $\mathbf{b} = \mathbf{0}$.
+</ProofBlock>
+
+<ProofBlock>
+**Proof of Property 4 (MVN as an exponential family member).**
+
+We show that the MVN PDF can be written in the canonical exponential family form $f(\mathbf{x} \mid \boldsymbol{\theta}) = h(\mathbf{x}) \exp(\boldsymbol{\eta}(\boldsymbol{\theta}) \cdot \mathbf{T}(\mathbf{x}) - A(\boldsymbol{\theta}))$ from [Topic 7 — Exponential Families](/topics/exponential-families).
+
+Start from the MVN PDF and take the logarithm:
+
+$$
+\log f_{\mathbf{X}}(\mathbf{x}) = -\frac{p}{2}\log(2\pi) - \frac{1}{2}\log|\boldsymbol{\Sigma}| - \frac{1}{2}(\mathbf{x} - \boldsymbol{\mu})^T \boldsymbol{\Sigma}^{-1}(\mathbf{x} - \boldsymbol{\mu})
+$$
+
+Expand the quadratic form. Let $\boldsymbol{\Lambda} = \boldsymbol{\Sigma}^{-1}$ (the precision matrix). Then
+
+$$
+(\mathbf{x} - \boldsymbol{\mu})^T \boldsymbol{\Lambda}(\mathbf{x} - \boldsymbol{\mu}) = \mathbf{x}^T \boldsymbol{\Lambda} \mathbf{x} - 2\boldsymbol{\mu}^T \boldsymbol{\Lambda} \mathbf{x} + \boldsymbol{\mu}^T \boldsymbol{\Lambda} \boldsymbol{\mu}
+$$
+
+Substituting:
+
+$$
+\log f_{\mathbf{X}}(\mathbf{x}) = -\frac{p}{2}\log(2\pi) + \boldsymbol{\mu}^T \boldsymbol{\Lambda} \mathbf{x} - \frac{1}{2}\mathbf{x}^T \boldsymbol{\Lambda} \mathbf{x} - \frac{1}{2}\boldsymbol{\mu}^T \boldsymbol{\Lambda} \boldsymbol{\mu} - \frac{1}{2}\log|\boldsymbol{\Sigma}|
+$$
+
+Now we identify the exponential family components. The natural parameters are $\boldsymbol{\eta}_1 = \boldsymbol{\Lambda}\boldsymbol{\mu} = \boldsymbol{\Sigma}^{-1}\boldsymbol{\mu}$ (a $p$-vector) and $\boldsymbol{\eta}_2 = -\frac{1}{2}\boldsymbol{\Lambda} = -\frac{1}{2}\boldsymbol{\Sigma}^{-1}$ (a $p \times p$ symmetric matrix, contributing $p(p+1)/2$ unique parameters). The corresponding sufficient statistics are $\mathbf{T}_1(\mathbf{x}) = \mathbf{x}$ and $\mathbf{T}_2(\mathbf{x}) = \mathbf{x}\mathbf{x}^T$.
+
+The components of the canonical form are:
+
+- $h(\mathbf{x}) = (2\pi)^{-p/2}$
+- $\boldsymbol{\eta} = (\boldsymbol{\Sigma}^{-1}\boldsymbol{\mu}, \; -\frac{1}{2}\boldsymbol{\Sigma}^{-1})$
+- $\mathbf{T}(\mathbf{x}) = (\mathbf{x}, \; \mathbf{x}\mathbf{x}^T)$
+- $A(\boldsymbol{\eta}) = \frac{1}{2}\boldsymbol{\mu}^T \boldsymbol{\Sigma}^{-1}\boldsymbol{\mu} + \frac{1}{2}\log|\boldsymbol{\Sigma}|$
+
+The inner product is $\boldsymbol{\eta} \cdot \mathbf{T}(\mathbf{x}) = (\boldsymbol{\Sigma}^{-1}\boldsymbol{\mu})^T \mathbf{x} + \text{tr}(-\frac{1}{2}\boldsymbol{\Sigma}^{-1} \mathbf{x}\mathbf{x}^T) = \boldsymbol{\mu}^T\boldsymbol{\Sigma}^{-1}\mathbf{x} - \frac{1}{2}\mathbf{x}^T\boldsymbol{\Sigma}^{-1}\mathbf{x}$, matching the expansion above.
+
+The MVN is a $k$-parameter exponential family with $k = p + p(p+1)/2$ natural parameters (the entries of $\boldsymbol{\Sigma}^{-1}\boldsymbol{\mu}$ and the unique entries of $-\frac{1}{2}\boldsymbol{\Sigma}^{-1}$). When $\boldsymbol{\Sigma}$ is known, it reduces to a $p$-parameter family with natural parameters $\boldsymbol{\eta} = \boldsymbol{\Sigma}^{-1}\boldsymbol{\mu}$ and sufficient statistics $\mathbf{T}(\mathbf{x}) = \mathbf{x}$.
+</ProofBlock>
+
+<RemarkBlock number={1} title="MVN as Exponential Family Member">
+The exponential family form of the MVN connects directly to [Topic 7](/topics/exponential-families). The sufficient statistics $\mathbf{T}(\mathbf{x}) = (\mathbf{x}, \mathbf{x}\mathbf{x}^T)$ tell us that for an i.i.d. sample $\mathbf{x}_1, \ldots, \mathbf{x}_n$ from a MVN, the sample mean $\bar{\mathbf{x}} = \frac{1}{n}\sum_i \mathbf{x}_i$ and the sample second moment matrix $\frac{1}{n}\sum_i \mathbf{x}_i \mathbf{x}_i^T$ are jointly sufficient for $(\boldsymbol{\mu}, \boldsymbol{\Sigma})$. No matter how large the sample, these two summary quantities capture everything the data has to say about the parameters.
+
+The log-partition function $A(\boldsymbol{\eta}) = \frac{1}{2}\boldsymbol{\mu}^T \boldsymbol{\Sigma}^{-1}\boldsymbol{\mu} + \frac{1}{2}\log|\boldsymbol{\Sigma}|$ generates the moments via differentiation, just as in the univariate case (Topic 7, Theorem 7.1). And the convexity of $A$ in the natural parameters guarantees that the MLE for $(\boldsymbol{\mu}, \boldsymbol{\Sigma})$ — namely $\hat{\boldsymbol{\mu}} = \bar{\mathbf{x}}$ and $\hat{\boldsymbol{\Sigma}} = \frac{1}{n}\sum_i (\mathbf{x}_i - \bar{\mathbf{x}})(\mathbf{x}_i - \bar{\mathbf{x}})^T$ — is unique.
+</RemarkBlock>
+
+<img src="/images/topics/multivariate-distributions/multivariate-normal-deep-dive.png"
+     alt="Three-panel: 3D surface plot of bivariate Normal, effect of covariance on ellipses, samples with marginal curves"
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+{/* MultivariateNormalExplorer will be embedded here */}
+
+---
+
+## 8.4 Conditional Multivariate Normal
+
+This section contains the single most consequential formula in this topic. The conditional MVN result is the *exact same formula* used to make predictions in Gaussian processes, to update states in Kalman filters, and to perform Bayesian linear regression. Learn this formula once, and you have the engine behind three of the most important tools in applied ML.
+
+<TheoremBlock number={3} title="Conditional Multivariate Normal">
+Let $\mathbf{X} \sim \mathcal{N}_p(\boldsymbol{\mu}, \boldsymbol{\Sigma})$. Partition $\mathbf{X}$, $\boldsymbol{\mu}$, and $\boldsymbol{\Sigma}$ as
+
+$$
+\mathbf{X} = \begin{pmatrix} \mathbf{X}_1 \\ \mathbf{X}_2 \end{pmatrix}, \quad \boldsymbol{\mu} = \begin{pmatrix} \boldsymbol{\mu}_1 \\ \boldsymbol{\mu}_2 \end{pmatrix}, \quad \boldsymbol{\Sigma} = \begin{pmatrix} \boldsymbol{\Sigma}_{11} & \boldsymbol{\Sigma}_{12} \\ \boldsymbol{\Sigma}_{21} & \boldsymbol{\Sigma}_{22} \end{pmatrix}
+$$
+
+where $\mathbf{X}_1$ is $q$-dimensional and $\mathbf{X}_2$ is $(p-q)$-dimensional. Then the conditional distribution of $\mathbf{X}_1$ given $\mathbf{X}_2 = \mathbf{x}_2$ is
+
+$$
+\mathbf{X}_1 \mid \mathbf{X}_2 = \mathbf{x}_2 \sim \mathcal{N}_q\!\left(\boldsymbol{\mu}_{1|2}, \; \boldsymbol{\Sigma}_{1|2}\right)
+$$
+
+where the conditional mean and conditional covariance are
+
+$$
+\boldsymbol{\mu}_{1|2} = \boldsymbol{\mu}_1 + \boldsymbol{\Sigma}_{12}\boldsymbol{\Sigma}_{22}^{-1}(\mathbf{x}_2 - \boldsymbol{\mu}_2)
+$$
+
+$$
+\boldsymbol{\Sigma}_{1|2} = \boldsymbol{\Sigma}_{11} - \boldsymbol{\Sigma}_{12}\boldsymbol{\Sigma}_{22}^{-1}\boldsymbol{\Sigma}_{21}
+$$
+
+Two properties are striking:
+
+- **The conditional mean is a linear function of $\mathbf{x}_2$.** It equals the prior mean $\boldsymbol{\mu}_1$ plus a correction term $\boldsymbol{\Sigma}_{12}\boldsymbol{\Sigma}_{22}^{-1}(\mathbf{x}_2 - \boldsymbol{\mu}_2)$ that adjusts for how much $\mathbf{x}_2$ deviates from its mean, weighted by the cross-covariance $\boldsymbol{\Sigma}_{12}$ relative to the variance of $\mathbf{X}_2$.
+- **The conditional covariance does not depend on $\mathbf{x}_2$.** No matter what value of $\mathbf{x}_2$ we observe, the uncertainty about $\mathbf{X}_1$ is always $\boldsymbol{\Sigma}_{1|2} = \boldsymbol{\Sigma}_{11} - \boldsymbol{\Sigma}_{12}\boldsymbol{\Sigma}_{22}^{-1}\boldsymbol{\Sigma}_{21}$, which is the **Schur complement** of $\boldsymbol{\Sigma}_{22}$ in $\boldsymbol{\Sigma}$.
+</TheoremBlock>
+
+<ProofBlock>
+We derive the conditional density by starting from the definition $f_{\mathbf{X}_1 | \mathbf{X}_2}(\mathbf{x}_1 \mid \mathbf{x}_2) = f_{\mathbf{X}}(\mathbf{x}_1, \mathbf{x}_2) / f_{\mathbf{X}_2}(\mathbf{x}_2)$ and working with the exponent of the joint density.
+
+**Step 1: Set up the quadratic form.** The exponent of the joint MVN density is
+
+$$
+Q = -\frac{1}{2}(\mathbf{x} - \boldsymbol{\mu})^T \boldsymbol{\Sigma}^{-1} (\mathbf{x} - \boldsymbol{\mu})
+$$
+
+We need the block inverse of $\boldsymbol{\Sigma}$. Using the formula for the inverse of a $2 \times 2$ block matrix:
+
+$$
+\boldsymbol{\Sigma}^{-1} = \begin{pmatrix} \boldsymbol{\Sigma}_{11}^{-1} + \boldsymbol{\Sigma}_{11}^{-1}\boldsymbol{\Sigma}_{12}\mathbf{S}^{-1}\boldsymbol{\Sigma}_{21}\boldsymbol{\Sigma}_{11}^{-1} & -\boldsymbol{\Sigma}_{11}^{-1}\boldsymbol{\Sigma}_{12}\mathbf{S}^{-1} \\ -\mathbf{S}^{-1}\boldsymbol{\Sigma}_{21}\boldsymbol{\Sigma}_{11}^{-1} & \mathbf{S}^{-1} \end{pmatrix}
+$$
+
+where $\mathbf{S} = \boldsymbol{\Sigma}_{22} - \boldsymbol{\Sigma}_{21}\boldsymbol{\Sigma}_{11}^{-1}\boldsymbol{\Sigma}_{12}$ is the Schur complement of $\boldsymbol{\Sigma}_{11}$ in $\boldsymbol{\Sigma}$.
+
+**Step 2: Expand the quadratic form.** Let $\mathbf{d}_1 = \mathbf{x}_1 - \boldsymbol{\mu}_1$ and $\mathbf{d}_2 = \mathbf{x}_2 - \boldsymbol{\mu}_2$. Expanding $Q = -\frac{1}{2}(\mathbf{d}_1^T, \mathbf{d}_2^T)\boldsymbol{\Sigma}^{-1}(\mathbf{d}_1^T, \mathbf{d}_2^T)^T$ using the block inverse:
+
+$$
+-2Q = \mathbf{d}_1^T(\boldsymbol{\Sigma}_{11}^{-1} + \boldsymbol{\Sigma}_{11}^{-1}\boldsymbol{\Sigma}_{12}\mathbf{S}^{-1}\boldsymbol{\Sigma}_{21}\boldsymbol{\Sigma}_{11}^{-1})\mathbf{d}_1 - 2\mathbf{d}_1^T\boldsymbol{\Sigma}_{11}^{-1}\boldsymbol{\Sigma}_{12}\mathbf{S}^{-1}\mathbf{d}_2 + \mathbf{d}_2^T\mathbf{S}^{-1}\mathbf{d}_2
+$$
+
+**Step 3: Complete the square in $\mathbf{x}_1$.** We want to rewrite $-2Q$ as the sum of a perfect square in $\mathbf{d}_1$ (which will give the conditional density) and a term in $\mathbf{d}_2$ alone (which belongs to the marginal of $\mathbf{X}_2$).
+
+Define $\boldsymbol{\Sigma}_{1|2} = \boldsymbol{\Sigma}_{11} - \boldsymbol{\Sigma}_{12}\boldsymbol{\Sigma}_{22}^{-1}\boldsymbol{\Sigma}_{21}$ and $\mathbf{m} = \boldsymbol{\Sigma}_{12}\boldsymbol{\Sigma}_{22}^{-1}\mathbf{d}_2$, so that $\boldsymbol{\mu}_{1|2} = \boldsymbol{\mu}_1 + \mathbf{m}$.
+
+After completing the square (grouping terms involving $\mathbf{d}_1$ and absorbing cross-terms), the quadratic form separates as:
+
+$$
+-2Q = (\mathbf{d}_1 - \mathbf{m})^T \boldsymbol{\Sigma}_{1|2}^{-1} (\mathbf{d}_1 - \mathbf{m}) + \mathbf{d}_2^T \boldsymbol{\Sigma}_{22}^{-1} \mathbf{d}_2
+$$
+
+We verify this by expanding the right side. The first term expands to:
+
+$$
+(\mathbf{d}_1 - \mathbf{m})^T \boldsymbol{\Sigma}_{1|2}^{-1} (\mathbf{d}_1 - \mathbf{m}) = \mathbf{d}_1^T \boldsymbol{\Sigma}_{1|2}^{-1} \mathbf{d}_1 - 2\mathbf{d}_1^T \boldsymbol{\Sigma}_{1|2}^{-1}\mathbf{m} + \mathbf{m}^T \boldsymbol{\Sigma}_{1|2}^{-1}\mathbf{m}
+$$
+
+Using the Woodbury identity, $\boldsymbol{\Sigma}_{1|2}^{-1} = (\boldsymbol{\Sigma}_{11} - \boldsymbol{\Sigma}_{12}\boldsymbol{\Sigma}_{22}^{-1}\boldsymbol{\Sigma}_{21})^{-1} = \boldsymbol{\Sigma}_{11}^{-1} + \boldsymbol{\Sigma}_{11}^{-1}\boldsymbol{\Sigma}_{12}\mathbf{S}^{-1}\boldsymbol{\Sigma}_{21}\boldsymbol{\Sigma}_{11}^{-1}$, and substituting $\mathbf{m} = \boldsymbol{\Sigma}_{12}\boldsymbol{\Sigma}_{22}^{-1}\mathbf{d}_2$, each term matches the expansion in Step 2. The cross-terms in $\mathbf{d}_1^T(\cdot)\mathbf{d}_2$ combine correctly, and the terms purely in $\mathbf{d}_2$ collect to $\mathbf{d}_2^T\boldsymbol{\Sigma}_{22}^{-1}\mathbf{d}_2$.
+
+**Step 4: Read off the conditional.** With the quadratic form separated, the joint density factors as
+
+$$
+f_{\mathbf{X}}(\mathbf{x}_1, \mathbf{x}_2) \propto \exp\!\left(-\frac{1}{2}(\mathbf{x}_1 - \boldsymbol{\mu}_{1|2})^T \boldsymbol{\Sigma}_{1|2}^{-1} (\mathbf{x}_1 - \boldsymbol{\mu}_{1|2})\right) \cdot \exp\!\left(-\frac{1}{2}\mathbf{d}_2^T \boldsymbol{\Sigma}_{22}^{-1} \mathbf{d}_2\right)
+$$
+
+The first factor, viewed as a function of $\mathbf{x}_1$, is the kernel of $\mathcal{N}_q(\boldsymbol{\mu}_{1|2}, \boldsymbol{\Sigma}_{1|2})$. The second factor depends only on $\mathbf{x}_2$ and is the kernel of $f_{\mathbf{X}_2}(\mathbf{x}_2)$.
+
+By Definition 3, the conditional density is
+
+$$
+f_{\mathbf{X}_1 | \mathbf{X}_2}(\mathbf{x}_1 \mid \mathbf{x}_2) = \frac{f_{\mathbf{X}}(\mathbf{x}_1, \mathbf{x}_2)}{f_{\mathbf{X}_2}(\mathbf{x}_2)} \propto \exp\!\left(-\frac{1}{2}(\mathbf{x}_1 - \boldsymbol{\mu}_{1|2})^T \boldsymbol{\Sigma}_{1|2}^{-1} (\mathbf{x}_1 - \boldsymbol{\mu}_{1|2})\right)
+$$
+
+This is the kernel of $\mathcal{N}_q(\boldsymbol{\mu}_{1|2}, \boldsymbol{\Sigma}_{1|2})$, where
+
+$$
+\boldsymbol{\mu}_{1|2} = \boldsymbol{\mu}_1 + \boldsymbol{\Sigma}_{12}\boldsymbol{\Sigma}_{22}^{-1}(\mathbf{x}_2 - \boldsymbol{\mu}_2)
+$$
+
+$$
+\boldsymbol{\Sigma}_{1|2} = \boldsymbol{\Sigma}_{11} - \boldsymbol{\Sigma}_{12}\boldsymbol{\Sigma}_{22}^{-1}\boldsymbol{\Sigma}_{21}
+$$
+
+The conditional mean is linear in $\mathbf{x}_2$ (a regression of $\mathbf{X}_1$ on $\mathbf{X}_2$), and the conditional covariance is constant in $\mathbf{x}_2$ (it depends only on the covariance structure, not on the observed value).
+</ProofBlock>
+
+<ExampleBlock number={1} title="Bivariate Case: Recovering the Scalar Formula">
+Let $p = 2$ with $\mathbf{X} = (X_1, X_2)^T \sim \mathcal{N}_2(\boldsymbol{\mu}, \boldsymbol{\Sigma})$ where
+
+$$
+\boldsymbol{\mu} = \begin{pmatrix} \mu_1 \\ \mu_2 \end{pmatrix}, \quad \boldsymbol{\Sigma} = \begin{pmatrix} \sigma_1^2 & \rho\sigma_1\sigma_2 \\ \rho\sigma_1\sigma_2 & \sigma_2^2 \end{pmatrix}
+$$
+
+Here $q = 1$, $\boldsymbol{\Sigma}_{11} = \sigma_1^2$, $\boldsymbol{\Sigma}_{12} = \rho\sigma_1\sigma_2$, $\boldsymbol{\Sigma}_{21} = \rho\sigma_1\sigma_2$, $\boldsymbol{\Sigma}_{22} = \sigma_2^2$. Applying the conditional MVN formulas:
+
+$$
+\mu_{1|2} = \mu_1 + \rho\sigma_1\sigma_2 \cdot \frac{1}{\sigma_2^2} \cdot (x_2 - \mu_2) = \mu_1 + \rho\frac{\sigma_1}{\sigma_2}(x_2 - \mu_2)
+$$
+
+$$
+\Sigma_{1|2} = \sigma_1^2 - \rho\sigma_1\sigma_2 \cdot \frac{1}{\sigma_2^2} \cdot \rho\sigma_1\sigma_2 = \sigma_1^2(1 - \rho^2)
+$$
+
+So $X_1 \mid X_2 = x_2 \sim \mathcal{N}\!\left(\mu_1 + \rho\frac{\sigma_1}{\sigma_2}(x_2 - \mu_2), \; \sigma_1^2(1 - \rho^2)\right)$.
+
+This recovers the bivariate conditional Normal formula from [Topic 3](/topics/random-variables) (Example 9). The conditional mean traces out the regression line $\mu_1 + \rho(\sigma_1/\sigma_2)(x_2 - \mu_2)$, and the conditional variance $\sigma_1^2(1-\rho^2)$ shrinks as $|\rho| \to 1$ — stronger correlation means less residual uncertainty after conditioning.
+
+When $\rho = 0$, the conditional mean is just $\mu_1$ (knowing $X_2$ tells us nothing about $X_1$) and the conditional variance is $\sigma_1^2$ (no uncertainty reduction). When $|\rho| = 1$, the conditional variance is 0 — knowing $X_2$ determines $X_1$ exactly. This is the perfect linear relationship $X_1 = \mu_1 + \rho(\sigma_1/\sigma_2)(X_2 - \mu_2)$.
+</ExampleBlock>
+
+<img src="/images/topics/multivariate-distributions/conditional-mvn.png"
+     alt="Three-panel: conditional slices with regression line, block matrix partition diagram, GP prediction as conditional MVN"
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+The conditional MVN formula is the workhorse behind Gaussian process prediction. In a GP, we observe function values $\mathbf{f}_{\text{obs}}$ at training inputs and want to predict function values $\mathbf{f}_*$ at new inputs. The GP prior places a joint MVN on $(\mathbf{f}_*, \mathbf{f}_{\text{obs}})^T$, and the posterior predictive $\mathbf{f}_* \mid \mathbf{f}_{\text{obs}}$ is given *exactly* by the conditional MVN formula: $\boldsymbol{\mu}_{1|2}$ is the posterior mean and $\boldsymbol{\Sigma}_{1|2}$ is the posterior covariance. See <ExternalLink href="https://formalml.com/topics/gaussian-processes" site="formalml">Gaussian Processes</ExternalLink> for the full development.
+
+{/* ConditionalMVNExplorer will be embedded here */}
+
+---
+
+## 8.5 The Multinomial Distribution
+
+The Binomial counts successes in $n$ independent trials with two outcomes. What if there are $k > 2$ possible outcomes? This is the setting of the Multinomial distribution — the natural generalization of the Binomial to multiple categories.
+
+Consider classifying $n = 100$ emails as spam, promotions, or legitimate. Each email falls into exactly one category, and we model the classification probabilities as $(p_1, p_2, p_3) = (0.3, 0.2, 0.5)$. The counts $(X_1, X_2, X_3)$ — how many emails fall into each category — follow a Multinomial distribution. The constraint $X_1 + X_2 + X_3 = 100$ is baked in: every email goes somewhere. This fixed-total constraint has deep consequences for the covariance structure.
+
+<DefinitionBlock number={6} title="Multinomial Distribution">
+Let $n \in \{1, 2, 3, \ldots\}$ be the number of trials and $\mathbf{p} = (p_1, p_2, \ldots, p_k)^T$ a probability vector with $p_j > 0$ and $\sum_{j=1}^k p_j = 1$. The random vector $\mathbf{X} = (X_1, \ldots, X_k)^T$ has the **Multinomial distribution** $\text{Mult}(n, \mathbf{p})$ if its PMF is
+
+$$
+P(\mathbf{X} = \mathbf{x}) = \frac{n!}{x_1! \, x_2! \cdots x_k!} \; p_1^{x_1} p_2^{x_2} \cdots p_k^{x_k}
+$$
+
+for non-negative integers $x_1, \ldots, x_k$ with $\sum_{j=1}^k x_j = n$.
+
+The coefficient $\frac{n!}{x_1! \cdots x_k!} = \binom{n}{x_1, \ldots, x_k}$ is the **multinomial coefficient** — the number of ways to assign $n$ items into $k$ groups of sizes $x_1, \ldots, x_k$.
+
+When $k = 2$, we have $\mathbf{X} = (X_1, n - X_1)^T$ and the PMF reduces to $\binom{n}{x_1} p_1^{x_1} (1-p_1)^{n-x_1}$, which is the Binomial$(n, p_1)$ PMF. The Multinomial is genuinely the $k$-category Binomial.
+</DefinitionBlock>
+
+<TheoremBlock number={4} title="Multinomial Moments">
+Let $\mathbf{X} \sim \text{Mult}(n, \mathbf{p})$. Then:
+
+1. $E[X_j] = np_j$ for each $j = 1, \ldots, k$
+2. $\text{Var}(X_j) = np_j(1 - p_j)$ for each $j$ — each marginal $X_j \sim \text{Bin}(n, p_j)$
+3. $\text{Cov}(X_i, X_j) = -np_ip_j$ for $i \neq j$ — the covariance is *always negative*
+</TheoremBlock>
+
+<ProofBlock>
+**Proof of Part 1 (Mean via indicator variables).**
+
+Write each trial outcome as an indicator. For the $\ell$-th trial ($\ell = 1, \ldots, n$), define the indicator
+
+$$
+Z_{\ell j} = \begin{cases} 1 & \text{if trial } \ell \text{ results in category } j \\ 0 & \text{otherwise} \end{cases}
+$$
+
+Then $X_j = \sum_{\ell=1}^n Z_{\ell j}$, the count for category $j$ is the sum of $n$ independent Bernoulli$(p_j)$ indicators. By linearity of expectation:
+
+$$
+E[X_j] = E\!\left[\sum_{\ell=1}^n Z_{\ell j}\right] = \sum_{\ell=1}^n E[Z_{\ell j}] = \sum_{\ell=1}^n p_j = np_j
+$$
+
+Since each $Z_{\ell j}$ is Bernoulli$(p_j)$, the marginal $X_j = \sum_\ell Z_{\ell j}$ is $\text{Bin}(n, p_j)$. From [Topic 5](/topics/discrete-distributions), $\text{Var}(X_j) = np_j(1 - p_j)$.
+</ProofBlock>
+
+<ProofBlock>
+**Proof of Part 3 (Negative covariance via the variance constraint).**
+
+This is the most revealing proof, because it shows *why* the covariance must be negative.
+
+The total count is fixed: $\sum_{j=1}^k X_j = n$ with probability 1. A constant has zero variance:
+
+$$
+\text{Var}\!\left(\sum_{j=1}^k X_j\right) = 0
+$$
+
+Expanding the variance of the sum using the general formula $\text{Var}(\sum X_j) = \sum \text{Var}(X_j) + 2\sum_{i < j} \text{Cov}(X_i, X_j)$:
+
+$$
+\sum_{j=1}^k \text{Var}(X_j) + 2\sum_{i < j} \text{Cov}(X_i, X_j) = 0
+$$
+
+Substituting $\text{Var}(X_j) = np_j(1-p_j)$:
+
+$$
+\sum_{j=1}^k np_j(1-p_j) + 2\sum_{i < j} \text{Cov}(X_i, X_j) = 0
+$$
+
+The first sum is $n\sum_j p_j - n\sum_j p_j^2 = n - n\sum_j p_j^2$. Therefore
+
+$$
+2\sum_{i < j} \text{Cov}(X_i, X_j) = -(n - n\sum_j p_j^2) = -n + n\sum_j p_j^2
+$$
+
+Now we claim that $\text{Cov}(X_i, X_j) = -np_ip_j$ for $i \neq j$. To verify, we can compute it directly from the indicator representation. For distinct trials $\ell \neq m$:
+
+$$
+E[Z_{\ell i} Z_{m j}] = E[Z_{\ell i}]E[Z_{m j}] = p_i p_j
+$$
+
+since trials are independent. For the same trial $\ell$:
+
+$$
+E[Z_{\ell i} Z_{\ell j}] = P(\text{trial } \ell \text{ in category } i \text{ AND category } j) = 0
+$$
+
+since a single trial cannot be in two categories simultaneously. Therefore
+
+$$
+E[X_i X_j] = E\!\left[\sum_{\ell=1}^n Z_{\ell i} \sum_{m=1}^n Z_{m j}\right] = \sum_{\ell=1}^n \sum_{m=1}^n E[Z_{\ell i} Z_{m j}]
+$$
+
+$$
+= \sum_{\ell=1}^n E[Z_{\ell i} Z_{\ell j}] + \sum_{\ell \neq m} E[Z_{\ell i} Z_{m j}] = n \cdot 0 + n(n-1) \cdot p_i p_j = n(n-1)p_i p_j
+$$
+
+So
+
+$$
+\text{Cov}(X_i, X_j) = E[X_i X_j] - E[X_i]E[X_j] = n(n-1)p_ip_j - n^2p_ip_j = -np_ip_j
+$$
+
+The covariance is *always* negative. This makes geometric sense: $X_1 + X_2 + \cdots + X_k = n$ is a hard constraint, so if one count goes up, the others must collectively go down. More emails classified as spam means fewer classified as legitimate — the negative covariance captures this competition for a fixed total.
+
+We can verify consistency. The sum $2\sum_{i<j}(-np_ip_j) = -n \cdot 2\sum_{i<j}p_ip_j = -n\left[(\sum_j p_j)^2 - \sum_j p_j^2\right] = -n(1 - \sum_j p_j^2)$, which matches the constraint equation above.
+</ProofBlock>
+
+<RemarkBlock number={2} title="Multinomial as Exponential Family Member">
+The Multinomial is an exponential family member, but the parameterization requires care because of the constraint $\sum p_j = 1$. Working with the first $k - 1$ components (since $p_k = 1 - \sum_{j=1}^{k-1} p_j$):
+
+$$
+\log P(\mathbf{X} = \mathbf{x}) = \log \binom{n}{x_1, \ldots, x_k} + \sum_{j=1}^{k-1} x_j \log p_j + x_k \log p_k
+$$
+
+$$
+= \log \binom{n}{x_1, \ldots, x_k} + \sum_{j=1}^{k-1} x_j \log p_j + \left(n - \sum_{j=1}^{k-1} x_j\right) \log p_k
+$$
+
+$$
+= \log \binom{n}{x_1, \ldots, x_k} + \sum_{j=1}^{k-1} x_j \log\frac{p_j}{p_k} + n\log p_k
+$$
+
+The natural parameters are the **log-odds ratios** $\eta_j = \log(p_j / p_k)$ for $j = 1, \ldots, k-1$, and the sufficient statistics are $T_j(\mathbf{x}) = x_j$. The inverse map gives $p_j = e^{\eta_j} / (1 + \sum_{m=1}^{k-1} e^{\eta_m})$ — this is the **softmax** function. The softmax output layer in a neural network classifier is performing Multinomial exponential family parameterization, just as the sigmoid is performing Bernoulli parameterization.
+</RemarkBlock>
+
+<img src="/images/topics/multivariate-distributions/multinomial-distribution.png"
+     alt="Three-panel: Multinomial samples vs expected counts, marginal Binomial overlay, negative covariance scatter"
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+{/* MultinomialExplorer will be embedded here */}
+
+---
+
+## 8.6 The Dirichlet Distribution
+
+The Multinomial models counts given fixed probabilities. But what if the probabilities themselves are unknown? We need a distribution *over probability vectors* — a distribution on the simplex $\Delta_{k-1} = \{(p_1, \ldots, p_k) : p_j \geq 0, \sum p_j = 1\}$. This is the Dirichlet distribution.
+
+Consider a language model trained on a corpus. The topic proportions of a document — say, 40% sports, 35% politics, 25% science — are a probability vector on the simplex. Different documents have different topic proportions. The Dirichlet distribution models this variability: each document's topic proportions are a draw from a Dirichlet, and the concentration parameters $\boldsymbol{\alpha}$ control how spread out or concentrated the draws are.
+
+<DefinitionBlock number={7} title="Dirichlet Distribution">
+Let $\boldsymbol{\alpha} = (\alpha_1, \alpha_2, \ldots, \alpha_k)^T$ with $\alpha_j > 0$ for all $j$. The random vector $\mathbf{P} = (P_1, P_2, \ldots, P_k)^T$ has the **Dirichlet distribution** $\text{Dir}(\boldsymbol{\alpha})$ if its PDF on the simplex $\Delta_{k-1}$ is
+
+$$
+f(\mathbf{p} \mid \boldsymbol{\alpha}) = \frac{\Gamma(\alpha_0)}{\prod_{j=1}^k \Gamma(\alpha_j)} \prod_{j=1}^k p_j^{\alpha_j - 1}
+$$
+
+where $\alpha_0 = \sum_{j=1}^k \alpha_j$ is the **concentration sum** (also called the **total concentration** or **precision**).
+
+The normalizing constant $\frac{\Gamma(\alpha_0)}{\prod \Gamma(\alpha_j)}$ is the reciprocal of the **multivariate Beta function** $B(\boldsymbol{\alpha}) = \frac{\prod \Gamma(\alpha_j)}{\Gamma(\alpha_0)}$.
+
+The concentration parameters control the shape:
+- $\alpha_j = 1$ for all $j$: $\text{Dir}(\mathbf{1})$ is the **uniform distribution** on the simplex — all probability vectors are equally likely
+- $\alpha_j > 1$ for all $j$: probability mass concentrates toward the center of the simplex (probability vectors with similar components)
+- $\alpha_j < 1$ for all $j$: probability mass concentrates toward the corners and edges (sparse probability vectors with most mass on a few categories)
+- Large $\alpha_0$: draws are tightly concentrated near the mean vector $E[\mathbf{P}]$
+- Small $\alpha_0$: draws are highly variable
+
+When $k = 2$, the Dirichlet reduces to the Beta distribution: $\text{Dir}(\alpha_1, \alpha_2) = \text{Beta}(\alpha_1, \alpha_2)$, since $P_2 = 1 - P_1$ and $f(p_1) \propto p_1^{\alpha_1-1}(1-p_1)^{\alpha_2-1}$.
+</DefinitionBlock>
+
+<TheoremBlock number={5} title="Dirichlet Moments">
+Let $\mathbf{P} \sim \text{Dir}(\boldsymbol{\alpha})$ with $\alpha_0 = \sum_{j=1}^k \alpha_j$. Then:
+
+1. $E[P_j] = \frac{\alpha_j}{\alpha_0}$
+
+2. $\text{Var}(P_j) = \frac{\alpha_j(\alpha_0 - \alpha_j)}{\alpha_0^2(\alpha_0 + 1)}$
+
+3. $\text{Cov}(P_i, P_j) = \frac{-\alpha_i \alpha_j}{\alpha_0^2(\alpha_0 + 1)}$ for $i \neq j$
+
+The mean $E[P_j] = \alpha_j / \alpha_0$ is the proportion of the total concentration allocated to category $j$. The variance decreases as $\alpha_0$ increases — larger total concentration means more precise draws. The covariance is always negative, reflecting the simplex constraint $\sum P_j = 1$ (same structural reason as the Multinomial's negative covariance).
+</TheoremBlock>
+
+The Dirichlet's greatest significance in applied statistics and machine learning is its role as the conjugate prior for the Multinomial.
+
+<TheoremBlock number={6} title="Dirichlet-Multinomial Conjugacy">
+If the prior on $\mathbf{p}$ is $\text{Dir}(\boldsymbol{\alpha})$ and the likelihood is $\text{Mult}(n, \mathbf{p})$ with observed counts $\mathbf{x} = (x_1, \ldots, x_k)^T$, then the posterior is
+
+$$
+\mathbf{p} \mid \mathbf{x} \sim \text{Dir}(\boldsymbol{\alpha} + \mathbf{x})
+$$
+
+That is, $\mathbf{p} \mid \mathbf{x} \sim \text{Dir}(\alpha_1 + x_1, \; \alpha_2 + x_2, \; \ldots, \; \alpha_k + x_k)$.
+</TheoremBlock>
+
+<ProofBlock>
+By Bayes' theorem, the posterior density is proportional to the likelihood times the prior:
+
+$$
+f(\mathbf{p} \mid \mathbf{x}) \propto P(\mathbf{X} = \mathbf{x} \mid \mathbf{p}) \cdot f(\mathbf{p})
+$$
+
+The Multinomial likelihood (keeping only the terms that depend on $\mathbf{p}$) is
+
+$$
+P(\mathbf{X} = \mathbf{x} \mid \mathbf{p}) \propto \prod_{j=1}^k p_j^{x_j}
+$$
+
+The Dirichlet prior density (again, keeping only $\mathbf{p}$-dependent terms) is
+
+$$
+f(\mathbf{p}) \propto \prod_{j=1}^k p_j^{\alpha_j - 1}
+$$
+
+Multiplying the likelihood and the prior:
+
+$$
+f(\mathbf{p} \mid \mathbf{x}) \propto \prod_{j=1}^k p_j^{x_j} \cdot \prod_{j=1}^k p_j^{\alpha_j - 1} = \prod_{j=1}^k p_j^{(\alpha_j + x_j) - 1}
+$$
+
+This is the kernel of a $\text{Dir}(\boldsymbol{\alpha} + \mathbf{x})$ density. Since $f(\mathbf{p} \mid \mathbf{x})$ must integrate to 1 over the simplex, the normalizing constant must be $B(\boldsymbol{\alpha} + \mathbf{x})^{-1} = \frac{\Gamma(\alpha_0 + n)}{\prod_{j=1}^k \Gamma(\alpha_j + x_j)}$, confirming the posterior is $\text{Dir}(\boldsymbol{\alpha} + \mathbf{x})$.
+
+The update rule is additive: each prior concentration $\alpha_j$ is incremented by the observed count $x_j$. The prior concentrations $\alpha_j$ act as **pseudo-counts** — they represent the "data" implied by the prior. The total pseudo-sample size is $\alpha_0$, and after observing $n$ real data points, the effective sample size is $\alpha_0 + n$.
+
+The posterior mean for category $j$ is
+
+$$
+E[P_j \mid \mathbf{x}] = \frac{\alpha_j + x_j}{\alpha_0 + n}
+$$
+
+This is a weighted average of the prior mean $\alpha_j / \alpha_0$ and the MLE $x_j / n$:
+
+$$
+E[P_j \mid \mathbf{x}] = \frac{\alpha_0}{\alpha_0 + n} \cdot \frac{\alpha_j}{\alpha_0} + \frac{n}{\alpha_0 + n} \cdot \frac{x_j}{n}
+$$
+
+As $n \to \infty$, the posterior mean converges to the MLE — the data overwhelms the prior, regardless of the choice of $\boldsymbol{\alpha}$.
+</ProofBlock>
+
+<ExampleBlock number={2} title="Conjugate Updating with Observed Data">
+Suppose we are estimating the topic proportions for a corpus with $k = 3$ topics: sports, politics, and science. We start with a weakly informative prior $\text{Dir}(2, 2, 2)$ — slight preference for uniform proportions, with pseudo-sample size $\alpha_0 = 6$.
+
+We classify $n = 30$ documents and observe counts $\mathbf{x} = (12, 10, 8)^T$.
+
+**Prior:** $\text{Dir}(2, 2, 2)$ with prior means $(1/3, 1/3, 1/3)$.
+
+**Posterior:** $\text{Dir}(2 + 12, 2 + 10, 2 + 8) = \text{Dir}(14, 12, 10)$ with posterior means:
+
+$$
+E[P_1 \mid \mathbf{x}] = \frac{14}{36} \approx 0.389, \quad E[P_2 \mid \mathbf{x}] = \frac{12}{36} \approx 0.333, \quad E[P_3 \mid \mathbf{x}] = \frac{10}{36} \approx 0.278
+$$
+
+**MLE:** $\hat{p}_j = x_j / n$, so $(\hat{p}_1, \hat{p}_2, \hat{p}_3) = (0.400, 0.333, 0.267)$.
+
+The posterior means are pulled slightly toward the prior mean of $1/3$ relative to the MLE — the Bayesian shrinkage effect. The shrinkage is mild because $n = 30$ is much larger than $\alpha_0 = 6$. If we had used $\alpha_0 = 300$ (a very strong prior), the posterior means would be much closer to $1/3$.
+
+Now observe 20 more documents with counts $(4, 8, 8)$. The posterior updates again:
+
+$$
+\text{Dir}(14 + 4, 12 + 8, 10 + 8) = \text{Dir}(18, 20, 18)
+$$
+
+with posterior means $(18/56, 20/56, 18/56) \approx (0.321, 0.357, 0.321)$. The second batch shifted the estimate toward politics. Sequential Bayesian updating works by using yesterday's posterior as today's prior — the algebra is the same at each step.
+</ExampleBlock>
+
+<img src="/images/topics/multivariate-distributions/dirichlet-distribution.png"
+     alt="Three-panel: symmetric Dirichlet samples, asymmetric Dirichlet, conjugate updating with prior and posterior"
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+The Dirichlet-Multinomial conjugacy is the backbone of **Latent Dirichlet Allocation** (LDA), the foundational topic model in NLP. In LDA, each document's topic proportions are drawn from a $\text{Dir}(\boldsymbol{\alpha})$, and the word counts for each topic follow a Multinomial. The conjugacy makes the posterior over topic proportions tractable, enabling variational inference and collapsed Gibbs sampling. See <ExternalLink href="https://formalml.com/topics/variational-inference" site="formalml">Variational Inference</ExternalLink> for the full treatment.
+
+{/* DirichletSimplexExplorer will be embedded here */}
+
+---
+
+## 8.7 Covariance Matrices: Geometry and Structure
+
+The covariance matrix $\boldsymbol{\Sigma}$ encodes the geometry of a multivariate distribution. Its diagonal entries are variances; its off-diagonal entries are covariances. But $\boldsymbol{\Sigma}$ is more than a table of numbers — it defines an inner product, a notion of distance, and a set of principal axes. Understanding this geometry is essential for PCA, Gaussian discriminant analysis, and the interpretation of MVN contour plots.
+
+<DefinitionBlock number={8} title="Covariance Matrix">
+The **covariance matrix** of a random vector $\mathbf{X} = (X_1, \ldots, X_p)^T$ with mean $\boldsymbol{\mu} = E[\mathbf{X}]$ is the $p \times p$ matrix
+
+$$
+\boldsymbol{\Sigma} = E\!\left[(\mathbf{X} - \boldsymbol{\mu})(\mathbf{X} - \boldsymbol{\mu})^T\right]
+$$
+
+The $(i, j)$ entry of $\boldsymbol{\Sigma}$ is $\Sigma_{ij} = \text{Cov}(X_i, X_j) = E[(X_i - \mu_i)(X_j - \mu_j)]$. The diagonal entries $\Sigma_{jj} = \text{Var}(X_j)$ are the variances of the individual components.
+
+Equivalently, $\boldsymbol{\Sigma} = E[\mathbf{X}\mathbf{X}^T] - \boldsymbol{\mu}\boldsymbol{\mu}^T$, which is the matrix analog of $\text{Var}(X) = E[X^2] - (E[X])^2$.
+</DefinitionBlock>
+
+<DefinitionBlock number={9} title="Mahalanobis Distance">
+The **Mahalanobis distance** from a point $\mathbf{x}$ to a distribution with mean $\boldsymbol{\mu}$ and covariance $\boldsymbol{\Sigma}$ is
+
+$$
+d_M(\mathbf{x}, \boldsymbol{\mu}) = \sqrt{(\mathbf{x} - \boldsymbol{\mu})^T \boldsymbol{\Sigma}^{-1} (\mathbf{x} - \boldsymbol{\mu})}
+$$
+
+and the **squared Mahalanobis distance** is
+
+$$
+d_M^2(\mathbf{x}, \boldsymbol{\mu}) = (\mathbf{x} - \boldsymbol{\mu})^T \boldsymbol{\Sigma}^{-1} (\mathbf{x} - \boldsymbol{\mu})
+$$
+
+Unlike Euclidean distance, Mahalanobis distance accounts for the scale and correlation of the variables. Two points that are equidistant from $\boldsymbol{\mu}$ in Euclidean terms may be very different in Mahalanobis terms if they lie in different directions relative to the covariance structure.
+
+For $\mathbf{X} \sim \mathcal{N}_p(\boldsymbol{\mu}, \boldsymbol{\Sigma})$, the squared Mahalanobis distance $d_M^2(\mathbf{X}, \boldsymbol{\mu}) \sim \chi^2_p$. This is why MVN contours (sets of constant $d_M^2$) are used for hypothesis testing and outlier detection: a point with $d_M^2 > \chi^2_{p, 0.95}$ is an outlier at the 5% level.
+</DefinitionBlock>
+
+<TheoremBlock number={7} title="Properties of Covariance Matrices">
+The covariance matrix $\boldsymbol{\Sigma}$ of any random vector $\mathbf{X}$ has the following properties:
+
+1. **Symmetry.** $\boldsymbol{\Sigma} = \boldsymbol{\Sigma}^T$, since $\text{Cov}(X_i, X_j) = \text{Cov}(X_j, X_i)$.
+
+2. **Positive semi-definiteness.** For any vector $\mathbf{a} \in \mathbb{R}^p$, $\mathbf{a}^T \boldsymbol{\Sigma} \mathbf{a} \geq 0$.
+
+3. **Spectral decomposition.** Since $\boldsymbol{\Sigma}$ is symmetric and PSD, it has a spectral decomposition $\boldsymbol{\Sigma} = \mathbf{Q}\boldsymbol{\Lambda}\mathbf{Q}^T$, where $\mathbf{Q}$ is an orthogonal matrix of eigenvectors and $\boldsymbol{\Lambda} = \text{diag}(\lambda_1, \ldots, \lambda_p)$ is a diagonal matrix of non-negative eigenvalues.
+
+The eigenvectors $\mathbf{q}_1, \ldots, \mathbf{q}_p$ are the **principal axes** of the distribution — the directions of maximum and minimum variance. The eigenvalues $\lambda_1 \geq \lambda_2 \geq \cdots \geq \lambda_p \geq 0$ are the **variances along each principal axis**. For the MVN, the ellipsoidal contours have semi-axes along $\mathbf{q}_j$ with lengths proportional to $\sqrt{\lambda_j}$.
+</TheoremBlock>
+
+<ProofBlock>
+**Proof of positive semi-definiteness.**
+
+For any fixed vector $\mathbf{a} \in \mathbb{R}^p$:
+
+$$
+\mathbf{a}^T \boldsymbol{\Sigma} \mathbf{a} = \mathbf{a}^T E\!\left[(\mathbf{X} - \boldsymbol{\mu})(\mathbf{X} - \boldsymbol{\mu})^T\right] \mathbf{a}
+$$
+
+Since $\mathbf{a}$ is a constant vector, we can move it inside the expectation:
+
+$$
+= E\!\left[\mathbf{a}^T (\mathbf{X} - \boldsymbol{\mu})(\mathbf{X} - \boldsymbol{\mu})^T \mathbf{a}\right]
+$$
+
+Let $Y = \mathbf{a}^T(\mathbf{X} - \boldsymbol{\mu})$. This is a scalar random variable (a linear combination of the components of $\mathbf{X} - \boldsymbol{\mu}$). The expression becomes:
+
+$$
+= E[Y^2]
+$$
+
+Since $Y^2 \geq 0$ for every outcome, $E[Y^2] \geq 0$. Therefore $\mathbf{a}^T \boldsymbol{\Sigma} \mathbf{a} \geq 0$ for all $\mathbf{a} \in \mathbb{R}^p$.
+
+Moreover, $\mathbf{a}^T \boldsymbol{\Sigma} \mathbf{a} = 0$ if and only if $E[Y^2] = 0$, which happens if and only if $Y = \mathbf{a}^T(\mathbf{X} - \boldsymbol{\mu}) = 0$ with probability 1. This means $\boldsymbol{\Sigma}$ is positive *definite* (not just semi-definite) when no non-trivial linear combination of the components is degenerate — which is the generic case, and the case assumed for the MVN with invertible $\boldsymbol{\Sigma}$.
+</ProofBlock>
+
+<RemarkBlock number={3} title="Wishart and Inverse-Wishart Distributions">
+When the covariance matrix $\boldsymbol{\Sigma}$ itself is unknown and we want to perform Bayesian inference, we need a prior distribution *on positive definite matrices*. The **Wishart distribution** $\mathcal{W}_p(\mathbf{V}, n)$ is the multivariate generalization of the Chi-squared distribution — if $\mathbf{X}_1, \ldots, \mathbf{X}_n$ are i.i.d. $\mathcal{N}_p(\mathbf{0}, \boldsymbol{\Sigma})$, then $\sum_{i=1}^n \mathbf{X}_i \mathbf{X}_i^T \sim \mathcal{W}_p(\boldsymbol{\Sigma}, n)$.
+
+The **Inverse-Wishart distribution** $\mathcal{W}_p^{-1}(\boldsymbol{\Psi}, \nu)$ is the distribution of the inverse of a Wishart-distributed matrix, and it serves as the **conjugate prior for the covariance matrix** of a multivariate Normal. If we observe data from $\mathcal{N}_p(\boldsymbol{\mu}, \boldsymbol{\Sigma})$ with an Inverse-Wishart prior on $\boldsymbol{\Sigma}$, the posterior on $\boldsymbol{\Sigma}$ is also Inverse-Wishart with updated parameters.
+
+The full development of Wishart-based inference, including the Normal-Inverse-Wishart conjugate family for joint inference on $(\boldsymbol{\mu}, \boldsymbol{\Sigma})$, belongs to Bayesian Computation (coming soon).
+</RemarkBlock>
+
+<img src="/images/topics/multivariate-distributions/covariance-geometry.png"
+     alt="Three-panel: eigenvectors as principal axes, Mahalanobis vs Euclidean distance ellipses, chi-squared calibration"
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+The spectral decomposition $\boldsymbol{\Sigma} = \mathbf{Q}\boldsymbol{\Lambda}\mathbf{Q}^T$ is the mathematical core of **Principal Component Analysis**. The eigenvectors $\mathbf{q}_j$ are the principal directions, and the eigenvalues $\lambda_j$ are the explained variances. PCA projects data onto the top eigenvectors — the directions of maximum variance — to reduce dimensionality while preserving as much information as possible. See <ExternalLink href="https://formalml.com/topics/principal-component-analysis" site="formalml">Principal Component Analysis</ExternalLink> for the full treatment, including the connection between the population covariance eigendecomposition (developed here) and the sample covariance eigendecomposition (used in practice).
+
+---
+
+## 8.8 Multivariate Transformations
+
+In one dimension, if $Y = g(X)$ and $g$ is invertible with $g^{-1}$ differentiable, then $f_Y(y) = f_X(g^{-1}(y)) \cdot |{(g^{-1})}'(y)|$. The multivariate generalization replaces the absolute derivative with the absolute value of the **Jacobian determinant** — the natural measure of how a transformation stretches or compresses volume in $\mathbb{R}^p$. This requires the multivariable change of variables formula from <ExternalLink href="https://formalcalculus.com/topics/change-of-variables" site="formalcalculus">Change of Variables</ExternalLink>.
+
+<TheoremBlock number={8} title="Multivariate Change of Variables">
+Let $\mathbf{X}$ be a continuous random vector in $\mathbb{R}^p$ with PDF $f_{\mathbf{X}}$. Let $\mathbf{g}: \mathbb{R}^p \to \mathbb{R}^p$ be an invertible, continuously differentiable transformation with inverse $\mathbf{g}^{-1}$. If $\mathbf{Y} = \mathbf{g}(\mathbf{X})$, then the PDF of $\mathbf{Y}$ is
+
+$$
+f_{\mathbf{Y}}(\mathbf{y}) = f_{\mathbf{X}}(\mathbf{g}^{-1}(\mathbf{y})) \cdot \left|\det \mathbf{J}_{\mathbf{g}^{-1}}(\mathbf{y})\right|
+$$
+
+where $\mathbf{J}_{\mathbf{g}^{-1}}(\mathbf{y})$ is the $p \times p$ **Jacobian matrix** of $\mathbf{g}^{-1}$ evaluated at $\mathbf{y}$, with entries $[\mathbf{J}_{\mathbf{g}^{-1}}]_{ij} = \frac{\partial [\mathbf{g}^{-1}]_i}{\partial y_j}$.
+
+The Jacobian determinant $|\det \mathbf{J}|$ measures the local volume distortion: if the transformation locally stretches volumes by a factor of $c$, then densities are locally compressed by a factor of $1/c$ to preserve total probability.
+</TheoremBlock>
+
+The most important application of the change of variables formula for ML is **Cholesky sampling** — the method used to generate samples from an arbitrary MVN using only standard Normal samples.
+
+<ProofBlock>
+**Cholesky sampling produces the correct distribution.**
+
+Let $\mathbf{Z} \sim \mathcal{N}_p(\mathbf{0}, \mathbf{I})$ (a standard multivariate Normal with independent components). Let $\boldsymbol{\Sigma} = \mathbf{L}\mathbf{L}^T$ be the **Cholesky decomposition** of $\boldsymbol{\Sigma}$, where $\mathbf{L}$ is a lower triangular matrix with positive diagonal entries (which exists because $\boldsymbol{\Sigma}$ is positive definite). Define the affine transformation
+
+$$
+\mathbf{X} = \boldsymbol{\mu} + \mathbf{L}\mathbf{Z}
+$$
+
+We claim that $\mathbf{X} \sim \mathcal{N}_p(\boldsymbol{\mu}, \boldsymbol{\Sigma})$.
+
+**Mean.** $E[\mathbf{X}] = \boldsymbol{\mu} + \mathbf{L} E[\mathbf{Z}] = \boldsymbol{\mu} + \mathbf{L} \cdot \mathbf{0} = \boldsymbol{\mu}$.
+
+**Covariance.** $\text{Cov}(\mathbf{X}) = \text{Cov}(\mathbf{L}\mathbf{Z}) = \mathbf{L} \, \text{Cov}(\mathbf{Z}) \, \mathbf{L}^T = \mathbf{L}\mathbf{I}\mathbf{L}^T = \mathbf{L}\mathbf{L}^T = \boldsymbol{\Sigma}$.
+
+**Normality.** By Property 2 of Theorem 2, any affine transformation of a multivariate Normal is multivariate Normal. Since $\mathbf{Z} \sim \mathcal{N}_p(\mathbf{0}, \mathbf{I})$ and $\mathbf{X} = \mathbf{L}\mathbf{Z} + \boldsymbol{\mu}$, we have $\mathbf{X} \sim \mathcal{N}_p(\boldsymbol{\mu}, \boldsymbol{\Sigma})$.
+
+**Alternatively, via the change of variables formula.** The transformation is $\mathbf{g}(\mathbf{z}) = \boldsymbol{\mu} + \mathbf{L}\mathbf{z}$, with inverse $\mathbf{g}^{-1}(\mathbf{x}) = \mathbf{L}^{-1}(\mathbf{x} - \boldsymbol{\mu})$. The Jacobian of the inverse is $\mathbf{J}_{\mathbf{g}^{-1}} = \mathbf{L}^{-1}$, so
+
+$$
+|\det \mathbf{J}_{\mathbf{g}^{-1}}| = |\det \mathbf{L}^{-1}| = |\det \mathbf{L}|^{-1} = |\boldsymbol{\Sigma}|^{-1/2}
+$$
+
+since $|\det \mathbf{L}|^2 = \det(\mathbf{L}\mathbf{L}^T) = |\boldsymbol{\Sigma}|$. Substituting into the change of variables formula:
+
+$$
+f_{\mathbf{X}}(\mathbf{x}) = f_{\mathbf{Z}}(\mathbf{L}^{-1}(\mathbf{x} - \boldsymbol{\mu})) \cdot |\boldsymbol{\Sigma}|^{-1/2}
+$$
+
+$$
+= (2\pi)^{-p/2} \exp\!\left(-\frac{1}{2}(\mathbf{L}^{-1}(\mathbf{x} - \boldsymbol{\mu}))^T (\mathbf{L}^{-1}(\mathbf{x} - \boldsymbol{\mu}))\right) \cdot |\boldsymbol{\Sigma}|^{-1/2}
+$$
+
+$$
+= (2\pi)^{-p/2} |\boldsymbol{\Sigma}|^{-1/2} \exp\!\left(-\frac{1}{2}(\mathbf{x} - \boldsymbol{\mu})^T (\mathbf{L}^{-1})^T \mathbf{L}^{-1} (\mathbf{x} - \boldsymbol{\mu})\right)
+$$
+
+$$
+= (2\pi)^{-p/2} |\boldsymbol{\Sigma}|^{-1/2} \exp\!\left(-\frac{1}{2}(\mathbf{x} - \boldsymbol{\mu})^T (\mathbf{L}\mathbf{L}^T)^{-1} (\mathbf{x} - \boldsymbol{\mu})\right)
+$$
+
+$$
+= (2\pi)^{-p/2} |\boldsymbol{\Sigma}|^{-1/2} \exp\!\left(-\frac{1}{2}(\mathbf{x} - \boldsymbol{\mu})^T \boldsymbol{\Sigma}^{-1} (\mathbf{x} - \boldsymbol{\mu})\right)
+$$
+
+This is the PDF of $\mathcal{N}_p(\boldsymbol{\mu}, \boldsymbol{\Sigma})$, confirming that the Cholesky sampling procedure produces the correct distribution.
+</ProofBlock>
+
+The Cholesky sampling formula $\mathbf{x} = \boldsymbol{\mu} + \mathbf{L}\mathbf{z}$ is not just a computational convenience — it is the mathematical foundation of the **reparameterization trick** used in variational autoencoders (VAEs). In a VAE, the encoder outputs $\boldsymbol{\mu}$ and $\mathbf{L}$ (or a diagonal approximation), and the decoder needs to sample from $\mathcal{N}(\boldsymbol{\mu}, \boldsymbol{\Sigma})$. Direct sampling would block gradient flow, but writing $\mathbf{x} = \boldsymbol{\mu} + \mathbf{L}\boldsymbol{\varepsilon}$ with $\boldsymbol{\varepsilon} \sim \mathcal{N}(\mathbf{0}, \mathbf{I})$ makes the sampling deterministic given $\boldsymbol{\varepsilon}$, allowing backpropagation through the sampling step. See <ExternalLink href="https://formalml.com/topics/variational-inference" site="formalml">Variational Inference</ExternalLink> for the full story.
+
+<RemarkBlock number={4} title="Normalizing Flows and the Jacobian Determinant">
+The change of variables formula from Theorem 8 is the core mathematical tool behind **normalizing flows**. A normalizing flow models a complex target distribution $f_{\mathbf{Y}}$ by learning an invertible transformation $\mathbf{g}$ from a simple base distribution (typically $\mathbf{Z} \sim \mathcal{N}_p(\mathbf{0}, \mathbf{I})$) to the target:
+
+$$
+f_{\mathbf{Y}}(\mathbf{y}) = f_{\mathbf{Z}}(\mathbf{g}^{-1}(\mathbf{y})) \cdot |\det \mathbf{J}_{\mathbf{g}^{-1}}(\mathbf{y})|
+$$
+
+The entire architecture of a normalizing flow — RealNVP, Glow, Neural Spline Flows — is designed to ensure that (1) $\mathbf{g}$ is invertible, (2) the Jacobian determinant is efficiently computable, and (3) the transformation is flexible enough to model complex densities. The constraint of efficient Jacobian computation drives the use of triangular Jacobians (for which $\det \mathbf{J} = \prod_i J_{ii}$, computed in $O(p)$ rather than $O(p^3)$). See <ExternalLink href="https://formalml.com/topics/normalizing-flows" site="formalml">Normalizing Flows</ExternalLink> for the full treatment.
+</RemarkBlock>
+
+<img src="/images/topics/multivariate-distributions/multivariate-transformations.png"
+     alt="Three-panel: Cholesky sampling from standard Normal to MVN, whitening transform, normalizing flows Jacobian diagram"
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+---
+
+## 8.9 Copulas: Separating Marginals from Dependence
+
+Here is a question that sounds simple but has deep consequences: can two random vectors have the *same* marginal distributions but *different* joint distributions?
+
+Yes, absolutely. [Topic 3](/topics/random-variables) flagged this point: the marginals alone do not determine the joint. Two variables $X$ and $Y$ can both be Exponential(1), but their joint distribution could show positive dependence, negative dependence, tail dependence, or no dependence at all — all while preserving the same marginals. The structure that separates marginals from dependence is called a **copula**.
+
+As [Topic 3](/topics/random-variables) promised: "Specifying the dependence structure is the job of copulas." We now deliver on that promise.
+
+<DefinitionBlock number={10} title="Copula">
+A **copula** is a joint CDF $C: [0, 1]^p \to [0, 1]$ whose marginal distributions are all $\text{Uniform}(0, 1)$.
+
+That is, $C(u_1, \ldots, u_p)$ is a valid joint CDF on $[0,1]^p$ satisfying:
+
+1. $C(u_1, \ldots, u_{j-1}, 0, u_{j+1}, \ldots, u_p) = 0$ for any $j$ (if any argument is 0, the probability is 0)
+2. $C(1, \ldots, 1, u_j, 1, \ldots, 1) = u_j$ for each $j$ (each marginal is Uniform(0,1))
+3. $C$ is non-decreasing in each argument and satisfies the rectangle inequality (ensuring probabilities of rectangles are non-negative)
+</DefinitionBlock>
+
+The power of copulas comes from the following fundamental theorem, which says that *any* joint distribution can be decomposed into marginals plus a copula.
+
+<TheoremBlock number={9} title="Sklar's Theorem">
+Let $F$ be a joint CDF of a random vector $\mathbf{X} = (X_1, \ldots, X_p)^T$ with marginal CDFs $F_1, \ldots, F_p$. Then there exists a copula $C: [0, 1]^p \to [0, 1]$ such that for all $(x_1, \ldots, x_p) \in \mathbb{R}^p$,
+
+$$
+F(x_1, \ldots, x_p) = C(F_1(x_1), \ldots, F_p(x_p))
+$$
+
+If $F_1, \ldots, F_p$ are all continuous, then $C$ is *unique*. Conversely, for any copula $C$ and any marginal CDFs $F_1, \ldots, F_p$, the function $F(x_1, \ldots, x_p) = C(F_1(x_1), \ldots, F_p(x_p))$ is a valid joint CDF with marginals $F_1, \ldots, F_p$.
+
+The proof of Sklar's theorem requires measure-theoretic machinery that is beyond the scope of this topic. We state it without proof and focus on its consequences.
+</TheoremBlock>
+
+Sklar's theorem is a *decomposition result*: the joint CDF $F$ decomposes into marginals ($F_1, \ldots, F_p$, which determine the individual behavior of each variable) and a copula ($C$, which determines the dependence structure). This decomposition is modular: we can change the marginals while keeping the copula fixed, or change the copula while keeping the marginals fixed.
+
+**Three important copula families:**
+
+**Independence copula.** $C_{\perp}(u_1, \ldots, u_p) = u_1 \cdot u_2 \cdots u_p = \prod_{j=1}^p u_j$. This copula encodes independence: the joint CDF is the product of the marginal CDFs. No dependence structure at all.
+
+**Gaussian copula.** Let $\mathbf{R}$ be a $p \times p$ correlation matrix and $\Phi$ the standard Normal CDF. The Gaussian copula is
+
+$$
+C_R^{\text{Gauss}}(u_1, \ldots, u_p) = \Phi_{\mathbf{R}}\!\left(\Phi^{-1}(u_1), \ldots, \Phi^{-1}(u_p)\right)
+$$
+
+where $\Phi_{\mathbf{R}}$ is the joint CDF of $\mathcal{N}_p(\mathbf{0}, \mathbf{R})$. The Gaussian copula applies the Normal quantile transform to each margin, computes the multivariate Normal joint CDF, and maps back. It inherits the correlation structure of the MVN but can be paired with *any* marginals — not just Normal ones.
+
+**Student-$t$ copula.** Same construction as the Gaussian copula, but using the multivariate Student-$t$ distribution with $\nu$ degrees of freedom instead of the Normal. The critical difference: the Student-$t$ copula exhibits **tail dependence** — extreme values in one variable are associated with extreme values in another.
+
+<RemarkBlock number={5} title="Tail Dependence: Gaussian vs. Student-t Copulas">
+Two variables with a Gaussian copula can have strong *overall* dependence (high $\rho$), but their **tail dependence** is exactly zero. This means that extreme events — both variables being in their top 1%, say — are no more likely than independent extreme events, conditional on at least one being extreme. This property caused serious problems in financial risk modeling during the 2008 financial crisis: Gaussian copula models drastically underestimated the probability of joint extreme losses.
+
+The Student-$t$ copula with finite $\nu$ has *positive* tail dependence that increases as $\nu$ decreases. With $\nu = 3$, extreme co-movement is far more likely than the Gaussian copula predicts. When modeling correlated risks (portfolio losses, simultaneous system failures, climate extremes), the choice between Gaussian and Student-$t$ copulas has real consequences for tail risk estimation.
+
+The coefficient of (upper) tail dependence is defined as $\lambda_U = \lim_{u \to 1^-} P(U_1 > u \mid U_2 > u)$, where $(U_1, U_2)$ follows the copula. For the Gaussian copula with $|\rho| < 1$, $\lambda_U = 0$. For the Student-$t$ copula with correlation $\rho$ and $\nu$ degrees of freedom, $\lambda_U > 0$ whenever $\rho > -1$.
+</RemarkBlock>
+
+<img src="/images/topics/multivariate-distributions/copula-visualization.png"
+     alt="Three-panel: same marginals with independence copula, Gaussian copula, and Student-t copula showing tail dependence"
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+{/* CopulaExplorer will be embedded here */}
+
+---
+
+## 8.10 Connections to ML
+
+The multivariate distributions developed in this topic are the computational backbone of modern machine learning. This section traces five concrete connections, starting with the most important.
+
+<ExampleBlock number={3} title="GP Prediction as Conditional MVN">
+Consider a Gaussian process $f \sim \mathcal{GP}(m(\cdot), k(\cdot, \cdot))$ with mean function $m$ and kernel $k$. We observe function values $\mathbf{f}_{\text{obs}} = (f(x_1), \ldots, f(x_n))^T$ at training inputs $x_1, \ldots, x_n$ and want to predict function values $\mathbf{f}_* = (f(x_*^{(1)}), \ldots, f(x_*^{(m)}))^T$ at new inputs.
+
+By the definition of a GP, any finite collection of function values is jointly multivariate Normal. Stacking observed and predicted values:
+
+$$
+\begin{pmatrix} \mathbf{f}_* \\ \mathbf{f}_{\text{obs}} \end{pmatrix} \sim \mathcal{N}\!\left( \begin{pmatrix} \mathbf{m}_* \\ \mathbf{m}_{\text{obs}} \end{pmatrix}, \begin{pmatrix} \mathbf{K}_{**} & \mathbf{K}_{*\text{obs}} \\ \mathbf{K}_{\text{obs}*} & \mathbf{K}_{\text{obs,obs}} \end{pmatrix} \right)
+$$
+
+where $[\mathbf{K}_{**}]_{ij} = k(x_*^{(i)}, x_*^{(j)})$, $[\mathbf{K}_{*\text{obs}}]_{ij} = k(x_*^{(i)}, x_j)$, and $[\mathbf{K}_{\text{obs,obs}}]_{ij} = k(x_i, x_j)$.
+
+Applying the conditional MVN formula from Theorem 3 with $\mathbf{X}_1 = \mathbf{f}_*$, $\mathbf{X}_2 = \mathbf{f}_{\text{obs}}$:
+
+$$
+\mathbf{f}_* \mid \mathbf{f}_{\text{obs}} \sim \mathcal{N}(\boldsymbol{\mu}_{*|\text{obs}}, \boldsymbol{\Sigma}_{*|\text{obs}})
+$$
+
+where
+
+$$
+\boldsymbol{\mu}_{*|\text{obs}} = \mathbf{m}_* + \mathbf{K}_{*\text{obs}} \mathbf{K}_{\text{obs,obs}}^{-1}(\mathbf{f}_{\text{obs}} - \mathbf{m}_{\text{obs}})
+$$
+
+$$
+\boldsymbol{\Sigma}_{*|\text{obs}} = \mathbf{K}_{**} - \mathbf{K}_{*\text{obs}} \mathbf{K}_{\text{obs,obs}}^{-1} \mathbf{K}_{\text{obs}*}
+$$
+
+These are *exactly* the standard GP prediction equations. The posterior mean $\boldsymbol{\mu}_{*|\text{obs}}$ is the prior mean plus a correction based on the observed residuals $\mathbf{f}_{\text{obs}} - \mathbf{m}_{\text{obs}}$. The posterior covariance $\boldsymbol{\Sigma}_{*|\text{obs}}$ is the prior covariance minus the reduction due to the observations — the Schur complement. The conditional covariance does not depend on $\mathbf{f}_{\text{obs}}$ (only on the input locations), which means the GP's uncertainty is determined by *where* we observe, not *what* we observe.
+
+The GP prediction formula is not an approximation — it is the *exact* conditional MVN formula, applied to the specific joint MVN defined by the kernel. See <ExternalLink href="https://formalml.com/topics/gaussian-processes" site="formalml">Gaussian Processes</ExternalLink> for the full development.
+</ExampleBlock>
+
+**PCA as eigendecomposition of the sample covariance matrix.** Given data $\mathbf{x}_1, \ldots, \mathbf{x}_n \in \mathbb{R}^p$, the sample covariance matrix is $\hat{\boldsymbol{\Sigma}} = \frac{1}{n-1}\sum_{i=1}^n (\mathbf{x}_i - \bar{\mathbf{x}})(\mathbf{x}_i - \bar{\mathbf{x}})^T$. PCA computes the spectral decomposition $\hat{\boldsymbol{\Sigma}} = \mathbf{Q}\boldsymbol{\Lambda}\mathbf{Q}^T$ and projects onto the top eigenvectors. The eigenvalues $\lambda_1 \geq \cdots \geq \lambda_p$ are the variances explained by each principal component, and the cumulative proportion $\sum_{j=1}^k \lambda_j / \sum_{j=1}^p \lambda_j$ determines how many components to retain. When the data are MVN, PCA gives the unique directions that maximize variance of the projections — the connection between Theorem 7 and the PCA algorithm. See <ExternalLink href="https://formalml.com/topics/principal-component-analysis" site="formalml">Principal Component Analysis</ExternalLink>.
+
+**Variational inference with MVN variational families.** In variational inference, we approximate a complex posterior $p(\mathbf{z} \mid \mathbf{x})$ with a tractable distribution $q(\mathbf{z})$, chosen to minimize the KL divergence $\text{KL}(q \| p)$. The most common choice for $q$ is the multivariate Normal. A **full-covariance** variational family $q(\mathbf{z}) = \mathcal{N}_p(\boldsymbol{\mu}, \boldsymbol{\Sigma})$ has $p + p(p+1)/2$ parameters (the mean vector and the full covariance matrix). A **diagonal** (mean-field) variational family $q(\mathbf{z}) = \mathcal{N}_p(\boldsymbol{\mu}, \text{diag}(\boldsymbol{\sigma}^2))$ has only $2p$ parameters but assumes independence — it misses all correlations. The reparameterization trick from Section 8.8 ($\mathbf{z} = \boldsymbol{\mu} + \mathbf{L}\boldsymbol{\varepsilon}$) enables gradient-based optimization of the ELBO with respect to $\boldsymbol{\mu}$ and $\mathbf{L}$.
+
+**LDA as Dirichlet prior with Multinomial likelihood.** In Latent Dirichlet Allocation, each document $d$ has topic proportions $\boldsymbol{\theta}_d \sim \text{Dir}(\boldsymbol{\alpha})$, each topic $k$ has a word distribution $\boldsymbol{\phi}_k \sim \text{Dir}(\boldsymbol{\beta})$, and the words in document $d$ are drawn from a Multinomial governed by the topic mixture. The entire generative model is: draw topic proportions from a Dirichlet, draw a topic for each word from a Multinomial over topics, then draw the word from a Multinomial over the vocabulary. The Dirichlet-Multinomial conjugacy (Theorem 6) makes collapsed Gibbs sampling tractable: we can integrate out $\boldsymbol{\theta}_d$ and $\boldsymbol{\phi}_k$ analytically, sampling only the topic assignments.
+
+**BNN weight priors as multivariate Normal.** In Bayesian neural networks, a common prior on the weight vector $\mathbf{w} \in \mathbb{R}^p$ is $\mathbf{w} \sim \mathcal{N}_p(\mathbf{0}, \sigma^2 \mathbf{I})$ — a spherical MVN centered at the origin. This prior regularizes the weights (equivalent to $L^2$ regularization in the MAP limit) and defines a prior over functions. The posterior $p(\mathbf{w} \mid \mathcal{D})$ is approximately MVN for well-specified models (by the Bernstein-von Mises theorem), with the Hessian of the negative log-posterior at the MAP estimate serving as the inverse covariance (the Laplace approximation). See <ExternalLink href="https://formalml.com/topics/bayesian-neural-networks" site="formalml">Bayesian Neural Networks</ExternalLink>.
+
+<img src="/images/topics/multivariate-distributions/ml-connections.png"
+     alt="Three-panel: PCA eigendecomposition, VI full vs diagonal covariance, LDA topic mixtures on the simplex"
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+---
+
+## 8.11 Summary
+
+This topic completes **Track 2: Core Distributions and Families**. With Topics 5-8 now in place, we have a complete catalog of the distributions that appear throughout statistics and machine learning, along with the structural frameworks (exponential families, multivariate distributions) that connect them.
+
+| Topic | Title | Status |
+|---|---|---|
+| Topic 5 | [Discrete Distributions](/topics/discrete-distributions) | Published |
+| Topic 6 | [Continuous Distributions](/topics/continuous-distributions) | Published |
+| Topic 7 | [Exponential Families](/topics/exponential-families) | Published |
+| Topic 8 | Multivariate Distributions (this topic) | Published |
+
+**Key results from this topic:**
+
+The **conditional MVN formula** (Theorem 3) is the single most consequential result. The conditional mean $\boldsymbol{\mu}_{1|2} = \boldsymbol{\mu}_1 + \boldsymbol{\Sigma}_{12}\boldsymbol{\Sigma}_{22}^{-1}(\mathbf{x}_2 - \boldsymbol{\mu}_2)$ is linear in the observed value, and the conditional covariance $\boldsymbol{\Sigma}_{1|2} = \boldsymbol{\Sigma}_{11} - \boldsymbol{\Sigma}_{12}\boldsymbol{\Sigma}_{22}^{-1}\boldsymbol{\Sigma}_{21}$ (the Schur complement) is constant. This formula *is* the GP prediction formula, the Kalman filter update, and the engine behind Bayesian linear regression.
+
+The **Dirichlet-Multinomial conjugacy** (Theorem 6) gives the cleanest example of Bayesian updating: prior $\text{Dir}(\boldsymbol{\alpha})$ plus observed counts $\mathbf{x}$ yields posterior $\text{Dir}(\boldsymbol{\alpha} + \mathbf{x})$. This powers LDA topic models and categorical Bayesian inference.
+
+The **spectral decomposition** of the covariance matrix (Theorem 7) $\boldsymbol{\Sigma} = \mathbf{Q}\boldsymbol{\Lambda}\mathbf{Q}^T$ gives the principal axes and variances of the distribution. This is the mathematical foundation of PCA.
+
+The **change of variables formula** (Theorem 8) with the Jacobian determinant is the mathematical tool behind normalizing flows and the reparameterization trick.
+
+**Sklar's theorem** (Theorem 9) decomposes any joint distribution into marginals plus a copula, enabling the separation of individual behavior from dependence structure.
+
+**What comes next.** Track 3 (Convergence and Limit Theorems) develops the asymptotic theory that makes statistics work in practice. The Law of Large Numbers explains why sample means converge to population means. The Central Limit Theorem explains why so many estimators are asymptotically Normal — including the multivariate Normal. The Delta Method, Slutsky's theorem, and the Continuous Mapping Theorem provide the tools for deriving the limiting distributions of complex statistics. The multivariate Normal developed here is the *target* of most convergence results — virtually every well-behaved estimator converges to a multivariate Normal distribution as sample size grows.
