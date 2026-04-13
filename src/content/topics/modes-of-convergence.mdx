@@ -1,0 +1,1203 @@
+---
+title: "Modes of Convergence"
+subtitle: "Almost sure, in probability, in distribution, in Lp — the hierarchy and when each matters."
+status: "published"
+difficulty: "intermediate"
+prerequisites:
+  - "expectation-moments"
+tags:
+  - "probability"
+  - "convergence"
+  - "almost-sure"
+  - "in-probability"
+  - "in-distribution"
+  - "lp-convergence"
+  - "continuous-mapping-theorem"
+  - "slutsky-theorem"
+  - "delta-method"
+  - "portmanteau-lemma"
+  - "poisson-limit-theorem"
+  - "law-of-large-numbers"
+domain: "convergence-limit-theorems"
+videoId: null
+notebookPath: "notebooks/modes-of-convergence/09_modes_of_convergence.ipynb"
+githubUrl: "https://github.com/jonx0037/formalStatistics/blob/main/src/content/topics/modes-of-convergence.mdx"
+datePublished: 2026-04-14
+estimatedReadTime: 45
+abstract: "Topics 1–8 built the vocabulary of probability — sample spaces, distributions, moments. Topic 9 begins the grammar: how do sequences of random variables behave in the limit? Four distinct modes of convergence answer this question at different levels of strength. Almost sure convergence (P(lim Xn = X) = 1) demands that every sample path eventually settles down — the strongest pointwise guarantee. Convergence in Lp (E[|Xn − X|^p] → 0) controls the average deviation in the p-th moment. Convergence in probability (∀ε > 0: P(|Xn − X| > ε) → 0) asks only that deviations become rare, not that every path converges. Convergence in distribution (Fn(x) → F(x) at continuity points) is the weakest mode — it says only that the CDFs approach each other, and it's the mode that the Central Limit Theorem uses. These four modes form a strict hierarchy: a.s. ⟹ in probability ⟹ in distribution, and Lp ⟹ in probability ⟹ in distribution, but a.s. and Lp are incomparable. Understanding which mode applies in a given setting is key to choosing the right tool: SGD convergence requires a.s. convergence, PAC learning bounds hold in probability, and the CLT holds for convergence in distribution. The continuous mapping theorem, Slutsky's theorem, and the delta method are the workhorses that combine converging sequences — essential for deriving asymptotic distributions of estimators. This topic makes the Poisson limit theorem rigorous (Bin(n, λ/n) →d Poisson(λ)), previews the weak LLN via Chebyshev, and sets the stage for the three biggest results in probability: LLN, CLT, and concentration inequalities."
+formalcalculusPrereqs:
+  - topic: "sequences-limits"
+    site: "formalcalculus"
+    relationship: "The formal definitions of almost sure convergence and convergence in probability are limit statements. The ε-N definition of limits (for sequences) is the template. Limsup and liminf appear in the Borel–Cantelli characterization of a.s. convergence."
+  - topic: "series-convergence"
+    site: "formalcalculus"
+    relationship: "The Borel–Cantelli lemma — the standard tool for proving a.s. convergence — requires that ΣP(An) < ∞, a series convergence condition. The first Borel–Cantelli is used in the proof that convergence in probability implies a.s. convergence along a subsequence."
+  - topic: "integration"
+    site: "formalcalculus"
+    relationship: "Lp convergence is defined via the integral norm E[|Xn − X|^p] = ∫|Xn − X|^p dP. The dominated convergence theorem is used to interchange limits and integrals when proving that Lp implies convergence in probability."
+formalmlConnections:
+  - topic: "stochastic-gradient-descent"
+    site: "formalml"
+    relationship: "SGD convergence analysis is an exercise in modes of convergence. With decreasing step sizes satisfying the Robbins–Monro conditions, the iterates converge almost surely to a local minimum. With constant step size, convergence is only in probability to a neighborhood."
+  - topic: "generalization-bounds"
+    site: "formalml"
+    relationship: "PAC learning bounds state that the empirical risk converges to the true risk in probability: P(|R̂(h) − R(h)| > ε) ≤ δ. The uniform convergence version (over hypothesis classes) uses the Glivenko–Cantelli theorem — a.s. convergence of the empirical CDF."
+  - topic: "bayesian-neural-networks"
+    site: "formalml"
+    relationship: "The Bernstein–von Mises theorem states that the posterior distribution converges in total variation (hence in distribution) to a Normal centered at the MLE. This is the frequentist justification for Bayesian inference."
+  - topic: "reinforcement-learning"
+    site: "formalml"
+    relationship: "Value iteration and Q-learning produce sequences of value functions that converge almost surely to the optimal value function under appropriate step-size schedules — the same Robbins–Monro machinery as SGD."
+connections:
+  - topic: "expectation-moments"
+    relationship: "Topic 4 developed Markov's inequality (Theorem 11), Chebyshev's inequality (Theorem 12), Jensen's inequality (Theorem 13), and MGF uniqueness (Theorem 16). These are the four tools that launch convergence theory: Chebyshev gives convergence in probability, MGF convergence gives convergence in distribution, and Jensen provides Lp moment control."
+  - topic: "discrete-distributions"
+    relationship: "Topic 5 stated the Poisson limit theorem informally (Bin(n, λ/n) → Poisson(λ)). This topic makes it rigorous using convergence in distribution via MGF convergence."
+  - topic: "continuous-distributions"
+    relationship: "Topic 6 stated that Student's t(ν) → N(0,1) as ν → ∞ (Theorem 18) using Slutsky's theorem. This topic defines Slutsky's theorem formally and provides additional convergence-in-distribution examples."
+  - topic: "law-of-large-numbers"
+    relationship: "Topic 10 proves WLLN (convergence in probability) and SLLN (a.s. convergence) for the sample mean. Both proofs rely on the modes defined here."
+  - topic: "central-limit-theorem"
+    relationship: "Topic 11 proves that √n(X̄ − μ)/σ →d N(0,1). The proof uses convergence in distribution (via MGFs or characteristic functions) — the weakest mode, but exactly the right one."
+references:
+  - type: "book"
+    title: "Probability and Measure"
+    author: "Patrick Billingsley"
+    year: 2012
+    edition: "Anniversary"
+    publisher: "Wiley"
+    isbn: "978-1-118-12237-2"
+    url: "https://www.wiley.com/en-us/Probability+and+Measure%2C+Anniversary+Edition-p-9781118122372"
+    note: "Chapters 20–25 are the definitive treatment of modes of convergence. The typewriter sequence counterexample originates here."
+  - type: "book"
+    title: "Probability: Theory and Examples"
+    author: "Rick Durrett"
+    year: 2019
+    edition: "5th"
+    publisher: "Cambridge University Press"
+    isbn: "978-1-108-47368-2"
+    url: "https://services.math.duke.edu/~rtd/PTE/PTE5_011119.pdf"
+    note: "Chapter 2 covers the laws of large numbers; Chapter 3 covers the CLT. The convergence hierarchy is developed with excellent counterexamples."
+  - type: "book"
+    title: "Statistical Inference"
+    author: "George Casella & Roger L. Berger"
+    year: 2002
+    edition: "2nd"
+    publisher: "Cengage"
+    isbn: "978-0-534-24312-8"
+    url: "https://www.cengage.com/c/statistical-inference-2e-casella/9780534243128/"
+    note: "Chapter 5 covers convergence concepts, Slutsky, delta method, and moment-generating function convergence. Excellent for the statistical (rather than measure-theoretic) perspective."
+  - type: "book"
+    title: "A Probability Path"
+    author: "Sidney Resnick"
+    year: 2014
+    edition: "1st"
+    publisher: "Birkhäuser"
+    isbn: "978-0-8176-8409-9"
+    url: "https://link.springer.com/book/10.1007/978-0-8176-8409-9"
+    note: "Chapters 6–7 cover convergence of random variables and convergence in distribution. Clear presentation of the Portmanteau lemma and continuous mapping theorem."
+  - type: "book"
+    title: "All of Statistics"
+    author: "Larry Wasserman"
+    year: 2004
+    publisher: "Springer"
+    isbn: "978-0-387-40272-7"
+    url: "https://link.springer.com/book/10.1007/978-0-387-21736-9"
+    note: "Chapter 5 covers convergence of random variables in a concise, statistician-friendly style. Excellent for the delta method."
+  - type: "book"
+    title: "Pattern Recognition and Machine Learning"
+    author: "Christopher M. Bishop"
+    year: 2006
+    publisher: "Springer"
+    isbn: "978-0-387-31073-2"
+    url: "https://www.microsoft.com/en-us/research/people/cmbishop/prml-book/"
+    note: "Chapter 2 and Appendix B use convergence concepts implicitly. The connection to ML applications is essential context."
+---
+
+import DefinitionBlock from '../../components/ui/DefinitionBlock.astro';
+import TheoremBlock from '../../components/ui/TheoremBlock.astro';
+import ProofBlock from '../../components/ui/ProofBlock.astro';
+import ExampleBlock from '../../components/ui/ExampleBlock.astro';
+import RemarkBlock from '../../components/ui/RemarkBlock.astro';
+import ExternalLink from '../../components/ui/ExternalLink.astro';
+
+import ConvergenceHierarchyExplorer from '../../components/viz/ConvergenceHierarchyExplorer.tsx';
+import SamplePathExplorer from '../../components/viz/SamplePathExplorer.tsx';
+import ConvergenceInDistributionExplorer from '../../components/viz/ConvergenceInDistributionExplorer.tsx';
+import CounterexampleExplorer from '../../components/viz/CounterexampleExplorer.tsx';
+import DeltaMethodExplorer from '../../components/viz/DeltaMethodExplorer.tsx';
+
+## 9.1 Why Convergence Needs Four Definitions
+
+Topics 1 through 8 built the vocabulary of probability: sample spaces gave us the stage, random variables gave us the actors, distributions told us how the actors behave, and moments — expectation, variance, the MGF — gave us numerical summaries of that behavior. But vocabulary alone doesn't make a language. We need *grammar* — rules for combining simple objects into complex ones and understanding what happens when we take limits.
+
+This topic starts that grammar. The central question is deceptively simple: if $X_1, X_2, X_3, \ldots$ is a sequence of random variables, what does it mean to say that $X_n$ *converges* to some random variable $X$?
+
+For deterministic sequences, there is exactly one answer. A sequence $a_n$ converges to $a$ if for every $\varepsilon > 0$ there exists $N$ such that $|a_n - a| < \varepsilon$ for all $n \geq N$. The $\varepsilon$-$N$ definition from calculus handles everything.
+
+For random variables, the situation is fundamentally different. A random variable $X_n$ is a *function* from the sample space $\Omega$ to the real numbers, so asking whether $X_n$ converges to $X$ is asking whether a sequence of *functions* converges. And functions can converge in many different ways.
+
+Consider the most important sequence in statistics: the sample mean $\bar{X}_n = \frac{1}{n}\sum_{i=1}^n X_i$, where the $X_i$ are iid with mean $\mu$. We want to say $\bar{X}_n \to \mu$. But what exactly does this mean?
+
+- Does *every single* realization of the sample mean eventually settle near $\mu$? (That's a strong demand — it requires every sample path to converge.)
+- Or do we only need that the *probability* of $\bar{X}_n$ being far from $\mu$ goes to zero? (That's weaker — some paths might misbehave, as long as the misbehaving paths become rare.)
+- Or do we only need that the *distribution* of $\bar{X}_n$ concentrates around $\mu$? (That's weaker still — we're just comparing CDFs.)
+
+These three questions lead to genuinely different notions of convergence, and a fourth emerges when we bring moment conditions into the picture. Here are the four modes, in preview:
+
+| Mode | Notation | Intuition |
+|------|----------|-----------|
+| Almost sure | $X_n \xrightarrow{\text{a.s.}} X$ | Every sample path converges |
+| In $L^p$ | $X_n \xrightarrow{L^p} X$ | The $p$-th moment of the gap vanishes |
+| In probability | $X_n \xrightarrow{P} X$ | Deviations become rare |
+| In distribution | $X_n \xrightarrow{d} X$ | CDFs converge at continuity points |
+
+These four modes form a strict hierarchy — a diamond, not a line — with almost sure and $L^p$ at the top, convergence in probability in the middle, and convergence in distribution at the bottom. The arrows point downward: stronger modes imply weaker ones, but not the reverse. Section 9.6 will make this precise, and Section 9.7 will show, with explicit counterexamples, exactly why the arrows don't reverse.
+
+<img src="/images/topics/modes-of-convergence/convergence-overview.png"
+     alt="Three-panel overview: sample paths (a.s.), probability decay (in prob), CDF convergence (in dist)"
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+The tools that launch convergence theory are all from [Topic 4 — Expectation, Variance & Moments](/topics/expectation-moments): Markov's inequality (Theorem 11), Chebyshev's inequality (Theorem 12), Jensen's inequality (Theorem 13), and MGF uniqueness (Theorem 17). Chebyshev gives us convergence in probability (Section 9.2). MGF convergence gives us convergence in distribution (Section 9.5). Jensen and Markov bridge between $L^p$ and probability modes (Section 9.6). If any of these results feel unfamiliar, revisit Topic 4, Sections 5 and 7, before proceeding.
+
+We start with convergence in probability — not because it's the strongest mode, but because it follows directly from a tool the reader already knows: Chebyshev's inequality.
+
+---
+
+## 9.2 Convergence in Probability
+
+Chebyshev's inequality (Topic 4, Theorem 12) tells us that $P(|X - \mu| > \varepsilon) \leq \text{Var}(X)/\varepsilon^2$. If the variance of a sequence shrinks to zero, then the probability of large deviations also goes to zero. This is the intuition behind convergence in probability.
+
+<DefinitionBlock number={1} title="Definition 9.1 (Convergence in Probability)">
+A sequence of random variables $\{X_n\}$ **converges in probability** to a random variable $X$ if for every $\varepsilon > 0$,
+
+$$
+P(|X_n - X| > \varepsilon) \to 0 \quad \text{as } n \to \infty
+$$
+
+We write $X_n \xrightarrow{P} X$.
+
+Equivalently, for every $\varepsilon > 0$ and every $\delta > 0$, there exists $N$ such that for all $n \geq N$:
+
+$$
+P(|X_n - X| > \varepsilon) < \delta
+$$
+
+When the limit $X$ is a constant $c$, the definition reduces to: for every $\varepsilon > 0$, $P(|X_n - c| > \varepsilon) \to 0$.
+</DefinitionBlock>
+
+The key feature of convergence in probability is that it makes a statement about each *fixed* $n$: at time $n$, the probability of being far from the target is small. It does *not* require that the sequence eventually stays close for all future times simultaneously — that's the stronger demand of almost sure convergence (Section 9.3).
+
+In statistics, convergence in probability has a dedicated name.
+
+<DefinitionBlock number={2} title="Definition 9.2 (Consistency)">
+An estimator sequence $\hat{\theta}_n$ is **consistent** for the parameter $\theta$ if
+
+$$
+\hat{\theta}_n \xrightarrow{P} \theta
+$$
+
+That is, as the sample size $n$ grows, the estimator concentrates around the true parameter value. Consistency is the bare minimum we demand of any reasonable estimator: with enough data, we should at least get the right answer in probability.
+</DefinitionBlock>
+
+The simplest proof of consistency is a direct application of Chebyshev.
+
+<TheoremBlock number={1} title="Theorem 9.1 (Sample Mean Convergence in Probability — Weak LLN Preview)">
+Let $X_1, X_2, \ldots$ be iid random variables with $E[X_i] = \mu$ and $\text{Var}(X_i) = \sigma^2 < \infty$. Then the sample mean $\bar{X}_n = \frac{1}{n}\sum_{i=1}^n X_i$ converges in probability to $\mu$:
+
+$$
+\bar{X}_n \xrightarrow{P} \mu
+$$
+</TheoremBlock>
+
+<ProofBlock>
+We need to show that for every $\varepsilon > 0$, $P(|\bar{X}_n - \mu| > \varepsilon) \to 0$.
+
+First, we compute the mean and variance of $\bar{X}_n$. By linearity of expectation:
+
+$$
+E[\bar{X}_n] = E\!\left[\frac{1}{n}\sum_{i=1}^n X_i\right] = \frac{1}{n}\sum_{i=1}^n E[X_i] = \frac{1}{n} \cdot n\mu = \mu
+$$
+
+Since the $X_i$ are independent, the variance of the sum equals the sum of the variances (Topic 4, Theorem 7, Property 3):
+
+$$
+\text{Var}(\bar{X}_n) = \text{Var}\!\left(\frac{1}{n}\sum_{i=1}^n X_i\right) = \frac{1}{n^2}\sum_{i=1}^n \text{Var}(X_i) = \frac{1}{n^2} \cdot n\sigma^2 = \frac{\sigma^2}{n}
+$$
+
+Now apply Chebyshev's inequality (Topic 4, Theorem 12) to $\bar{X}_n$:
+
+$$
+P(|\bar{X}_n - \mu| > \varepsilon) \leq \frac{\text{Var}(\bar{X}_n)}{\varepsilon^2} = \frac{\sigma^2}{n\varepsilon^2}
+$$
+
+As $n \to \infty$, the right-hand side $\sigma^2/(n\varepsilon^2) \to 0$. Since probabilities are non-negative, the squeeze gives:
+
+$$
+0 \leq P(|\bar{X}_n - \mu| > \varepsilon) \leq \frac{\sigma^2}{n\varepsilon^2} \to 0
+$$
+
+Therefore $P(|\bar{X}_n - \mu| > \varepsilon) \to 0$, which is $\bar{X}_n \xrightarrow{P} \mu$. $\square$
+</ProofBlock>
+
+This three-line argument — compute the variance, apply Chebyshev, watch it go to zero — is the prototype for most consistency proofs in statistics. The full Weak Law of Large Numbers (WLLN), proved in Topic 10 (coming soon), generalizes this to relaxed independence conditions.
+
+<ExampleBlock number={1} title="Scaled Normal: the simplest convergence-in-probability example">
+Let $Z \sim N(0, 1)$ and define $X_n = Z/n$. We claim $X_n \xrightarrow{P} 0$.
+
+For any $\varepsilon > 0$:
+
+$$
+P(|X_n| > \varepsilon) = P\!\left(\frac{|Z|}{n} > \varepsilon\right) = P(|Z| > n\varepsilon)
+$$
+
+Since $Z$ is standard Normal, we can bound this using the tail inequality $P(|Z| > t) \leq 2e^{-t^2/2}$ for $t > 0$. So:
+
+$$
+P(|X_n| > \varepsilon) \leq 2e^{-n^2\varepsilon^2/2}
+$$
+
+This decays exponentially fast to zero. For concrete values with $\varepsilon = 0.1$:
+
+| $n$ | $n\varepsilon$ | $P(\|X_n\| > 0.1) \leq$ |
+|-----|----------|--------------------------|
+| 1 | 0.1 | 0.920 |
+| 5 | 0.5 | 0.617 |
+| 10 | 1.0 | 0.317 |
+| 50 | 5.0 | $5.7 \times 10^{-7}$ |
+| 100 | 10.0 | $< 10^{-22}$ |
+
+Notice that $X_n = Z/n$ not only converges in probability — every single realization converges deterministically, since for each fixed $\omega$, $X_n(\omega) = Z(\omega)/n \to 0$. So this sequence actually converges *almost surely*, which is stronger. The next section makes that distinction precise.
+</ExampleBlock>
+
+<img src="/images/topics/modes-of-convergence/convergence-in-probability.png"
+     alt="Probability tubes shrinking around the limit: P(|Xn - X| > epsilon) decay curves for several epsilon values"
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+---
+
+## 9.3 Almost Sure Convergence
+
+Convergence in probability says: at any fixed time $n$, the probability of being far from the target is small. Almost sure convergence says something much stronger: with probability 1, the *entire* sample path eventually settles near the target and stays there. The distinction matters. A sequence could converge in probability (deviations become rare) while occasionally producing large excursions that persist along every sample path — the typewriter sequence of Section 9.7 does exactly this.
+
+<DefinitionBlock number={3} title="Definition 9.3 (Almost Sure Convergence)">
+A sequence $\{X_n\}$ **converges almost surely** (a.s.) to $X$ if
+
+$$
+P\!\left(\lim_{n \to \infty} X_n = X\right) = 1
+$$
+
+Equivalently, $P(\omega \in \Omega : X_n(\omega) \to X(\omega)) = 1$, meaning the set of sample points $\omega$ where the sequence of real numbers $X_1(\omega), X_2(\omega), \ldots$ converges to $X(\omega)$ has probability 1.
+
+We write $X_n \xrightarrow{\text{a.s.}} X$.
+
+The critical difference from convergence in probability: a.s. convergence requires that for probability-1 many outcomes $\omega$, there exists $N(\omega)$ (depending on the outcome) such that $|X_n(\omega) - X(\omega)| < \varepsilon$ for all $n \geq N(\omega)$. The quantifier structure is: $\forall \varepsilon > 0$, $P(\exists N : \forall n \geq N, |X_n - X| < \varepsilon) = 1$.
+</DefinitionBlock>
+
+The definition involves $\lim_{n \to \infty} X_n$, which in turn involves $\limsup$ and $\liminf$. An equivalent characterization avoids the limit and works directly with tail events.
+
+<TheoremBlock number={2} title="Theorem 9.2 (Borel-Cantelli Characterization of A.S. Convergence)">
+$X_n \xrightarrow{\text{a.s.}} X$ if and only if for every $\varepsilon > 0$:
+
+$$
+P\!\left(\sup_{m \geq n} |X_m - X| > \varepsilon\right) \to 0 \quad \text{as } n \to \infty
+$$
+
+Equivalently, $P(\limsup_{n} \{|X_n - X| > \varepsilon\}) = 0$ for every $\varepsilon > 0$, where
+
+$$
+\limsup_{n} \{|X_n - X| > \varepsilon\} = \bigcap_{n=1}^{\infty} \bigcup_{m=n}^{\infty} \{|X_m - X| > \varepsilon\}
+$$
+
+is the event that $|X_n - X| > \varepsilon$ *infinitely often*.
+</TheoremBlock>
+
+<ProofBlock>
+We show both directions of the equivalence.
+
+**Forward direction.** Suppose $X_n \xrightarrow{\text{a.s.}} X$, so $P(\lim X_n = X) = 1$. The event $\{X_n \not\to X\}$ — the set of $\omega$ where $X_n(\omega)$ does not converge to $X(\omega)$ — can be written as:
+
+$$
+\{X_n \not\to X\} = \bigcup_{k=1}^{\infty} \limsup_{n} \left\{|X_n - X| > \frac{1}{k}\right\}
+$$
+
+This is because $X_n(\omega) \not\to X(\omega)$ means there exists some $\varepsilon > 0$ (which we can take to be $1/k$ for some integer $k$) such that $|X_n(\omega) - X(\omega)| > 1/k$ for infinitely many $n$.
+
+Since $P(\{X_n \not\to X\}) = 0$ and the union above covers $\{X_n \not\to X\}$:
+
+$$
+0 = P\!\left(\bigcup_{k=1}^{\infty} \limsup_{n} \left\{|X_n - X| > \frac{1}{k}\right\}\right) \geq P\!\left(\limsup_{n} \left\{|X_n - X| > \frac{1}{k}\right\}\right)
+$$
+
+for each $k$. Since probabilities are non-negative, $P(\limsup_n \{|X_n - X| > 1/k\}) = 0$ for every $k$. For arbitrary $\varepsilon > 0$, choose $k$ with $1/k < \varepsilon$; then $\{|X_n - X| > \varepsilon\} \subseteq \{|X_n - X| > 1/k\}$, so $\limsup_n \{|X_n - X| > \varepsilon\} \subseteq \limsup_n \{|X_n - X| > 1/k\}$, and the result follows.
+
+Now, the event $\limsup_n \{|X_n - X| > \varepsilon\} = \bigcap_{n=1}^{\infty} \bigcup_{m=n}^{\infty} \{|X_m - X| > \varepsilon\}$. The sets $B_n = \bigcup_{m=n}^{\infty} \{|X_m - X| > \varepsilon\}$ are decreasing ($B_1 \supseteq B_2 \supseteq \cdots$), so by continuity of probability from above:
+
+$$
+P(\limsup_n \{|X_n - X| > \varepsilon\}) = \lim_{n \to \infty} P(B_n) = \lim_{n \to \infty} P\!\left(\sup_{m \geq n} |X_m - X| > \varepsilon\right)
+$$
+
+Since this equals 0, we have $P(\sup_{m \geq n} |X_m - X| > \varepsilon) \to 0$.
+
+**Reverse direction.** Suppose $P(\limsup_n \{|X_n - X| > \varepsilon\}) = 0$ for every $\varepsilon > 0$. Then:
+
+$$
+P(\{X_n \not\to X\}) = P\!\left(\bigcup_{k=1}^{\infty} \limsup_{n}\left\{|X_n - X| > \frac{1}{k}\right\}\right) \leq \sum_{k=1}^{\infty} P\!\left(\limsup_{n}\left\{|X_n - X| > \frac{1}{k}\right\}\right) = \sum_{k=1}^{\infty} 0 = 0
+$$
+
+So $P(\lim X_n = X) = 1$, which is $X_n \xrightarrow{\text{a.s.}} X$. $\square$
+</ProofBlock>
+
+The Borel-Cantelli characterization reveals why a.s. convergence is harder to establish than convergence in probability. For convergence in probability, we only need each individual $P(|X_n - X| > \varepsilon) \to 0$. For a.s. convergence, we need the supremum $P(\sup_{m \geq n} |X_m - X| > \varepsilon) \to 0$, which controls all future times simultaneously.
+
+<ExampleBlock number={2} title="Strong Law of Large Numbers (Preview)">
+Let $X_1, X_2, \ldots$ be iid with $E[X_i] = \mu$ and $\text{Var}(X_i) = \sigma^2 < \infty$. Then
+
+$$
+\bar{X}_n \xrightarrow{\text{a.s.}} \mu
+$$
+
+This is the **Strong Law of Large Numbers** (SLLN). It says more than Theorem 9.1: not only does $P(|\bar{X}_n - \mu| > \varepsilon) \to 0$ (which is convergence in probability), but with probability 1, the realized sequence $\bar{X}_1(\omega), \bar{X}_2(\omega), \bar{X}_3(\omega), \ldots$ converges to $\mu$ as a sequence of real numbers.
+
+The SLLN is *the* justification for Monte Carlo simulation: when we estimate $E[g(X)]$ by averaging $g(X_1), \ldots, g(X_n)$, the a.s. convergence guarantees that our single run of the simulation will produce an average that converges to the truth. Convergence in probability alone would only guarantee this "with high probability" — we'd need to worry about rare bad runs. The SLLN says those bad runs have probability zero.
+
+The full proof requires more machinery than we have developed so far and is the subject of Topic 10 (coming soon). The key difficulty is controlling the supremum $\sup_{m \geq n}|\bar{X}_m - \mu|$, which the Chebyshev argument of Theorem 9.1 cannot do.
+</ExampleBlock>
+
+<RemarkBlock number={1} title="Kolmogorov's 0-1 Law and Tail Events">
+The event $\{\bar{X}_n \to \mu\}$ is a **tail event** — it depends only on the "tail" of the sequence $(X_1, X_2, \ldots)$ and is unaffected by changing any finite number of terms. Kolmogorov's 0-1 law states that every tail event has probability either 0 or 1. So before we even prove the SLLN, we know that $P(\bar{X}_n \to \mu) \in \{0, 1\}$. The SLLN's job is to establish that the answer is 1, not 0.
+
+This 0-1 structure is why almost sure convergence results tend to be all-or-nothing: either the sample mean converges a.s. to the right thing, or it doesn't converge a.s. at all. There's no middle ground like "converges a.s. with probability 0.7."
+</RemarkBlock>
+
+<img src="/images/topics/modes-of-convergence/almost-sure-convergence.png"
+     alt="Multiple sample paths of the sample mean converging to mu, with the sup envelope shrinking"
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+The interactive explorer below generates sample paths and lets you watch them converge (or not). Try switching between sequences that converge almost surely and sequences that converge only in probability — the difference is visible in the paths.
+
+<SamplePathExplorer client:visible />
+
+---
+
+## 9.4 Convergence in $L^p$
+
+Almost sure convergence and convergence in probability are both *qualitative* — they measure whether $X_n$ is close to $X$, but not how far away it is on average. $L^p$ convergence brings *quantitative* control: it requires that the $p$-th moment of the gap vanishes.
+
+<DefinitionBlock number={4} title="Definition 9.4 (Lp Convergence)">
+For $p \geq 1$, a sequence $\{X_n\}$ **converges in $L^p$** to $X$ if
+
+$$
+E[|X_n - X|^p] \to 0 \quad \text{as } n \to \infty
+$$
+
+We write $X_n \xrightarrow{L^p} X$. This requires that both $X_n$ and $X$ have finite $p$-th moments.
+
+The $L^p$ norm of a random variable is $\|Y\|_p = (E[|Y|^p])^{1/p}$, so $L^p$ convergence is convergence in the $L^p$ norm: $\|X_n - X\|_p \to 0$.
+</DefinitionBlock>
+
+The most important special case is $p = 2$.
+
+<DefinitionBlock number={5} title="Definition 9.5 (Mean Square Convergence)">
+A sequence $\{X_n\}$ **converges in mean square** (or in $L^2$) to $X$ if
+
+$$
+E[(X_n - X)^2] \to 0 \quad \text{as } n \to \infty
+$$
+
+We write $X_n \xrightarrow{L^2} X$. Expanding the square:
+
+$$
+E[(X_n - X)^2] = \text{Var}(X_n - X) + (E[X_n - X])^2 = \text{Var}(X_n - X) + (\text{Bias}_n)^2
+$$
+
+So $L^2$ convergence requires both the variance of the gap and the squared bias to vanish. This is exactly the bias-variance decomposition applied to the "estimator" $X_n$ targeting the "parameter" $X$.
+</DefinitionBlock>
+
+$L^p$ convergence controls not just whether $X_n$ is close to $X$, but whether the *moments* of $X_n$ approach those of $X$.
+
+<TheoremBlock number={3} title="Theorem 9.3 (Lp Convergence Implies Convergence of Moments)">
+If $X_n \xrightarrow{L^p} X$, then $E[|X_n|^p] \to E[|X|^p]$.
+
+More generally, if $X_n \xrightarrow{L^p} X$ and $q \leq p$, then $X_n \xrightarrow{L^q} X$.
+</TheoremBlock>
+
+<ProofBlock>
+**Convergence of moments.** We use Minkowski's inequality (the triangle inequality for the $L^p$ norm):
+
+$$
+\|X_n\|_p \leq \|X_n - X\|_p + \|X\|_p
+$$
+
+and similarly $\|X\|_p \leq \|X - X_n\|_p + \|X_n\|_p$, so:
+
+$$
+\bigl|\|X_n\|_p - \|X\|_p\bigr| \leq \|X_n - X\|_p
+$$
+
+Since $X_n \xrightarrow{L^p} X$ means $\|X_n - X\|_p \to 0$, we get $\|X_n\|_p \to \|X\|_p$, which is $(E[|X_n|^p])^{1/p} \to (E[|X|^p])^{1/p}$. Taking $p$-th powers (the function $t \mapsto t^p$ is continuous on $[0, \infty)$) gives $E[|X_n|^p] \to E[|X|^p]$.
+
+**Higher $L^p$ implies lower $L^q$.** For $1 \leq q \leq p$, Jensen's inequality (Topic 4, Theorem 13) applied to the convex function $t \mapsto t^{p/q}$ gives:
+
+$$
+(E[|X_n - X|^q])^{p/q} \leq E[|X_n - X|^p]
+$$
+
+Taking the $q$-th root of both sides:
+
+$$
+\|X_n - X\|_q = (E[|X_n - X|^q])^{1/q} \leq (E[|X_n - X|^p])^{1/p} = \|X_n - X\|_p
+$$
+
+So $\|X_n - X\|_p \to 0$ implies $\|X_n - X\|_q \to 0$. In particular, $L^2$ convergence implies $L^1$ convergence. $\square$
+</ProofBlock>
+
+This theorem highlights an important contrast. Convergence in probability does *not* guarantee convergence of moments (Example 7 in Section 9.7 will show this dramatically). $L^p$ convergence does — it's what you need when moment control matters, which is most of statistics.
+
+<ExampleBlock number={3} title="L2 convergence with explicit rate">
+Let $U \sim \text{Uniform}(0,1)$ and define $X_n = \sqrt{n} \cdot U \cdot \mathbf{1}(U < 1/n)$. We claim $X_n \xrightarrow{L^2} 0$.
+
+We compute $E[X_n^2]$ directly:
+
+$$
+E[X_n^2] = E\!\left[n \cdot U^2 \cdot \mathbf{1}(U < 1/n)\right] = n \int_0^{1/n} u^2 \, du = n \cdot \frac{u^3}{3}\bigg|_0^{1/n} = n \cdot \frac{1}{3n^3} = \frac{1}{3n^2}
+$$
+
+So $E[(X_n - 0)^2] = 1/(3n^2) \to 0$, confirming $L^2$ convergence. The rate of convergence is $O(1/n^2)$ — quite fast.
+
+For comparison, $E[X_n] = \sqrt{n} \int_0^{1/n} u \, du = \sqrt{n}/(2n^2) = 1/(2n^{3/2})$, which also goes to zero. Both the bias and the variance vanish, as required by the bias-variance decomposition of $E[(X_n - 0)^2]$.
+</ExampleBlock>
+
+<img src="/images/topics/modes-of-convergence/lp-convergence.png"
+     alt="Lp norms E[|Xn - X|^p] decaying to zero for p = 1, 2, and 4"
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+---
+
+## 9.5 Convergence in Distribution
+
+The three modes above all require the random variables $X_n$ and $X$ to live on the *same* probability space — they compare the random variables pointwise (a.s.), moment-wise ($L^p$), or event-wise (in probability). Convergence in distribution breaks free of this requirement. It compares only the *distributions* of $X_n$ and $X$, which can live on entirely different probability spaces.
+
+This is the weakest mode, but it's also the most important for asymptotic statistics. The Central Limit Theorem — the single most-used result in statistical inference — is a statement about convergence in distribution.
+
+<DefinitionBlock number={6} title="Definition 9.6 (Convergence in Distribution)">
+A sequence $\{X_n\}$ **converges in distribution** to $X$ if
+
+$$
+F_{X_n}(x) \to F_X(x) \quad \text{as } n \to \infty
+$$
+
+at every point $x$ where $F_X$ is continuous. We write $X_n \xrightarrow{d} X$.
+
+The restriction to continuity points of $F_X$ is essential. At jump points of $F_X$, the CDFs $F_{X_n}$ may converge to a value different from $F_X(x)$ due to the discontinuity. For instance, if $X_n = 1/n$ (a deterministic sequence converging to 0) and $X = 0$, then $F_{X_n}(0) = 0$ for all $n$ but $F_X(0) = 1$. At $x = 0$ — a discontinuity of $F_X$ — the CDFs do not converge. But at every other $x$, they do.
+</DefinitionBlock>
+
+Convergence in distribution is sometimes called **weak convergence** or **convergence in law**. The notation $X_n \Rightarrow X$ and $X_n \xrightarrow{\mathcal{L}} X$ are also common.
+
+The most powerful characterization of convergence in distribution comes from the Portmanteau lemma, which gives five equivalent conditions.
+
+<TheoremBlock number={4} title="Theorem 9.4 (Portmanteau Lemma)">
+The following are equivalent:
+
+**(i)** $F_{X_n}(x) \to F_X(x)$ at every continuity point $x$ of $F_X$.
+
+**(ii)** $E[g(X_n)] \to E[g(X)]$ for every bounded continuous function $g : \mathbb{R} \to \mathbb{R}$.
+
+**(iii)** $\liminf_{n \to \infty} P(X_n \in G) \geq P(X \in G)$ for every open set $G \subseteq \mathbb{R}$.
+
+**(iv)** $\limsup_{n \to \infty} P(X_n \in F) \leq P(X \in F)$ for every closed set $F \subseteq \mathbb{R}$.
+
+**(v)** $P(X_n \in A) \to P(X \in A)$ for every Borel set $A$ with $P(X \in \partial A) = 0$ (where $\partial A$ is the boundary of $A$).
+</TheoremBlock>
+
+<ProofBlock>
+We prove the implication **(i) $\Rightarrow$ (ii)**, which is the direction most often used in practice.
+
+Assume $F_{X_n}(x) \to F_X(x)$ at all continuity points of $F_X$, and let $g$ be a bounded continuous function with $|g| \leq M$.
+
+Fix $\varepsilon > 0$. Since $F_X$ is a CDF, it has at most countably many discontinuities. Choose $a < b$ such that both $a$ and $b$ are continuity points of $F_X$ and $F_X(a) < \varepsilon/(4M)$ and $1 - F_X(b) < \varepsilon/(4M)$. This is possible because $F_X(x) \to 0$ as $x \to -\infty$ and $F_X(x) \to 1$ as $x \to +\infty$, and the discontinuity set is countable.
+
+On the compact interval $[a, b]$, the continuous function $g$ is uniformly continuous. So there exists $\delta > 0$ such that $|g(x) - g(y)| < \varepsilon/2$ whenever $|x - y| < \delta$.
+
+Partition $[a, b]$ into subintervals $a = x_0 < x_1 < \cdots < x_k = b$ with mesh $\max_j(x_{j+1} - x_j) < \delta$, choosing each $x_j$ to be a continuity point of $F_X$ (again possible since discontinuities are countable).
+
+For each subinterval $[x_{j-1}, x_j)$, the value of $g$ varies by at most $\varepsilon/2$ from $g(x_{j-1})$. So the step function $g_{\text{step}}(x) = \sum_{j=1}^k g(x_{j-1}) \mathbf{1}_{[x_{j-1}, x_j)}(x)$ satisfies $|g(x) - g_{\text{step}}(x)| < \varepsilon/2$ for $x \in [a, b)$.
+
+Now we bound $|E[g(X_n)] - E[g(X)]|$. Split the expectation into three parts — the tails $(-\infty, a)$ and $[b, \infty)$, and the middle $[a, b)$:
+
+$$
+|E[g(X_n)] - E[g(X)]| \leq |E[g(X_n)\mathbf{1}_{(-\infty, a)}] - E[g(X)\mathbf{1}_{(-\infty, a)}]|
+$$
+
+$$
++ \; |E[g(X_n)\mathbf{1}_{[a,b)}] - E[g(X)\mathbf{1}_{[a,b)}]|
+$$
+
+$$
++ \; |E[g(X_n)\mathbf{1}_{[b,\infty)}] - E[g(X)\mathbf{1}_{[b,\infty)}]|
+$$
+
+For the tail terms, since $|g| \leq M$:
+
+$$
+|E[g(X_n)\mathbf{1}_{(-\infty, a)}]| \leq M \cdot P(X_n < a) = M \cdot F_{X_n}(a^-)
+$$
+
+Since $a$ is a continuity point of $F_X$, $F_{X_n}(a) \to F_X(a) < \varepsilon/(4M)$, so for large $n$, $M \cdot F_{X_n}(a^-) < \varepsilon/4$. Similarly for the right tail. Combined, the tail contributions are at most $\varepsilon/2 + \varepsilon/2 = \varepsilon$ for both $X_n$ and $X$.
+
+For the middle term, replace $g$ with $g_{\text{step}}$ at cost $\varepsilon/2$. The expectation of $g_{\text{step}}$ depends only on $F_{X_n}(x_j) - F_{X_n}(x_{j-1})$ for each $j$, and since all $x_j$ are continuity points of $F_X$, these converge to $F_X(x_j) - F_X(x_{j-1})$. So for large enough $n$, the step-function expectations are within $\varepsilon/2$.
+
+Combining: for all sufficiently large $n$, $|E[g(X_n)] - E[g(X)]| < 3\varepsilon$. Since $\varepsilon$ was arbitrary, $E[g(X_n)] \to E[g(X)]$. $\square$
+</ProofBlock>
+
+Characterization (ii) — convergence of expectations of bounded continuous functions — is the one most frequently used in proofs. It's the definition of weak convergence in functional analysis, which is why convergence in distribution is also called "weak convergence."
+
+<ExampleBlock number={4} title="Student's t(v) converges in distribution to N(0,1)">
+As previewed in [Topic 6 — Continuous Distributions](/topics/continuous-distributions) (Theorem 18), the Student's $t$ distribution with $\nu$ degrees of freedom converges in distribution to the standard Normal:
+
+$$
+T_\nu \xrightarrow{d} N(0, 1) \quad \text{as } \nu \to \infty
+$$
+
+Recall that $T_\nu = Z / \sqrt{V/\nu}$ where $Z \sim N(0,1)$ and $V \sim \chi^2(\nu)$ are independent. By the law of large numbers applied to the chi-squared (which is a sum of $\nu$ independent squared Normals), $V/\nu \xrightarrow{P} 1$. So $\sqrt{V/\nu} \xrightarrow{P} 1$ by the continuous mapping theorem (Theorem 9.9, Section 9.8).
+
+The punchline is Slutsky's theorem (Theorem 9.10, Section 9.8): if $Z \xrightarrow{d} Z$ (trivially) and $\sqrt{V/\nu} \xrightarrow{P} 1$, then $Z / \sqrt{V/\nu} \xrightarrow{d} Z/1 = Z \sim N(0,1)$.
+
+This is why, for large $\nu$, the $t$-distribution and the Normal give nearly identical critical values. At $\nu = 30$, the 97.5th percentile of $t(\nu)$ is 2.042 versus 1.960 for the Normal — a difference of about 4%.
+</ExampleBlock>
+
+<RemarkBlock number={2} title="Levy's Continuity Theorem (MGF version)">
+If the moment-generating functions $M_{X_n}(t)$ converge to $M_X(t)$ for all $t$ in an open interval containing 0, and $M_X$ is the MGF of some distribution, then $X_n \xrightarrow{d} X$.
+
+This is the MGF version of Levy's continuity theorem (the full version uses characteristic functions, which always exist). It converts a convergence-in-distribution problem into a pointwise limit of MGFs — a calculus problem rather than a probability problem. This is exactly the technique we'll use to prove the Poisson limit theorem (Section 9.9) and the Central Limit Theorem (Topic 11, coming soon).
+
+The MGF version requires that the limit MGF $M_X(t)$ exists in a neighborhood of 0. When it does, MGF uniqueness (Topic 4, Theorem 17) identifies the limiting distribution. The characteristic function version avoids this existence requirement, which is why the full CLT proof uses characteristic functions.
+</RemarkBlock>
+
+<img src="/images/topics/modes-of-convergence/convergence-in-distribution.png"
+     alt="CDFs of t(1), t(5), t(30), t(100) approaching the standard Normal CDF"
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<ConvergenceInDistributionExplorer client:visible />
+
+---
+
+## 9.6 The Convergence Diamond
+
+We now have all four modes. The natural question: how do they relate? The answer is a diamond-shaped implication diagram with almost sure and $L^p$ at the top, convergence in probability in the middle, and convergence in distribution at the bottom. The arrows point downward — each mode implies the ones below it, but the reverse implications fail.
+
+<ConvergenceHierarchyExplorer client:visible />
+
+We prove each arrow in the diamond.
+
+<TheoremBlock number={5} title="Theorem 9.5 (Almost Sure Implies In Probability)">
+If $X_n \xrightarrow{\text{a.s.}} X$, then $X_n \xrightarrow{P} X$.
+</TheoremBlock>
+
+<ProofBlock>
+Fix $\varepsilon > 0$. Define the indicator random variable $Y_n = \mathbf{1}(|X_n - X| > \varepsilon)$. We need to show $P(|X_n - X| > \varepsilon) = E[Y_n] \to 0$.
+
+Since $X_n \xrightarrow{\text{a.s.}} X$, for almost every $\omega$, $X_n(\omega) \to X(\omega)$. This means $|X_n(\omega) - X(\omega)| \to 0$ for almost every $\omega$, so $Y_n(\omega) = \mathbf{1}(|X_n(\omega) - X(\omega)| > \varepsilon) \to 0$ for almost every $\omega$. That is, $Y_n \to 0$ almost surely.
+
+Now, $|Y_n| \leq 1$ for all $n$ (since $Y_n$ is an indicator), so $Y_n$ is bounded by the constant function 1, which is integrable. By the bounded convergence theorem (a special case of the dominated convergence theorem):
+
+$$
+E[Y_n] \to E[0] = 0
+$$
+
+Therefore $P(|X_n - X| > \varepsilon) = E[Y_n] \to 0$, which is $X_n \xrightarrow{P} X$. $\square$
+</ProofBlock>
+
+<TheoremBlock number={6} title="Theorem 9.6 (Lp Implies In Probability)">
+If $X_n \xrightarrow{L^p} X$ for some $p \geq 1$, then $X_n \xrightarrow{P} X$.
+</TheoremBlock>
+
+<ProofBlock>
+This is a direct application of Markov's inequality (Topic 4, Theorem 11). Fix $\varepsilon > 0$. Apply Markov's inequality to the non-negative random variable $|X_n - X|^p$ with threshold $\varepsilon^p$:
+
+$$
+P(|X_n - X| > \varepsilon) = P(|X_n - X|^p > \varepsilon^p) \leq \frac{E[|X_n - X|^p]}{\varepsilon^p}
+$$
+
+Since $X_n \xrightarrow{L^p} X$, the numerator $E[|X_n - X|^p] \to 0$. The denominator $\varepsilon^p$ is a fixed positive constant. So:
+
+$$
+0 \leq P(|X_n - X| > \varepsilon) \leq \frac{E[|X_n - X|^p]}{\varepsilon^p} \to 0
+$$
+
+By the squeeze theorem, $P(|X_n - X| > \varepsilon) \to 0$. $\square$
+</ProofBlock>
+
+<TheoremBlock number={7} title="Theorem 9.7 (In Probability Implies In Distribution)">
+If $X_n \xrightarrow{P} X$, then $X_n \xrightarrow{d} X$.
+</TheoremBlock>
+
+<ProofBlock>
+Fix a continuity point $x$ of $F_X$. We need to show $F_{X_n}(x) \to F_X(x)$.
+
+**Upper bound.** For any $\delta > 0$:
+
+$$
+F_{X_n}(x) = P(X_n \leq x) = P(X_n \leq x, |X_n - X| \leq \delta) + P(X_n \leq x, |X_n - X| > \delta)
+$$
+
+The first term: if $X_n \leq x$ and $|X_n - X| \leq \delta$, then $X \leq X_n + \delta \leq x + \delta$, so:
+
+$$
+P(X_n \leq x, |X_n - X| \leq \delta) \leq P(X \leq x + \delta) = F_X(x + \delta)
+$$
+
+The second term is at most $P(|X_n - X| > \delta)$. Combining:
+
+$$
+F_{X_n}(x) \leq F_X(x + \delta) + P(|X_n - X| > \delta)
+$$
+
+**Lower bound.** Similarly:
+
+$$
+F_X(x - \delta) = P(X \leq x - \delta) = P(X \leq x - \delta, |X_n - X| \leq \delta) + P(X \leq x - \delta, |X_n - X| > \delta)
+$$
+
+If $X \leq x - \delta$ and $|X_n - X| \leq \delta$, then $X_n \leq X + \delta \leq x$, so:
+
+$$
+P(X \leq x - \delta, |X_n - X| \leq \delta) \leq P(X_n \leq x) = F_{X_n}(x)
+$$
+
+Therefore:
+
+$$
+F_X(x - \delta) \leq F_{X_n}(x) + P(|X_n - X| > \delta)
+$$
+
+Rearranging: $F_X(x - \delta) - P(|X_n - X| > \delta) \leq F_{X_n}(x)$.
+
+**Combining the bounds:**
+
+$$
+F_X(x - \delta) - P(|X_n - X| > \delta) \leq F_{X_n}(x) \leq F_X(x + \delta) + P(|X_n - X| > \delta)
+$$
+
+Now take $n \to \infty$. Since $X_n \xrightarrow{P} X$, $P(|X_n - X| > \delta) \to 0$. So:
+
+$$
+F_X(x - \delta) \leq \liminf_{n} F_{X_n}(x) \leq \limsup_{n} F_{X_n}(x) \leq F_X(x + \delta)
+$$
+
+This holds for every $\delta > 0$. Now take $\delta \to 0$. Since $x$ is a continuity point of $F_X$, both $F_X(x - \delta) \to F_X(x)$ and $F_X(x + \delta) \to F_X(x)$. By the squeeze:
+
+$$
+\liminf_{n} F_{X_n}(x) = \limsup_{n} F_{X_n}(x) = F_X(x)
+$$
+
+So $\lim_n F_{X_n}(x) = F_X(x)$, which is $X_n \xrightarrow{d} X$. $\square$
+</ProofBlock>
+
+There is one partial converse worth knowing: convergence in probability implies a.s. convergence *along a subsequence*.
+
+<TheoremBlock number={8} title="Theorem 9.8 (In Probability Implies A.S. Along a Subsequence)">
+If $X_n \xrightarrow{P} X$, then there exists a subsequence $\{n_k\}$ such that $X_{n_k} \xrightarrow{\text{a.s.}} X$.
+</TheoremBlock>
+
+<ProofBlock>
+Since $X_n \xrightarrow{P} X$, for each integer $k \geq 1$, $P(|X_n - X| > 1/k) \to 0$ as $n \to \infty$. So we can choose $n_k$ (with $n_1 < n_2 < n_3 < \cdots$) such that:
+
+$$
+P(|X_{n_k} - X| > 1/k) < 2^{-k}
+$$
+
+Define the events $A_k = \{|X_{n_k} - X| > 1/k\}$. Then:
+
+$$
+\sum_{k=1}^{\infty} P(A_k) < \sum_{k=1}^{\infty} 2^{-k} = 1 < \infty
+$$
+
+By the first Borel-Cantelli lemma, $P(\limsup_k A_k) = 0$. That is, with probability 1, only finitely many of the events $A_k$ occur. So for almost every $\omega$, there exists $K(\omega)$ such that for all $k \geq K(\omega)$:
+
+$$
+|X_{n_k}(\omega) - X(\omega)| \leq \frac{1}{k}
+$$
+
+Since $1/k \to 0$, this gives $X_{n_k}(\omega) \to X(\omega)$ for almost every $\omega$, which is $X_{n_k} \xrightarrow{\text{a.s.}} X$. $\square$
+</ProofBlock>
+
+This subsequence result is a key technical tool. It's how most proofs upgrade convergence in probability to almost sure convergence: extract a subsequence that converges a.s., use the a.s. convergence to establish some property, then extend back to the full sequence.
+
+<RemarkBlock number={3} title="Why the hierarchy matters in practice">
+The mode of convergence you need depends on what you're trying to do:
+
+- **Almost sure convergence** is what you need for **SGD guarantees**. When training a neural network, you run one optimization trajectory. The SLLN (a.s. convergence of the sample mean) and Robbins-Monro theory (a.s. convergence of SGD iterates) guarantee that *your specific run* converges — not just that runs converge "on average" or "with high probability."
+
+- **Convergence in probability** is what **PAC learning** provides. A PAC bound says $P(|\hat{R}(h) - R(h)| > \varepsilon) \leq \delta$ — the empirical risk is close to the true risk with probability at least $1 - \delta$. This is convergence in probability, not a.s. You can't guarantee that every dataset will give a good estimate, but the bad datasets become vanishingly rare.
+
+- **Convergence in distribution** is what the **CLT** gives. The statement $\sqrt{n}(\bar{X}_n - \mu)/\sigma \xrightarrow{d} N(0,1)$ tells you the *shape* of the sampling distribution is approximately Normal. It says nothing about individual sample paths converging — only about the aggregate distributional behavior. This is enough for confidence intervals and hypothesis tests.
+
+Choosing the wrong mode is like using a wrench as a hammer — it might work, but you lose the guarantee. If you need every training run to converge, convergence in distribution is insufficient. If you need the distribution of a test statistic, a.s. convergence is overkill.
+</RemarkBlock>
+
+<img src="/images/topics/modes-of-convergence/convergence-hierarchy.png"
+     alt="Diamond diagram: a.s. and Lp at top, in prob in middle, in dist at bottom, with arrows and crossed arrows"
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+---
+
+## 9.7 Counterexamples: Why the Arrows Don't Reverse
+
+The hierarchy in Section 9.6 has three missing arrows: in probability does not imply a.s., in probability does not imply $L^p$, and convergence in distribution does not imply convergence of expectations. We now construct explicit counterexamples for each.
+
+<CounterexampleExplorer client:visible />
+
+<ExampleBlock number={5} title="The Typewriter Sequence: In probability but NOT almost surely">
+Let $U \sim \text{Uniform}(0,1)$. We construct a sequence $\{X_n\}$ that converges to 0 in probability but not almost surely. The idea: let intervals of decreasing length "slide" across $[0, 1]$ repeatedly, so every point gets covered infinitely often.
+
+**Construction.** Index the sequence so that for the $m$-th pass, we divide $[0,1]$ into $m$ equal intervals, each of length $1/m$. The first pass ($m = 1$) has one interval $[0, 1]$. The second pass ($m = 2$) has two intervals $[0, 1/2)$ and $[1/2, 1]$. The third pass ($m = 3$) has three intervals $[0, 1/3)$, $[1/3, 2/3)$, $[2/3, 1]$. And so on.
+
+Formally, we define a mapping from $n$ to a pair $(m, j)$ where $m$ is the pass number and $j \in \{0, 1, \ldots, m-1\}$ is the interval within that pass. The relationship is: $n = m(m-1)/2 + j + 1$ (since the first $m - 1$ passes use $1 + 2 + \cdots + (m-1) = m(m-1)/2$ indices). Then:
+
+$$
+X_n = \mathbf{1}\!\left(U \in \left[\frac{j}{m}, \frac{j+1}{m}\right)\right)
+$$
+
+**Convergence in probability.** For each $n$ in pass $m$, $P(X_n \neq 0) = P(X_n = 1) = 1/m$. Since $m \to \infty$ as $n \to \infty$ (specifically, $m \approx \sqrt{2n}$), we have $P(|X_n| > \varepsilon) = 1/m \to 0$ for any $\varepsilon > 0$. So $X_n \xrightarrow{P} 0$.
+
+**Failure of a.s. convergence.** Fix any $u \in [0, 1)$. In pass $m$, the point $u$ falls in the interval $[\lfloor mu \rfloor / m, (\lfloor mu \rfloor + 1)/m)$. So for the index $n$ corresponding to $(m, \lfloor mu \rfloor)$, we have $X_n(u) = 1$. This happens for *every* $m$, so $X_n(u) = 1$ for infinitely many $n$. Since $X_n(u) = 0$ for other $n$ in the same pass, the sequence $X_1(u), X_2(u), \ldots$ oscillates between 0 and 1 forever and does not converge.
+
+This holds for *every* $u \in [0,1)$, so $P(\lim X_n \text{ exists}) = 0$. Not only does the sequence fail to converge a.s. to 0 — it fails to converge a.s. to *anything*.
+</ExampleBlock>
+
+<ExampleBlock number={6} title="Escape to Infinity: In probability but NOT in L1">
+Let $U \sim \text{Uniform}(0, 1)$ and define:
+
+$$
+X_n = n \cdot \mathbf{1}(U < 1/n)
+$$
+
+**Convergence in probability.** $P(X_n \neq 0) = P(U < 1/n) = 1/n \to 0$. So for any $\varepsilon > 0$, $P(|X_n| > \varepsilon) \leq P(X_n \neq 0) = 1/n \to 0$, giving $X_n \xrightarrow{P} 0$.
+
+**Failure of $L^1$ convergence.** The expected value is:
+
+$$
+E[X_n] = n \cdot P(U < 1/n) = n \cdot \frac{1}{n} = 1
+$$
+
+for every $n$. So $E[|X_n - 0|] = E[X_n] = 1 \not\to 0$. We do not have $X_n \xrightarrow{L^1} 0$.
+
+The intuition: as $n$ grows, $X_n$ is nonzero with vanishing probability (convergence in probability), but when it *is* nonzero, its value is $n$ — growing without bound. The spike becomes less likely but taller, maintaining a constant expectation. The probability mass that "escapes to infinity" prevents $L^1$ convergence.
+
+More dramatically, $E[X_n^2] = n^2 \cdot (1/n) = n \to \infty$, so we don't have $L^2$ convergence either. The sequence converges in probability but in no $L^p$ space.
+</ExampleBlock>
+
+<ExampleBlock number={7} title="Convergence in distribution without convergence of expectations">
+Define $X_n$ by:
+
+$$
+P(X_n = 0) = 1 - \frac{1}{n}, \qquad P(X_n = n^2) = \frac{1}{n}
+$$
+
+**Convergence in distribution.** The CDF of $X_n$ is: $F_{X_n}(x) = 0$ for $x < 0$, $F_{X_n}(x) = 1 - 1/n$ for $0 \leq x < n^2$, and $F_{X_n}(x) = 1$ for $x \geq n^2$.
+
+For any fixed $x \geq 0$, once $n$ is large enough that $n^2 > x$, we have $F_{X_n}(x) = 1 - 1/n \to 1 = F_0(x)$ (where $F_0$ is the CDF of the constant 0: $F_0(x) = \mathbf{1}(x \geq 0)$). For $x < 0$, $F_{X_n}(x) = 0 = F_0(x)$ trivially. So $X_n \xrightarrow{d} 0$.
+
+**Divergence of expectations.** But:
+
+$$
+E[X_n] = 0 \cdot \left(1 - \frac{1}{n}\right) + n^2 \cdot \frac{1}{n} = n \to \infty
+$$
+
+The distributions converge to a point mass at 0, yet the expectations diverge to infinity. The tiny probability mass at $n^2$ is invisible to the CDF at any fixed $x$, but it dominates the expectation.
+
+This is why convergence in distribution — the mode the CLT provides — does *not* automatically give convergence of moments. For the CLT, the moments of $\sqrt{n}(\bar{X}_n - \mu)/\sigma$ do converge to those of $N(0,1)$, but this requires additional uniform integrability arguments beyond the basic convergence-in-distribution statement.
+</ExampleBlock>
+
+<img src="/images/topics/modes-of-convergence/counterexamples.png"
+     alt="Three counterexamples: typewriter sliding intervals, escape-to-infinity spike, and diverging expectations"
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+---
+
+## 9.8 Continuous Mapping, Slutsky, and the Delta Method
+
+The four modes of convergence tell us how sequences of random variables approach their limits. But in practice, we rarely work with the raw sequence — we transform it, combine it with other sequences, and apply functions. The continuous mapping theorem, Slutsky's theorem, and the delta method are the three tools that let us do this while preserving convergence guarantees.
+
+<TheoremBlock number={9} title="Theorem 9.9 (Continuous Mapping Theorem)">
+Let $g : \mathbb{R} \to \mathbb{R}$ be a continuous function. Then:
+
+**(a)** If $X_n \xrightarrow{d} X$, then $g(X_n) \xrightarrow{d} g(X)$.
+
+**(b)** If $X_n \xrightarrow{P} X$, then $g(X_n) \xrightarrow{P} g(X)$.
+
+**(c)** If $X_n \xrightarrow{\text{a.s.}} X$, then $g(X_n) \xrightarrow{\text{a.s.}} g(X)$.
+
+In short, continuous functions preserve all three modes of convergence.
+</TheoremBlock>
+
+<ProofBlock>
+We prove part **(b)** in full, which illustrates the key technique.
+
+Fix $\varepsilon > 0$. We need to show $P(|g(X_n) - g(X)| > \varepsilon) \to 0$.
+
+The difficulty is that $g$ is continuous on all of $\mathbb{R}$, but continuity only gives us *local* control: for each $x$, if $y$ is close to $x$, then $g(y)$ is close to $g(x)$. On a compact set, this local control becomes uniform. On all of $\mathbb{R}$, we need to handle the tails separately.
+
+**Step 1: Truncation.** Choose $M > 0$ large enough that $P(|X| > M) < \varepsilon$. This is possible because $P(|X| > M) \to 0$ as $M \to \infty$.
+
+**Step 2: Uniform continuity on compact sets.** On the compact set $[-M - 1, M + 1]$, the continuous function $g$ is uniformly continuous. So there exists $\delta > 0$ (with $\delta < 1$) such that $|g(x) - g(y)| < \varepsilon$ whenever $|x - y| < \delta$ and both $x, y \in [-M - 1, M + 1]$.
+
+**Step 3: Event decomposition.** We split:
+
+$$
+\{|g(X_n) - g(X)| > \varepsilon\} \subseteq \{|X_n - X| \geq \delta\} \cup \{|X| > M\} \cup \{|X_n| > M + 1\}
+$$
+
+To see why: if $|X_n - X| < \delta$, $|X| \leq M$, and $|X_n| \leq M + 1$, then both $X$ and $X_n$ lie in $[-M-1, M+1]$ and $|X_n - X| < \delta$, so $|g(X_n) - g(X)| < \varepsilon$ by uniform continuity. The contrapositive gives the inclusion above.
+
+**Step 4: Bounding each piece.**
+
+$$
+P(|g(X_n) - g(X)| > \varepsilon) \leq P(|X_n - X| \geq \delta) + P(|X| > M) + P(|X_n| > M + 1)
+$$
+
+The first term $P(|X_n - X| \geq \delta) \to 0$ because $X_n \xrightarrow{P} X$.
+
+The second term $P(|X| > M) < \varepsilon$ by our choice of $M$.
+
+The third term: $\{|X_n| > M + 1\} \subseteq \{|X_n - X| > 1\} \cup \{|X| > M\}$ (triangle inequality), so $P(|X_n| > M + 1) \leq P(|X_n - X| > 1) + P(|X| > M)$. The first part goes to 0 (convergence in probability), and the second is at most $\varepsilon$.
+
+Combining, for all sufficiently large $n$:
+
+$$
+P(|g(X_n) - g(X)| > \varepsilon) < \varepsilon + \varepsilon + 2\varepsilon = 4\varepsilon
+$$
+
+Since $\varepsilon > 0$ was arbitrary, $P(|g(X_n) - g(X)| > \varepsilon) \to 0$, giving $g(X_n) \xrightarrow{P} g(X)$. $\square$
+</ProofBlock>
+
+The continuous mapping theorem handles transformations of a *single* converging sequence. Slutsky's theorem handles *combinations* of a converging-in-distribution sequence with a converging-in-probability sequence.
+
+<TheoremBlock number={10} title="Theorem 9.10 (Slutsky's Theorem)">
+If $X_n \xrightarrow{d} X$ and $Y_n \xrightarrow{P} c$ (where $c$ is a constant), then:
+
+**(a)** $X_n + Y_n \xrightarrow{d} X + c$
+
+**(b)** $Y_n X_n \xrightarrow{d} cX$
+
+**(c)** $X_n / Y_n \xrightarrow{d} X / c$ provided $c \neq 0$
+</TheoremBlock>
+
+<ProofBlock>
+We prove part **(a)**. Parts (b) and (c) follow by similar arguments.
+
+We use the Portmanteau characterization (Theorem 9.4, part (ii)): we need to show $E[g(X_n + Y_n)] \to E[g(X + c)]$ for every bounded continuous $g$.
+
+Let $g$ be bounded by $M$ and continuous. Fix $\varepsilon > 0$. Since $g$ is continuous and bounded, it is uniformly continuous on any compact set. Choose $R > 0$ large enough that $P(|X| > R) < \varepsilon/(4M)$ and $P(|X_n| > R) < \varepsilon/(4M)$ for all large $n$ (the latter follows from convergence in distribution via tightness).
+
+On $[-R - 1, R + 1]$, $g$ is uniformly continuous: there exists $\delta > 0$ such that $|g(s) - g(t)| < \varepsilon$ when $|s - t| < \delta$ and both $s, t \in [-R - 1, R + 1]$.
+
+Now decompose:
+
+$$
+|E[g(X_n + Y_n)] - E[g(X_n + c)]| \leq E[|g(X_n + Y_n) - g(X_n + c)|]
+$$
+
+Split this expectation based on whether $|Y_n - c| < \delta$ and $|X_n| \leq R$:
+
+When $|Y_n - c| < \delta$ and $|X_n| \leq R$: both $X_n + Y_n$ and $X_n + c$ lie in $[-R-1, R+1]$ (for $\delta < 1$), and $|(X_n + Y_n) - (X_n + c)| = |Y_n - c| < \delta$, so $|g(X_n + Y_n) - g(X_n + c)| < \varepsilon$.
+
+On the complementary event:
+
+$$
+E[|g(X_n + Y_n) - g(X_n + c)|] \leq \varepsilon + 2M \cdot P(|Y_n - c| \geq \delta) + 2M \cdot P(|X_n| > R)
+$$
+
+Since $Y_n \xrightarrow{P} c$, $P(|Y_n - c| \geq \delta) \to 0$. By tightness, $P(|X_n| > R) < \varepsilon/(4M)$ for large $n$. So for large $n$:
+
+$$
+|E[g(X_n + Y_n)] - E[g(X_n + c)]| < 2\varepsilon
+$$
+
+Now, the continuous mapping theorem for convergence in distribution (applied to $h(x) = g(x + c)$, which is bounded and continuous) gives $E[g(X_n + c)] = E[h(X_n)] \to E[h(X)] = E[g(X + c)]$.
+
+Combining: $|E[g(X_n + Y_n)] - E[g(X + c)]| < 3\varepsilon$ for large $n$. Since $\varepsilon$ was arbitrary and $g$ was an arbitrary bounded continuous function, $X_n + Y_n \xrightarrow{d} X + c$ by the Portmanteau lemma. $\square$
+</ProofBlock>
+
+Slutsky's theorem is the workhorse of asymptotic statistics. It's how we derived $t(\nu) \xrightarrow{d} N(0,1)$ in Example 4: the numerator $Z$ converges in distribution to $N(0,1)$ (trivially — it *is* $N(0,1)$), the denominator $\sqrt{V/\nu}$ converges in probability to 1, so the ratio converges in distribution to $Z/1 = Z$.
+
+A crucial restriction: Slutsky's theorem requires one of the two sequences to converge to a *constant*. If both $X_n$ and $Y_n$ converge in distribution to non-degenerate limits, the joint behavior of $X_n + Y_n$ is not determined by the marginal limits — we would need information about the joint distribution.
+
+The delta method converts a convergence-in-distribution result about $X_n$ into one about $g(X_n)$, with explicit variance formulas.
+
+<TheoremBlock number={11} title="Theorem 9.11 (Delta Method — First Order)">
+Suppose $\sqrt{n}(X_n - \mu) \xrightarrow{d} N(0, \sigma^2)$, and let $g$ be a function that is differentiable at $\mu$ with $g'(\mu) \neq 0$. Then:
+
+$$
+\sqrt{n}\bigl(g(X_n) - g(\mu)\bigr) \xrightarrow{d} N\!\left(0, \, [g'(\mu)]^2 \sigma^2\right)
+$$
+
+In words: the asymptotic variance of $g(X_n)$ is $(g'(\mu))^2$ times the asymptotic variance of $X_n$.
+</TheoremBlock>
+
+The proof uses a Taylor expansion and Slutsky's theorem. The key insight is that for $X_n$ close to $\mu$, $g(X_n) \approx g(\mu) + g'(\mu)(X_n - \mu)$, so the distribution of $g(X_n) - g(\mu)$ is approximately $g'(\mu)$ times the distribution of $X_n - \mu$.
+
+When $g'(\mu) = 0$, the first-order Taylor term vanishes and we need the second-order term.
+
+<TheoremBlock number={12} title="Theorem 9.12 (Delta Method — Second Order)">
+Suppose $\sqrt{n}(X_n - \mu) \xrightarrow{d} N(0, \sigma^2)$, and let $g$ be twice differentiable at $\mu$ with $g'(\mu) = 0$ and $g''(\mu) \neq 0$. Then:
+
+$$
+n\bigl(g(X_n) - g(\mu)\bigr) \xrightarrow{d} \frac{g''(\mu)}{2} \sigma^2 \chi^2_1
+$$
+
+Note the scaling changes from $\sqrt{n}$ to $n$: the convergence rate is slower when the first derivative vanishes.
+</TheoremBlock>
+
+<ExampleBlock number={8} title="Delta method for the log transform">
+Let $X_1, \ldots, X_n$ be iid with mean $\mu > 0$ and variance $\sigma^2$. By the CLT (which we're previewing — the full proof is Topic 11, coming soon):
+
+$$
+\sqrt{n}(\bar{X}_n - \mu) \xrightarrow{d} N(0, \sigma^2)
+$$
+
+Apply the delta method with $g(x) = \log(x)$. We have $g'(x) = 1/x$, so $g'(\mu) = 1/\mu \neq 0$ (since $\mu > 0$). Therefore:
+
+$$
+\sqrt{n}(\log \bar{X}_n - \log \mu) \xrightarrow{d} N\!\left(0, \frac{\sigma^2}{\mu^2}\right)
+$$
+
+The asymptotic variance of $\log \bar{X}_n$ is $\sigma^2 / (n\mu^2)$.
+
+**Concrete computation for Exponential(1).** If $X_i \sim \text{Exponential}(1)$, then $\mu = 1$ and $\sigma^2 = 1$. The delta method gives:
+
+$$
+\sqrt{n}(\log \bar{X}_n - \log 1) = \sqrt{n} \log \bar{X}_n \xrightarrow{d} N(0, 1)
+$$
+
+So $\log \bar{X}_n$ has asymptotic variance $1/n$ — exactly the same as $\bar{X}_n$ itself in this special case. This is because $g'(1) = 1$, so the log transform preserves the asymptotic variance at $\mu = 1$.
+
+For $\mu \neq 1$, the delta method variance $\sigma^2/\mu^2$ is the *squared coefficient of variation* of the underlying distribution times $1/n$. The coefficient of variation $\text{CV} = \sigma/\mu$ is dimensionless, which is why the log transform is natural for data with a constant CV (multiplicative noise models).
+</ExampleBlock>
+
+<img src="/images/topics/modes-of-convergence/combining-convergence.png"
+     alt="Delta method: CLT Normal for Xbar, then transformed Normal for g(Xbar) with g' scaling the variance"
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<DeltaMethodExplorer client:visible />
+
+---
+
+## 9.9 Making the Poisson Limit Theorem Rigorous
+
+In [Topic 5 — Discrete Distributions](/topics/discrete-distributions), we stated that $\text{Bin}(n, \lambda/n) \to \text{Poisson}(\lambda)$ as $n \to \infty$. At the time, we verified this by showing the PMFs converge pointwise. Now we can make this fully rigorous using convergence in distribution, proved via MGF convergence (Levy's continuity theorem, Remark 2).
+
+<TheoremBlock number={13} title="Theorem 9.13 (Poisson Limit Theorem)">
+Let $X_n \sim \text{Binomial}(n, \lambda/n)$ for a fixed $\lambda > 0$. Then:
+
+$$
+X_n \xrightarrow{d} \text{Poisson}(\lambda)
+$$
+</TheoremBlock>
+
+<ProofBlock>
+We prove this by showing that the MGF of $X_n$ converges to the MGF of $\text{Poisson}(\lambda)$ at every $t \in \mathbb{R}$, then invoking Levy's continuity theorem (Remark 2).
+
+**Step 1: MGF of $\text{Bin}(n, \lambda/n)$.** The MGF of a $\text{Binomial}(n, p)$ random variable is $M(t) = (1 - p + pe^t)^n$ (derived by exponentiating the binomial PMF and recognizing the binomial theorem). With $p = \lambda/n$:
+
+$$
+M_{X_n}(t) = \left(1 - \frac{\lambda}{n} + \frac{\lambda}{n} e^t\right)^n
+$$
+
+Factor out the 1 and rewrite:
+
+$$
+M_{X_n}(t) = \left(1 + \frac{\lambda(e^t - 1)}{n}\right)^n
+$$
+
+**Step 2: Take the limit.** This is a sequence of the form $(1 + a_n/n)^n$ where $a_n = \lambda(e^t - 1)$. Since $a_n$ does not depend on $n$ (it depends only on $t$ and $\lambda$), we can use the fundamental limit $\lim_{n \to \infty}(1 + a/n)^n = e^a$ directly:
+
+$$
+\lim_{n \to \infty} M_{X_n}(t) = \lim_{n \to \infty} \left(1 + \frac{\lambda(e^t - 1)}{n}\right)^n = \exp\!\left(\lambda(e^t - 1)\right)
+$$
+
+To be more careful, take the logarithm:
+
+$$
+\log M_{X_n}(t) = n \log\!\left(1 + \frac{\lambda(e^t - 1)}{n}\right)
+$$
+
+Using the Taylor expansion $\log(1 + x) = x - x^2/2 + O(x^3)$ with $x = \lambda(e^t - 1)/n$:
+
+$$
+\log M_{X_n}(t) = n \left[\frac{\lambda(e^t - 1)}{n} - \frac{\lambda^2(e^t - 1)^2}{2n^2} + O(n^{-3})\right]
+$$
+
+$$
+= \lambda(e^t - 1) - \frac{\lambda^2(e^t - 1)^2}{2n} + O(n^{-2})
+$$
+
+As $n \to \infty$:
+
+$$
+\log M_{X_n}(t) \to \lambda(e^t - 1)
+$$
+
+Exponentiating: $M_{X_n}(t) \to \exp(\lambda(e^t - 1))$.
+
+**Step 3: Identify the limit.** The MGF of $Y \sim \text{Poisson}(\lambda)$ is:
+
+$$
+M_Y(t) = E[e^{tY}] = \sum_{k=0}^{\infty} e^{tk} \frac{\lambda^k e^{-\lambda}}{k!} = e^{-\lambda} \sum_{k=0}^{\infty} \frac{(\lambda e^t)^k}{k!} = e^{-\lambda} \cdot e^{\lambda e^t} = \exp\!\left(\lambda(e^t - 1)\right)
+$$
+
+So $M_{X_n}(t) \to M_Y(t)$ for all $t \in \mathbb{R}$. The limit $M_Y(t) = \exp(\lambda(e^t - 1))$ exists for all $t$ and is the MGF of $\text{Poisson}(\lambda)$.
+
+**Step 4: Apply Levy's continuity theorem.** Since $M_{X_n}(t)$ converges to $M_Y(t)$ pointwise on all of $\mathbb{R}$ (which contains a neighborhood of 0), and $M_Y$ is the MGF of $\text{Poisson}(\lambda)$, the theorem gives $X_n \xrightarrow{d} Y \sim \text{Poisson}(\lambda)$.
+
+By MGF uniqueness (Topic 4, Theorem 17), the limiting distribution is uniquely identified as $\text{Poisson}(\lambda)$. $\square$
+</ProofBlock>
+
+<img src="/images/topics/modes-of-convergence/poisson-limit-rigorous.png"
+     alt="PMFs of Bin(10, 0.5), Bin(50, 0.1), Bin(500, 0.01) with lambda=5, approaching Poisson(5)"
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+This proof is the prototype for how the Central Limit Theorem will be proved in Topic 11 (coming soon). The technique is the same: compute the MGF of the sequence, show it converges pointwise to the MGF of the target distribution, and invoke Levy's continuity theorem. The CLT proof is more involved because the MGF of $\sqrt{n}(\bar{X}_n - \mu)/\sigma$ requires a careful Taylor expansion of $\log M_{X_1}(t/(\sigma\sqrt{n}))$, but the structure is identical.
+
+---
+
+## 9.10 Connections to Machine Learning
+
+The four modes of convergence are not abstract curiosities — they appear throughout machine learning, often implicitly. Recognizing which mode is at play helps you understand what a convergence guarantee actually promises and what it leaves open.
+
+<ExampleBlock number={9} title="Three ML convergence scenarios">
+**Scenario 1: SGD with Robbins-Monro step sizes (almost sure convergence).**
+
+Consider stochastic gradient descent on a loss function $L(\theta)$ with updates $\theta_{t+1} = \theta_t - \eta_t \nabla L(\theta_t; x_t)$, where $x_t$ is a random minibatch and $\eta_t$ is the step size. The Robbins-Monro conditions require:
+
+$$
+\sum_{t=1}^{\infty} \eta_t = \infty \quad \text{and} \quad \sum_{t=1}^{\infty} \eta_t^2 < \infty
+$$
+
+The first condition ensures the step sizes are large enough to reach any minimum. The second ensures they decay fast enough that the noise averages out. Under these conditions (plus regularity assumptions on $L$), the iterates $\theta_t \xrightarrow{\text{a.s.}} \theta^*$, a local minimum.
+
+Why *almost sure* convergence matters: you run SGD *once*. A single training run produces a single trajectory $\theta_1, \theta_2, \ldots$ Almost sure convergence guarantees that this specific trajectory converges — not just that "most" trajectories converge.
+
+With a constant step size $\eta_t = \eta$ (common in practice for speed), the Robbins-Monro conditions fail ($\sum \eta_t^2 = \infty$). The iterates then converge only *in probability* to a neighborhood of $\theta^*$, with the neighborhood size proportional to $\eta$. This is the exploration-exploitation tradeoff made explicit through convergence modes.
+
+**Scenario 2: PAC learning (convergence in probability).**
+
+In Probably Approximately Correct (PAC) learning, the fundamental guarantee has the form:
+
+$$
+P\!\left(\sup_{h \in \mathcal{H}} |R_{\text{emp}}(h) - R(h)| > \varepsilon\right) \leq \delta
+$$
+
+where $R(h)$ is the true risk of hypothesis $h$, $R_{\text{emp}}(h)$ is the empirical risk on $n$ training samples, and $\delta$ decreases with $n$. This is convergence in probability: with high probability, the empirical risk is close to the true risk.
+
+The "sup over $\mathcal{H}$" makes this a *uniform* convergence statement — the empirical risk concentrates simultaneously for all hypotheses in the class. The rate at which $\delta \to 0$ depends on the complexity of $\mathcal{H}$ (VC dimension, Rademacher complexity), and this rate is what distinguishes learnable from unlearnable hypothesis classes.
+
+**Scenario 3: Bernstein-von Mises theorem (convergence in distribution).**
+
+In Bayesian statistics, the posterior distribution for a parameter $\theta$ given $n$ iid observations satisfies:
+
+$$
+\sqrt{n}(\theta - \hat{\theta}_{\text{MLE}}) \mid X_1, \ldots, X_n \xrightarrow{d} N\!\left(0, I(\theta_0)^{-1}\right)
+$$
+
+where $I(\theta_0)$ is the Fisher information at the true parameter $\theta_0$. This is convergence in distribution: the posterior *shape* approaches a Normal, regardless of the prior (under regularity conditions).
+
+This is the frequentist justification for Bayesian inference: with enough data, the posterior is approximately Normal centered at the MLE, and the prior washes out. The convergence is in distribution — we're comparing the posterior *distribution* to the Normal, not individual samples or paths.
+</ExampleBlock>
+
+<RemarkBlock number={4} title="Convergence rates and what comes next">
+Knowing that a sequence converges is useful, but knowing *how fast* it converges is essential for practice. The modes of convergence defined in this topic are *qualitative* — they say whether the limit is reached, not how quickly.
+
+**Convergence rates** quantify the speed:
+
+- **Hoeffding's inequality** gives exponential decay for convergence in probability: $P(|\bar{X}_n - \mu| > \varepsilon) \leq 2\exp(-2n\varepsilon^2/(b-a)^2)$ for bounded random variables in $[a, b]$. This is much sharper than the $1/n$ rate from Chebyshev.
+
+- **The Berry-Esseen theorem** gives the rate for convergence in distribution in the CLT: $\sup_x |F_{\bar{Z}_n}(x) - \Phi(x)| \leq C \cdot E[|X_1|^3] / (\sigma^3 \sqrt{n})$, where $C \leq 0.4748$. The CLT convergence rate is $O(1/\sqrt{n})$.
+
+- **Large deviations theory** characterizes the exponential rate at which $P(\bar{X}_n \in A)$ decays for sets $A$ that are far from the mean. The rate function $I(x) = \sup_t (tx - \log M_X(t))$ is the Fenchel-Legendre transform of the log-MGF.
+
+These rate results are the subject of Topic 12 (coming soon) on concentration inequalities and large deviations. They bridge the gap between the *existence* of convergence (this topic) and the *speed* of convergence (which determines sample size requirements in practice).
+</RemarkBlock>
+
+<img src="/images/topics/modes-of-convergence/ml-connections.png"
+     alt="Three ML scenarios mapped to convergence modes: SGD paths (a.s.), PAC bounds (in prob), posterior concentration (in dist)"
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+---
+
+## 9.11 Summary
+
+This topic defined the four modes of convergence for sequences of random variables, established the implication hierarchy between them, and built the tools — continuous mapping, Slutsky, delta method — for working with convergent sequences in practice.
+
+### The Four Modes
+
+| Mode | Definition | Intuition | Guarantees | Does NOT Guarantee | ML Application |
+|------|-----------|-----------|------------|-------------------|----------------|
+| Almost sure | $P(\lim X_n = X) = 1$ | Every path settles | Path-by-path convergence | Moment convergence | SGD convergence |
+| $L^p$ | $E[\|X_n - X\|^p] \to 0$ | Average $p$-th gap vanishes | Moment convergence | Path-by-path convergence | MSE-consistent estimation |
+| In probability | $P(\|X_n - X\| > \varepsilon) \to 0$ | Deviations become rare | Subsequential a.s. convergence | Full a.s. convergence, moment convergence | PAC learning bounds |
+| In distribution | $F_{X_n}(x) \to F_X(x)$ | CDFs approach | Shape convergence | Moment convergence, path convergence | CLT, asymptotic tests |
+
+### The Convergence Diamond
+
+$$
+\text{a.s.} \quad \Longrightarrow \quad \xrightarrow{P} \quad \Longrightarrow \quad \xrightarrow{d}
+$$
+
+$$
+L^p \quad \Longrightarrow \quad \xrightarrow{P} \quad \Longrightarrow \quad \xrightarrow{d}
+$$
+
+Almost sure and $L^p$ are *incomparable* — neither implies the other in general.
+
+### The Tools
+
+- **Continuous mapping** (Theorem 9.9): continuous functions preserve all modes.
+- **Slutsky** (Theorem 9.10): convergence in distribution + convergence in probability to a constant = convergence in distribution.
+- **Delta method** (Theorems 9.11-9.12): transforms CLT-type results through differentiable functions.
+- **MGF convergence** (Remark 2): pointwise convergence of MGFs implies convergence in distribution.
+
+### Formal Element Index
+
+| Element | Name | Section |
+|---------|------|---------|
+| Definition 9.1 | Convergence in probability | 9.2 |
+| Definition 9.2 | Consistency | 9.2 |
+| Definition 9.3 | Almost sure convergence | 9.3 |
+| Definition 9.4 | $L^p$ convergence | 9.4 |
+| Definition 9.5 | Mean square convergence | 9.4 |
+| Definition 9.6 | Convergence in distribution | 9.5 |
+| Theorem 9.1 | Sample mean convergence (WLLN preview) | 9.2 |
+| Theorem 9.2 | Borel-Cantelli characterization | 9.3 |
+| Theorem 9.3 | $L^p$ implies moment convergence | 9.4 |
+| Theorem 9.4 | Portmanteau lemma | 9.5 |
+| Theorem 9.5 | A.s. implies in probability | 9.6 |
+| Theorem 9.6 | $L^p$ implies in probability | 9.6 |
+| Theorem 9.7 | In probability implies in distribution | 9.6 |
+| Theorem 9.8 | In probability implies a.s. along subsequence | 9.6 |
+| Theorem 9.9 | Continuous mapping theorem | 9.8 |
+| Theorem 9.10 | Slutsky's theorem | 9.8 |
+| Theorem 9.11 | Delta method (first order) | 9.8 |
+| Theorem 9.12 | Delta method (second order) | 9.8 |
+| Theorem 9.13 | Poisson limit theorem | 9.9 |
+
+### What Comes Next
+
+This topic established the *modes* of convergence — the different senses in which sequences of random variables can approach a limit. The next three topics apply these modes to the three pillars of asymptotic probability:
+
+- **Law of Large Numbers** (Topic 10, coming soon): The WLLN proves $\bar{X}_n \xrightarrow{P} \mu$ (convergence in probability of the sample mean) under finite variance, and the SLLN proves $\bar{X}_n \xrightarrow{\text{a.s.}} \mu$ (almost sure convergence) under finite mean alone. Both proofs use the framework developed here.
+
+- **Central Limit Theorem** (Topic 11, coming soon): The CLT proves $\sqrt{n}(\bar{X}_n - \mu)/\sigma \xrightarrow{d} N(0,1)$ (convergence in distribution). The proof technique is MGF convergence — the same technique we used for the Poisson limit theorem in Section 9.9.
+
+- **Concentration Inequalities** (Topic 12, coming soon): While the CLT gives the *shape* of the limiting distribution, concentration inequalities give *rates* — how fast the convergence happens. Hoeffding, Bernstein, and sub-Gaussian tail bounds provide the exponential-rate guarantees that make finite-sample statistical learning theory work.

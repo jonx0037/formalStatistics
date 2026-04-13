@@ -752,7 +752,7 @@ $\square$
 If $M_X(t) = M_Y(t)$ for all $t$ in some open interval $(-\delta, \delta)$ around 0, then $X$ and $Y$ have the same distribution.
 </TheoremBlock>
 
-This uniqueness theorem is what makes MGFs a powerful proof tool: if you can show two random variables have the same MGF, you've shown they have the same distribution. We'll use this in the proof of the Central Limit Theorem (Modes of Convergence, coming soon).
+This uniqueness theorem is what makes MGFs a powerful proof tool: if you can show two random variables have the same MGF, you've shown they have the same distribution. We'll use this in the proof of the Central Limit Theorem — see [Modes of Convergence](/topics/modes-of-convergence) for the framework and [Central Limit Theorem](/topics/central-limit-theorem) (coming soon) for the full proof.
 
 <TheoremBlock number={18} title="MGF of Independent Sums">
 If $X$ and $Y$ are independent, then
@@ -842,8 +842,8 @@ This is Eve's law in disguise: the total prediction error decomposes into a syst
 | Eve's law | Bias-variance decomposition of prediction error (<ExternalLink href="https://formalml.com/topics/bias-variance-tradeoff" site="formalml" topic="Bias-Variance Tradeoff" />) |
 | $E[X \mid Y]$ | Optimal prediction function under squared loss |
 | Jensen's inequality | ELBO $\leq \log p(\mathbf{x})$ in variational inference (<ExternalLink href="https://formalml.com/topics/information-theory" site="formalml" topic="Information Theory" />) |
-| MGF uniqueness | Proof of Central Limit Theorem (Modes of Convergence, coming soon) |
-| Chebyshev's inequality | PAC learning bounds; weak law of large numbers (Modes of Convergence, coming soon) |
+| MGF uniqueness | Proof of Central Limit Theorem ([Modes of Convergence](/topics/modes-of-convergence) + [CLT](/topics/central-limit-theorem), coming soon) |
+| Chebyshev's inequality | PAC learning bounds; weak law of large numbers ([Modes of Convergence](/topics/modes-of-convergence) → [LLN](/topics/law-of-large-numbers), coming soon) |
 
 ---
 
@@ -861,6 +861,6 @@ This topic completes **Track 1: Foundations of Probability**. We now have the co
 **What comes next.** Track 1's machinery feeds directly into five parallel tracks:
 
 - [Discrete Distributions](/topics/discrete-distributions) and [Continuous Distributions](/topics/continuous-distributions) apply the expectation and variance formulas to every named distribution — Binomial, Poisson, Normal, Exponential, Gamma, Beta.
-- **Modes of Convergence** (coming soon) uses Markov and Chebyshev as the starting point for the law of large numbers and the central limit theorem.
+- [Modes of Convergence](/topics/modes-of-convergence) uses Markov and Chebyshev as the starting point for the law of large numbers and the central limit theorem.
 - **Point Estimation** (coming soon) defines bias as $E[\hat{\theta}] - \theta$ and MSE as $\text{Var}(\hat{\theta}) + \text{Bias}^2$.
 - **Method of Moments** (coming soon) equates sample moments $\bar{X}, \overline{X^2}, \ldots$ to population moments $E[X], E[X^2], \ldots$.
