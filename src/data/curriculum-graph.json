@@ -8,7 +8,7 @@
     { "id": "discrete-distributions", "label": "Discrete Distributions", "domain": "core-distributions", "status": "published", "url": "/topics/discrete-distributions" },
     { "id": "continuous-distributions", "label": "Continuous Distributions", "domain": "core-distributions", "status": "published", "url": "/topics/continuous-distributions" },
     { "id": "exponential-families", "label": "Exponential Families", "domain": "core-distributions", "status": "published", "url": "/topics/exponential-families" },
-    { "id": "multivariate-distributions", "label": "Multivariate Distributions", "domain": "core-distributions", "status": "planned", "url": "/topics/multivariate-distributions" },
+    { "id": "multivariate-distributions", "label": "Multivariate Distributions", "domain": "core-distributions", "status": "published", "url": "/topics/multivariate-distributions" },
 
     { "id": "modes-of-convergence", "label": "Modes of Convergence", "domain": "convergence-limit-theorems", "status": "planned", "url": "/topics/modes-of-convergence" },
     { "id": "law-of-large-numbers", "label": "Law of Large Numbers", "domain": "convergence-limit-theorems", "status": "planned", "url": "/topics/law-of-large-numbers" },
