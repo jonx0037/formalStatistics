@@ -885,3 +885,369 @@ export function varianceF(d1: number, d2: number): number {
   if (d2 <= 4) return NaN;
   return (2 * d2 * d2 * (d1 + d2 - 2)) / (d1 * (d2 - 2) * (d2 - 2) * (d2 - 4));
 }
+
+// ── 2×2 Linear Algebra Helpers (Topic 8) ───────────────────────────────────
+
+/** 2×2 matrix determinant: ad - bc. */
+export function matDet2x2(M: number[][]): number {
+  return M[0][0] * M[1][1] - M[0][1] * M[1][0];
+}
+
+/** 2×2 matrix inverse: (1/det) × [[d, -b], [-c, a]]. Returns zero matrix if singular. */
+export function matInverse2x2(M: number[][]): number[][] {
+  const det = matDet2x2(M);
+  if (Math.abs(det) < 1e-15) return [[0, 0], [0, 0]];
+  const invDet = 1 / det;
+  return [
+    [M[1][1] * invDet, -M[0][1] * invDet],
+    [-M[1][0] * invDet, M[0][0] * invDet],
+  ];
+}
+
+/** Matrix-vector multiplication Mv for small matrices. */
+export function matVecMul(M: number[][], v: number[]): number[] {
+  const rows = M.length;
+  const result: number[] = new Array(rows);
+  for (let i = 0; i < rows; i++) {
+    let sum = 0;
+    for (let j = 0; j < v.length; j++) {
+      sum += M[i][j] * v[j];
+    }
+    result[i] = sum;
+  }
+  return result;
+}
+
+/**
+ * Eigendecomposition of a 2×2 symmetric matrix [[a, b], [b, d]].
+ * Returns eigenvalues sorted descending and corresponding unit eigenvectors.
+ */
+export function eigenSymmetric2x2(M: number[][]): {
+  values: [number, number];
+  vectors: [[number, number], [number, number]];
+} {
+  const a = M[0][0];
+  const b = M[0][1];
+  const d = M[1][1];
+  const trace = a + d;
+  const det = a * d - b * b;
+  const disc = Math.sqrt(Math.max(trace * trace - 4 * det, 0));
+  const lambda1 = (trace + disc) / 2;
+  const lambda2 = (trace - disc) / 2;
+
+  // Eigenvectors
+  let v1: [number, number];
+  let v2: [number, number];
+
+  if (Math.abs(b) > 1e-12) {
+    v1 = [lambda1 - d, b];
+    v2 = [lambda2 - d, b];
+  } else {
+    // Diagonal matrix
+    v1 = a >= d ? [1, 0] : [0, 1];
+    v2 = a >= d ? [0, 1] : [1, 0];
+  }
+
+  // Normalize
+  const norm1 = Math.sqrt(v1[0] * v1[0] + v1[1] * v1[1]);
+  const norm2 = Math.sqrt(v2[0] * v2[0] + v2[1] * v2[1]);
+  if (norm1 > 1e-15) { v1[0] /= norm1; v1[1] /= norm1; }
+  if (norm2 > 1e-15) { v2[0] /= norm2; v2[1] /= norm2; }
+
+  return {
+    values: [lambda1, lambda2],
+    vectors: [v1, v2],
+  };
+}
+
+/**
+ * Cholesky decomposition of a 2×2 positive definite matrix.
+ * Returns lower-triangular L such that M = LLᵀ.
+ */
+export function cholesky2x2(M: number[][]): number[][] {
+  const l11 = Math.sqrt(Math.max(M[0][0], 0));
+  const l21 = l11 > 1e-15 ? M[1][0] / l11 : 0;
+  const l22 = Math.sqrt(Math.max(M[1][1] - l21 * l21, 0));
+  return [[l11, 0], [l21, l22]];
+}
+
+// ── Multivariate Normal (Topic 8) ──────────────────────────────────────────
+
+/**
+ * General p-dimensional multivariate Normal PDF.
+ * Takes pre-inverted Σ and pre-computed |Σ| for efficiency in interactive use.
+ *
+ * f(x) = (2π)^{-p/2} |Σ|^{-1/2} exp(-½ (x-μ)ᵀΣ⁻¹(x-μ))
+ */
+export function pdfMultivariateNormal(
+  x: number[], mu: number[], SigmaInv: number[][], SigmaDet: number, p: number,
+): number {
+  if (SigmaDet <= 0) return 0;
+  const diff = x.map((xi, i) => xi - mu[i]);
+  const Sinv_diff = matVecMul(SigmaInv, diff);
+  let quadForm = 0;
+  for (let i = 0; i < p; i++) quadForm += diff[i] * Sinv_diff[i];
+  const logNorm = -0.5 * p * Math.log(2 * Math.PI) - 0.5 * Math.log(SigmaDet);
+  return Math.exp(logNorm - 0.5 * quadForm);
+}
+
+/**
+ * Conditional MVN parameters for X₁|X₂=x₂ via block matrix partition.
+ *
+ * Given X = (X₁, X₂)ᵀ ~ N(μ, Σ) with block partition:
+ *   μ = (μ₁, μ₂)ᵀ,  Σ = [[Σ₁₁, Σ₁₂], [Σ₂₁, Σ₂₂]]
+ *
+ * Then X₁|X₂=x₂ ~ N(condMean, condCov) where:
+ *   condMean = μ₁ + Σ₁₂ Σ₂₂⁻¹ (x₂ - μ₂)
+ *   condCov  = Σ₁₁ - Σ₁₂ Σ₂₂⁻¹ Σ₂₁   (the Schur complement)
+ */
+export function conditionalMVNParams(
+  mu1: number[], mu2: number[],
+  Sigma11: number[][], Sigma12: number[][], Sigma21: number[][], Sigma22: number[][],
+  x2: number[],
+): { condMean: number[]; condCov: number[][] } {
+  const q = mu1.length;  // dimension of X₁
+  const r = mu2.length;  // dimension of X₂
+
+  // Σ₂₂⁻¹ — for interactive use, r is typically 1 or 2
+  let Sigma22Inv: number[][];
+  if (r === 1) {
+    const s = Sigma22[0][0];
+    Sigma22Inv = s > 1e-15 ? [[1 / s]] : [[0]];
+  } else {
+    Sigma22Inv = matInverse2x2(Sigma22);
+  }
+
+  // Σ₁₂ Σ₂₂⁻¹ — q×r matrix
+  const regCoeff: number[][] = [];
+  for (let i = 0; i < q; i++) {
+    const row: number[] = new Array(r).fill(0);
+    for (let j = 0; j < r; j++) {
+      for (let k = 0; k < r; k++) {
+        row[j] += Sigma12[i][k] * Sigma22Inv[k][j];
+      }
+    }
+    regCoeff.push(row);
+  }
+
+  // Conditional mean: μ₁ + regCoeff × (x₂ - μ₂)
+  const diff2 = x2.map((v, i) => v - mu2[i]);
+  const condMean = mu1.map((m, i) => {
+    let sum = m;
+    for (let j = 0; j < r; j++) sum += regCoeff[i][j] * diff2[j];
+    return sum;
+  });
+
+  // Conditional covariance: Σ₁₁ - regCoeff × Σ₂₁
+  const condCov: number[][] = Sigma11.map(row => [...row]);
+  for (let i = 0; i < q; i++) {
+    for (let j = 0; j < q; j++) {
+      for (let k = 0; k < r; k++) {
+        condCov[i][j] -= regCoeff[i][k] * Sigma21[k][j];
+      }
+    }
+  }
+
+  return { condMean, condCov };
+}
+
+/**
+ * Mahalanobis distance squared: (x - μ)ᵀ Σ⁻¹ (x - μ).
+ * Measures distance accounting for the covariance structure.
+ * Under the MVN, d²_M ~ χ²(p).
+ */
+export function mahalanobisDistSq(
+  x: number[], mu: number[], SigmaInv: number[][],
+): number {
+  const diff = x.map((xi, i) => xi - mu[i]);
+  const Sinv_diff = matVecMul(SigmaInv, diff);
+  let result = 0;
+  for (let i = 0; i < diff.length; i++) result += diff[i] * Sinv_diff[i];
+  return result;
+}
+
+// ── Multinomial (Topic 8) ──────────────────────────────────────────────────
+
+/**
+ * Multinomial PMF: P(X = x) = n! / (x₁!⋯xₖ!) × p₁^x₁⋯pₖ^xₖ.
+ * Computed in log space to avoid overflow for large n.
+ * Requires Σxⱼ = n and each xⱼ ≥ 0.
+ */
+export function pmfMultinomial(x: number[], n: number, p: number[]): number {
+  const k = x.length;
+  if (k !== p.length) return 0;
+  let sumX = 0;
+  for (let j = 0; j < k; j++) {
+    if (!Number.isInteger(x[j]) || x[j] < 0) return 0;
+    sumX += x[j];
+  }
+  if (sumX !== n) return 0;
+
+  let logP = lnGamma(n + 1);
+  for (let j = 0; j < k; j++) {
+    logP -= lnGamma(x[j] + 1);
+    if (x[j] > 0 && p[j] > 0) {
+      logP += x[j] * Math.log(p[j]);
+    } else if (x[j] > 0 && p[j] <= 0) {
+      return 0; // impossible outcome
+    }
+    // x[j] === 0 contributes 0 to the log
+  }
+  return Math.exp(logP);
+}
+
+/** Multinomial E[Xⱼ] = npⱼ. Returns k-dimensional expectation vector. */
+export function expectationMultinomial(n: number, p: number[]): number[] {
+  return p.map(pj => n * pj);
+}
+
+/**
+ * Multinomial covariance matrix.
+ * Var(Xⱼ) = npⱼ(1-pⱼ) on the diagonal,
+ * Cov(Xᵢ,Xⱼ) = -npᵢpⱼ off-diagonal (negative covariance from fixed total).
+ */
+export function covarianceMultinomial(n: number, p: number[]): number[][] {
+  const k = p.length;
+  const cov: number[][] = [];
+  for (let i = 0; i < k; i++) {
+    const row: number[] = new Array(k);
+    for (let j = 0; j < k; j++) {
+      if (i === j) {
+        row[j] = n * p[i] * (1 - p[i]);
+      } else {
+        row[j] = -n * p[i] * p[j];
+      }
+    }
+    cov.push(row);
+  }
+  return cov;
+}
+
+// ── Dirichlet (Topic 8) ────────────────────────────────────────────────────
+
+/**
+ * Dirichlet PDF on the simplex.
+ * f(p | α) = [Γ(α₀) / ∏Γ(αⱼ)] × ∏ pⱼ^(αⱼ-1)
+ * where α₀ = Σαⱼ. Computed in log space for numerical stability.
+ */
+export function pdfDirichlet(p: number[], alpha: number[]): number {
+  const k = p.length;
+  if (k !== alpha.length) return 0;
+
+  let alpha0 = 0;
+  for (let j = 0; j < k; j++) alpha0 += alpha[j];
+
+  let logP = lnGamma(alpha0);
+  for (let j = 0; j < k; j++) {
+    logP -= lnGamma(alpha[j]);
+    if (alpha[j] !== 1) {
+      if (p[j] <= 0) return alpha[j] < 1 ? Infinity : 0;
+      logP += (alpha[j] - 1) * Math.log(p[j]);
+    }
+  }
+  return Math.exp(logP);
+}
+
+/** Dirichlet E[Pⱼ] = αⱼ/α₀ where α₀ = Σαⱼ. */
+export function expectationDirichlet(alpha: number[]): number[] {
+  let alpha0 = 0;
+  for (let j = 0; j < alpha.length; j++) alpha0 += alpha[j];
+  return alpha.map(aj => aj / alpha0);
+}
+
+/** Dirichlet Var(Pⱼ) = αⱼ(α₀-αⱼ) / (α₀²(α₀+1)). */
+export function varianceDirichlet(alpha: number[]): number[] {
+  let alpha0 = 0;
+  for (let j = 0; j < alpha.length; j++) alpha0 += alpha[j];
+  const denom = alpha0 * alpha0 * (alpha0 + 1);
+  return alpha.map(aj => (aj * (alpha0 - aj)) / denom);
+}
+
+/**
+ * Generate a single Gamma(α, 1) sample.
+ * Uses Marsaglia-Tsang method for α ≥ 1, with Ahrens-Dieter boost for α < 1.
+ * Internal helper for sampleDirichlet.
+ */
+function sampleGammaShape(alpha: number, rng: () => number): number {
+  if (alpha < 1) {
+    // Ahrens-Dieter: if Y ~ Gamma(α+1, 1), then Y · U^(1/α) ~ Gamma(α, 1)
+    const y = sampleGammaShape(alpha + 1, rng);
+    return y * Math.pow(rng(), 1 / alpha);
+  }
+
+  // Marsaglia-Tsang method for α ≥ 1
+  const d = alpha - 1 / 3;
+  const c = 1 / Math.sqrt(9 * d);
+
+  for (;;) {
+    let x: number;
+    let v: number;
+    do {
+      // Box-Muller for standard normal
+      const u1 = rng();
+      const u2 = rng();
+      x = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+      v = 1 + c * x;
+    } while (v <= 0);
+
+    v = v * v * v;
+    const u = rng();
+    if (u < 1 - 0.0331 * (x * x) * (x * x)) return d * v;
+    if (Math.log(u) < 0.5 * x * x + d * (1 - v + Math.log(v))) return d * v;
+  }
+}
+
+/**
+ * Generate a single Dirichlet sample using the Gamma-distribution method:
+ * Draw Yⱼ ~ Gamma(αⱼ, 1) independently, then Pⱼ = Yⱼ / ΣYⱼ.
+ * @param alpha — concentration parameter vector (αⱼ > 0)
+ * @param rng — optional random number generator (default: Math.random)
+ */
+export function sampleDirichlet(alpha: number[], rng: () => number = Math.random): number[] {
+  const k = alpha.length;
+  const y = new Array<number>(k);
+  let sum = 0;
+  for (let j = 0; j < k; j++) {
+    y[j] = sampleGammaShape(alpha[j], rng);
+    sum += y[j];
+  }
+  if (sum <= 0) return new Array(k).fill(1 / k); // fallback for degenerate case
+  return y.map(yj => yj / sum);
+}
+
+// ── Copula (Topic 8) ───────────────────────────────────────────────────────
+
+/**
+ * Generate n samples from a Gaussian copula with correlation matrix R.
+ * Returns n×p array of Uniform(0,1) values with the specified dependence.
+ * Apply marginal inverse CDFs to get the desired marginal distributions.
+ *
+ * Algorithm: Z = L·ε where ε ~ N(0,I), L = cholesky(R). Then U = Φ(Z).
+ */
+export function sampleGaussianCopula(
+  n: number, R: number[][], rng: () => number = Math.random,
+): number[][] {
+  const p = R.length;
+  const L = cholesky2x2(R); // works for 2×2 (CopulaExplorer is bivariate)
+
+  const samples: number[][] = [];
+  for (let i = 0; i < n; i++) {
+    // Generate p independent standard normals via Box-Muller
+    const z: number[] = new Array(p);
+    for (let j = 0; j < p; j += 2) {
+      const u1 = rng();
+      const u2 = rng();
+      const r = Math.sqrt(-2 * Math.log(u1));
+      z[j] = r * Math.cos(2 * Math.PI * u2);
+      if (j + 1 < p) z[j + 1] = r * Math.sin(2 * Math.PI * u2);
+    }
+
+    // Correlate: Y = L·Z
+    const y = matVecMul(L, z);
+
+    // Apply Φ to get uniform marginals
+    const u = y.map(yj => cdfStdNormal(yj));
+    samples.push(u);
+  }
+  return samples;
+}
