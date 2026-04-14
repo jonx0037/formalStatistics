@@ -12,7 +12,6 @@ type DistClass =
   | 'general';
 
 const BOUND_COLORS: Record<string, string> = {
-  markov: '#6b7280',
   chebyshev: '#d97706',
   hoeffding: '#059669',
   bernstein: '#2563eb',
@@ -21,7 +20,6 @@ const BOUND_COLORS: Record<string, string> = {
 };
 
 const BOUND_LABEL: Record<string, string> = {
-  markov: 'Markov',
   chebyshev: 'Chebyshev',
   hoeffding: 'Hoeffding',
   bernstein: 'Bernstein',
@@ -47,33 +45,29 @@ export default function SampleSizeCalculator() {
   const [M, setM] = useState(0.5);
   // Sub-Gaussian param
   const [sgParam, setSgParam] = useState(0.5);
-  // Optional mean (for Markov)
-  const [mu, setMu] = useState(0.5);
 
   const results = useMemo(() => {
     const zScore = quantileStdNormal(1 - delta / 2);
-    const params: Parameters<typeof sampleSizeRequirements>[2] = {
-      mu,
-      zScore,
-    };
+    const params: Parameters<typeof sampleSizeRequirements>[2] = { zScore };
     if (distClass === 'bounded' || distClass === 'known-variance') {
       params.range = [aBound, bBound];
     }
-    if (distClass === 'known-variance' || distClass === 'sub-gaussian') {
+    if (distClass === 'known-variance' || distClass === 'sub-gaussian' || distClass === 'general') {
       params.sigma2 = sigma2;
+    }
+    if (distClass === 'known-variance') {
       params.M = M;
     }
     if (distClass === 'sub-gaussian') {
       params.subGaussianParam = sgParam;
     }
     if (distClass === 'bounded') {
-      // Infer variance bound and M from range for Chebyshev/Bernstein fallbacks
       const range = bBound - aBound;
       params.sigma2 = (range * range) / 4;
       params.M = range / 2;
     }
     return sampleSizeRequirements(epsilon, delta, params);
-  }, [epsilon, delta, distClass, aBound, bBound, sigma2, M, sgParam, mu]);
+  }, [epsilon, delta, distClass, aBound, bBound, sigma2, M, sgParam]);
 
   const entries = useMemo(
     () =>
@@ -91,7 +85,6 @@ export default function SampleSizeCalculator() {
   const tightest = useMemo(() => {
     let best: [string, number] | null = null;
     for (const [k, v] of entries) {
-      if (k === 'markov') continue; // Markov is rarely actionable
       if (best === null || v < best[1]) best = [k, v];
     }
     return best;
@@ -192,14 +185,6 @@ export default function SampleSizeCalculator() {
               label="σ_sg"
               value={sgParam}
               onChange={setSgParam}
-              step={0.05}
-            />
-          )}
-          {distClass === 'general' && (
-            <LabeledNumber
-              label="μ (for Markov)"
-              value={mu}
-              onChange={setMu}
               step={0.05}
             />
           )}

@@ -809,22 +809,23 @@ export function johnsonLindenstraussDim(
  * Sample-size requirements under each bound family for achieving
  *   P(|X̄ₙ − μ| ≥ ε) ≤ δ.
  * Returns the minimum n implied by each applicable bound; fields are
- * undefined when the required parameter is not supplied.
- *   • markov:     n ≥ μ/ε       (requires mu; often loose)
+ * undefined when the required parameter is not supplied. The Markov row
+ * is intentionally omitted — a two-sided Markov bound on |X̄ₙ − μ| does
+ * not yield a useful sample-size formula (it gives no n-dependence).
  *   • chebyshev:  n ≥ σ²/(ε²δ)
  *   • hoeffding:  n ≥ (b−a)²·ln(2/δ) / (2ε²)
  *   • bernstein:  n ≥ (2σ² + 2Mε/3)·ln(2/δ) / ε²
  *   • subGauss:   n ≥ 2σ_sg²·ln(2/δ) / ε²
  *   • clt:        n ≥ (z_{δ/2}·σ/ε)²  (approximate, using z = Φ⁻¹(1−δ/2))
- * @param epsilon — accuracy tolerance
- * @param delta — failure probability
+ * Returns an empty object for invalid inputs (ε ≤ 0 or δ ∉ (0, 1)).
+ * @param epsilon — accuracy tolerance (must be > 0)
+ * @param delta — failure probability (must be in (0, 1))
  * @param params — distribution parameters (any subset)
  */
 export function sampleSizeRequirements(
   epsilon: number,
   delta: number,
   params: {
-    mu?: number;
     sigma2?: number;
     range?: [number, number];
     M?: number;
@@ -832,7 +833,6 @@ export function sampleSizeRequirements(
     zScore?: number;
   }
 ): {
-  markov?: number;
   chebyshev?: number;
   hoeffding?: number;
   bernstein?: number;
@@ -840,29 +840,31 @@ export function sampleSizeRequirements(
   clt?: number;
 } {
   const out: Record<string, number | undefined> = {};
+  if (
+    !Number.isFinite(epsilon) ||
+    !Number.isFinite(delta) ||
+    epsilon <= 0 ||
+    delta <= 0 ||
+    delta >= 1
+  ) {
+    return out;
+  }
   const lnFactor = Math.log(2 / delta);
   const eps2 = epsilon * epsilon;
 
-  if (params.mu !== undefined && epsilon > 0) {
-    out.markov = Math.ceil(params.mu / epsilon);
-  }
-  if (params.sigma2 !== undefined && eps2 > 0) {
+  if (params.sigma2 !== undefined) {
     out.chebyshev = Math.ceil(params.sigma2 / (eps2 * delta));
   }
   if (params.range !== undefined) {
     const r = params.range[1] - params.range[0];
     out.hoeffding = Math.ceil((r * r * lnFactor) / (2 * eps2));
   }
-  if (
-    params.sigma2 !== undefined &&
-    params.M !== undefined &&
-    eps2 > 0
-  ) {
+  if (params.sigma2 !== undefined && params.M !== undefined) {
     out.bernstein = Math.ceil(
       ((2 * params.sigma2 + (2 * params.M * epsilon) / 3) * lnFactor) / eps2
     );
   }
-  if (params.subGaussianParam !== undefined && eps2 > 0) {
+  if (params.subGaussianParam !== undefined) {
     const sg = params.subGaussianParam;
     out.subGaussian = Math.ceil((2 * sg * sg * lnFactor) / eps2);
   }

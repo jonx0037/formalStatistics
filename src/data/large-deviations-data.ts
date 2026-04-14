@@ -111,13 +111,13 @@ export const concentrationDistributions: ConcentrationDistribution[] = [
     id: 'normal-truncated',
     name: 'Truncated N(0, 1) on [−3, 3]',
     mu: 0,
-    sigma2: 0.9973,
+    sigma2: 0.9733,
     range: [-3, 3],
     M: 3,
     subGaussianParam: 1,
     classification: 'sub-gaussian',
     description:
-      'Bounded approximation of a Gaussian. Range [−3, 3] covers 99.7% of N(0,1).',
+      'Bounded approximation of a Gaussian. Range [−3, 3] covers about 99.7% of N(0,1); the truncated distribution has variance ≈ 0.9733.',
   },
   {
     id: 'exponential',

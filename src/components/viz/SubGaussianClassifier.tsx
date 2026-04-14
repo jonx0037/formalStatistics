@@ -71,7 +71,7 @@ export default function SubGaussianClassifier() {
   const [distId, setDistId] = useState<string>('normal');
   const [isLoading, setIsLoading] = useState(true);
   const samplesRef = useRef<Float64Array | null>(null);
-  const [_, setBump] = useState(0); // trigger re-render after sample generation
+  const [, setBump] = useState(0); // trigger re-render after sample generation
 
   const preset: SubGaussianPreset =
     subGaussianPresets.find((p) => p.id === distId) ?? subGaussianPresets[0];

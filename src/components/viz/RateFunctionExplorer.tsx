@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import * as d3 from 'd3';
 import { useResizeObserver } from './shared/useResizeObserver';
-import { bernoulliKL, cramerRateFunction } from './shared/convergence';
+import { bernoulliKL } from './shared/convergence';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -179,6 +179,7 @@ export default function RateFunctionExplorer() {
           n={n}
           hoverX={hoverX}
           setHoverX={setHoverX}
+          iAt={dist.I}
         />
         <LogMgfPanel
           width={panelW}
@@ -214,6 +215,7 @@ function RatePanel({
   n,
   hoverX,
   setHoverX,
+  iAt,
 }: {
   width: number;
   data: Array<{ x: number; I: number }>;
@@ -221,9 +223,18 @@ function RatePanel({
   n: number;
   hoverX: number | null;
   setHoverX: (x: number | null) => void;
+  iAt: (x: number) => number;
 }) {
   const svgRef = useRef<SVGSVGElement>(null);
+  // Keep the x/y scales stable across re-renders so the hover-only effect can
+  // translate hoverX → pixel coords without rebuilding the chart.
+  const scalesRef = useRef<{
+    xScale: d3.ScaleLinear<number, number>;
+    yScale: d3.ScaleLinear<number, number>;
+    innerH: number;
+  } | null>(null);
 
+  // Static draw — runs only when data/width/mean change. Never wipes on hover.
   useEffect(() => {
     if (!svgRef.current || data.length === 0) return;
     const svg = d3.select(svgRef.current);
@@ -231,11 +242,13 @@ function RatePanel({
 
     const innerW = width - MARGIN.left - MARGIN.right;
     const innerH = H - MARGIN.top - MARGIN.bottom;
-    const xExt = d3.extent(data, (d) => d.x) as [number, number];
+    const [xMin, xMax] = d3.extent(data, (d) => d.x);
+    if (xMin === undefined || xMax === undefined) return;
     const iMax = d3.max(data, (d) => d.I) ?? 1;
 
-    const xScale = d3.scaleLinear().domain(xExt).range([0, innerW]);
+    const xScale = d3.scaleLinear().domain([xMin, xMax]).range([0, innerW]);
     const yScale = d3.scaleLinear().domain([0, iMax]).range([innerH, 0]);
+    scalesRef.current = { xScale, yScale, innerH };
 
     const g = svg
       .append('g')
@@ -250,8 +263,6 @@ function RatePanel({
       .call(d3.axisLeft(yScale).ticks(5))
       .selectAll('text')
       .style('font-size', '10px');
-
-    // Axis labels
     g.append('text')
       .attr('x', innerW / 2)
       .attr('y', innerH + 30)
@@ -268,7 +279,6 @@ function RatePanel({
       .style('fill', 'currentColor')
       .text('I(x)');
 
-    // Rate curve
     const line = d3
       .line<{ x: number; I: number }>()
       .x((d) => xScale(d.x))
@@ -279,7 +289,6 @@ function RatePanel({
       .attr('stroke', '#7c3aed')
       .attr('stroke-width', 2);
 
-    // Mark mean
     g.append('line')
       .attr('x1', xScale(mean))
       .attr('x2', xScale(mean))
@@ -295,39 +304,51 @@ function RatePanel({
       .style('fill', '#059669')
       .text(`μ = ${mean.toFixed(2)}`);
 
-    // Hover overlay
+    // Dedicated hover layer, mutated by the second effect without rebuilds.
+    g.append('g').attr('class', 'hover-layer');
+
     const overlay = g
       .append('rect')
       .attr('width', innerW)
       .attr('height', innerH)
       .attr('fill', 'transparent')
       .attr('pointer-events', 'all');
-
     overlay.on('mousemove', (event) => {
       const [mx] = d3.pointer(event);
       setHoverX(xScale.invert(mx));
     });
     overlay.on('mouseleave', () => setHoverX(null));
+  }, [data, width, mean, setHoverX]);
 
-    if (hoverX !== null) {
-      const hx = xScale(hoverX);
-      g.append('line')
-        .attr('x1', hx)
-        .attr('x2', hx)
-        .attr('y1', 0)
-        .attr('y2', innerH)
-        .attr('stroke', '#dc2626')
-        .attr('stroke-width', 1);
-      // e^{-nI(x)} annotation
-      const iVal = data.find((d) => Math.abs(d.x - hoverX) < 1e-2)?.I ?? 0;
-      g.append('text')
-        .attr('x', hx + 5)
-        .attr('y', yScale(iVal) - 4)
-        .style('font-size', '10px')
-        .style('fill', '#dc2626')
-        .text(`e^(-${(n * iVal).toFixed(2)}) = ${Math.exp(-n * iVal).toExponential(2)}`);
-    }
-  }, [data, width, mean, n, hoverX, setHoverX]);
+  // Hover-only update — redraws the two-element hover layer without touching
+  // the rest of the chart. iAt is the closed-form rate function, so the
+  // annotation is exact, not a tolerance-search fallback.
+  useEffect(() => {
+    if (!svgRef.current || !scalesRef.current) return;
+    const svg = d3.select(svgRef.current);
+    const layer = svg.select<SVGGElement>('g.hover-layer');
+    layer.selectAll('*').remove();
+    if (hoverX === null) return;
+    const { xScale, yScale, innerH } = scalesRef.current;
+    const iVal = iAt(hoverX);
+    if (!isFinite(iVal)) return;
+    const hx = xScale(hoverX);
+    layer
+      .append('line')
+      .attr('x1', hx)
+      .attr('x2', hx)
+      .attr('y1', 0)
+      .attr('y2', innerH)
+      .attr('stroke', '#dc2626')
+      .attr('stroke-width', 1);
+    layer
+      .append('text')
+      .attr('x', hx + 5)
+      .attr('y', yScale(iVal) - 4)
+      .style('font-size', '10px')
+      .style('fill', '#dc2626')
+      .text(`e^(-${(n * iVal).toFixed(2)}) = ${Math.exp(-n * iVal).toExponential(2)}`);
+  }, [hoverX, n, iAt]);
 
   return <svg ref={svgRef} width={width} height={H} />;
 }

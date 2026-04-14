@@ -230,7 +230,7 @@ The Chernoff bound is not one bound — it is a *family* of bounds parametrized 
 Let $X_1, \ldots, X_n$ be iid Bernoulli$(p)$ and $S_n = \sum X_i$. The MGF of a single Bernoulli is $M(t) = 1 - p + p e^t$, so
 
 $$
-e^{-tna(1+\delta)} M(t)^n \;=\; \exp\!\left(-tn p(1+\delta) + n\log(1 - p + p e^t)\right),
+e^{-tnp(1+\delta)} M(t)^n \;=\; \exp\!\left(-tn p(1+\delta) + n\log(1 - p + p e^t)\right),
 $$
 
 where we've written the threshold as $np(1+\delta)$ for $\delta > 0$. The first-order condition $\Lambda'(t) = p(1+\delta)$ solves explicitly:
@@ -735,13 +735,19 @@ $$
 |M_{k+1} - M_k| \;\leq\; c_{k+1}.
 $$
 
-Applying Azuma–Hoeffding (Theorem 12.7) with these increment bounds:
+Applying Azuma–Hoeffding (Theorem 12.7) with these increment bounds would give $P(|M_n - M_0| \geq t) \leq 2 \exp(-t^2/(2 \sum_k c_k^2))$ — the Azuma constant. The sharper McDiarmid constant ($2t^2$ in the numerator rather than $t^2/2$) comes from a better sub-Gaussian MGF bound on each increment: given the filtration up to step $k$, the increment $M_{k+1} - M_k$ is a mean-zero random variable that lies in an interval of length at most $c_{k+1}$ (because varying $X_{k+1}$ over its support changes $f$ by at most $c_{k+1}$, so the conditional range of $M_{k+1}$ given the past is $\leq c_{k+1}$). Hoeffding's lemma (Theorem 12.2) then gives
 
 $$
-P(|M_n - M_0| \geq t) \;\leq\; 2 \exp\!\left(-\frac{t^2}{2 \sum_k c_k^2}\right).
+\mathbb{E}\!\left[e^{s(M_{k+1} - M_k)} \mid X_1, \ldots, X_k\right] \;\leq\; \exp\!\left(\frac{s^2 c_{k+1}^2}{8}\right).
 $$
 
-The factor of $2$ in the final bound (McDiarmid has $2t^2$ in the numerator, while Azuma has $t^2/2$) is because the martingale construction gives $c_k$ as a bound on $|M_k - M_{k-1}|$, which is actually $\leq c_k/2$ when $f$ has symmetric bounded differences — this sharpening is the standard factor-of-4 in moving from Azuma to McDiarmid. For the symmetric statement above, $|M_{k+1} - M_k| \leq c_{k+1}/2$, giving the factor-of-$2$-in-exponent improvement. $\blacksquare$
+Applying the Chernoff technique with this conditional MGF bound — exactly as in Hoeffding's inequality proof, iterating the conditional-expectation argument over $k$ — gives
+
+$$
+P(|M_n - M_0| \geq t) \;\leq\; 2 \exp\!\left(-\frac{2 t^2}{\sum_k c_k^2}\right).
+$$
+
+The key point: Azuma's generic constant uses $|M_{k+1} - M_k| \leq c$ as a worst-case absolute bound, which is equivalent to sub-Gaussian with parameter $c^2$; but for the Doob martingale of a bounded-differences function, we know the stronger fact that the increment's *conditional range* is $\leq c_{k+1}$, which by Hoeffding's lemma gives sub-Gaussian parameter $c_{k+1}^2/4$. The factor of $4$ in the variance proxy is exactly the factor-of-$4$ improvement in the exponent. $\blacksquare$
 </ProofBlock>
 
 McDiarmid is the Swiss army knife of concentration. It applies to *any* function of independent inputs that has bounded differences, regardless of the function's structure. The variance of $f$ doesn't enter — only the coordinate-wise Lipschitz constants $c_i$.

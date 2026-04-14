@@ -116,11 +116,12 @@ export default function ChernoffOptimizationExplorer() {
     const innerW = panelW - MARGIN.left - MARGIN.right;
     const innerH = H - MARGIN.top - MARGIN.bottom;
     const yPositive = curve.filter((d) => d.y > 0);
-    const yExt = d3.extent(yPositive, (d) => d.y) as [number, number];
+    const [yMinRaw, yMaxRaw] = d3.extent(yPositive, (d) => d.y);
+    if (yMinRaw === undefined || yMaxRaw === undefined) return;
     const xScale = d3.scaleLinear().domain([0.001, 5]).range([0, innerW]);
     const yScale = d3
       .scaleLog()
-      .domain([Math.max(1e-12, yExt[0]), Math.max(1, yExt[1])])
+      .domain([Math.max(1e-12, yMinRaw), Math.max(1, yMaxRaw)])
       .range([innerH, 0])
       .clamp(true);
     const g = svg.append('g').attr('transform', `translate(${MARGIN.left},${MARGIN.top})`);
