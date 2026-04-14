@@ -11,7 +11,7 @@
     { "id": "multivariate-distributions", "label": "Multivariate Distributions", "domain": "core-distributions", "status": "published", "url": "/topics/multivariate-distributions" },
 
     { "id": "modes-of-convergence", "label": "Modes of Convergence", "domain": "convergence-limit-theorems", "status": "published", "url": "/topics/modes-of-convergence" },
-    { "id": "law-of-large-numbers", "label": "Law of Large Numbers", "domain": "convergence-limit-theorems", "status": "planned", "url": "/topics/law-of-large-numbers" },
+    { "id": "law-of-large-numbers", "label": "Law of Large Numbers", "domain": "convergence-limit-theorems", "status": "published", "url": "/topics/law-of-large-numbers" },
     { "id": "central-limit-theorem", "label": "Central Limit Theorem", "domain": "convergence-limit-theorems", "status": "planned", "url": "/topics/central-limit-theorem" },
     { "id": "large-deviations", "label": "Large Deviations & Tail Bounds", "domain": "convergence-limit-theorems", "status": "planned", "url": "/topics/large-deviations" },
 

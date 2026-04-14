@@ -241,7 +241,7 @@ $$
 Therefore $P(|\bar{X}_n - \mu| > \varepsilon) \to 0$, which is $\bar{X}_n \xrightarrow{P} \mu$. $\square$
 </ProofBlock>
 
-This three-line argument — compute the variance, apply Chebyshev, watch it go to zero — is the prototype for most consistency proofs in statistics. The full Weak Law of Large Numbers (WLLN), proved in Topic 10 (coming soon), generalizes this to relaxed independence conditions.
+This three-line argument — compute the variance, apply Chebyshev, watch it go to zero — is the prototype for most consistency proofs in statistics. The full Weak Law of Large Numbers (WLLN), proved in [Law of Large Numbers](/topics/law-of-large-numbers), generalizes this to relaxed independence conditions — including uncorrelated sequences and distributions with finite mean but infinite variance.
 
 <ExampleBlock number={1} title="Scaled Normal: the simplest convergence-in-probability example">
 Let $Z \sim N(0, 1)$ and define $X_n = Z/n$. We claim $X_n \xrightarrow{P} 0$.
@@ -363,7 +363,7 @@ This is the **Strong Law of Large Numbers** (SLLN). It says more than Theorem 9.
 
 The SLLN is *the* justification for Monte Carlo simulation: when we estimate $E[g(X)]$ by averaging $g(X_1), \ldots, g(X_n)$, the a.s. convergence guarantees that our single run of the simulation will produce an average that converges to the truth. Convergence in probability alone would only guarantee this "with high probability" — we'd need to worry about rare bad runs. The SLLN says those bad runs have probability zero.
 
-The full proof requires more machinery than we have developed so far and is the subject of Topic 10 (coming soon). The key difficulty is controlling the supremum $\sup_{m \geq n}|\bar{X}_m - \mu|$, which the Chebyshev argument of Theorem 9.1 cannot do.
+The full proof requires Kolmogorov's maximal inequality and a truncation argument — see [Law of Large Numbers](/topics/law-of-large-numbers) for the complete Etemadi proof. The key difficulty is controlling the supremum $\sup_{m \geq n}|\bar{X}_m - \mu|$, which the Chebyshev argument of Theorem 9.1 cannot do.
 </ExampleBlock>
 
 <RemarkBlock number={1} title="Kolmogorov's 0-1 Law and Tail Events">
@@ -1196,7 +1196,7 @@ Almost sure and $L^p$ are *incomparable* — neither implies the other in genera
 
 This topic established the *modes* of convergence — the different senses in which sequences of random variables can approach a limit. The next three topics apply these modes to the three pillars of asymptotic probability:
 
-- **Law of Large Numbers** (Topic 10, coming soon): The WLLN proves $\bar{X}_n \xrightarrow{P} \mu$ (convergence in probability of the sample mean) under finite variance, and the SLLN proves $\bar{X}_n \xrightarrow{\text{a.s.}} \mu$ (almost sure convergence) under finite mean alone. Both proofs use the framework developed here.
+- [Law of Large Numbers](/topics/law-of-large-numbers): The WLLN proves $\bar{X}_n \xrightarrow{P} \mu$ under finite variance (Theorem 10.1) and under finite mean alone (Khintchine, Theorem 10.3). The SLLN proves $\bar{X}_n \xrightarrow{\text{a.s.}} \mu$ under finite mean alone (Etemadi, Theorem 10.5). The Glivenko–Cantelli theorem proves uniform a.s. convergence of the empirical CDF.
 
 - **Central Limit Theorem** (Topic 11, coming soon): The CLT proves $\sqrt{n}(\bar{X}_n - \mu)/\sigma \xrightarrow{d} N(0,1)$ (convergence in distribution). The proof technique is MGF convergence — the same technique we used for the Poisson limit theorem in Section 9.9.
 

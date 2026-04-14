@@ -297,3 +297,142 @@ export function bernoulliSample(
 ): number {
   return rng() < p ? 1 : 0;
 }
+
+// ── Topic 10: Law of Large Numbers Extensions ──────────────────────────────
+
+// ── Additional Sampling Functions ──────────────────────────────────────────
+
+/**
+ * Generate a Student-t(ν) sample using the ratio method.
+ * t = Z / √(V/ν) where Z ~ N(0,1) and V ~ χ²(ν) = Σᵢ Zᵢ².
+ * @param nu — degrees of freedom (> 0)
+ * @param rng — uniform [0,1) generator (default Math.random)
+ */
+export function tSample(
+  nu: number,
+  rng: () => number = Math.random
+): number {
+  const z = normalSample(0, 1, rng);
+  // χ²(ν) as sum of ν squared standard normals
+  let v = 0;
+  for (let i = 0; i < Math.round(nu); i++) {
+    const zi = normalSample(0, 1, rng);
+    v += zi * zi;
+  }
+  return z / Math.sqrt(v / nu);
+}
+
+/**
+ * Generate a Pareto(α, xₘ=1) sample via inverse CDF.
+ * X = 1 / U^{1/α} where U ~ Uniform(0,1).
+ * @param alpha — shape parameter (> 0)
+ * @param rng — uniform [0,1) generator (default Math.random)
+ */
+export function paretoSample(
+  alpha: number,
+  rng: () => number = Math.random
+): number {
+  const u = Math.max(rng(), Number.EPSILON);
+  return 1 / Math.pow(u, 1 / alpha);
+}
+
+/**
+ * Generate a bootstrap sample: n draws with replacement from data.
+ * @param data — original sample array
+ * @returns array of length data.length, drawn with replacement
+ */
+export function bootstrapSample(data: number[]): number[] {
+  const n = data.length;
+  const out = new Array<number>(n);
+  for (let i = 0; i < n; i++) {
+    out[i] = data[Math.floor(Math.random() * n)];
+  }
+  return out;
+}
+
+// ── Concentration Bounds ───────────────────────────────────────────────────
+
+/**
+ * Chebyshev bound: P(|X̄ₙ − μ| > ε) ≤ σ²/(nε²).
+ * Clamped to [0, 1].
+ */
+export function chebyshevBound(
+  n: number,
+  sigmaSquared: number,
+  epsilon: number
+): number {
+  return Math.min(sigmaSquared / (n * epsilon * epsilon), 1);
+}
+
+/**
+ * Hoeffding bound: P(|X̄ₙ − μ| > ε) ≤ 2 exp(−2nε²/(b−a)²).
+ * For bounded random variables X ∈ [a, b].
+ */
+export function hoeffdingBound(
+  n: number,
+  a: number,
+  b: number,
+  epsilon: number
+): number {
+  const range = b - a;
+  return Math.min(2 * Math.exp(-2 * n * epsilon * epsilon / (range * range)), 1);
+}
+
+// ── Glivenko–Cantelli Utilities ────────────────────────────────────────────
+
+/**
+ * DKW confidence band half-width: √(ln(2/α) / (2n)).
+ * The Dvoretzky–Kiefer–Wolfowitz inequality gives:
+ *   P(supₓ |Fₙ(x) − F(x)| > ε) ≤ 2 exp(−2nε²).
+ * Inverting: the band width at level α is √(ln(2/α)/(2n)).
+ */
+export function dkwBound(n: number, alpha: number): number {
+  return Math.sqrt(Math.log(2 / alpha) / (2 * n));
+}
+
+/**
+ * Running KS statistic: Dₙ for n = 1, 2, ..., N.
+ * Returns array where entry k is the KS statistic using
+ * samples[0..k] (i.e., the first k+1 observations).
+ * @param samples — all N samples
+ * @param cdf — theoretical CDF function
+ */
+export function runningKSStatistic(
+  samples: number[],
+  cdf: (x: number) => number
+): number[] {
+  const N = samples.length;
+  const result = new Array<number>(N);
+  const running: number[] = [];
+
+  for (let i = 0; i < N; i++) {
+    running.push(samples[i]);
+    // Sort the running sample to compute KS stat
+    const sorted = [...running].sort((a, b) => a - b);
+    const n = sorted.length;
+    let maxDiff = 0;
+    for (let j = 0; j < n; j++) {
+      const Fx = cdf(sorted[j]);
+      const ecdfRight = (j + 1) / n;
+      const ecdfLeft = j / n;
+      maxDiff = Math.max(
+        maxDiff,
+        Math.abs(ecdfRight - Fx),
+        Math.abs(ecdfLeft - Fx)
+      );
+    }
+    result[i] = maxDiff;
+  }
+
+  return result;
+}
+
+/**
+ * Law of the iterated logarithm envelope: σ√(2 ln(ln(n)) / n).
+ * Gives the precise a.s. oscillation rate of X̄ₙ around μ.
+ * For n < 3, ln(ln(n)) is undefined or negative; returns Infinity.
+ */
+export function lilEnvelope(n: number, sigma: number): number {
+  if (n < 3) return Infinity;
+  return sigma * Math.sqrt(2 * Math.log(Math.log(n)) / n);
+}
