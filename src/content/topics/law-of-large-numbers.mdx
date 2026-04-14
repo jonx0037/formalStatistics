@@ -1,0 +1,1193 @@
+---
+title: "Law of Large Numbers"
+subtitle: "From sample means to population truth — the weak law, the strong law, and why Monte Carlo works."
+status: "published"
+difficulty: "intermediate"
+prerequisites:
+  - "modes-of-convergence"
+tags:
+  - "probability"
+  - "convergence"
+  - "weak-law"
+  - "strong-law"
+  - "wlln"
+  - "slln"
+  - "kolmogorov"
+  - "glivenko-cantelli"
+  - "monte-carlo"
+  - "empirical-cdf"
+  - "convergence-rates"
+domain: "convergence-limit-theorems"
+videoId: null
+notebookPath: "notebooks/law-of-large-numbers/10_law_of_large_numbers.ipynb"
+githubUrl: "https://github.com/jonx0037/formalStatistics/blob/main/src/content/topics/law-of-large-numbers.mdx"
+datePublished: 2026-04-14
+estimatedReadTime: 40
+abstract: "Topic 9 defined four modes of convergence and used Chebyshev's inequality to preview the simplest weak law of large numbers: if X₁, X₂, ... are iid with finite variance σ², then the sample mean X̄ₙ converges to the population mean μ in probability. That three-line proof left two questions open. First, can we relax the assumptions? Finite variance is stronger than necessary — Khintchine's theorem proves the WLLN under finite mean alone, and the uncorrelated version drops the 'identically distributed' requirement entirely. Second, can we upgrade the conclusion? Convergence in probability says deviations are rare, but the Strong Law of Large Numbers (SLLN) says more: P(X̄ₙ → μ) = 1, meaning every single sample path converges almost surely. The SLLN is the mathematical license to trust a single run of Monte Carlo simulation, a single trajectory of SGD, or a single empirical risk estimate. This topic proves the WLLN under progressively relaxed conditions (uncorrelated sequences, finite mean via truncation), develops Kolmogorov's maximal inequality (the technical engine that controls the supremum of partial sums), and proves the SLLN via Etemadi's elegant argument requiring only pairwise independence. The Glivenko–Cantelli theorem extends the SLLN from sample means to the entire empirical CDF: supₓ|Fₙ(x) − F(x)| → 0 almost surely — the foundational result behind the Kolmogorov–Smirnov test and the starting point for empirical process theory. Convergence rate analysis connects the LLN to the CLT (1/√n rate), concentration inequalities (exponential rates via Hoeffding), and the law of the iterated logarithm (the precise a.s. oscillation envelope)."
+formalcalculusPrereqs:
+  - topic: "sequences-limits"
+    site: "formalcalculus"
+    relationship: "The SLLN is an almost sure convergence statement — P(lim X̄ₙ = μ) = 1 — which requires the formal definition of limits and the ε-N proof technique. Limsup and liminf appear in the Borel–Cantelli characterization used in the proof."
+  - topic: "series-convergence"
+    site: "formalcalculus"
+    relationship: "The Borel–Cantelli lemma — used in both the truncation step of Etemadi's proof and the Glivenko–Cantelli theorem — requires that Σ P(Aₙ) < ∞, a series convergence condition. The variance series Σ Var(Yᵢ)/i² < ∞ requires comparison tests."
+  - topic: "integration"
+    site: "formalcalculus"
+    relationship: "The dominated convergence theorem is the key tool in the truncation argument: E[X₁ 1(|X₁| ≤ n)] → E[X₁] as n → ∞, and E[X₁² 1(|X₁| ≤ n)]/n → 0. Both limits are justified by DCT."
+formalmlConnections:
+  - topic: "stochastic-gradient-descent"
+    site: "formalml"
+    relationship: "SGD convergence under Robbins–Monro conditions (Σ αₜ = ∞, Σ αₜ² < ∞) is proved via the SLLN and martingale convergence. Polyak averaging — computing the running mean of SGD iterates — converges a.s. to the optimum by the SLLN."
+  - topic: "generalization-bounds"
+    site: "formalml"
+    relationship: "PAC learning bounds are WLLN statements: P(|R̂(h) − R(h)| > ε) ≤ δ. Uniform convergence over hypothesis classes (Vapnik–Chervonenkis theory) extends the Glivenko–Cantelli theorem from indicators to function classes."
+  - topic: "monte-carlo-methods"
+    site: "formalml"
+    relationship: "The SLLN is the theoretical foundation of all Monte Carlo methods. MCMC convergence (ergodic theorem) is a generalization of the SLLN to dependent sequences. Importance sampling convergence is the SLLN applied under a change of measure."
+  - topic: "empirical-risk-minimization"
+    site: "formalml"
+    relationship: "ERM consistency — the minimizer of the empirical risk converges to the minimizer of the population risk — requires uniform convergence of R̂ₙ(θ) → R(θ) over θ, which is a generalization of the Glivenko–Cantelli theorem."
+connections:
+  - topic: "modes-of-convergence"
+    relationship: "Topic 9 defined the four modes of convergence and proved the WLLN for iid with finite variance (Theorem 9.1) as a preview. This topic extends to the full WLLN under relaxed conditions and proves the SLLN."
+  - topic: "expectation-moments"
+    relationship: "Topic 4 developed Chebyshev's inequality (Theorem 12), which is the proof engine for the basic WLLN, and the dominated convergence theorem concepts used in the truncation argument."
+  - topic: "central-limit-theorem"
+    relationship: "Topic 11 refines the LLN: while the LLN says X̄ₙ → μ, the CLT says √n(X̄ₙ − μ) →d N(0, σ²) — giving the shape of the fluctuations, not just their disappearance."
+  - topic: "large-deviations"
+    relationship: "Topic 12 quantifies how fast X̄ₙ → μ via exponential tail bounds (Hoeffding, Bernstein), which are much tighter than Chebyshev for bounded or sub-Gaussian random variables."
+references:
+  - type: "book"
+    title: "Probability: Theory and Examples"
+    author: "Rick Durrett"
+    year: 2019
+    edition: "5th"
+    publisher: "Cambridge University Press"
+    isbn: "978-1-108-47368-2"
+    url: "https://services.math.duke.edu/~rtd/PTE/PTE5_011119.pdf"
+    note: "Chapter 2 covers the laws of large numbers with the Etemadi proof. The standard graduate reference."
+  - type: "book"
+    title: "Probability and Measure"
+    author: "Patrick Billingsley"
+    year: 2012
+    edition: "Anniversary"
+    publisher: "Wiley"
+    isbn: "978-1-118-12237-2"
+    url: "https://www.wiley.com/en-us/Probability+and+Measure%2C+Anniversary+Edition-p-9781118122372"
+    note: "Chapters 22–24 cover the weak and strong laws. The truncation technique and maximal inequality proofs are definitive."
+  - type: "book"
+    title: "Statistical Inference"
+    author: "George Casella & Roger L. Berger"
+    year: 2002
+    edition: "2nd"
+    publisher: "Cengage"
+    isbn: "978-0-534-24312-8"
+    url: "https://www.cengage.com/c/statistical-inference-2e-casella/9780534243128/"
+    note: "Chapter 5 covers convergence and the LLN from a statistics perspective, with emphasis on consistency of estimators."
+  - type: "article"
+    title: "An elementary proof of the strong law of large numbers"
+    author: "Nasrollah Etemadi"
+    year: 1981
+    journal: "Zeitschrift für Wahrscheinlichkeitstheorie und verwandte Gebiete"
+    volume: "55"
+    pages: "119–122"
+    url: "https://doi.org/10.1007/BF01013465"
+    note: "The elegant proof requiring only pairwise independence. Three pages. Every graduate student should read it."
+  - type: "book"
+    title: "All of Statistics"
+    author: "Larry Wasserman"
+    year: 2004
+    publisher: "Springer"
+    isbn: "978-0-387-40272-7"
+    url: "https://link.springer.com/book/10.1007/978-0-387-21736-9"
+    note: "Chapter 5 covers convergence and the LLN concisely. Good for the Glivenko–Cantelli theorem statement and statistical applications."
+  - type: "book"
+    title: "Pattern Recognition and Machine Learning"
+    author: "Christopher M. Bishop"
+    year: 2006
+    publisher: "Springer"
+    isbn: "978-0-387-31073-2"
+    url: "https://www.microsoft.com/en-us/research/people/cmbishop/prml-book/"
+    note: "Chapter 2 uses the LLN implicitly throughout. Monte Carlo methods in Chapter 11 depend on it fundamentally."
+---
+
+import DefinitionBlock from '../../components/ui/DefinitionBlock.astro';
+import TheoremBlock from '../../components/ui/TheoremBlock.astro';
+import ProofBlock from '../../components/ui/ProofBlock.astro';
+import ExampleBlock from '../../components/ui/ExampleBlock.astro';
+import RemarkBlock from '../../components/ui/RemarkBlock.astro';
+import ExternalLink from '../../components/ui/ExternalLink.astro';
+
+import WLLNExplorer from '../../components/viz/WLLNExplorer.tsx';
+import MaximalInequalityExplorer from '../../components/viz/MaximalInequalityExplorer.tsx';
+import SLLNExplorer from '../../components/viz/SLLNExplorer.tsx';
+import GlivenkoCantelliExplorer from '../../components/viz/GlivenkoCantelliExplorer.tsx';
+import ConvergenceRateExplorer from '../../components/viz/ConvergenceRateExplorer.tsx';
+
+## 10.1 Why "In Probability" Isn't Enough
+
+Topic 9 ended with a promise. We proved that the sample mean $\bar{X}_n = \frac{1}{n}\sum_{i=1}^n X_i$ converges to the population mean $\mu$ *in probability* — meaning that for any tolerance $\varepsilon > 0$, the probability of $\bar{X}_n$ deviating from $\mu$ by more than $\varepsilon$ goes to zero as $n$ grows. That was Theorem 9.1, and its proof was three lines: compute the variance of $\bar{X}_n$, apply Chebyshev's inequality, watch the bound vanish.
+
+But convergence in probability is a statement about *individual time slices*. It says: "at time $n$, the probability of a bad deviation is small." It does *not* say that the sample path — the actual sequence of values $\bar{X}_1(\omega), \bar{X}_2(\omega), \bar{X}_3(\omega), \ldots$ that you observe when you run your simulation or collect your data — eventually settles down and stays near $\mu$. A sequence can converge in probability without any single realization converging at all (recall the typewriter sequence from [Topic 9, Section 9.7](/topics/modes-of-convergence)).
+
+This distinction matters enormously in practice. When you run a Monte Carlo simulation to estimate $E[g(X)]$, you run *one* simulation. You don't generate infinitely many parallel universes and check that the fraction of bad outcomes is shrinking — you generate a single sequence of samples and compute a single running average. You need to know that *this particular* running average converges to the truth. That's almost sure convergence: $P(\lim_{n \to \infty} \bar{X}_n = \mu) = 1$.
+
+The same goes for stochastic gradient descent. You run one training trajectory. Polyak averaging — taking the running mean of the iterates — needs almost sure convergence of the running mean to guarantee that your single training run finds the optimum. And when you evaluate a model's performance on a test set, the empirical risk $\hat{R}_n(\theta) = \frac{1}{n}\sum_{i=1}^n \ell(Y_i, f_\theta(X_i))$ is a sample mean. The Strong Law says this single empirical risk converges to the true risk for each fixed $\theta$. The Glivenko--Cantelli theorem (Section 10.7) says something even stronger: the convergence is *uniform* over all thresholds — or, with the right generalization, over all $\theta$ simultaneously.
+
+This topic traces the full arc from the weak law to the strong law. We start where Topic 9 left off — the Chebyshev-based WLLN for finite-variance iid sequences — and progressively generalize in two directions:
+
+1. **Relaxing assumptions** (Sections 10.2--10.4): We drop the "identically distributed" requirement (uncorrelated WLLN), then drop the finite-variance requirement entirely (Khintchine's WLLN under finite mean alone).
+
+2. **Strengthening the conclusion** (Sections 10.5--10.7): We upgrade from convergence in probability to almost sure convergence (SLLN via Etemadi's proof), then from pointwise to uniform convergence (Glivenko--Cantelli).
+
+The bridge between these two directions is Kolmogorov's maximal inequality (Section 10.5) — a result that controls the *running maximum* of partial sums with the same bound as Chebyshev uses for the *terminal* value. It is the technical engine that powers the SLLN proof.
+
+To make the distinction between the weak and strong laws concrete, consider the following analogy. Imagine you are tracking a sequence of fair coin flips, computing the running proportion of heads $\hat{p}_n = (\text{number of heads in } n \text{ flips})/n$.
+
+- **WLLN:** For any fixed tolerance $\varepsilon > 0$, $P(|\hat{p}_n - 1/2| > \varepsilon) \to 0$ as $n \to \infty$. If you could peek at the proportion at a single, very large time step, you'd very likely see something close to $1/2$. But this says nothing about what happens if you watch the proportion evolve over time.
+
+- **SLLN:** With probability 1, the entire trajectory $\hat{p}_1, \hat{p}_2, \hat{p}_3, \ldots$ converges to $1/2$. The running proportion settles down and stays near $1/2$ forever — not just at one particular time, but eventually at all times simultaneously.
+
+The WLLN is like saying "most photos of the sequence look good." The SLLN is like saying "the whole movie has a happy ending." For a single run of an experiment, a simulation, or a training procedure, you are watching the movie, not snapshots — so the SLLN is the result you need.
+
+This distinction is especially important in settings where you *cannot* re-run the experiment: a clinical trial with a fixed patient cohort, a one-time A/B test in production, a training run of a large language model that costs millions of dollars. You get one trajectory. The SLLN says that one trajectory is enough.
+
+<img src="/images/topics/law-of-large-numbers/lln-overview.png" alt="LLN overview: sample paths converging, probability decay, Cauchy vs Exponential" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
+
+Here is the roadmap:
+
+| Section | Result | What it says |
+|---------|--------|-------------|
+| 10.2 | WLLN (Chebyshev) | iid, $\sigma^2 < \infty$ implies $\bar{X}_n \xrightarrow{P} \mu$ |
+| 10.3 | WLLN (uncorrelated) | Uncorrelated, $\sum \sigma_i^2/n^2 \to 0$ implies $\bar{X}_n - \bar{\mu}_n \xrightarrow{P} 0$ |
+| 10.4 | WLLN (Khintchine) | iid, $E[\lvert X \rvert] < \infty$ implies $\bar{X}_n \xrightarrow{P} \mu$ |
+| 10.5 | Kolmogorov's maximal inequality | $P(\max_{k \leq n} \lvert S_k \rvert \geq \varepsilon) \leq \text{Var}(S_n)/\varepsilon^2$ |
+| 10.6 | SLLN (Etemadi) | Pairwise iid, $E[\lvert X \rvert] < \infty$ implies $\bar{X}_n \xrightarrow{\text{a.s.}} \mu$ |
+| 10.7 | Glivenko--Cantelli | $\sup_x \lvert F_n(x) - F(x) \rvert \xrightarrow{\text{a.s.}} 0$ |
+| 10.8 | Convergence rates | Chebyshev ($1/\varepsilon^2 n$), Hoeffding ($e^{-2n\varepsilon^2}$), LIL ($\sqrt{2\ln\ln n / n}$) |
+| 10.9 | ML connections | Monte Carlo, SGD/Polyak, ERM, and Glivenko--Cantelli in practice |
+
+The first seven results are fully proved in this topic. Theorems 10.7 and 10.8 are stated without proof — the former is proved in Topic 12 (Large Deviations), the latter is a deep result requiring tools beyond our current scope.
+
+---
+
+## 10.2 WLLN for iid with Finite Variance
+
+We begin by restating the result from Topic 9 that is our starting point. This is Theorem 9.1 transplanted into its permanent home.
+
+<TheoremBlock number={1} title="Theorem 10.1 (WLLN — Chebyshev Version; Recap from Topic 9)">
+Let $X_1, X_2, \ldots$ be iid with $E[X_i] = \mu$ and $\text{Var}(X_i) = \sigma^2 < \infty$. Then
+
+$$
+\bar{X}_n \xrightarrow{P} \mu
+$$
+
+That is, for every $\varepsilon > 0$, $P(|\bar{X}_n - \mu| > \varepsilon) \to 0$ as $n \to \infty$.
+</TheoremBlock>
+
+The proof is recorded in [Topic 9, Section 9.2](/topics/modes-of-convergence): compute $\text{Var}(\bar{X}_n) = \sigma^2/n$, apply Chebyshev's inequality to get $P(|\bar{X}_n - \mu| > \varepsilon) \leq \sigma^2/(n\varepsilon^2)$, and observe that the right-hand side vanishes. We do not reproduce it here — the reader should revisit the three-line argument in Topic 9 if needed.
+
+What matters now is where this result falls short and what it leaves on the table. It requires two assumptions:
+
+1. **Identically distributed.** The $X_i$ must all follow the same distribution — same mean, same variance, same everything. This rules out many practical settings where the noise level changes over time (heteroscedastic data) or the observations come from different subpopulations.
+
+2. **Finite variance.** The variance $\sigma^2$ must be finite. This excludes heavy-tailed distributions like the Student's $t$ with $\nu \leq 2$ degrees of freedom, the Pareto with shape $\alpha \leq 2$, and certain financial return models where extreme events dominate.
+
+Both assumptions are stronger than necessary. The next two sections relax them, one at a time: Section 10.3 drops "identically distributed" (replacing it with the weaker condition "uncorrelated"), and Section 10.4 drops "finite variance" entirely (requiring only a finite mean). Sections 10.5 and 10.6 then attack the second front: upgrading the *conclusion* from convergence in probability to almost sure convergence.
+
+<RemarkBlock number={1} title="Connection to Consistency of Estimators">
+The sample mean $\bar{X}_n$ is the simplest estimator of the population mean $\mu$, and the WLLN says it is *consistent*: $\bar{X}_n \xrightarrow{P} \mu$. In statistics, consistency is the bare minimum we demand of any estimator — with enough data, the estimate should converge to the truth in probability. An inconsistent estimator is fundamentally unreliable: no amount of data will make it accurate.
+
+Every consistent estimator is, at its core, a law-of-large-numbers statement. The sample variance $S_n^2 = \frac{1}{n-1}\sum (X_i - \bar{X}_n)^2$ converges to the population variance $\sigma^2$ — this is the LLN applied to the squared deviations. The empirical CDF converges to the true CDF (Section 10.7). The maximum likelihood estimator converges to the true parameter under regularity conditions — a fact whose proof uses the LLN applied to the log-likelihood.
+
+Conversely, an estimator's *inconsistency* is typically diagnosed by showing the LLN fails to apply — either because the estimator is not a sample mean (or a sufficiently well-behaved function of sample means), or because the underlying variables lack the required moment conditions.
+
+Point estimation theory (coming in the Statistical Inference track) will formalize this connection: an estimator $\hat{\theta}_n$ is consistent if and only if it satisfies a suitable LLN — and the strength of the LLN (weak or strong) determines the strength of the consistency (convergence in probability or almost sure).
+</RemarkBlock>
+
+Before proceeding, it is worth noting the quantitative content of Theorem 10.1. The Chebyshev bound $P(|\bar{X}_n - \mu| > \varepsilon) \leq \sigma^2/(n\varepsilon^2)$ is not just an existence statement — it gives an explicit bound on how close $\bar{X}_n$ is to $\mu$ for each $n$. For example, if $X_i \sim N(5, 4)$ (so $\mu = 5$, $\sigma^2 = 4$) and we want $P(|\bar{X}_n - 5| > 0.5) \leq 0.01$, we need $4/(n \cdot 0.25) \leq 0.01$, giving $n \geq 1600$. This is a conservative bound — we will see in Section 10.8 that Hoeffding's inequality gives much tighter sample-size requirements for bounded variables — but it has the virtue of requiring only the mean and variance, not the full distributional form.
+
+It is also worth noting that the bound $\sigma^2/(n\varepsilon^2)$ is *distribution-free* in the following sense: it holds for *any* distribution with mean $\mu$ and variance $\sigma^2$, no matter what the higher moments look like. Whether the $X_i$ are Normal, Uniform, Exponential, or any other distribution with finite variance, the same bound applies. This universality is both a strength (the result is extremely general — it works for *any* distribution with finite variance, from the Uniform to the Exponential to the chi-squared) and a weakness (the bound cannot exploit distributional structure to give tighter guarantees). Section 10.8 presents Hoeffding's inequality, which gives exponentially better bounds by exploiting the additional assumption that the variables are bounded.
+
+<img src="/images/topics/law-of-large-numbers/wlln-chebyshev.png" alt="WLLN via Chebyshev: probability bound σ²/(nε²) decaying with n for various ε" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
+
+---
+
+## 10.3 WLLN for Uncorrelated Sequences
+
+The Chebyshev-based proof of Theorem 10.1 used two properties of the $X_i$: they are identically distributed (so all means and variances are equal) and independent (so the variance of the sum is the sum of the variances). Let us examine exactly where each property entered.
+
+The "identically distributed" assumption was used to conclude $E[\bar{X}_n] = \mu$ and $\text{Var}(\bar{X}_n) = \sigma^2/n$. Without it, the mean of $\bar{X}_n$ is $\frac{1}{n}\sum \mu_i$ (which may change with $n$) and the variance is $\frac{1}{n^2}\sum \sigma_i^2$ (which depends on the individual variances).
+
+The "independent" assumption was used only to show that $\text{Var}(S_n) = \sum_{i=1}^n \text{Var}(X_i)$ — that is, to kill the cross-terms in $\text{Var}(\sum X_i) = \sum \text{Var}(X_i) + 2\sum_{i < j} \text{Cov}(X_i, X_j)$. For this, independence is overkill — we only need the cross-terms $\text{Cov}(X_i, X_j)$ to vanish. That is, we only need the $X_i$ to be *uncorrelated*.
+
+This is a meaningful generalization. In many applied settings, variables are uncorrelated but not independent:
+
+- In a designed experiment with orthogonal contrasts, the contrast variables are uncorrelated by construction but may not be independent (because they are all functions of the same underlying data).
+- In time series analysis, residuals from a correctly specified linear model are uncorrelated (by the Gauss--Markov theorem) but not necessarily independent — the joint distribution may have higher-order dependencies.
+- In random matrix theory, the entries of a Wigner matrix are uncorrelated (by the symmetric distribution assumption) but the eigenvalues are not independent.
+
+Furthermore, if the variables are not identically distributed, the sample mean $\bar{X}_n$ may not converge to a single value $\mu$ — instead, it tracks the running average of the individual means $\bar{\mu}_n = \frac{1}{n}\sum_{i=1}^n \mu_i$. The theorem says the deviation $\bar{X}_n - \bar{\mu}_n$ converges to zero — the sample mean stays close to the running population mean.
+
+<TheoremBlock number={2} title="Theorem 10.2 (WLLN for Uncorrelated Sequences)">
+Let $X_1, X_2, \ldots$ be uncorrelated random variables (not necessarily identically distributed) with $E[X_i] = \mu_i$ and $\text{Var}(X_i) = \sigma_i^2 < \infty$. Define the average mean $\bar{\mu}_n = \frac{1}{n}\sum_{i=1}^n \mu_i$. If
+
+$$
+\frac{1}{n^2}\sum_{i=1}^n \sigma_i^2 \to 0 \quad \text{as } n \to \infty
+$$
+
+then $\bar{X}_n - \bar{\mu}_n \xrightarrow{P} 0$.
+</TheoremBlock>
+
+<ProofBlock>
+We apply Chebyshev's inequality to $\bar{X}_n - \bar{\mu}_n$. First, note that $E[\bar{X}_n - \bar{\mu}_n] = 0$.
+
+For the variance, since the $X_i$ are uncorrelated:
+
+$$
+\text{Var}(\bar{X}_n) = \text{Var}\!\left(\frac{1}{n}\sum_{i=1}^n X_i\right) = \frac{1}{n^2}\sum_{i=1}^n \text{Var}(X_i) = \frac{1}{n^2}\sum_{i=1}^n \sigma_i^2
+$$
+
+The cross-terms vanish because $\text{Cov}(X_i, X_j) = 0$ for $i \neq j$ — this is exactly where the uncorrelated assumption enters. Independence would also give this, but uncorrelatedness is strictly weaker: two random variables can be uncorrelated without being independent (e.g., $X$ and $X^2$ when $X$ is symmetric about zero).
+
+By Chebyshev's inequality ([Expectation & Moments](/topics/expectation-moments), Theorem 12):
+
+$$
+P(|\bar{X}_n - \bar{\mu}_n| > \varepsilon) \leq \frac{\text{Var}(\bar{X}_n)}{\varepsilon^2} = \frac{1}{\varepsilon^2} \cdot \frac{1}{n^2}\sum_{i=1}^n \sigma_i^2
+$$
+
+By hypothesis, $\frac{1}{n^2}\sum_{i=1}^n \sigma_i^2 \to 0$, so the right-hand side goes to zero for every $\varepsilon > 0$. Therefore $\bar{X}_n - \bar{\mu}_n \xrightarrow{P} 0$. $\square$
+</ProofBlock>
+
+The structure of the proof is identical to Theorem 10.1 — compute the variance, apply Chebyshev, watch it vanish — but the generalization is significant. We no longer require the $X_i$ to have the same distribution, or even to be independent. The only structural requirement is that they are uncorrelated: $\text{Cov}(X_i, X_j) = 0$ for $i \neq j$. This is strictly weaker than independence (independent variables are uncorrelated, but not conversely — recall the examples from [Topic 8 — Multivariate Distributions](/topics/multivariate-distributions)).
+
+The condition $\frac{1}{n^2}\sum_{i=1}^n \sigma_i^2 \to 0$ is a *Cesaro-type* condition on the variances: it says the average variance doesn't grow too fast. The most common sufficient condition is that the variances are uniformly bounded.
+
+<TheoremBlock type="corollary" number={1} title="Corollary 10.1 (Uniformly Bounded Variances)">
+If the variances are uniformly bounded — $\sigma_i^2 \leq C$ for all $i$ and some constant $C$ — then
+
+$$
+\frac{1}{n^2}\sum_{i=1}^n \sigma_i^2 \leq \frac{nC}{n^2} = \frac{C}{n} \to 0
+$$
+
+and the WLLN (Theorem 10.2) applies. In particular, if the $X_i$ are additionally identically distributed with common mean $\mu$, then $\bar{\mu}_n = \mu$ for all $n$ and we recover $\bar{X}_n \xrightarrow{P} \mu$.
+</TheoremBlock>
+
+<ExampleBlock number={1} title="Online Learning: Uncorrelated Observations with Time-Varying Variance">
+An online learning platform collects user engagement scores $X_i$ that measure how long (in minutes) a user spends on a task. The scores have a common population mean $E[X_i] = \mu = 12$ minutes (the true average engagement), but the variance changes over time as the platform adjusts its recommendation algorithm: $\text{Var}(X_i) = \sigma_i^2 = 1 + 0.5\sin(i/20)$.
+
+The variances oscillate between 0.5 and 1.5 — some cohorts of users are more homogeneous than others — so they are uniformly bounded by $C = 1.5$. By Corollary 10.1, the running mean of the engagement scores converges in probability to $\mu = 12$ minutes, despite the non-identical distributions. The platform can trust its running average even though the noise level fluctuates.
+
+This is a common situation in practice: data collected over time rarely has constant variance (the phenomenon is called *heteroscedasticity* — literally, "different scatter"). Theorem 10.2 says the WLLN still holds as long as the variances don't grow too fast. The Cesaro condition $\frac{1}{n^2}\sum \sigma_i^2 \to 0$ allows the variances to oscillate, to have isolated spikes, or even to grow slowly — as long as their running sum grows slower than $n^2$.
+
+The uncorrelated condition is also natural in many applications. If users are sampled independently, their scores are certainly uncorrelated (since independence implies uncorrelatedness), even if the measurement process changes over time.
+
+Now consider the opposite scenario: the variance *grows* with time — say $\sigma_i^2 = i$, perhaps because measurement noise increases as the platform scales or because the user population becomes more diverse. Then:
+
+$$
+\frac{1}{n^2}\sum_{i=1}^n \sigma_i^2 = \frac{1}{n^2} \cdot \frac{n(n+1)}{2} = \frac{n+1}{2n} \to \frac{1}{2}
+$$
+
+This does *not* go to zero, so the Chebyshev-based WLLN does not apply. The running mean may not converge — the growing variance can overwhelm the averaging effect. Note that the WLLN might still hold via a different proof technique (Theorem 10.2 gives a sufficient condition, not a necessary one), but the Chebyshev approach gives no guarantee.
+
+This distinction matters when designing experiments or data collection systems: if you anticipate that measurement noise grows over time, you cannot blithely trust the running average — you may need to downweight older, noisier observations, or cap the noise via trimming.
+</ExampleBlock>
+
+<img src="/images/topics/law-of-large-numbers/wlln-uncorrelated.png" alt="WLLN for uncorrelated sequences: bounded vs growing variance, sample mean trajectories" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
+
+<WLLNExplorer client:visible />
+
+---
+
+## 10.4 Khintchine's WLLN
+
+Theorems 10.1 and 10.2 both require finite variance. Is this necessary? The answer, remarkably, is *no*. For iid sequences, finite mean alone suffices.
+
+Why should we care about distributions with finite mean but infinite variance? Because they arise naturally in practice. The distribution of insurance claim sizes, financial returns, city populations, and many other real-world quantities have heavy tails — their probability of extreme values decays slowly enough that the variance is infinite, even though the mean exists. The Pareto distribution with shape parameter $\alpha \in (1, 2]$ is the canonical example: $E[X] < \infty$ but $\text{Var}(X) = \infty$. If the WLLN required finite variance, we could not guarantee that sample means converge for these distributions.
+
+Khintchine's theorem — arguably the "right" version of the WLLN — identifies the minimal condition: $E[|X_1|] < \infty$.
+
+The proof cannot use Chebyshev's inequality (which requires a finite second moment), so we need a different technique: *truncation*. The idea is to clip the random variables to make their variance finite, apply the finite-variance WLLN to the clipped version, and then show that the clipping error vanishes. This is our first encounter with the truncation technique, which will reappear in the SLLN proof (Section 10.6).
+
+The strategy has three phases, which we will see again and again in probability:
+1. **Approximate:** Replace the original variables $X_i$ with well-behaved versions $Y_i$.
+2. **Solve the easy problem:** Prove the theorem for $Y_i$ using standard tools (Chebyshev).
+3. **Control the error:** Show that the difference between $X_i$ and $Y_i$ is negligible.
+
+<TheoremBlock number={3} title="Theorem 10.3 (Khintchine's WLLN)">
+Let $X_1, X_2, \ldots$ be iid with $E[|X_1|] < \infty$ (finite mean), but possibly $\text{Var}(X_1) = \infty$. Then
+
+$$
+\bar{X}_n \xrightarrow{P} \mu = E[X_1]
+$$
+</TheoremBlock>
+
+<ProofBlock>
+The key idea: even when the variance is infinite, we can *truncate* the random variables to make the variance finite, apply the finite-variance WLLN to the truncated version, and then show the truncation error vanishes. The truncation threshold grows with the sample size — a clever coupling that makes everything work.
+
+**Step 1: Truncate.** Define $Y_i = X_i \cdot \mathbf{1}(|X_i| \leq n)$ — the version of $X_i$ where values exceeding $n$ in absolute value are zeroed out. Note that the truncation threshold is $n$ (the sample size), not a fixed constant. This is essential: as $n$ grows, the truncation becomes less aggressive, eventually including every finite value.
+
+**Step 2: Show the truncation error is negligible.** We need $P(\bar{X}_n \neq \bar{Y}_n) \to 0$. The events $\{X_i \neq Y_i\} = \{|X_i| > n\}$ are the events where truncation changes the $i$-th variable. By the union bound:
+
+$$
+P(\bar{X}_n \neq \bar{Y}_n) \leq P\!\left(\bigcup_{i=1}^n \{X_i \neq Y_i\}\right) \leq \sum_{i=1}^n P(|X_i| > n) = n \cdot P(|X_1| > n)
+$$
+
+where the last equality uses the identical distribution of the $X_i$. We claim $n \cdot P(|X_1| > n) \to 0$.
+
+To see this, note that $n \cdot P(|X_1| > n) = n \cdot E[\mathbf{1}(|X_1| > n)]$. We need a sharper bound than Markov's inequality (which gives $n \cdot P(|X_1| > n) \leq E[|X_1|]$, a bound that does not vanish). Instead, observe that $n \cdot \mathbf{1}(|X_1| > n) \leq |X_1| \cdot \mathbf{1}(|X_1| > n)$ (since $n < |X_1|$ on the event $\{|X_1| > n\}$). Therefore:
+
+$$
+n \cdot P(|X_1| > n) \leq E[|X_1| \cdot \mathbf{1}(|X_1| > n)]
+$$
+
+Since $|X_1| \cdot \mathbf{1}(|X_1| > n) \to 0$ pointwise as $n \to \infty$ (for every outcome where $|X_1(\omega)| < \infty$, which is almost every outcome since $E[|X_1|] < \infty$), and $|X_1| \cdot \mathbf{1}(|X_1| > n) \leq |X_1|$ with $E[|X_1|] < \infty$, the dominated convergence theorem (<ExternalLink href="https://formalcalculus.com/topics/integration" site="formalcalculus" topic="Integration" />) gives:
+
+$$
+E[|X_1| \cdot \mathbf{1}(|X_1| > n)] \to 0
+$$
+
+Therefore $P(\bar{X}_n \neq \bar{Y}_n) \to 0$, which means $\bar{X}_n - \bar{Y}_n \xrightarrow{P} 0$.
+
+**Step 3: Center the truncated variables.** Let $\mu_n = E[Y_1] = E[X_1 \cdot \mathbf{1}(|X_1| \leq n)]$. By DCT (since $X_1 \cdot \mathbf{1}(|X_1| \leq n) \to X_1$ pointwise and $|X_1 \cdot \mathbf{1}(|X_1| \leq n)| \leq |X_1|$):
+
+$$
+\mu_n \to \mu = E[X_1] \quad \text{as } n \to \infty
+$$
+
+**Step 4: Apply the finite-variance WLLN to the truncated variables.** The $Y_i$ are iid (as functions of iid $X_i$) with $|Y_i| \leq n$, so $\text{Var}(Y_i) \leq E[Y_i^2] \leq n^2$. But we need $\text{Var}(\bar{Y}_n) = \text{Var}(Y_1)/n \to 0$, which requires $\text{Var}(Y_1)/n \to 0$. The crude bound $\text{Var}(Y_1) \leq n^2$ gives $\text{Var}(Y_1)/n \leq n$, which does not vanish. We need a sharper estimate.
+
+Since $|Y_1| \leq n$ implies $Y_1^2 \leq n \cdot |Y_1|$, we have:
+
+$$
+\frac{E[Y_1^2]}{n} = \frac{E[X_1^2 \cdot \mathbf{1}(|X_1| \leq n)]}{n} \leq \frac{E[n \cdot |X_1| \cdot \mathbf{1}(|X_1| \leq n)]}{n} = E[|X_1| \cdot \mathbf{1}(|X_1| \leq n)]
+$$
+
+The right side converges to $E[|X_1|] < \infty$ by DCT. But we need it to show $\text{Var}(Y_1)/n \to 0$, not just that it's bounded. Let us be more careful. We have:
+
+$$
+\frac{E[X_1^2 \cdot \mathbf{1}(|X_1| \leq n)]}{n} = E\!\left[\frac{X_1^2}{n} \cdot \mathbf{1}(|X_1| \leq n)\right]
+$$
+
+For each fixed $\omega$, $\frac{X_1(\omega)^2}{n} \cdot \mathbf{1}(|X_1(\omega)| \leq n) \to 0$ as $n \to \infty$ (the numerator $X_1(\omega)^2$ is fixed while the denominator $n$ grows). The integrand is bounded by $|X_1| \cdot \mathbf{1}(|X_1| \leq n) \leq |X_1|$ (using $|X_1| \leq n$ on the indicator). Since $E[|X_1|] < \infty$, DCT gives:
+
+$$
+\frac{E[X_1^2 \cdot \mathbf{1}(|X_1| \leq n)]}{n} \to 0
+$$
+
+Therefore $\text{Var}(\bar{Y}_n) = \text{Var}(Y_1)/n \leq E[Y_1^2]/n \to 0$, and by Chebyshev's inequality:
+
+$$
+\bar{Y}_n - \mu_n \xrightarrow{P} 0
+$$
+
+**Step 5: Combine.** We have three convergence statements:
+- $\bar{X}_n - \bar{Y}_n \xrightarrow{P} 0$ (Step 2)
+- $\bar{Y}_n - \mu_n \xrightarrow{P} 0$ (Step 4)
+- $\mu_n \to \mu$ (Step 3, deterministic convergence)
+
+Therefore:
+
+$$
+\bar{X}_n - \mu = (\bar{X}_n - \bar{Y}_n) + (\bar{Y}_n - \mu_n) + (\mu_n - \mu) \xrightarrow{P} 0 + 0 + 0 = 0
+$$
+
+which gives $\bar{X}_n \xrightarrow{P} \mu$. $\square$
+</ProofBlock>
+
+The truncation technique is a workhorse of probability theory. The pattern — replace a badly-behaved random variable with a well-behaved approximation, handle the approximation with standard tools, then bound the approximation error — appears throughout convergence theory. We will see it again in the SLLN proof (Section 10.6), where the truncation threshold is $i$ rather than $n$. The CLT proof (Topic 11, coming soon) uses the same idea with characteristic functions. In empirical process theory, truncation is the first step in proving maximal inequalities for unbounded function classes.
+
+The key insight is that the truncation threshold *grows with $n$*. A fixed threshold would introduce a permanent bias (the truncated mean $E[X \cdot \mathbf{1}(|X| \leq c)]$ is generally not equal to $\mu$). By letting the threshold grow, the bias vanishes — the truncated mean converges to the true mean — while the variance is still controlled because the growth rate of the threshold is calibrated to the sample size.
+
+Let us also highlight where the dominated convergence theorem entered, because its role is subtle. The DCT was used in three places:
+
+1. **Step 2:** To show $E[|X_1| \cdot \mathbf{1}(|X_1| > n)] \to 0$ — the tail expectation vanishes. The dominating function is $|X_1|$ itself.
+2. **Step 3:** To show $E[X_1 \cdot \mathbf{1}(|X_1| \leq n)] \to E[X_1]$ — the truncated mean converges to the true mean.
+3. **Step 4:** To show $E[X_1^2 \cdot \mathbf{1}(|X_1| \leq n)]/n \to 0$ — the key variance bound. Here the dominating function is $|X_1|$, and the pointwise convergence $X_1^2 \cdot \mathbf{1}(|X_1| \leq n)/n \to 0$ uses the fact that the numerator is a fixed number $X_1(\omega)^2$ while the denominator grows.
+
+Each application follows the same pattern: the integrand converges pointwise and is dominated by an integrable function, so the integral converges. The DCT is the workhorse of truncation arguments throughout probability theory. See <ExternalLink href="https://formalcalculus.com/topics/integration" site="formalcalculus" topic="Integration" /> for the full statement and proof.
+
+<ExampleBlock number={2} title="Student's t(1.5): Finite Mean, Infinite Variance">
+The Student's $t$ distribution with $\nu = 1.5$ degrees of freedom has $E[|X|] < \infty$ (the mean exists when $\nu > 1$) but $\text{Var}(X) = \infty$ (the variance is infinite when $\nu \leq 2$). The Chebyshev-based WLLN (Theorem 10.1) does not apply — we cannot even compute the bound $\sigma^2/(n\varepsilon^2)$ because $\sigma^2 = \infty$.
+
+Khintchine's theorem (Theorem 10.3) guarantees $\bar{X}_n \xrightarrow{P} 0$ regardless. But the convergence is painfully slow — much slower than for distributions with finite variance.
+
+Why? The heavy tails of the $t(1.5)$ produce occasional extreme values — observations 10, 100, or even 1000 times larger than typical — that jerk the running mean away from zero. These outliers become rarer as $n$ grows (the truncation argument ensures this), but their impact on the average is large enough to cause visible fluctuations even at sample sizes where a Normal or Exponential running mean would have long since settled down. The Chebyshev rate $\sigma^2/(n\varepsilon^2)$ is not available (because $\sigma^2 = \infty$), and the effective convergence rate is slower than $1/\sqrt{n}$.
+
+How slow is "painfully slow"? For $N(0,1)$ (which has $\sigma^2 = 1$), the Chebyshev bound gives $P(|\bar{X}_n| > 0.1) \leq 100/n$. At $n = 10,\!000$, this is at most 1%. For $t(1.5)$, we cannot even write down a Chebyshev bound because the variance is infinite. Empirically, the sample mean of $n = 10,\!000$ observations from $t(1.5)$ still shows fluctuations of order 0.1 or more with noticeable probability — a tenfold degradation compared to the Normal.
+
+The interactive WLLN Explorer (above) lets you compare the convergence speed of the sample mean for different distributions. Try setting the distribution to $t(1.5)$ and comparing with $N(0,1)$ — both have mean zero, but the convergence to zero is visibly rougher for the $t(1.5)$.
+</ExampleBlock>
+
+<RemarkBlock number={2} title="Characteristic Function Proof (Alternative)">
+Khintchine's original proof used characteristic functions rather than truncation. The characteristic function $\varphi_X(t) = E[e^{itX}]$ always exists (even when moments are infinite), and for iid $X_i$ with mean $\mu$:
+
+$$
+\varphi_{\bar{X}_n}(t) = \left[\varphi_X(t/n)\right]^n
+$$
+
+Since $\varphi_X(t) = 1 + i\mu t + o(t)$ near $t = 0$ (this expansion requires only $E[|X|] < \infty$), we get $[\varphi_X(t/n)]^n \to e^{i\mu t}$, which is the characteristic function of the constant $\mu$. By Levy's continuity theorem, $\bar{X}_n \xrightarrow{d} \mu$, and convergence in distribution to a constant is equivalent to convergence in probability.
+
+This approach is more elegant but requires Fourier analysis (specifically, the expansion $\varphi_X(t) = 1 + i\mu t + o(t)$ for $|t|$ small, which holds whenever $E[|X|] < \infty$). The truncation proof above uses only tools we have already developed: Chebyshev's inequality and the dominated convergence theorem. The characteristic function proof has the advantage of immediately giving convergence in distribution, which implies convergence in probability to a constant — but the truncation proof is more transparent about where the finite-mean assumption is used.
+</RemarkBlock>
+
+<img src="/images/topics/law-of-large-numbers/wlln-khintchine.png" alt="Khintchine's WLLN: sample mean convergence for t(1.5) (finite mean, infinite variance) vs N(0,1)" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
+
+---
+
+## 10.5 Kolmogorov's Maximal Inequality
+
+The three WLLN results (Theorems 10.1--10.3) all establish convergence in probability: $\bar{X}_n \xrightarrow{P} \mu$. To upgrade to almost sure convergence, we need to control the *entire path* of partial sums, not just the terminal value $S_n$. This is a fundamentally harder problem. Convergence in probability is a statement about each fixed time $n$; almost sure convergence is a statement about the entire infinite trajectory simultaneously.
+
+The key question is: how large can the partial sums $S_1, S_2, \ldots, S_n$ get along the way? Chebyshev's inequality controls $P(|S_n| \geq \varepsilon)$ — the probability that the *final* partial sum is large. But the partial sums might wander far from zero at intermediate times and then return. A random walk, for instance, typically reaches a maximum that is much larger than its terminal value. For the SLLN, we need to control $P(\max_{1 \leq k \leq n} |S_k| \geq \varepsilon)$ — the probability that *any* partial sum along the way is large.
+
+You might guess that controlling the maximum would cost a factor of $n$ (by the union bound: $P(\max |S_k| \geq \varepsilon) \leq \sum_{k=1}^n P(|S_k| \geq \varepsilon)$, and each term is bounded by Chebyshev). Kolmogorov's maximal inequality does dramatically better: the bound is *the same* as Chebyshev's for the terminal value alone. Controlling the running maximum costs nothing extra. This "free upgrade" is the mathematical reason why the SLLN proof works — it converts Chebyshev-type bounds (which give convergence in probability) into bounds on the running maximum (which, via Borel--Cantelli, give almost sure convergence).
+
+<TheoremBlock number={4} title="Theorem 10.4 (Kolmogorov's Maximal Inequality)">
+Let $X_1, \ldots, X_n$ be independent random variables with $E[X_i] = 0$ and $\text{Var}(X_i) = \sigma_i^2 < \infty$. Define partial sums $S_k = \sum_{i=1}^k X_i$. Then for any $\varepsilon > 0$:
+
+$$
+P\!\left(\max_{1 \leq k \leq n} |S_k| \geq \varepsilon\right) \leq \frac{\text{Var}(S_n)}{\varepsilon^2} = \frac{\sum_{i=1}^n \sigma_i^2}{\varepsilon^2}
+$$
+</TheoremBlock>
+
+<ProofBlock>
+The right-hand side is identical to the Chebyshev bound for $P(|S_n| \geq \varepsilon)$. The fact that controlling the *maximum* over all $k$ gives the same bound is what makes this inequality powerful. The proof uses a clever decomposition based on the *first time* the partial sum exceeds the threshold.
+
+**The stopping time idea.** Define the event $A_k = \{|S_k| \geq \varepsilon \text{ and } |S_j| < \varepsilon \text{ for all } j < k\}$ — the event that the partial sum *first* exceeds $\varepsilon$ in absolute value at time $k$. These events are disjoint (the first exceedance can only happen once), and their union is the event that the maximum exceeds $\varepsilon$:
+
+$$
+\left\{\max_{1 \leq k \leq n} |S_k| \geq \varepsilon\right\} = \bigcup_{k=1}^n A_k
+$$
+
+**Decompose $E[S_n^2]$.** We split $E[S_n^2]$ according to whether the maximum exceeds $\varepsilon$:
+
+$$
+E[S_n^2] = E\!\left[S_n^2 \cdot \mathbf{1}\!\left(\max_{k \leq n} |S_k| \geq \varepsilon\right)\right] + E\!\left[S_n^2 \cdot \mathbf{1}\!\left(\max_{k \leq n} |S_k| < \varepsilon\right)\right]
+$$
+
+The second term is non-negative (it is the expectation of a non-negative random variable), so:
+
+$$
+E[S_n^2] \geq E\!\left[S_n^2 \cdot \mathbf{1}\!\left(\max_{k \leq n} |S_k| \geq \varepsilon\right)\right] = \sum_{k=1}^n E[S_n^2 \cdot \mathbf{1}(A_k)]
+$$
+
+**Key step: Expand $S_n = S_k + (S_n - S_k)$ on each $A_k$.** On the event $A_k$, we decompose the final partial sum into the value at the first exceedance time plus the remaining increments:
+
+$$
+S_n^2 = (S_k + (S_n - S_k))^2 = S_k^2 + 2S_k(S_n - S_k) + (S_n - S_k)^2
+$$
+
+Since $(S_n - S_k)^2 \geq 0$, we have $S_n^2 \geq S_k^2 + 2S_k(S_n - S_k)$. Taking expectations restricted to $A_k$:
+
+$$
+E[S_n^2 \cdot \mathbf{1}(A_k)] \geq E[S_k^2 \cdot \mathbf{1}(A_k)] + 2E[S_k(S_n - S_k) \cdot \mathbf{1}(A_k)]
+$$
+
+Now comes the crucial observation. The random variable $S_k \cdot \mathbf{1}(A_k)$ is a function of $X_1, \ldots, X_k$ alone (because $S_k$ and the event $A_k = \{|S_1| < \varepsilon, \ldots, |S_{k-1}| < \varepsilon, |S_k| \geq \varepsilon\}$ depend only on the first $k$ variables). The random variable $S_n - S_k = X_{k+1} + \cdots + X_n$ depends only on $X_{k+1}, \ldots, X_n$. By independence of the $X_i$, these two quantities are independent. Therefore:
+
+$$
+E[S_k(S_n - S_k) \cdot \mathbf{1}(A_k)] = E[S_k \cdot \mathbf{1}(A_k)] \cdot E[S_n - S_k]
+$$
+
+Since $E[X_i] = 0$ for all $i$:
+
+$$
+E[S_n - S_k] = \sum_{i=k+1}^n E[X_i] = 0
+$$
+
+So the cross-term vanishes: $E[S_k(S_n - S_k) \cdot \mathbf{1}(A_k)] = 0$. This gives:
+
+$$
+E[S_n^2 \cdot \mathbf{1}(A_k)] \geq E[S_k^2 \cdot \mathbf{1}(A_k)]
+$$
+
+On the event $A_k$, we have $|S_k| \geq \varepsilon$, so $S_k^2 \geq \varepsilon^2$. Therefore:
+
+$$
+E[S_k^2 \cdot \mathbf{1}(A_k)] \geq \varepsilon^2 \cdot P(A_k)
+$$
+
+**Summing over $k$.** Combining the chain of inequalities:
+
+$$
+\text{Var}(S_n) = E[S_n^2] \geq \sum_{k=1}^n E[S_n^2 \cdot \mathbf{1}(A_k)] \geq \sum_{k=1}^n \varepsilon^2 \cdot P(A_k) = \varepsilon^2 \cdot P\!\left(\max_{k \leq n} |S_k| \geq \varepsilon\right)
+$$
+
+Rearranging:
+
+$$
+P\!\left(\max_{1 \leq k \leq n} |S_k| \geq \varepsilon\right) \leq \frac{\text{Var}(S_n)}{\varepsilon^2} = \frac{\sum_{i=1}^n \sigma_i^2}{\varepsilon^2}
+$$
+
+which is the claimed bound. $\square$
+</ProofBlock>
+
+The proof is entirely elementary — no advanced machinery, just a decomposition based on the first exceedance time and the observation that independence kills the cross-term. This is the same "orthogonality" trick that makes the variance of a sum equal the sum of the variances, applied more carefully.
+
+Let us pause to appreciate why this result is surprising. A naive approach to controlling $P(\max_{k \leq n} |S_k| \geq \varepsilon)$ would use the union bound:
+
+$$
+P\!\left(\max_{k \leq n} |S_k| \geq \varepsilon\right) \leq \sum_{k=1}^n P(|S_k| \geq \varepsilon) \leq \sum_{k=1}^n \frac{\text{Var}(S_k)}{\varepsilon^2} = \frac{1}{\varepsilon^2}\sum_{k=1}^n \sum_{i=1}^k \sigma_i^2
+$$
+
+This gives a bound that grows like $n \cdot \text{Var}(S_n)$ — a factor of $n$ worse than Kolmogorov's inequality. The stopping-time decomposition avoids this factor-of-$n$ loss by exploiting the independence structure: the future increments $S_n - S_k$ are independent of the past, so the cross-term $E[S_k(S_n - S_k) \cdot \mathbf{1}(A_k)]$ vanishes. Without independence, the best we could do is the union bound.
+
+This factor-of-$n$ savings is exactly what allows the Borel--Cantelli argument in the SLLN proof to succeed: the summable probability bounds from Kolmogorov's inequality, summed over the geometric subsequence, converge — whereas the union-bound version would diverge.
+
+<ExampleBlock number={3} title="Random Walk: the Gap Between max|S_k| and |S_n|">
+Let $X_1, \ldots, X_n$ be iid $N(0, 1)$, so $S_k = X_1 + \cdots + X_k$ is a random walk. The terminal value $|S_n|$ has the same distribution as $\sqrt{n} \cdot |Z|$ for $Z \sim N(0,1)$, with typical magnitude $\sqrt{n}$. But the running maximum $\max_{k \leq n} |S_k|$ is typically *larger* — the path might wander far from zero at some intermediate time and then return.
+
+The reflection principle from probability theory gives $E[\max_{k \leq n} |S_k|] \approx \sqrt{2n/\pi}$ (slightly larger than $E[|S_n|] = \sqrt{2n/\pi}$ by a constant factor). Yet Kolmogorov's inequality tells us that the *tail probability* $P(\max_{k \leq n} |S_k| \geq \varepsilon)$ satisfies the same bound as $P(|S_n| \geq \varepsilon)$: both are at most $n/\varepsilon^2$. Controlling the maximum path is no harder than controlling the endpoint, at least in terms of the Chebyshev-type bound.
+
+For $n = 1000$ steps, a typical random walk has $|S_{1000}| \approx 32$ (since $\sqrt{1000} \approx 32$) but $\max_{k \leq 1000} |S_k| \approx 50$ or more. The Kolmogorov bound says $P(\max_{k \leq 1000} |S_k| \geq 100) \leq 1000/10000 = 0.1$ — the same bound we would get from Chebyshev for $P(|S_{1000}| \geq 100)$.
+
+The interactive explorer below shows sample paths of the random walk with both $|S_n|$ (the endpoint) and $\max_{k \leq n} |S_k|$ (the running maximum) highlighted. Notice how the running maximum can be substantially larger than the endpoint, yet the Kolmogorov bound still holds.
+</ExampleBlock>
+
+<RemarkBlock number={3} title="Kolmogorov's Maximal Inequality and Doob's Martingale Inequality">
+Kolmogorov's maximal inequality is a special case of Doob's maximal inequality for submartingales. When $E[X_i] = 0$, the partial sums $S_k = X_1 + \cdots + X_k$ form a martingale (the conditional expectation of $S_{k+1}$ given $S_1, \ldots, S_k$ equals $S_k$), and $S_k^2$ is a submartingale. Doob's inequality gives the same bound in greater generality: for any non-negative submartingale $(M_k)$,
+
+$$
+P\!\left(\max_{k \leq n} M_k \geq \lambda\right) \leq \frac{E[M_n]}{\lambda}
+$$
+
+Applied to $M_k = S_k^2$ and $\lambda = \varepsilon^2$, this recovers Kolmogorov's inequality. We do not need the full martingale theory here — the stopping-time decomposition above is elementary and self-contained — but the reader should be aware that the maximal inequality is part of a much richer theory.
+</RemarkBlock>
+
+<img src="/images/topics/law-of-large-numbers/kolmogorov-maximal.png" alt="Kolmogorov's maximal inequality: random walk paths, running maximum vs endpoint, Chebyshev bound overlay" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
+
+<MaximalInequalityExplorer client:visible />
+
+---
+
+## 10.6 The Strong Law of Large Numbers
+
+We are now ready for the main event. The Strong Law of Large Numbers says that the sample mean converges to the population mean *almost surely* — not just in probability. Recall from [Topic 9](/topics/modes-of-convergence) that almost sure convergence is strictly stronger than convergence in probability: it says that the probability of the event "the sample path converges to $\mu$" is 1, not merely that the probability of being far from $\mu$ at any particular time goes to zero.
+
+This distinction is not academic. When you run a Monte Carlo simulation to estimate an integral, you run *one* simulation and observe *one* trajectory of running averages. You need that trajectory to converge — not just that most trajectories converge, but that yours does. The SLLN says: with probability 1, yours does. When you train a neural network with SGD, you run *one* training trajectory. The SLLN (and its martingale generalizations) says that trajectory converges. When you evaluate a model on a test set, you compute *one* empirical risk. The SLLN says it converges to the true risk. Almost sure convergence is what makes single-run inference valid.
+
+We follow the proof of Etemadi (1981), which is remarkable in two respects. First, it requires only *pairwise* independence — not the full mutual independence that most proofs assume. Second, it is genuinely elementary: the only tools are the Kolmogorov maximal inequality (Theorem 10.4), the first Borel--Cantelli lemma (from [Modes of Convergence](/topics/modes-of-convergence)), and the dominated convergence theorem (<ExternalLink href="https://formalcalculus.com/topics/integration" site="formalcalculus" topic="Integration" />). No characteristic functions, no martingale theory, no measure-theoretic heavy machinery. Etemadi's original paper (1981) is three pages long — one of the shortest proofs of a fundamental theorem in all of probability. Before Etemadi, the standard proof (due to Kolmogorov) required full mutual independence and used the Kolmogorov three-series theorem, which itself requires significant machinery. Etemadi's contribution was to show that pairwise independence suffices, using only the tools we have developed here.
+
+<TheoremBlock number={5} title="Theorem 10.5 (Strong Law of Large Numbers — Kolmogorov/Etemadi)">
+Let $X_1, X_2, \ldots$ be pairwise independent, identically distributed random variables with $E[|X_1|] < \infty$. Then
+
+$$
+\bar{X}_n \xrightarrow{\text{a.s.}} \mu = E[X_1]
+$$
+
+That is, $P\!\left(\lim_{n \to \infty} \bar{X}_n = \mu\right) = 1$.
+</TheoremBlock>
+
+<ProofBlock>
+We follow Etemadi's 1981 proof, which is remarkable for requiring only *pairwise* independence (not full independence). The argument has three stages: reduce to non-negative random variables, prove convergence along a geometric subsequence using truncation and Borel--Cantelli, then fill in the gaps between subsequence terms using monotonicity.
+
+**Stage 1: Reduce to non-negative random variables.**
+
+Write $X_i = X_i^+ - X_i^-$ where $X_i^+ = \max(X_i, 0)$ and $X_i^- = \max(-X_i, 0)$. Since $E[|X_1|] < \infty$, both $E[X_1^+] = E[\max(X_1, 0)]$ and $E[X_1^-] = E[\max(-X_1, 0)]$ are finite (because $X_1^+ \leq |X_1|$ and $X_1^- \leq |X_1|$). The sequences $(X_i^+)$ and $(X_i^-)$ are each pairwise independent and identically distributed with finite mean.
+
+If we prove the SLLN for non-negative random variables, then:
+
+$$
+\frac{1}{n}\sum_{i=1}^n X_i^+ \xrightarrow{\text{a.s.}} E[X_1^+] \quad \text{and} \quad \frac{1}{n}\sum_{i=1}^n X_i^- \xrightarrow{\text{a.s.}} E[X_1^-]
+$$
+
+Subtracting (the difference of two a.s. convergent sequences converges a.s., since a.s. convergence is preserved under finite linear combinations) gives:
+
+$$
+\bar{X}_n = \frac{1}{n}\sum_{i=1}^n X_i^+ - \frac{1}{n}\sum_{i=1}^n X_i^- \xrightarrow{\text{a.s.}} E[X_1^+] - E[X_1^-] = E[X_1] = \mu
+$$
+
+So without loss of generality, assume $X_i \geq 0$ for the remainder of the proof. This assumption buys us something crucial: when $X_i \geq 0$, the partial sums $S_m = X_1 + \cdots + X_m$ are non-decreasing in $m$. This monotonicity is what makes Stage 3 work.
+
+**Stage 2: Truncate and prove convergence along a geometric subsequence.**
+
+Fix an integer $\alpha \geq 2$ (the standard choice is $\alpha = 2$, but any integer $\geq 2$ works). Define the geometric subsequence $n_k = \alpha^k$ for $k = 0, 1, 2, \ldots$ The key insight is to first establish convergence along this *sparse* subsequence — which is easier because the gaps between terms grow geometrically, making certain series converge — and then fill in the gaps using monotonicity.
+
+The plan: prove $S_{n_k}/n_k \to \mu$ almost surely (the hard part, Steps 2a--2e), then show $S_n/n \to \mu$ for all $n$ between consecutive subsequence terms (Stage 3, using monotonicity from Stage 1).
+
+**Step 2a: Truncation.** Define truncated variables $Y_i = X_i \cdot \mathbf{1}(X_i \leq i)$. Since $X_i \geq 0$, the truncation simply caps values exceeding $i$ at zero: if $X_i \leq i$, then $Y_i = X_i$; if $X_i > i$, then $Y_i = 0$. Note that the truncation threshold for the $i$-th variable is $i$ itself (not $n$, as in the Khintchine proof). This is a different calibration — each variable gets its own threshold, growing with its index. Let $Z_i = Y_i - E[Y_i]$ denote the centered truncated variables.
+
+**Step 2b: The truncation error vanishes almost surely.** We need to show that $X_i = Y_i$ for all but finitely many $i$, with probability 1. Consider the "bad" events $\{X_i \neq Y_i\} = \{X_i > i\}$ — the events where the $i$-th observation exceeds the $i$-th truncation threshold. Since the $X_i$ are identically distributed:
+
+$$
+\sum_{i=1}^{\infty} P(X_i > i) = \sum_{i=1}^{\infty} P(X_1 > i) \leq E[X_1] < \infty
+$$
+
+The inequality $\sum_{i=1}^{\infty} P(X_1 > i) \leq E[X_1]$ follows from the tail-sum formula for expectation of non-negative integer-valued random variables, or more precisely from comparing the sum to the integral:
+
+$$
+\sum_{i=1}^{\infty} P(X_1 > i) \leq \int_0^{\infty} P(X_1 > t)\, dt = E[X_1] < \infty
+$$
+
+By the first Borel--Cantelli lemma (<ExternalLink href="https://formalcalculus.com/topics/series-convergence" site="formalcalculus" topic="Series Convergence" />): since $\sum P(X_i > i) < \infty$, the probability that $X_i > i$ occurs for infinitely many $i$ is zero. In other words, with probability 1, $X_i \leq i$ for all but finitely many $i$. For those finitely many exceptions, $X_i \neq Y_i$ — but a finite number of mismatches does not affect the asymptotic behavior of a sample mean. Therefore, the sample means of $X_i$ and $Y_i$ have the same a.s. limit (if either has one).
+
+**Step 2c: The variance series converges.** For Borel--Cantelli to work in Step 2d, we need a summable series of probability bounds. This in turn requires that the variances of the truncated variables, when summed with appropriate weights, converge. Specifically, we need $\sum_{i=1}^{\infty} \text{Var}(Y_i)/i^2 < \infty$. Since $\text{Var}(Y_i) \leq E[Y_i^2]$ (the variance is at most the second moment), it suffices to show $\sum E[Y_i^2]/i^2 < \infty$:
+
+$$
+\sum_{i=1}^{\infty} \frac{E[Y_i^2]}{i^2} = \sum_{i=1}^{\infty} \frac{E[X_1^2 \cdot \mathbf{1}(X_1 \leq i)]}{i^2}
+$$
+
+We interchange the sum and expectation using Tonelli's theorem (both are non-negative):
+
+$$
+= E\!\left[X_1^2 \sum_{i \geq X_1} \frac{1}{i^2}\right]
+$$
+
+For $X_1 = m$ (or more precisely, $m - 1 < X_1 \leq m$), the inner sum $\sum_{i \geq m} 1/i^2$ satisfies:
+
+$$
+\sum_{i=m}^{\infty} \frac{1}{i^2} \leq \frac{1}{m-1} \leq \frac{2}{m} \quad \text{for } m \geq 2
+$$
+
+(by comparison with the integral $\int_{m-1}^{\infty} t^{-2}\, dt$). Therefore $X_1^2 \cdot \sum_{i \geq X_1} 1/i^2 \leq 2X_1$, giving:
+
+$$
+\sum_{i=1}^{\infty} \frac{E[Y_i^2]}{i^2} \leq 2\, E[X_1] < \infty
+$$
+
+This is where $E[|X_1|] < \infty$ (equivalently $E[X_1] < \infty$ since $X_1 \geq 0$) is used — and it is the *only* place in the proof where the finite-mean assumption enters in an essential way. If $E[X_1] = \infty$, the series would diverge, and the entire argument would collapse.
+
+**Step 2d: Apply Kolmogorov's maximal inequality along the subsequence.** This is the step where Kolmogorov's inequality (Theorem 10.4) enters. For each $k$, consider the centered truncated partial sums $\sum_{i=1}^{n_k} Z_i$. The $Z_i$ are pairwise independent (since each $Z_i = Y_i - E[Y_i]$ is a function of $X_i$ alone, and the $X_i$ are pairwise independent) with $E[Z_i] = 0$. By Kolmogorov's maximal inequality, for any $\delta > 0$:
+
+$$
+P\!\left(\max_{1 \leq j \leq n_k} \left|\sum_{i=1}^{j} Z_i\right| > \delta n_k\right) \leq \frac{\sum_{i=1}^{n_k} \text{Var}(Y_i)}{\delta^2 n_k^2}
+$$
+
+We need $\sum_{k=1}^{\infty}$ of the right-hand side to converge (so Borel--Cantelli applies). Since $n_k = \alpha^k$:
+
+$$
+\sum_{k=1}^{\infty} \frac{\sum_{i=1}^{n_k} \text{Var}(Y_i)}{\delta^2 n_k^2} \leq \frac{1}{\delta^2} \sum_{k=1}^{\infty} \frac{1}{n_k^2} \sum_{i=1}^{n_k} E[Y_i^2]
+$$
+
+Exchanging the order of summation (each $i$ appears in the inner sum for all $k$ with $n_k \geq i$, i.e., $k \geq \log_\alpha i$):
+
+$$
+= \frac{1}{\delta^2} \sum_{i=1}^{\infty} E[Y_i^2] \sum_{k : n_k \geq i} \frac{1}{n_k^2} \leq \frac{1}{\delta^2} \sum_{i=1}^{\infty} \frac{E[Y_i^2]}{i^2} \cdot C_\alpha
+$$
+
+where $C_\alpha = \sum_{j=0}^{\infty} \alpha^{-2j} = \alpha^2/(\alpha^2 - 1) < \infty$ is a geometric series constant (for $\alpha = 2$, this is $4/3$). Since $\sum E[Y_i^2]/i^2 < \infty$ (Step 2c), the entire sum converges. This is where the geometric spacing of the subsequence is essential: with equally spaced terms ($n_k = k$), the sum would not converge.
+
+By the first Borel--Cantelli lemma (<ExternalLink href="https://formalcalculus.com/topics/series-convergence" site="formalcalculus" topic="Series Convergence" />): since $\sum_k P(\ldots) < \infty$, the probability that the event occurs for infinitely many $k$ is zero. That is:
+
+$$
+P\!\left(\max_{j \leq n_k} \left|\frac{1}{n_k}\sum_{i=1}^{j} Z_i\right| > \delta \text{ infinitely often in } k\right) = 0
+$$
+
+In particular, taking $j = n_k$:
+
+$$
+\frac{1}{n_k}\sum_{i=1}^{n_k} Z_i \to 0 \quad \text{almost surely}
+$$
+
+**Step 2e: The means of the truncated variables converge.** Since $E[Y_i] = E[X_1 \cdot \mathbf{1}(X_1 \leq i)] \to E[X_1] = \mu$ by DCT (<ExternalLink href="https://formalcalculus.com/topics/integration" site="formalcalculus" topic="Integration" />):
+
+$$
+\frac{1}{n_k}\sum_{i=1}^{n_k} E[Y_i] \to \mu
+$$
+
+(This is a Cesaro mean of a convergent sequence. By the Cesaro lemma, if $a_i \to a$, then $\frac{1}{n}\sum_{i=1}^n a_i \to a$. Here $a_i = E[Y_i] \to \mu$, so the Cesaro mean also converges to $\mu$.)
+
+Combining Steps 2d and 2e:
+
+$$
+\frac{1}{n_k}\sum_{i=1}^{n_k} Y_i = \underbrace{\frac{1}{n_k}\sum_{i=1}^{n_k} Z_i}_{\to\, 0 \text{ a.s.}} + \underbrace{\frac{1}{n_k}\sum_{i=1}^{n_k} E[Y_i]}_{\to\, \mu} \xrightarrow{\text{a.s.}} \mu
+$$
+
+By Step 2b, $X_i = Y_i$ for all sufficiently large $i$ (almost surely). This means the partial sums $\sum_{i=1}^{n_k} X_i$ and $\sum_{i=1}^{n_k} Y_i$ differ by at most a finite constant (the sum of the finitely many terms where $X_i \neq Y_i$). Dividing by $n_k \to \infty$, this finite difference becomes negligible. Therefore $\frac{1}{n_k}\sum_{i=1}^{n_k} X_i \to \mu$ almost surely.
+
+**Stage 3: Fill in the gaps between subsequence terms.**
+
+For $n_k \leq n < n_{k+1} = \alpha \cdot n_k$, we use the non-negativity of the $X_i$ to squeeze the sample mean. Let $S_m = \sum_{i=1}^m X_i$. Since each $X_i \geq 0$, the partial sums are non-decreasing: $S_{n_k} \leq S_n \leq S_{n_{k+1}}$. Therefore:
+
+$$
+\frac{S_{n_k}}{n_{k+1}} \leq \frac{S_n}{n} \leq \frac{S_{n_{k+1}}}{n_k}
+$$
+
+The left inequality holds because $S_{n_k} \leq S_n$ (adding more non-negative terms can only increase the sum) and $n \leq n_{k+1}$ (dividing by a larger denominator makes the fraction smaller), so $S_{n_k}/n_{k+1} \leq S_n/n_{k+1} \leq S_n/n$. The right inequality holds because $S_n \leq S_{n_{k+1}}$ (the sum of more terms is larger) and $n \geq n_k$ (dividing by a smaller denominator makes the fraction larger), so $S_n/n \leq S_{n_{k+1}}/n \leq S_{n_{k+1}}/n_k$.
+
+Now we evaluate the bounds as $k \to \infty$. The lower bound:
+
+$$
+\frac{S_{n_k}}{n_{k+1}} = \frac{S_{n_k}}{n_k} \cdot \frac{n_k}{n_{k+1}} = \frac{S_{n_k}}{n_k} \cdot \frac{1}{\alpha} \xrightarrow{\text{a.s.}} \frac{\mu}{\alpha}
+$$
+
+The upper bound:
+
+$$
+\frac{S_{n_{k+1}}}{n_k} = \frac{S_{n_{k+1}}}{n_{k+1}} \cdot \frac{n_{k+1}}{n_k} = \frac{S_{n_{k+1}}}{n_{k+1}} \cdot \alpha \xrightarrow{\text{a.s.}} \alpha \mu
+$$
+
+So for every $n$ between $n_k$ and $n_{k+1}$, the sample mean $S_n/n$ is squeezed between values converging to $\mu/\alpha$ and $\alpha\mu$.
+
+Since $\alpha \geq 2$ is fixed, the lower bound approaches $\mu/2$ and the upper bound approaches $2\mu$ — useful, but not the $S_n/n \to \mu$ that we want. The squeeze is too loose because the ratio $n_{k+1}/n_k = \alpha$ between consecutive subsequence terms is too large. But we can still extract the result by combining the squeeze with the WLLN.
+
+For *any* $\alpha \geq 2$:
+
+$$
+\frac{\mu}{\alpha} \leq \liminf_{n \to \infty} \frac{S_n}{n} \leq \limsup_{n \to \infty} \frac{S_n}{n} \leq \alpha \mu
+$$
+
+almost surely. Now, the left-hand side and right-hand side hold for *every* integer $\alpha \geq 2$. Taking $\alpha \to \infty$ does not help — the bounds get *worse* (the squeeze widens). But we can finesse this with the following observation.
+
+The random variables $L = \liminf_{n \to \infty} S_n/n$ and $U = \limsup_{n \to \infty} S_n/n$ are both *tail random variables* — they depend only on the tail of the sequence. By Kolmogorov's 0-1 law (Remark 4), each is almost surely constant: $L = c_1$ a.s. and $U = c_2$ a.s. for some deterministic constants $c_1, c_2$ with $c_1 \leq c_2$.
+
+The squeeze gives $\mu/\alpha \leq c_1$ and $c_2 \leq \alpha\mu$ for every $\alpha \geq 2$. This constrains $c_1$ and $c_2$ but does not pin them down. However, the WLLN (Theorem 10.3, which we proved independently) tells us $S_n/n \xrightarrow{P} \mu$. Convergence in probability to a constant implies that any almost-sure subsequential limit must equal that constant. Since $c_1$ and $c_2$ are the infimum and supremum of the subsequential limits, we must have:
+
+$$
+\liminf_{n \to \infty} \frac{S_n}{n} = \limsup_{n \to \infty} \frac{S_n}{n} = \mu \quad \text{a.s.}
+$$
+
+Therefore $S_n/n \to \mu$ almost surely. $\square$
+</ProofBlock>
+
+Let us step back and appreciate the structure of Etemadi's argument, because it is a masterclass in mathematical proof technique:
+
+- **Stage 1** reduces to non-negative variables — a clean trick that unlocks monotonicity in Stage 3. The decomposition $X = X^+ - X^-$ is standard, but its use here is strategic: monotonicity of partial sums is what lets us fill in the gaps between subsequence terms.
+
+- **Stage 2** is the hard work, and it interleaves three ideas. *Truncation* ($Y_i = X_i \cdot \mathbf{1}(X_i \leq i)$) makes the variance summable — this is where $E[|X_1|] < \infty$ is used, via the interchange-of-sum trick $\sum E[Y_i^2]/i^2 \leq 2E[X_1]$. *Kolmogorov's maximal inequality* controls the running maximum of the centered partial sums, not just the terminal value. *Borel--Cantelli* converts the summable probability bounds into almost sure convergence, but only along the geometric subsequence $n_k = \alpha^k$.
+
+- **Stage 3** fills in the gaps using the non-negativity from Stage 1. The squeeze $S_{n_k}/n_{k+1} \leq S_n/n \leq S_{n_{k+1}}/n_k$ traps every $S_n/n$ between two sequences that both converge to $\mu$.
+
+The proof requires only *pairwise* independence — a remarkable weakening of the usual assumption. Full mutual independence is not needed for two reasons. First, the Kolmogorov maximal inequality proof (Theorem 10.4) uses independence only to show that the future increment $S_n - S_k$ is independent of $S_k \cdot \mathbf{1}(A_k)$; for the variance calculation $\text{Var}(S_n) = \sum \text{Var}(X_i)$, pairwise independence suffices. Second, the first Borel--Cantelli lemma ($\sum P(A_n) < \infty$ implies $P(A_n \text{ i.o.}) = 0$) makes no independence assumption at all — it is a purely measure-theoretic fact.
+
+This pairwise-independence generalization is not just a mathematical curiosity. In several practical settings, observations are pairwise independent but not mutually independent:
+
+- **Sampling without replacement** from a finite population: knowing that observation 1 and observation 2 take specific values tells you something about observation 3 (the population is slightly depleted), so the three are not mutually independent. But any two observations are pairwise independent (each pair is equally likely to produce any pair of values).
+- **Hash-based sampling:** Random hash functions with pairwise independence (2-universal hash families) are widely used in streaming algorithms. The SLLN via Etemadi applies to averages computed from such samples.
+
+Etemadi's theorem guarantees that the SLLN still holds in all these settings.
+
+The following proposition confirms that finite mean is not just sufficient but *necessary* for the SLLN.
+
+<TheoremBlock type="corollary" number={1} title="Proposition 10.1 (Finite Mean is Necessary)">
+If $X_1, X_2, \ldots$ are iid and $\bar{X}_n$ converges almost surely (or even in probability) to a finite limit, then $E[|X_1|] < \infty$.
+</TheoremBlock>
+
+The proof uses the converse direction of the Borel--Cantelli lemma. If $E[|X_1|] = \infty$, then $\sum_{n=1}^{\infty} P(|X_n| > n) = \sum_{n=1}^{\infty} P(|X_1| > n) = \infty$ (since $\sum_{n=1}^{\infty} P(|X_1| > n) \geq E[|X_1|] - 1$, which is infinite). By the second Borel--Cantelli lemma — which applies here because the events $\{|X_n| > n\}$ are independent (they depend on different $X_n$'s) — we get $P(|X_n| > n \text{ infinitely often}) = 1$.
+
+This means that with probability 1, the sequence $X_1, X_2, \ldots$ contains infinitely many terms with $|X_n| > n$. Each such term contributes at least $1/n$ to the sample mean (since $|X_n/n| > 1$), and these large contributions arrive infinitely often. A careful argument shows this prevents $\bar{X}_n$ from converging to any finite limit. The details are in Durrett (2019, Theorem 2.4.5).
+
+The takeaway: $E[|X_1|] < \infty$ is the *exact boundary* for the LLN. Below this threshold (e.g., the Cauchy with $E[|X_1|] = \infty$), sample means do not converge to any finite limit. At or above this threshold, they converge almost surely to $E[X_1]$. The condition is sharp — it cannot be weakened.
+
+<ExampleBlock number={4} title="Cauchy Sample Mean: No Convergence at All">
+The Cauchy distribution (equivalently, Student's $t$ with $\nu = 1$ degree of freedom) has density $f(x) = 1/(\pi(1 + x^2))$. It has no finite mean: $E[|X|] = \int_{-\infty}^{\infty} |x|/(\pi(1+x^2))\, dx = \infty$ (the integral diverges logarithmically).
+
+Proposition 10.1 says the SLLN must fail. But something much more dramatic is true: the sample mean of iid Cauchy random variables *does not converge at all*. In fact, $\bar{X}_n$ is itself Cauchy-distributed for every $n$ — with the exact same distribution as a single observation.
+
+This follows from the Cauchy being a *stable distribution*: if $X_1, \ldots, X_n$ are iid standard Cauchy, then $X_1 + \cdots + X_n$ has the same distribution as $n \cdot X_1$ (Cauchy with scale parameter $n$). Dividing by $n$ gives $\bar{X}_n \sim \text{Cauchy}(0, 1)$ — the averaging accomplishes nothing. No matter how large $n$ is, the sample mean is just as dispersed as a single observation.
+
+This is not just slow convergence — it is *no* convergence. The sample mean carries zero information about the "center" of the Cauchy distribution, no matter how many observations you collect. The median, by contrast, does converge: the sample median of $n$ iid Cauchy observations converges to the location parameter at rate $1/\sqrt{n}$. This is a vivid illustration of why the choice of estimator matters — the sample mean is the wrong tool for heavy-tailed data.
+
+Try setting the degrees of freedom to $\nu = 1$ in the SLLN Explorer below. The sample paths wander without settling down — a striking contrast to the well-behaved convergence seen with distributions that have a finite mean. Then try $\nu = 1.5$ (finite mean, infinite variance) to see slow but genuine convergence, and $\nu = 3$ (finite variance) to see rapid convergence.
+</ExampleBlock>
+
+<RemarkBlock number={4} title="Kolmogorov's 0-1 Law">
+The event $\{\bar{X}_n \to \mu\}$ is a *tail event*: it depends only on the "tail" of the sequence. More precisely, for any finite $N$, changing $X_1, \ldots, X_N$ does not affect whether $\bar{X}_n$ converges as $n \to \infty$ — the convergence or non-convergence is determined by the behavior of $X_{N+1}, X_{N+2}, \ldots$ The tail $\sigma$-algebra $\mathcal{T} = \bigcap_{N=1}^{\infty} \sigma(X_{N+1}, X_{N+2}, \ldots)$ captures exactly these "asymptotic" events.
+
+Kolmogorov's 0-1 law states: if $X_1, X_2, \ldots$ are independent, then every event in $\mathcal{T}$ has probability 0 or 1. There is no middle ground — you cannot have $P(\bar{X}_n \to \mu) = 0.7$, for instance.
+
+This means that even before proving the SLLN, we know the answer must be all-or-nothing: either $P(\bar{X}_n \to \mu) = 0$ or $P(\bar{X}_n \to \mu) = 1$. The SLLN's job is to determine *which one*. Etemadi's proof shows that when $E[|X_1|] < \infty$, the answer is 1. Proposition 10.1 shows that when $E[|X_1|] = \infty$, the answer is 0. The 0-1 law ensures there are no other possibilities.
+
+Other tail events include $\{\sum X_n \text{ converges}\}$, $\{\limsup \bar{X}_n = +\infty\}$, and $\{\bar{X}_n \text{ oscillates between } a \text{ and } b\}$. All of these have probability 0 or 1. The 0-1 law is one of the most elegant results in probability: it says that for independent sequences, every question about the "eventual behavior" has a deterministic answer — even though the individual random variables are random, the tail behavior is not.
+
+The 0-1 law requires independence (or at least that the tail $\sigma$-algebra is trivial). For dependent sequences (such as Markov chains), the tail behavior can genuinely have intermediate probabilities. This is why the SLLN for Markov chains (the ergodic theorem) requires additional conditions beyond what the iid SLLN needs.
+</RemarkBlock>
+
+<img src="/images/topics/law-of-large-numbers/slln.png" alt="SLLN: sample paths converging almost surely to μ for Normal, Exponential; failing for Cauchy" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
+
+<SLLNExplorer client:visible />
+
+---
+
+## 10.7 The Glivenko-Cantelli Theorem
+
+The SLLN says that the sample mean $\bar{X}_n = \frac{1}{n}\sum_{i=1}^n X_i$ converges to $\mu = E[X_1]$ almost surely. But sample means are just one kind of statistic. What about the entire *distribution* of the data? Can we estimate the CDF of $X$ from a sample?
+
+The natural estimator is the empirical CDF: the proportion of observations at or below each threshold $x$. The Glivenko--Cantelli theorem says this estimator converges to the true CDF not just pointwise (which would follow immediately from the SLLN applied to indicator functions) but *uniformly* over all $x$ — and almost surely.
+
+<DefinitionBlock number={1} title="Definition 10.1 (Empirical CDF)">
+Given iid observations $X_1, \ldots, X_n$ with common CDF $F$, the **empirical CDF** (ECDF) is:
+
+$$
+F_n(x) = \frac{1}{n}\sum_{i=1}^n \mathbf{1}(X_i \leq x)
+$$
+
+For each fixed $x$, $F_n(x)$ is the sample mean of the Bernoulli random variables $\mathbf{1}(X_i \leq x)$, each with mean $F(x) = P(X_i \leq x)$.
+</DefinitionBlock>
+
+The ECDF $F_n$ is a step function that jumps by $1/n$ at each observation. It is itself a valid CDF (of the discrete uniform distribution that places mass $1/n$ on each observed value $X_1, \ldots, X_n$). As a function of $x$, it is non-decreasing and right-continuous, just like any CDF.
+
+The ECDF is the most fundamental object in nonparametric statistics. Unlike parametric estimators (which assume the data comes from a specific family), the ECDF estimates the *entire distribution* without any assumptions. Every summary statistic you compute from data — the sample mean, the sample variance, the sample median, the sample quantiles — can be expressed as a functional of the ECDF. The sample mean is $\int x \, dF_n(x) = \frac{1}{n}\sum X_i$. The sample variance is $\int (x - \bar{X}_n)^2 \, dF_n(x)$. The sample $q$-quantile is $F_n^{-1}(q) = \inf\{x : F_n(x) \geq q\}$. The interquartile range is $F_n^{-1}(0.75) - F_n^{-1}(0.25)$. In this sense, the ECDF is the "mother" of all nonparametric statistics — if the ECDF converges to the true CDF, then every continuous functional of the CDF is consistently estimated by the corresponding functional of the ECDF.
+
+For each fixed $x$, the SLLN immediately gives $F_n(x) \xrightarrow{\text{a.s.}} F(x)$, since $F_n(x)$ is the sample mean of iid Bernoulli variables with mean $F(x)$, and $E[|\mathbf{1}(X_1 \leq x)|] = F(x) \leq 1 < \infty$. This gives *pointwise* a.s. convergence — the ECDF converges to the true CDF at each individual threshold.
+
+But pointwise convergence is not enough. If we want to use the ECDF to estimate quantiles, test distributional hypotheses, or construct confidence bands, we need convergence that holds at *all* $x$ simultaneously. The problem is that the pointwise SLLN gives a probability-1 set $\Omega_x$ for each $x$ on which $F_n(x) \to F(x)$, but different $x$'s may have different exceptional sets. Since $x$ ranges over the uncountable set $\mathbb{R}$, we cannot simply intersect the probability-1 sets (an uncountable intersection of probability-1 sets need not have probability 1).
+
+The Glivenko--Cantelli theorem overcomes this obstacle by exploiting the monotonicity of CDFs. The key idea is that an uncountable supremum over $x$ can be bounded by a *finite* maximum over grid points plus a discretization error — and this works because CDFs cannot oscillate freely between grid points. The argument is an $\varepsilon$-net argument: approximate the uncountable index set $\mathbb{R}$ by a finite grid, handle the grid points with the SLLN, and control the approximation error using monotonicity.
+
+This is worth highlighting because the same $\varepsilon$-net technique — with different notions of "grid" and "approximation error" — is the template for *all* uniform convergence results in probability and statistics, from the Glivenko--Cantelli theorem to uniform laws of large numbers over function classes.
+
+<TheoremBlock number={6} title="Theorem 10.6 (Glivenko-Cantelli Theorem)">
+Let $X_1, X_2, \ldots$ be iid with CDF $F$. Then:
+
+$$
+\sup_{x \in \mathbb{R}} |F_n(x) - F(x)| \xrightarrow{\text{a.s.}} 0
+$$
+
+The empirical CDF converges to the true CDF uniformly and almost surely.
+</TheoremBlock>
+
+<ProofBlock>
+The challenge is upgrading from pointwise to uniform convergence. The SLLN gives convergence at each fixed $x$, but taking the supremum over uncountably many $x$ requires an additional argument. The key insight is that CDFs are monotone, so the supremum over all $x$ can be bounded by the maximum over finitely many grid points plus a discretization error controlled by the CDF's own oscillation.
+
+**Step 1: Pointwise convergence via SLLN.** Fix any $x \in \mathbb{R}$. The random variables $\mathbf{1}(X_i \leq x)$ are iid Bernoulli$(F(x))$ — they equal 1 with probability $F(x)$ and 0 otherwise. Their mean is $E[\mathbf{1}(X_1 \leq x)] = F(x)$ and they certainly have $E[|\mathbf{1}(X_1 \leq x)|] = F(x) \leq 1 < \infty$. By the SLLN (Theorem 10.5):
+
+$$
+F_n(x) = \frac{1}{n}\sum_{i=1}^n \mathbf{1}(X_i \leq x) \xrightarrow{\text{a.s.}} F(x)
+$$
+
+This gives pointwise a.s. convergence at every $x$, but we need *uniform* convergence.
+
+**Step 2: Discretize using partition points.** Fix $\varepsilon > 0$. Since $F$ is non-decreasing with $\lim_{x \to -\infty} F(x) = 0$ and $\lim_{x \to +\infty} F(x) = 1$, we can choose points $-\infty = x_0 < x_1 < x_2 < \cdots < x_N < x_{N+1} = +\infty$ such that:
+
+$$
+F(x_j) - F(x_{j-1}) < \varepsilon \quad \text{for all } j = 1, \ldots, N+1
+$$
+
+(We define $F(x_0) = F(-\infty) = 0$ and $F(x_{N+1}) = F(+\infty) = 1$.) This is possible because $F$ is right-continuous — we can always refine the partition to make the jumps smaller than $\varepsilon$.
+
+**Step 3: Bound the supremum using the grid.** For any $x \in \mathbb{R}$, there exists $j \in \{1, \ldots, N+1\}$ such that $x_{j-1} \leq x < x_j$. Since both $F_n$ and $F$ are non-decreasing:
+
+$$
+F_n(x_{j-1}) \leq F_n(x) \leq F_n(x_j) \quad \text{and} \quad F(x_{j-1}) \leq F(x) \leq F(x_j)
+$$
+
+For the upper bound on $F_n(x) - F(x)$:
+
+$$
+F_n(x) - F(x) \leq F_n(x_j) - F(x_{j-1}) = [F_n(x_j) - F(x_j)] + [F(x_j) - F(x_{j-1})]
+$$
+
+$$
+\leq [F_n(x_j) - F(x_j)] + \varepsilon
+$$
+
+For the upper bound on $F(x) - F_n(x)$:
+
+$$
+F(x) - F_n(x) \leq F(x_j) - F_n(x_{j-1}) = [F(x_j) - F(x_{j-1})] + [F(x_{j-1}) - F_n(x_{j-1})]
+$$
+
+$$
+\leq \varepsilon + [F(x_{j-1}) - F_n(x_{j-1})]
+$$
+
+Combining both bounds:
+
+$$
+|F_n(x) - F(x)| \leq \max_{0 \leq j \leq N+1} |F_n(x_j) - F(x_j)| + \varepsilon
+$$
+
+Taking the supremum over all $x$:
+
+$$
+\sup_{x \in \mathbb{R}} |F_n(x) - F(x)| \leq \max_{0 \leq j \leq N+1} |F_n(x_j) - F(x_j)| + \varepsilon
+$$
+
+**Step 4: Apply the SLLN at finitely many points.** By Step 1, $F_n(x_j) \xrightarrow{\text{a.s.}} F(x_j)$ for each $j = 0, 1, \ldots, N+1$. Since the intersection of finitely many probability-1 events has probability 1, there exists a single event $\Omega_\varepsilon$ with $P(\Omega_\varepsilon) = 1$ on which $F_n(x_j) \to F(x_j)$ for *all* $j$ simultaneously.
+
+On $\Omega_\varepsilon$, for all sufficiently large $n$:
+
+$$
+\max_{0 \leq j \leq N+1} |F_n(x_j) - F(x_j)| < \varepsilon
+$$
+
+Combining with the bound from Step 3: for all $n$ larger than some $N(\omega, \varepsilon)$,
+
+$$
+\sup_{x \in \mathbb{R}} |F_n(x) - F(x)| < \varepsilon + \varepsilon = 2\varepsilon
+$$
+
+The crucial point is that $N$ depends on $\omega$ (since the SLLN convergence is sample-path dependent) but not on $x$ — the same $N$ works for *all* $x$ simultaneously, because we reduced the uncountable supremum to a finite maximum in Step 3.
+
+**Step 5: Remove the dependence on $\varepsilon$.** Steps 2--4 showed that for each fixed $\varepsilon > 0$, there exists a probability-1 set $\Omega_\varepsilon$ on which $\sup_x |F_n(x) - F(x)| < 2\varepsilon$ eventually. But $\Omega_\varepsilon$ depends on $\varepsilon$ (because the grid points $x_j$ depend on $\varepsilon$). To get a *single* probability-1 set that works for all $\varepsilon$, we use a standard countable-intersection trick.
+
+Let $\Omega^* = \bigcap_{m=1}^{\infty} \Omega_{1/m}$. This is a countable intersection of probability-1 events, so $P(\Omega^*) = 1$ (by countable subadditivity of probability). On $\Omega^*$, for every integer $m \geq 1$, we have $\sup_x |F_n(x) - F(x)| < 2/m$ for all sufficiently large $n$. Since $m$ is arbitrary:
+
+$$
+\sup_{x \in \mathbb{R}} |F_n(x) - F(x)| \to 0 \quad \text{on } \Omega^*
+$$
+
+Therefore $\sup_x |F_n(x) - F(x)| \xrightarrow{\text{a.s.}} 0$. $\square$
+</ProofBlock>
+
+The proof's strategy — reduce an uncountable supremum to a finite maximum plus a discretization error — is a template that recurs throughout empirical process theory. The monotonicity of CDFs is what makes the discretization work: between two grid points, neither $F_n$ nor $F$ can oscillate freely, so the error from approximating the continuous supremum with a finite maximum is controlled by the mesh of the partition.
+
+Notice what the proof does *not* require: any assumption on the distribution $F$. The Glivenko--Cantelli theorem holds for *every* CDF — continuous, discrete, mixed, any distribution whatsoever. This is because the proof uses only three properties of CDFs: they are non-decreasing, they go from 0 to 1, and they have at most countably many discontinuities. The SLLN provides the pointwise convergence; monotonicity and the $\varepsilon$-net argument upgrade it to uniform convergence.
+
+The quantity $D_n = \sup_x |F_n(x) - F(x)|$ is known as the **Kolmogorov--Smirnov (KS) statistic**. It measures the worst-case discrepancy between the empirical and true CDFs — the maximum vertical gap between the step function $F_n$ and the smooth curve $F$. The Glivenko--Cantelli theorem says $D_n \to 0$ a.s.; the Dvoretzky--Kiefer--Wolfowitz (DKW) inequality (stated in Example 5 below) gives exponential concentration around zero; and the Kolmogorov distribution gives the exact limiting distribution of $\sqrt{n} D_n$, which is the foundation of the KS test for goodness of fit.
+
+<ExampleBlock number={5} title="ECDF of Normal(0,1): KS Statistic Decay">
+Generate $n$ observations from $N(0, 1)$. The empirical CDF $F_n(x)$ is a step function that approaches the smooth CDF $\Phi(x) = P(Z \leq x)$. The **Kolmogorov--Smirnov (KS) statistic** is:
+
+$$
+D_n = \sup_{x \in \mathbb{R}} |F_n(x) - \Phi(x)|
+$$
+
+The Glivenko--Cantelli theorem says $D_n \to 0$ almost surely. But how fast? The Dvoretzky--Kiefer--Wolfowitz (DKW) inequality gives an exponential rate:
+
+$$
+P(D_n > \varepsilon) \leq 2\exp(-2n\varepsilon^2)
+$$
+
+At $n = 100$, $D_n \approx 0.1$ with high probability. At $n = 1000$, $D_n \approx 0.03$. At $n = 10000$, $D_n \approx 0.01$. The decay is at rate $1/\sqrt{n}$ — specifically, $\sqrt{n}\, D_n$ converges in distribution to the Kolmogorov distribution (the supremum of a Brownian bridge), which is the basis of the Kolmogorov--Smirnov test for goodness of fit.
+
+The KS test is one of the most widely used nonparametric tests: to test whether a sample comes from a particular distribution $F$, compute $D_n$ and reject if it is too large (compared to the quantiles of the Kolmogorov distribution). The Glivenko--Cantelli theorem is what makes this test valid — it guarantees that under the null hypothesis $H_0: X_i \sim F$, the KS statistic converges to zero, so large values of $D_n$ are evidence against $H_0$.
+
+The two-sample KS test compares two empirical CDFs $F_n$ and $G_m$ from potentially different distributions. The test statistic $\sup_x |F_n(x) - G_m(x)|$ converges to $\sup_x |F(x) - G(x)|$ by Glivenko--Cantelli applied to each sample, so the test can detect *any* difference between the two distributions — not just differences in mean or variance, but differences in shape, skewness, or tail behavior. This omnibus property is what makes the KS test valuable as a diagnostic tool in model validation.
+
+In machine learning, the KS test has several applications:
+
+- **Dataset shift detection:** Compare the ECDF of a feature in the training data to the ECDF in the production data. If the KS statistic is large, the distribution has shifted, and the model may need retraining.
+- **Model validation:** After training a generative model, compare the ECDF of generated samples to the ECDF of real data. The KS statistic measures how well the model captures the true distribution.
+- **Feature engineering:** The KS statistic between the ECDFs of a feature conditioned on different classes measures the feature's discriminative power.
+
+The Glivenko--Cantelli theorem guarantees that all these comparisons are meaningful: both ECDFs converge to their respective true CDFs, so the KS statistic consistently estimates the true discrepancy.
+</ExampleBlock>
+
+<img src="/images/topics/law-of-large-numbers/glivenko-cantelli.png" alt="Glivenko-Cantelli: empirical CDF approaching true CDF, KS statistic decay with n" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
+
+<GlivenkoCantelliExplorer client:visible />
+
+---
+
+## 10.8 Convergence Rates
+
+The SLLN says $\bar{X}_n \to \mu$ almost surely — but how fast? This is not just a theoretical curiosity. In practice, the convergence *rate* determines how many samples you need to achieve a desired accuracy. A Monte Carlo estimate with $n = 100$ samples might be adequate if the convergence is fast, or catastrophically unreliable if it is slow. The difference between polynomial and exponential convergence rates can mean the difference between $n = 10,\!000$ and $n = 100$ samples for the same accuracy guarantee.
+
+Three results give increasingly precise answers, forming a hierarchy of convergence rate statements:
+
+1. **Chebyshev's inequality** — polynomial rate, weakest but most general
+2. **Hoeffding's inequality** — exponential rate for bounded variables
+3. **Law of the iterated logarithm** — the exact a.s. oscillation envelope
+
+**The Chebyshev rate.** From Theorem 10.1, $P(|\bar{X}_n - \mu| > \varepsilon) \leq \sigma^2/(n\varepsilon^2)$. This is a *polynomial* decay: the probability of an $\varepsilon$-deviation decreases like $1/n$. For a fixed confidence level $\delta$, we need $n \geq \sigma^2/(\varepsilon^2 \delta)$ samples to guarantee $P(|\bar{X}_n - \mu| > \varepsilon) \leq \delta$. This is often pessimistic — Chebyshev uses only the mean and variance, ignoring all other information about the distribution. For bounded or sub-Gaussian variables, the true rate is much faster.
+
+<TheoremBlock number={7} title="Theorem 10.7 (Hoeffding's Inequality — Preview)">
+Let $X_1, \ldots, X_n$ be independent with $X_i \in [a_i, b_i]$ almost surely. Then for any $t > 0$:
+
+$$
+P(|\bar{X}_n - E[\bar{X}_n]| \geq t) \leq 2\exp\!\left(\frac{-2n^2t^2}{\sum_{i=1}^n (b_i - a_i)^2}\right)
+$$
+
+For iid variables with $X_i \in [a, b]$:
+
+$$
+P(|\bar{X}_n - \mu| \geq \varepsilon) \leq 2\exp\!\left(\frac{-2n\varepsilon^2}{(b-a)^2}\right)
+$$
+</TheoremBlock>
+
+The improvement over Chebyshev is dramatic. Chebyshev gives polynomial decay: $P(|\bar{X}_n - \mu| \geq \varepsilon) \leq \sigma^2/(n\varepsilon^2)$, which is $O(1/n)$. Hoeffding gives *exponential* decay: $2\exp(-2n\varepsilon^2/(b-a)^2)$, which goes to zero exponentially fast in $n$. The practical difference is enormous — it determines how many samples you need for a given confidence level. For $\varepsilon = 0.1$ and $[a,b] = [0,1]$ (so $\sigma^2 \leq 1/4$):
+
+| $n$ | Chebyshev bound | Hoeffding bound |
+|-----|-----------------|-----------------|
+| 100 | 2.500 (useless) | 0.271 |
+| 500 | 0.500 | 0.000045 |
+| 1000 | 0.250 | $2 \times 10^{-9}$ |
+| 5000 | 0.050 | $2 \times 10^{-44}$ |
+
+At $n = 1000$, Chebyshev says the probability of a 0.1 deviation is at most 25%, while Hoeffding says it is at most two in a billion. At $n = 5000$, Chebyshev gives 5% (barely useful) while Hoeffding gives $10^{-44}$ (effectively zero).
+
+The practical implication: if you need a confidence guarantee of $P(|\bar{X}_n - \mu| \geq 0.01) \leq 0.05$ for bounded $[0,1]$ variables, Chebyshev requires $n \geq \sigma^2/(0.01^2 \cdot 0.05) = 200,\!000/\sigma^2$ samples (at least $50,\!000$ for $\sigma^2 = 1/4$). Hoeffding requires $n \geq -\ln(0.025)/(2 \cdot 0.0001) \approx 18,\!400$ samples — nearly three times fewer. The Chebyshev bound is useless for practical sample-size calculations; the Hoeffding bound is tight enough to be actionable.
+
+The full proof of Hoeffding's inequality uses the **Chernoff bounding technique**: apply Markov's inequality to $e^{t(X - \mu)}$ instead of $|X - \mu|$, then optimize over $t$. The exponential transform converts additive structure (the sum of independent variables) into multiplicative structure (a product of MGFs), which is much easier to control. The boundedness assumption $X_i \in [a_i, b_i]$ enters through the Hoeffding lemma, which bounds the MGF of a bounded random variable. The full development is the subject of Large Deviations and Tail Bounds (Topic 12, coming soon).
+
+The third result tells us the *exact* a.s. rate at which $\bar{X}_n$ fluctuates around $\mu$.
+
+<TheoremBlock number={8} title="Theorem 10.8 (Law of the Iterated Logarithm — Statement)">
+Let $X_1, X_2, \ldots$ be iid with $E[X_1] = \mu$ and $\text{Var}(X_1) = \sigma^2 < \infty$. Then almost surely:
+
+$$
+\limsup_{n \to \infty} \frac{\bar{X}_n - \mu}{\sigma\sqrt{2\ln\ln n / n}} = 1 \quad \text{and} \quad \liminf_{n \to \infty} \frac{\bar{X}_n - \mu}{\sigma\sqrt{2\ln\ln n / n}} = -1
+$$
+
+The sample mean oscillates within the envelope $\pm\sigma\sqrt{2\ln\ln n / n}$ and *touches* both boundaries infinitely often.
+</TheoremBlock>
+
+The LIL gives an astonishingly precise description of the a.s. behavior. The SLLN says $\bar{X}_n - \mu \to 0$. The LIL says *exactly how* it approaches zero: the fluctuations are of order $\sqrt{\ln\ln n / n}$, which is slightly larger than the CLT scale of $1/\sqrt{n}$ (by a factor of $\sqrt{2\ln\ln n}$). The sample path oscillates within this shrinking envelope, touching the upper and lower boundaries infinitely many times — it never stays on one side permanently.
+
+The double logarithm $\ln\ln n$ grows extraordinarily slowly: $\ln\ln(10) \approx 0.83$, $\ln\ln(100) \approx 1.53$, $\ln\ln(10^6) \approx 2.63$, $\ln\ln(10^{100}) \approx 5.44$. So the LIL envelope $\sigma\sqrt{2\ln\ln n / n}$ is only slightly wider than the CLT scale $\sigma/\sqrt{n}$. In practice, the LIL is more of a theoretical landmark than a computational tool — it tells us that the SLLN convergence rate cannot be faster than $\sqrt{\ln\ln n / n}$, establishing a fundamental limit on how quickly sample means can settle down.
+
+The proof of the LIL is deep (it uses the second Borel--Cantelli lemma and exponential tail bounds) and beyond our scope here. We state it to complete the picture of how the LLN, the CLT, and the LIL form a hierarchy of increasingly precise statements about $\bar{X}_n$.
+
+<RemarkBlock number={5} title="The Hierarchy: SLLN, LIL, CLT">
+Three results describe $\bar{X}_n - \mu$ at different levels of precision:
+
+**SLLN** (Theorem 10.5): $\bar{X}_n - \mu \to 0$ almost surely. The fluctuations vanish. This is the *qualitative* statement — convergence happens. It answers the question: *does* $\bar{X}_n$ converge?
+
+**Law of the Iterated Logarithm** (Theorem 10.8): The fluctuations are exactly of order $\sigma\sqrt{2\ln\ln n / n}$. This is the *quantitative* envelope — how tightly the sample path concentrates around $\mu$. It answers: *how closely* does $\bar{X}_n$ track $\mu$?
+
+**Central Limit Theorem** (Topic 11, coming soon): $\sqrt{n}(\bar{X}_n - \mu)/\sigma \xrightarrow{d} N(0, 1)$. The fluctuations at scale $1/\sqrt{n}$ are approximately Normal. This is the *distributional* statement — the shape of the fluctuations. It answers: *what do the deviations look like* at any given $n$?
+
+Each tells you more. The SLLN says "it converges." The LIL says "the deviations decay like $\sqrt{\ln\ln n / n}$." The CLT says "at the scale $1/\sqrt{n}$, the deviations look Gaussian."
+
+These are not competing statements — they complement each other. The SLLN is a *pathwise* result (it says something about almost every $\omega \in \Omega$). The LIL is also pathwise (it gives the exact a.s. oscillation). The CLT is *distributional* (it says what the distribution of $\sqrt{n}(\bar{X}_n - \mu)$ looks like for large $n$). Concentration inequalities like Hoeffding (Theorem 10.7) are *tail probability* bounds (they say how fast $P(|\bar{X}_n - \mu| > \varepsilon)$ decays). Large Deviations and Tail Bounds (Topic 12, coming soon) develops these exponential-rate guarantees — the most useful results for practical sample-size calculations.
+</RemarkBlock>
+
+<img src="/images/topics/law-of-large-numbers/convergence-rates.png" alt="Convergence rates: Chebyshev (1/n) vs Hoeffding (exponential) bounds, LIL envelope around sample paths" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
+
+<ConvergenceRateExplorer client:visible />
+
+---
+
+## 10.9 Connections to Machine Learning
+
+The law of large numbers is not an abstract mathematical curiosity. It is the *foundation* of empirical machine learning. Every time you compute a statistic from data — a training loss, a validation accuracy, a feature mean for normalization, a gradient estimate — you are implicitly invoking the LLN. The WLLN says your estimate is probably close to the truth. The SLLN says your single run converges to the truth. The Glivenko--Cantelli theorem says the entire empirical distribution converges, not just individual statistics.
+
+This section makes the connections explicit, tracing the LLN through three central pillars of modern ML: Monte Carlo estimation (where the SLLN justifies single-run simulation), stochastic optimization (where the SLLN justifies Polyak averaging), and empirical risk minimization (where the Glivenko--Cantelli theorem justifies training on finite data).
+
+The theme is always the same: we observe a finite sample, compute a statistic (a sample mean, a gradient average, an empirical risk), and trust that it approximates the corresponding population quantity. The LLN is the mathematical warrant for that trust.
+
+It is worth pausing to appreciate the remarkable generality of this foundation. The LLN does not care what the random variables represent — pixel intensities, word embeddings, gradient components, loss values, feature activations. It does not care about the dimension of the underlying space. It does not care about the specific distribution, as long as the mean exists. This universality is what makes the LLN the single most important theorem in applied statistics.
+
+<ExampleBlock number={6} title="Monte Carlo Estimation">
+To compute $E[g(X)]$ for some function $g$ and random variable $X$, draw $X_1, \ldots, X_n$ iid from the distribution of $X$ and report:
+
+$$
+\hat{\theta}_n = \frac{1}{n}\sum_{i=1}^n g(X_i)
+$$
+
+The SLLN guarantees $\hat{\theta}_n \to E[g(X)]$ almost surely — your single simulation run converges to the truth. This is the entire theoretical justification for Monte Carlo estimation.
+
+**Concrete example:** Suppose $X \sim N(2, 1)$ and you want to estimate $\theta = E[X^2]$. The true value is $\text{Var}(X) + (E[X])^2 = 1 + 4 = 5$. Drawing $X_1, \ldots, X_n$ iid from $N(2,1)$ and computing $\hat{\theta}_n = \frac{1}{n}\sum_{i=1}^n X_i^2$ gives an estimate that converges to 5 almost surely by the SLLN (since $E[X^2] = 5 < \infty$). The CLT (Topic 11, coming soon) will tell us that the error is approximately $N(0, \text{Var}(X^2)/n)$, giving confidence intervals. And concentration inequalities (Topic 12, coming soon) will give non-asymptotic bounds like $P(|\hat{\theta}_n - 5| > \varepsilon) \leq 2\exp(-cn\varepsilon^2)$ for bounded transformations.
+
+The Monte Carlo method extends to high-dimensional integrals where deterministic quadrature fails: if $X \in \mathbb{R}^d$ and $d$ is large, grid-based methods require $O(\varepsilon^{-d})$ evaluations for accuracy $\varepsilon$ (the curse of dimensionality), while Monte Carlo requires only $O(\varepsilon^{-2})$ evaluations regardless of $d$ — courtesy of the SLLN and CLT.
+
+Notice the role of the SLLN versus the WLLN here. The WLLN would tell you that for each fixed $n$, the probability of your estimate being far from $E[X^2]$ is small. But you are looking at a *single* run — a single sequence of estimates $\hat{\theta}_1, \hat{\theta}_2, \hat{\theta}_3, \ldots$ — and you want this sequence to converge. That is exactly what the SLLN guarantees: with probability 1, your sequence converges to the truth.
+
+The SLLN also extends to MCMC: if the Markov chain is ergodic (irreducible, aperiodic, positive recurrent), then time averages converge to space averages almost surely. This is the ergodic theorem, a generalization of the SLLN to dependent sequences — the dependence between successive states of the Markov chain is handled by the ergodic property rather than independence. See <ExternalLink href="https://formalml.com/topics/monte-carlo-methods" site="formalml" topic="Monte Carlo Methods" /> for the full development.
+</ExampleBlock>
+
+<ExampleBlock number={7} title="Stochastic Gradient Descent and Polyak Averaging">
+In SGD, we approximate the full gradient $\nabla R(\theta) = E[\nabla \ell(Y, f_\theta(X))]$ with a single-sample gradient $\nabla \ell(Y_t, f_\theta(X_t))$. The key convergence result says: with step sizes satisfying the Robbins--Monro conditions ($\sum_{t=1}^{\infty} \alpha_t = \infty$ and $\sum_{t=1}^{\infty} \alpha_t^2 < \infty$), the iterates $\theta_t$ converge to a local minimum almost surely.
+
+**Polyak averaging** replaces the final iterate $\theta_T$ with the running mean:
+
+$$
+\bar{\theta}_T = \frac{1}{T}\sum_{t=1}^T \theta_t
+$$
+
+This exploits the SLLN: the running mean of the iterates (which fluctuate around the optimum) converges to the optimum almost surely, and the Polyak-averaged estimator achieves the optimal asymptotic variance — it is as efficient as the best possible estimator. The SLLN is what makes this averaging trick valid.
+
+The connection between SGD and the LLN runs deeper than the averaging trick. At each step, the stochastic gradient $\nabla \ell(Y_t, f_\theta(X_t))$ is a noisy estimate of the true gradient $\nabla R(\theta)$. The noise averages out over time — by the LLN applied to the gradient estimates — and the iterates converge. The Robbins--Monro conditions encode two competing requirements:
+- $\sum_{t=1}^{\infty} \alpha_t = \infty$: the step sizes are large enough in total to reach the optimum from any starting point (the algorithm doesn't stop too early).
+- $\sum_{t=1}^{\infty} \alpha_t^2 < \infty$: the step sizes shrink fast enough that the gradient noise averages out (the algorithm doesn't oscillate forever).
+
+The common choice $\alpha_t = 1/t$ satisfies both: $\sum 1/t = \infty$ (harmonic series diverges) and $\sum 1/t^2 = \pi^2/6 < \infty$ (Basel problem).
+
+See <ExternalLink href="https://formalml.com/topics/stochastic-gradient-descent" site="formalml" topic="Stochastic Gradient Descent" /> for the full convergence analysis.
+</ExampleBlock>
+
+<ExampleBlock number={8} title="Empirical Risk Minimization and Uniform Convergence">
+In supervised learning, the empirical risk of a model $f_\theta$ on data $(X_1, Y_1), \ldots, (X_n, Y_n)$ is:
+
+$$
+\hat{R}_n(\theta) = \frac{1}{n}\sum_{i=1}^n \ell(Y_i, f_\theta(X_i))
+$$
+
+For each fixed $\theta$, $\hat{R}_n(\theta)$ is a sample mean, so the SLLN gives $\hat{R}_n(\theta) \xrightarrow{\text{a.s.}} R(\theta) = E[\ell(Y, f_\theta(X))]$. But ERM selects $\hat{\theta}_n = \arg\min_\theta \hat{R}_n(\theta)$, and for this to be consistent we need convergence that is *uniform* over $\theta$:
+
+$$
+\sup_\theta |\hat{R}_n(\theta) - R(\theta)| \xrightarrow{\text{a.s.}} 0
+$$
+
+This is exactly the type of result that the Glivenko--Cantelli theorem provides for indicator functions $\mathbf{1}(X \leq x)$, and its generalization to richer function classes (via Vapnik--Chervonenkis theory) is what makes ERM work. The function class $\{(x, y) \mapsto \ell(y, f_\theta(x)) : \theta \in \Theta\}$ must be "small enough" — specifically, its VC dimension must be finite — for uniform convergence to hold.
+
+The logical chain from the results in this topic to statistical learning theory is:
+
+1. **Glivenko--Cantelli** (Theorem 10.6): uniform LLN for indicators $\mathbf{1}(X \leq x)$.
+2. **VC theory** (generalization): uniform LLN for function classes with finite VC dimension.
+3. **ERM consistency**: the empirical risk minimizer converges to the population risk minimizer.
+4. **PAC learning bounds**: $P(|\hat{R}_n(\hat{\theta}_n) - R(\hat{\theta}_n)| > \varepsilon) \leq \delta$ with $n = O(d/\varepsilon^2 \cdot \ln(1/\delta))$ samples, where $d$ is the VC dimension.
+
+Each step in the chain uses the previous step as a building block. The Glivenko--Cantelli theorem is step 1 — the simplest case — and everything else follows by generalization.
+
+See <ExternalLink href="https://formalml.com/topics/empirical-risk-minimization" site="formalml" topic="Empirical Risk Minimization" /> and <ExternalLink href="https://formalml.com/topics/generalization-bounds" site="formalml" topic="Generalization Bounds" /> for the full development.
+</ExampleBlock>
+
+<RemarkBlock number={6} title="Glivenko-Cantelli as the Starting Point for Empirical Process Theory">
+The Glivenko--Cantelli theorem is the simplest case of a *uniform law of large numbers*. It says that the empirical measure $P_n$ (which assigns mass $1/n$ to each observation) converges to the population measure $P$ uniformly over the class of half-lines $\{(-\infty, x] : x \in \mathbb{R}\}$.
+
+Empirical process theory (coming in the Statistical Inference track) generalizes from half-lines to arbitrary function classes $\mathcal{F}$, asking: when does $\sup_{f \in \mathcal{F}} |P_n f - Pf| \to 0$? The answer involves the *complexity* of $\mathcal{F}$ — measured by the VC dimension, covering numbers, or metric entropy. The Glivenko--Cantelli class of half-lines has VC dimension 1, which is why the theorem holds without any distributional assumptions.
+
+This is the bridge between the LLN (convergence for a single statistic) and statistical learning theory (uniform convergence over a class of statistics). The function class must be "learnable" (finite VC dimension or, more generally, finite metric entropy) for the uniform LLN to hold, and learnability is *equivalent* to the uniform LLN. This equivalence — the fundamental theorem of statistical learning — is one of the deepest results in the field.
+
+The Glivenko--Cantelli theorem is the $\mathcal{F} = \{\mathbf{1}_{(-\infty, x]} : x \in \mathbb{R}\}$ case. This class has VC dimension 1 (any single point can be shattered, but no two points can be). With VC dimension 1, the uniform convergence holds for any distribution — exactly what Theorem 10.6 states.
+
+The extension to higher dimensions is more subtle: in $\mathbb{R}^d$, the class of half-spaces has VC dimension $d + 1$, and the multivariate Glivenko--Cantelli theorem holds with convergence rate $O(n^{-1/2})$ — the same rate as in one dimension, independent of $d$. This is remarkable: the empirical CDF converges just as fast in high dimensions as in one dimension, at least for half-spaces. For richer function classes, the rate can degrade with dimension — this is the curse of dimensionality in statistical learning theory.
+</RemarkBlock>
+
+<img src="/images/topics/law-of-large-numbers/ml-connections.png" alt="ML connections: Monte Carlo convergence, SGD with Polyak averaging, ERM uniform convergence" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
+
+---
+
+## 10.10 Summary
+
+This topic traced the arc from the simplest weak law to the strongest convergence results available for sample means and empirical distributions. Here is the complete progression:
+
+| Result | Assumptions | Conclusion | Proof Tool |
+|--------|------------|------------|------------|
+| Theorem 10.1 (WLLN) | iid, $\sigma^2 < \infty$ | $\bar{X}_n \xrightarrow{P} \mu$ | Chebyshev |
+| Theorem 10.2 (WLLN) | uncorrelated, $\frac{1}{n^2}\sum \sigma_i^2 \to 0$ | $\bar{X}_n - \bar{\mu}_n \xrightarrow{P} 0$ | Variance of sums |
+| Theorem 10.3 (Khintchine) | iid, $E[\lvert X \rvert] < \infty$ | $\bar{X}_n \xrightarrow{P} \mu$ | Truncation + DCT |
+| Theorem 10.4 (Kolmogorov) | independent, $E[X_i] = 0$ | $P(\max\lvert S_k \rvert \geq \varepsilon) \leq \text{Var}(S_n)/\varepsilon^2$ | Stopping time decomposition |
+| Theorem 10.5 (SLLN) | pairwise iid, $E[\lvert X \rvert] < \infty$ | $\bar{X}_n \xrightarrow{\text{a.s.}} \mu$ | Etemadi (truncation + Kolmogorov + B-C) |
+| Theorem 10.6 (Glivenko--Cantelli) | iid | $\sup_x \lvert F_n(x) - F(x) \rvert \xrightarrow{\text{a.s.}} 0$ | SLLN for indicators + monotonicity |
+| Theorem 10.7 (Hoeffding) | independent, bounded | $P(\lvert\bar{X}_n - \mu\rvert \geq \varepsilon) \leq 2e^{-2n\varepsilon^2/(b-a)^2}$ | (Proof in Topic 12) |
+| Theorem 10.8 (LIL) | iid, $\sigma^2 < \infty$ | $\limsup (\bar{X}_n - \mu)/\sigma\sqrt{2\ln\ln n/n} = 1$ a.s. | (Statement only) |
+
+The logical dependencies form a clear ladder:
+
+- **Chebyshev WLLN** (Theorem 10.1) is the base case — three lines.
+- **Uncorrelated WLLN** (Theorem 10.2) generalizes by dropping "identically distributed."
+- **Khintchine's WLLN** (Theorem 10.3) generalizes by dropping "finite variance," using truncation.
+- **Kolmogorov's maximal inequality** (Theorem 10.4) provides the new tool needed to control *paths*, not just *endpoints*.
+- **SLLN** (Theorem 10.5) uses Kolmogorov + truncation + Borel--Cantelli to upgrade from "in probability" to "almost surely."
+- **Glivenko--Cantelli** (Theorem 10.6) uses the SLLN + monotonicity to upgrade from "pointwise" to "uniform."
+
+At every stage, we relaxed an assumption or strengthened a conclusion. This is how convergence theory works: you start with the simplest result that captures the essential phenomenon, then systematically push the boundaries — either by weakening the hypotheses (making the theorem more broadly applicable) or by strengthening the conclusion (making it more useful). The progression from Theorem 10.1 to Theorem 10.6 exemplifies both directions simultaneously.
+
+The minimal assumption for the LLN is $E[|X_1|] < \infty$ — finite mean. This is both necessary and sufficient (Proposition 10.1). No weaker condition will do. The Cauchy distribution ($E[|X_1|] = \infty$) is the canonical counterexample: its sample mean does not converge, in any mode, to any finite limit. This clean dichotomy — finite mean gives everything, infinite mean gives nothing — is one of the most satisfying results in probability.
+
+For the Glivenko--Cantelli theorem, even the finite-mean assumption is unnecessary: the empirical CDF converges uniformly to the true CDF for *every* distribution, no matter how heavy the tails. This universality is what makes nonparametric statistics possible — the ECDF is a valid, consistent estimator of any CDF, without distributional assumptions. It is the most assumption-free estimator in all of statistics.
+
+The practical takeaway is reassuring: no matter what your data looks like — Normal, heavy-tailed, multimodal, discrete, continuous, or a bizarre mixture — the empirical CDF faithfully approximates the true CDF, and all statistics derived from the ECDF (quantiles, moments, probabilities of intervals) converge to their population counterparts.
+
+### Looking Back: Prerequisites in Action
+
+This topic drew on three specific results from earlier in the curriculum:
+
+- **Chebyshev's inequality** ([Expectation & Moments](/topics/expectation-moments), Theorem 12): the proof engine for all three WLLN variants and the starting point for the maximal inequality.
+- **Borel--Cantelli lemma** ([Modes of Convergence](/topics/modes-of-convergence)): used in the SLLN proof (truncation error vanishes a.s.) and the Glivenko--Cantelli proof (finite intersection of probability-1 sets). The *first* Borel--Cantelli requires only $\sum P(A_n) < \infty$; the *second* (used in Proposition 10.1) requires independence.
+- **Dominated convergence theorem** (<ExternalLink href="https://formalcalculus.com/topics/integration" site="formalcalculus" topic="Integration" />): the key tool in every truncation argument — it justifies $E[X \cdot \mathbf{1}(|X| \leq n)] \to E[X]$ and $E[X^2 \cdot \mathbf{1}(|X| \leq n)]/n \to 0$. The DCT appeared in three steps of the Khintchine proof and two steps of the Etemadi proof.
+
+The four modes of convergence from [Topic 9](/topics/modes-of-convergence) provided the conceptual framework: the WLLN is a convergence-in-probability statement, the SLLN is an almost-sure convergence statement, and the hierarchy theorem (a.s. implies in probability, Topic 9 Theorem 9.5) means the SLLN is strictly stronger. The Glivenko--Cantelli theorem adds a new dimension: not just convergence of a single statistic, but *uniform* convergence of an entire function.
+
+### What Comes Next
+
+The law of large numbers says $\bar{X}_n \to \mu$. Two natural follow-up questions remain:
+
+- **What is the shape of the fluctuations?** The Central Limit Theorem (Topic 11, coming soon) answers this: $\sqrt{n}(\bar{X}_n - \mu)/\sigma \xrightarrow{d} N(0, 1)$. The deviations of $\bar{X}_n$ from $\mu$, when rescaled by $\sqrt{n}$, are approximately Normal — regardless of the underlying distribution of $X$, as long as the variance is finite. This universality is what makes confidence intervals, hypothesis tests, and p-values work. The CLT says the LLN's fluctuations are Gaussian in shape — and from that shape, all of classical statistics flows.
+
+  The CLT is the *distributional* complement to the LLN's *qualitative* statement. The LLN says $\bar{X}_n \to \mu$; the CLT says how $\bar{X}_n$ deviates from $\mu$ at scale $1/\sqrt{n}$.
+
+- **How fast does the convergence happen?** Large Deviations and Tail Bounds (Topic 12, coming soon) answers this with exponential-rate guarantees. Hoeffding's inequality (previewed in Theorem 10.7) is the simplest such bound; Bernstein's inequality gives tighter results when the variance is small; sub-Gaussian and sub-exponential tail bounds handle the most common distributional families. These are the finite-sample tools that power statistical learning theory: PAC bounds, uniform convergence rates, and sample complexity calculations.
+
+  These concentration inequalities are the *quantitative* complement to the LLN's *qualitative* statement. The LLN says $\bar{X}_n \to \mu$; the concentration inequalities say exactly how many samples you need for $|\bar{X}_n - \mu| \leq \varepsilon$ with probability at least $1 - \delta$.
+
+Together, the LLN (convergence), the CLT (the shape), and concentration inequalities (the rate) form the three pillars of asymptotic statistics. Everything in statistical inference — point estimation, confidence intervals, hypothesis testing, Bayesian asymptotics — rests on one or more of these pillars. The LLN says "your estimator works." The CLT says "here is how to quantify your uncertainty." Concentration inequalities say "here is exactly how many samples you need."
+
+With the LLN now proved, we have the first of these three pillars firmly in place. The sample mean converges to the truth — weakly under finite variance, strongly under finite mean, uniformly for the empirical CDF. The next two topics will complete the trinity.
+
+The reader who has followed from Topic 1 (Sample Spaces) through Topic 10 has now traversed the full journey from "what is a random event?" to "sample means converge almost surely to population means." This is the first genuinely *asymptotic* result in the curriculum — a statement about what happens as $n \to \infty$ — and it opens the door to all of statistical inference. Point estimation relies on the SLLN for consistency. Confidence intervals rely on the CLT (which refines the LLN). Hypothesis testing relies on the asymptotic distribution of test statistics (which follows from the CLT). Bayesian consistency (the posterior concentrating around the true parameter) relies on the SLLN for the log-likelihood. Every branch of inference grows from this root.

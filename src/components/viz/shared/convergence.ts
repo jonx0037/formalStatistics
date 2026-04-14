@@ -297,3 +297,175 @@ export function bernoulliSample(
 ): number {
   return rng() < p ? 1 : 0;
 }
+
+// ── Topic 10: Law of Large Numbers Extensions ──────────────────────────────
+
+// ── Additional Sampling Functions ──────────────────────────────────────────
+
+/**
+ * Generate a Gamma(shape, scale=1) sample using the Marsaglia–Tsang method.
+ * Works for any shape > 0 (uses rejection for shape < 1).
+ * @param shape — shape parameter (> 0)
+ * @param rng — uniform [0,1) generator (default Math.random)
+ */
+export function gammaSample(
+  shape: number,
+  rng: () => number = Math.random
+): number {
+  // For shape < 1, use the identity: Gamma(a) = Gamma(a+1) * U^(1/a)
+  if (shape < 1) {
+    const u = Math.max(rng(), Number.EPSILON);
+    return gammaSample(shape + 1, rng) * Math.pow(u, 1 / shape);
+  }
+  // Marsaglia–Tsang method for shape >= 1
+  const d = shape - 1 / 3;
+  const c = 1 / Math.sqrt(9 * d);
+  while (true) {
+    let x: number;
+    let v: number;
+    do {
+      x = normalSample(0, 1, rng);
+      v = 1 + c * x;
+    } while (v <= 0);
+    v = v * v * v;
+    const u = rng();
+    if (u < 1 - 0.0331 * (x * x) * (x * x)) return d * v;
+    if (Math.log(u) < 0.5 * x * x + d * (1 - v + Math.log(v))) return d * v;
+  }
+}
+
+/**
+ * Generate a Student-t(ν) sample using the ratio method.
+ * t = Z / √(V/ν) where Z ~ N(0,1) and V ~ χ²(ν) ~ Gamma(ν/2, 2).
+ * Supports non-integer ν (e.g., ν = 1.5) via Gamma sampling.
+ * @param nu — degrees of freedom (> 0)
+ * @param rng — uniform [0,1) generator (default Math.random)
+ */
+export function tSample(
+  nu: number,
+  rng: () => number = Math.random
+): number {
+  const z = normalSample(0, 1, rng);
+  // χ²(ν) = Gamma(ν/2, 2) = 2 * Gamma(ν/2, 1)
+  const v = 2 * gammaSample(nu / 2, rng);
+  return z / Math.sqrt(v / nu);
+}
+
+/**
+ * Generate a Pareto(α, xₘ=1) sample via inverse CDF.
+ * X = 1 / U^{1/α} where U ~ Uniform(0,1).
+ * @param alpha — shape parameter (> 0)
+ * @param rng — uniform [0,1) generator (default Math.random)
+ */
+export function paretoSample(
+  alpha: number,
+  rng: () => number = Math.random
+): number {
+  const u = Math.max(rng(), Number.EPSILON);
+  return 1 / Math.pow(u, 1 / alpha);
+}
+
+/**
+ * Generate a bootstrap sample: n draws with replacement from data.
+ * @param data — original sample array
+ * @param rng — uniform [0,1) generator (default Math.random)
+ * @returns array of length data.length, drawn with replacement
+ */
+export function bootstrapSample(
+  data: number[],
+  rng: () => number = Math.random
+): number[] {
+  const n = data.length;
+  const out = new Array<number>(n);
+  for (let i = 0; i < n; i++) {
+    out[i] = data[Math.floor(rng() * n)];
+  }
+  return out;
+}
+
+// ── Concentration Bounds ───────────────────────────────────────────────────
+
+/**
+ * Chebyshev bound: P(|X̄ₙ − μ| > ε) ≤ σ²/(nε²).
+ * Clamped to [0, 1].
+ */
+export function chebyshevBound(
+  n: number,
+  sigmaSquared: number,
+  epsilon: number
+): number {
+  return Math.min(sigmaSquared / (n * epsilon * epsilon), 1);
+}
+
+/**
+ * Hoeffding bound: P(|X̄ₙ − μ| > ε) ≤ 2 exp(−2nε²/(b−a)²).
+ * For bounded random variables X ∈ [a, b].
+ */
+export function hoeffdingBound(
+  n: number,
+  a: number,
+  b: number,
+  epsilon: number
+): number {
+  const range = b - a;
+  return Math.min(2 * Math.exp(-2 * n * epsilon * epsilon / (range * range)), 1);
+}
+
+// ── Glivenko–Cantelli Utilities ────────────────────────────────────────────
+
+/**
+ * DKW confidence band half-width: √(ln(2/α) / (2n)).
+ * The Dvoretzky–Kiefer–Wolfowitz inequality gives:
+ *   P(supₓ |Fₙ(x) − F(x)| > ε) ≤ 2 exp(−2nε²).
+ * Inverting: the band width at level α is √(ln(2/α)/(2n)).
+ */
+export function dkwBound(n: number, alpha: number): number {
+  return Math.sqrt(Math.log(2 / alpha) / (2 * n));
+}
+
+/**
+ * Running KS statistic: Dₙ for n = 1, 2, ..., N.
+ * Returns array where entry k is the KS statistic using
+ * samples[0..k] (i.e., the first k+1 observations).
+ * @param samples — all N samples
+ * @param cdf — theoretical CDF function
+ */
+export function runningKSStatistic(
+  samples: number[],
+  cdf: (x: number) => number
+): number[] {
+  const N = samples.length;
+  const result = new Array<number>(N);
+  const running: number[] = [];
+
+  for (let i = 0; i < N; i++) {
+    running.push(samples[i]);
+    // Sort the running sample to compute KS stat
+    const sorted = [...running].sort((a, b) => a - b);
+    const n = sorted.length;
+    let maxDiff = 0;
+    for (let j = 0; j < n; j++) {
+      const Fx = cdf(sorted[j]);
+      const ecdfRight = (j + 1) / n;
+      const ecdfLeft = j / n;
+      maxDiff = Math.max(
+        maxDiff,
+        Math.abs(ecdfRight - Fx),
+        Math.abs(ecdfLeft - Fx)
+      );
+    }
+    result[i] = maxDiff;
+  }
+
+  return result;
+}
+
+/**
+ * Law of the iterated logarithm envelope: σ√(2 ln(ln(n)) / n).
+ * Gives the precise a.s. oscillation rate of X̄ₙ around μ.
+ * For n < 3, ln(ln(n)) is undefined or negative; returns Infinity.
+ */
+export function lilEnvelope(n: number, sigma: number): number {
+  if (n < 3) return Infinity;
+  return sigma * Math.sqrt(2 * Math.log(Math.log(n)) / n);
+}
