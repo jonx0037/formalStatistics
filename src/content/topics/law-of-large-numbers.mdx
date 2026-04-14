@@ -395,7 +395,7 @@ $$
 which gives $\bar{X}_n \xrightarrow{P} \mu$. $\square$
 </ProofBlock>
 
-The truncation technique is a workhorse of probability theory. The pattern — replace a badly-behaved random variable with a well-behaved approximation, handle the approximation with standard tools, then bound the approximation error — appears throughout convergence theory. We will see it again in the SLLN proof (Section 10.6), where the truncation threshold is $i$ rather than $n$. The CLT proof (Topic 11, coming soon) uses the same idea with characteristic functions. In empirical process theory, truncation is the first step in proving maximal inequalities for unbounded function classes.
+The truncation technique is a workhorse of probability theory. The pattern — replace a badly-behaved random variable with a well-behaved approximation, handle the approximation with standard tools, then bound the approximation error — appears throughout convergence theory. We will see it again in the SLLN proof (Section 10.6), where the truncation threshold is $i$ rather than $n$. The [CLT proof](/topics/central-limit-theorem) uses the same idea with characteristic functions. In empirical process theory, truncation is the first step in proving maximal inequalities for unbounded function classes.
 
 The key insight is that the truncation threshold *grows with $n$*. A fixed threshold would introduce a permanent bias (the truncated mean $E[X \cdot \mathbf{1}(|X| \leq c)]$ is generally not equal to $\mu$). By letting the threshold grow, the bias vanishes — the truncated mean converges to the true mean — while the variance is still controlled because the growth rate of the threshold is calibrated to the sample size.
 
@@ -1028,7 +1028,7 @@ Three results describe $\bar{X}_n - \mu$ at different levels of precision:
 
 **Law of the Iterated Logarithm** (Theorem 10.8): The fluctuations are exactly of order $\sigma\sqrt{2\ln\ln n / n}$. This is the *quantitative* envelope — how tightly the sample path concentrates around $\mu$. It answers: *how closely* does $\bar{X}_n$ track $\mu$?
 
-**Central Limit Theorem** (Topic 11, coming soon): $\sqrt{n}(\bar{X}_n - \mu)/\sigma \xrightarrow{d} N(0, 1)$. The fluctuations at scale $1/\sqrt{n}$ are approximately Normal. This is the *distributional* statement — the shape of the fluctuations. It answers: *what do the deviations look like* at any given $n$?
+[**Central Limit Theorem**](/topics/central-limit-theorem): $\sqrt{n}(\bar{X}_n - \mu)/\sigma \xrightarrow{d} N(0, 1)$. The fluctuations at scale $1/\sqrt{n}$ are approximately Normal. This is the *distributional* statement — the shape of the fluctuations. It answers: *what do the deviations look like* at any given $n$?
 
 Each tells you more. The SLLN says "it converges." The LIL says "the deviations decay like $\sqrt{\ln\ln n / n}$." The CLT says "at the scale $1/\sqrt{n}$, the deviations look Gaussian."
 
@@ -1060,7 +1060,7 @@ $$
 
 The SLLN guarantees $\hat{\theta}_n \to E[g(X)]$ almost surely — your single simulation run converges to the truth. This is the entire theoretical justification for Monte Carlo estimation.
 
-**Concrete example:** Suppose $X \sim N(2, 1)$ and you want to estimate $\theta = E[X^2]$. The true value is $\text{Var}(X) + (E[X])^2 = 1 + 4 = 5$. Drawing $X_1, \ldots, X_n$ iid from $N(2,1)$ and computing $\hat{\theta}_n = \frac{1}{n}\sum_{i=1}^n X_i^2$ gives an estimate that converges to 5 almost surely by the SLLN (since $E[X^2] = 5 < \infty$). The CLT (Topic 11, coming soon) will tell us that the error is approximately $N(0, \text{Var}(X^2)/n)$, giving confidence intervals. And concentration inequalities (Topic 12, coming soon) will give non-asymptotic bounds like $P(|\hat{\theta}_n - 5| > \varepsilon) \leq 2\exp(-cn\varepsilon^2)$ for bounded transformations.
+**Concrete example:** Suppose $X \sim N(2, 1)$ and you want to estimate $\theta = E[X^2]$. The true value is $\text{Var}(X) + (E[X])^2 = 1 + 4 = 5$. Drawing $X_1, \ldots, X_n$ iid from $N(2,1)$ and computing $\hat{\theta}_n = \frac{1}{n}\sum_{i=1}^n X_i^2$ gives an estimate that converges to 5 almost surely by the SLLN (since $E[X^2] = 5 < \infty$). The [CLT](/topics/central-limit-theorem) will tell us that the error is approximately $N(0, \text{Var}(X^2)/n)$, giving confidence intervals. And concentration inequalities (Topic 12, coming soon) will give non-asymptotic bounds like $P(|\hat{\theta}_n - 5| > \varepsilon) \leq 2\exp(-cn\varepsilon^2)$ for bounded transformations.
 
 The Monte Carlo method extends to high-dimensional integrals where deterministic quadrature fails: if $X \in \mathbb{R}^d$ and $d$ is large, grid-based methods require $O(\varepsilon^{-d})$ evaluations for accuracy $\varepsilon$ (the curse of dimensionality), while Monte Carlo requires only $O(\varepsilon^{-2})$ evaluations regardless of $d$ — courtesy of the SLLN and CLT.
 
@@ -1178,7 +1178,7 @@ The four modes of convergence from [Topic 9](/topics/modes-of-convergence) provi
 
 The law of large numbers says $\bar{X}_n \to \mu$. Two natural follow-up questions remain:
 
-- **What is the shape of the fluctuations?** The Central Limit Theorem (Topic 11, coming soon) answers this: $\sqrt{n}(\bar{X}_n - \mu)/\sigma \xrightarrow{d} N(0, 1)$. The deviations of $\bar{X}_n$ from $\mu$, when rescaled by $\sqrt{n}$, are approximately Normal — regardless of the underlying distribution of $X$, as long as the variance is finite. This universality is what makes confidence intervals, hypothesis tests, and p-values work. The CLT says the LLN's fluctuations are Gaussian in shape — and from that shape, all of classical statistics flows.
+- **What is the shape of the fluctuations?** The [Central Limit Theorem](/topics/central-limit-theorem) answers this: $\sqrt{n}(\bar{X}_n - \mu)/\sigma \xrightarrow{d} N(0, 1)$. The deviations of $\bar{X}_n$ from $\mu$, when rescaled by $\sqrt{n}$, are approximately Normal — regardless of the underlying distribution of $X$, as long as the variance is finite. This universality is what makes confidence intervals, hypothesis tests, and p-values work. The CLT says the LLN's fluctuations are Gaussian in shape — and from that shape, all of classical statistics flows.
 
   The CLT is the *distributional* complement to the LLN's *qualitative* statement. The LLN says $\bar{X}_n \to \mu$; the CLT says how $\bar{X}_n$ deviates from $\mu$ at scale $1/\sqrt{n}$.
 
