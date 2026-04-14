@@ -281,11 +281,11 @@ export default function SLLNExplorer() {
     const sllnFraction = indices.map((idx) => {
       let count = 0;
       for (const path of pathData) {
-        // Check if path has stayed within the band from some point up to idx.
-        // Look back up to 50 steps (or to the beginning) to verify lock-in.
+        // A path is "locked in" at index idx if it stays within the ε-band
+        // for all m from idx to the end of the path. This is the correct
+        // finite-data proxy for a.s. convergence (tail behavior).
         let stayedIn = true;
-        const lookback = Math.min(idx, 50);
-        for (let j = idx; j >= idx - lookback; j--) {
+        for (let j = idx; j < n; j++) {
           if (Math.abs(path[j] - mu) > epsilon) {
             stayedIn = false;
             break;

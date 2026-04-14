@@ -80,22 +80,26 @@ function generatePaths(
         break;
       }
       case 'uncorrelated': {
-        // X_i = mu + sigma_i * Z_i where Z_i ~ N(0,1)
-        // sigma_i = 1 + 0.5*sin(i/20)
+        // X_i = mu + sigma_i * (Y_i - mu), where Y_i comes from the selected
+        // base distribution and sigma_i = 1 + 0.5*sin(i/20).
+        // Preserves the selected distribution family while introducing
+        // time-varying scale without correlation across draws.
         samples = new Array<number>(n);
         for (let i = 0; i < n; i++) {
           const sigmaI = 1 + 0.5 * Math.sin(i / 20);
-          samples[i] = mu + sigmaI * normalSample(0, 1);
+          samples[i] = mu + sigmaI * (baseSampler() - mu);
         }
         break;
       }
       case 'correlated': {
-        // AR(1): X_i = rho * X_{i-1} + eps_i
-        // where eps_i comes from the base distribution
+        // Mean-preserving AR(1):
+        // X_i = mu + rho * (X_{i-1} - mu) + eps_i
+        // where eps_i = baseSampler() - mu has mean 0.
+        // Stationary mean is mu (not mu/(1-rho)).
         samples = new Array<number>(n);
         samples[0] = baseSampler();
         for (let i = 1; i < n; i++) {
-          samples[i] = rho * samples[i - 1] + baseSampler();
+          samples[i] = mu + rho * (samples[i - 1] - mu) + (baseSampler() - mu);
         }
         break;
       }
@@ -373,14 +377,14 @@ export default function WLLNExplorer() {
 
   // ── Status indicator ──────────────────────────────────────────────────
   const statusInfo = useMemo(() => {
-    if (dist.hasMean && dist.hasVariance) {
+    if (dist.llnApplies === 'slln') {
       return { color: '#059669', bg: 'rgba(5, 150, 105, 0.1)', text: 'SLLN applies \u2713' };
     }
-    if (dist.hasMean && !dist.hasVariance) {
+    if (dist.llnApplies === 'wlln') {
       return { color: '#D97706', bg: 'rgba(217, 119, 6, 0.1)', text: 'WLLN only (slow)' };
     }
     return { color: '#DC2626', bg: 'rgba(220, 38, 38, 0.1)', text: 'LLN does not apply \u2717' };
-  }, [dist.hasMean, dist.hasVariance]);
+  }, [dist.llnApplies]);
 
   // ── Resample handler ──────────────────────────────────────────────────
   const handleResample = useCallback(() => {

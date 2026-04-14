@@ -23,7 +23,8 @@ const MAX_RENDER_POINTS = 300;
 // Colors per ratePresets and spec
 const CHEBYSHEV_COLOR = '#059669';  // emerald
 const HOEFFDING_COLOR = '#d97706';  // amber
-const CLT_COLOR = '#2563eb';        // blue (used for CLT and LIL labels)
+const LIL_COLOR = '#2563eb';        // blue — matches ratePresets
+const CLT_COLOR = '#93c5fd';        // lighter blue for CLT envelope
 const EMPIRICAL_COLOR = '#DC2626';  // red
 const PATH_COLOR = '#6B7280';       // gray
 const EPSILON_BAND_COLOR = '#E5E7EB';
@@ -196,9 +197,12 @@ function estimateExceedance(
 ): number {
   let count = 0;
   for (let r = 0; r < M; r++) {
-    const samples = sampleSequence(sampler, ni);
-    const mean = samples.reduce((a, b) => a + b, 0) / ni;
-    if (Math.abs(mean - mu) > epsilon) count++;
+    // Streaming sum — no array allocation per replication
+    let sum = 0;
+    for (let i = 0; i < ni; i++) {
+      sum += sampler();
+    }
+    if (Math.abs(sum / ni - mu) > epsilon) count++;
   }
   return count / M;
 }
@@ -714,7 +718,7 @@ export default function ConvergenceRateExplorer() {
               );
             })()}
 
-            {/* LIL envelope: ±σ√(2 ln ln n / n) (solid amber, starts at n=3) */}
+            {/* LIL envelope: ±σ√(2 ln ln n / n) (solid blue, starts at n=3) */}
             {(() => {
               const dUpper = lineLeft(lilUpperPath);
               const dLower = lineLeft(lilLowerPath);
@@ -724,7 +728,7 @@ export default function ConvergenceRateExplorer() {
                     <path
                       d={dUpper}
                       fill="none"
-                      stroke={HOEFFDING_COLOR}
+                      stroke={LIL_COLOR}
                       strokeWidth={1.5}
                       opacity={0.7}
                     />
@@ -733,7 +737,7 @@ export default function ConvergenceRateExplorer() {
                     <path
                       d={dLower}
                       fill="none"
-                      stroke={HOEFFDING_COLOR}
+                      stroke={LIL_COLOR}
                       strokeWidth={1.5}
                       opacity={0.7}
                     />
@@ -786,7 +790,7 @@ export default function ConvergenceRateExplorer() {
                   lilUpperPath[lilUpperPath.length - 1].value;
                 items.push({
                   label: 'LIL',
-                  color: HOEFFDING_COLOR,
+                  color: LIL_COLOR,
                   yVal: lastLil,
                   dash: false,
                 });

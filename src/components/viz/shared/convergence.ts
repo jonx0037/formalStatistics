@@ -303,8 +303,41 @@ export function bernoulliSample(
 // ── Additional Sampling Functions ──────────────────────────────────────────
 
 /**
+ * Generate a Gamma(shape, scale=1) sample using the Marsaglia–Tsang method.
+ * Works for any shape > 0 (uses rejection for shape < 1).
+ * @param shape — shape parameter (> 0)
+ * @param rng — uniform [0,1) generator (default Math.random)
+ */
+export function gammaSample(
+  shape: number,
+  rng: () => number = Math.random
+): number {
+  // For shape < 1, use the identity: Gamma(a) = Gamma(a+1) * U^(1/a)
+  if (shape < 1) {
+    const u = Math.max(rng(), Number.EPSILON);
+    return gammaSample(shape + 1, rng) * Math.pow(u, 1 / shape);
+  }
+  // Marsaglia–Tsang method for shape >= 1
+  const d = shape - 1 / 3;
+  const c = 1 / Math.sqrt(9 * d);
+  while (true) {
+    let x: number;
+    let v: number;
+    do {
+      x = normalSample(0, 1, rng);
+      v = 1 + c * x;
+    } while (v <= 0);
+    v = v * v * v;
+    const u = rng();
+    if (u < 1 - 0.0331 * (x * x) * (x * x)) return d * v;
+    if (Math.log(u) < 0.5 * x * x + d * (1 - v + Math.log(v))) return d * v;
+  }
+}
+
+/**
  * Generate a Student-t(ν) sample using the ratio method.
- * t = Z / √(V/ν) where Z ~ N(0,1) and V ~ χ²(ν) = Σᵢ Zᵢ².
+ * t = Z / √(V/ν) where Z ~ N(0,1) and V ~ χ²(ν) ~ Gamma(ν/2, 2).
+ * Supports non-integer ν (e.g., ν = 1.5) via Gamma sampling.
  * @param nu — degrees of freedom (> 0)
  * @param rng — uniform [0,1) generator (default Math.random)
  */
@@ -313,12 +346,8 @@ export function tSample(
   rng: () => number = Math.random
 ): number {
   const z = normalSample(0, 1, rng);
-  // χ²(ν) as sum of ν squared standard normals
-  let v = 0;
-  for (let i = 0; i < Math.round(nu); i++) {
-    const zi = normalSample(0, 1, rng);
-    v += zi * zi;
-  }
+  // χ²(ν) = Gamma(ν/2, 2) = 2 * Gamma(ν/2, 1)
+  const v = 2 * gammaSample(nu / 2, rng);
   return z / Math.sqrt(v / nu);
 }
 
@@ -339,13 +368,17 @@ export function paretoSample(
 /**
  * Generate a bootstrap sample: n draws with replacement from data.
  * @param data — original sample array
+ * @param rng — uniform [0,1) generator (default Math.random)
  * @returns array of length data.length, drawn with replacement
  */
-export function bootstrapSample(data: number[]): number[] {
+export function bootstrapSample(
+  data: number[],
+  rng: () => number = Math.random
+): number[] {
   const n = data.length;
   const out = new Array<number>(n);
   for (let i = 0; i < n; i++) {
-    out[i] = data[Math.floor(Math.random() * n)];
+    out[i] = data[Math.floor(rng() * n)];
   }
   return out;
 }
