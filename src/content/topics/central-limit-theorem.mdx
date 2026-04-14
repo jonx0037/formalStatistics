@@ -1,0 +1,767 @@
+---
+title: "Central Limit Theorem"
+subtitle: "Why normality emerges from chaos — the shape of fluctuations, the rate of convergence, and why almost all of classical statistics works."
+status: "published"
+difficulty: "intermediate"
+prerequisites:
+  - "modes-of-convergence"
+  - "law-of-large-numbers"
+tags:
+  - "probability"
+  - "convergence"
+  - "central-limit-theorem"
+  - "clt"
+  - "normal-approximation"
+  - "de-moivre-laplace"
+  - "lindeberg"
+  - "berry-esseen"
+  - "characteristic-functions"
+  - "delta-method"
+  - "confidence-intervals"
+domain: "convergence-limit-theorems"
+videoId: null
+notebookPath: "notebooks/central-limit-theorem/11_central_limit_theorem.ipynb"
+githubUrl: "https://github.com/jonx0037/formalStatistics/blob/main/src/content/topics/central-limit-theorem.mdx"
+datePublished: 2026-04-15
+estimatedReadTime: 45
+abstract: "The Law of Large Numbers says the sample mean converges to the population mean. But convergence is only half the story — what shape do the fluctuations take along the way? The Central Limit Theorem answers: regardless of the underlying distribution, the standardized sample mean √n(X̄ₙ − μ)/σ converges in distribution to a standard Normal. This universality is breathtaking — Bernoulli, Exponential, Poisson, Uniform, any distribution with finite variance produces Gaussian fluctuations at the 1/√n scale. The CLT is the mathematical engine behind confidence intervals, hypothesis tests, p-values, and the entire apparatus of frequentist inference. This topic traces the CLT from its historical origin (de Moivre's 1733 approximation of the Binomial by the Normal) through the modern proofs (via moment-generating functions and characteristic functions), the general Lindeberg version for non-identical summands, the Berry–Esseen convergence rate bound, the multivariate extension, and the delta method for nonlinear transformations."
+formalcalculusPrereqs:
+  - topic: "sequences-limits"
+    site: "formalcalculus"
+    relationship: "Pointwise limits of MGFs and characteristic functions, limsup in Berry–Esseen rate analysis."
+  - topic: "series-convergence"
+    site: "formalcalculus"
+    relationship: "Taylor series and power series expansions are the backbone of the MGF proof: log(1 + x) = x − x²/2 + O(x³) applied with x = O(1/n)."
+  - topic: "differentiation"
+    site: "formalcalculus"
+    relationship: "Taylor's theorem with remainder provides the rigorous bound on the remainder term in the MGF expansion. The delta method requires differentiability of the transformation g."
+formalmlConnections:
+  - topic: "stochastic-gradient-descent"
+    site: "formalml"
+    relationship: "The mini-batch gradient is an average of B iid gradient samples. By the CLT, its fluctuations around the true gradient are Gaussian at scale σ/√B, which motivates the learning rate schedule η ∝ 1/√t and explains why larger batches reduce noise with diminishing returns."
+  - topic: "generalization-bounds"
+    site: "formalml"
+    relationship: "Rademacher complexity bounds use symmetrization and CLT-type reasoning. The empirical Rademacher complexity converges to its expectation at rate 1/√n, giving the O(1/√n) generalization bound for bounded loss functions."
+  - topic: "bayesian-neural-networks"
+    site: "formalml"
+    relationship: "The Bernstein–von Mises theorem (the Bayesian CLT) proves that the posterior distribution √n(θ − θ₀) | X₁,…,Xₙ converges in total variation to N(0, I(θ₀)⁻¹), where I(θ₀) is the Fisher information. This is why Bayesian credible intervals and frequentist confidence intervals agree asymptotically."
+  - topic: "monte-carlo-methods"
+    site: "formalml"
+    relationship: "The CLT gives the convergence rate of Monte Carlo estimators: the standard error of (1/n)Σf(Xᵢ) is σ_f/√n, leading to the canonical ±1.96σ/√n confidence band for Monte Carlo estimates."
+connections:
+  - topic: "modes-of-convergence"
+    relationship: "Topic 9 defined convergence in distribution, proved Lévy's continuity theorem (via MGFs), Slutsky's theorem, the delta method, and proved the Poisson limit theorem. The CLT proof follows the identical structure as the Poisson limit proof."
+  - topic: "law-of-large-numbers"
+    relationship: "Topic 10 proved X̄ₙ → μ (qualitative convergence). The CLT refines this: the deviations √n(X̄ₙ − μ) are Gaussian. The LLN says 'it converges'; the CLT says 'the fluctuations are Normal.'"
+  - topic: "expectation-moments"
+    relationship: "Topic 4 developed MGFs (Definition 15, Theorem 16), MGF uniqueness (Theorem 17), and moment inequalities. The CLT proof uses MGF uniqueness to identify the limit as N(0,1)."
+  - topic: "discrete-distributions"
+    relationship: "Topic 5 previewed the Normal approximation to the Binomial. The de Moivre–Laplace theorem (§2) makes this rigorous as the first historical CLT."
+  - topic: "continuous-distributions"
+    relationship: "Topic 6 developed the Normal distribution properties (PDF, CDF, MGF). The CLT establishes why the Normal appears so ubiquitously in nature and statistics."
+  - topic: "multivariate-distributions"
+    relationship: "Topic 8 developed the multivariate Normal. The multivariate CLT (§8) extends the univariate result to random vectors."
+  - topic: "large-deviations"
+    relationship: "Topic 12 complements the CLT: the CLT gives the shape (Gaussian) at scale 1/√n, while concentration inequalities give the rate (exponential) at all scales."
+references:
+  - type: "book"
+    title: "Probability: Theory and Examples"
+    author: "Rick Durrett"
+    year: 2019
+    edition: "5th"
+    publisher: "Cambridge University Press"
+    note: "Chapter 3 covers the CLT in all its forms — Lindeberg–Lévy, Lindeberg–Feller, Berry–Esseen. The standard graduate reference for the characteristic function proof."
+  - type: "book"
+    title: "Probability and Measure"
+    author: "Patrick Billingsley"
+    year: 2012
+    edition: "Anniversary"
+    publisher: "Wiley"
+    note: "Chapter 27 covers the CLT with both MGF and characteristic function proofs. The Lindeberg condition treatment is definitive."
+  - type: "book"
+    title: "Statistical Inference"
+    author: "George Casella & Roger L. Berger"
+    year: 2002
+    edition: "2nd"
+    publisher: "Cengage"
+    note: "Chapter 5 covers the CLT from a statistics perspective, with emphasis on confidence intervals and the delta method."
+  - type: "book"
+    title: "All of Statistics"
+    author: "Larry Wasserman"
+    year: 2004
+    publisher: "Springer"
+    note: "Chapter 5 covers the CLT concisely with statistical applications. Good for the Berry–Esseen theorem and confidence interval construction."
+  - type: "book"
+    title: "An Introduction to Probability Theory and Its Applications, Vol. 2"
+    author: "William Feller"
+    year: 1971
+    edition: "2nd"
+    publisher: "Wiley"
+    note: "Chapter XV contains the definitive characteristic function proof of the CLT. Feller's treatment of the Lindeberg condition and the Berry–Esseen theorem is still the gold standard."
+  - type: "book"
+    title: "Pattern Recognition and Machine Learning"
+    author: "Christopher M. Bishop"
+    year: 2006
+    publisher: "Springer"
+    note: "Chapter 2 uses CLT results implicitly throughout. The Gaussian distribution's central role in machine learning is a consequence of the CLT."
+---
+
+import DefinitionBlock from '../../components/ui/DefinitionBlock.astro';
+import TheoremBlock from '../../components/ui/TheoremBlock.astro';
+import ProofBlock from '../../components/ui/ProofBlock.astro';
+import ExampleBlock from '../../components/ui/ExampleBlock.astro';
+import RemarkBlock from '../../components/ui/RemarkBlock.astro';
+import ExternalLink from '../../components/ui/ExternalLink.astro';
+
+import CLTExplorer from '../../components/viz/CLTExplorer.tsx';
+import DeMoivreLaplaceExplorer from '../../components/viz/DeMoivreLaplaceExplorer.tsx';
+import BerryEsseenExplorer from '../../components/viz/BerryEsseenExplorer.tsx';
+import LindebergExplorer from '../../components/viz/LindebergExplorer.tsx';
+import DeltaMethodCLTExplorer from '../../components/viz/DeltaMethodCLTExplorer.tsx';
+
+## 11.1 Why the LLN Isn't Enough
+
+Topic 10 closed with a qualitative statement: the sample mean $\bar{X}_n$ converges to the population mean $\mu$. The [Strong Law of Large Numbers](/topics/law-of-large-numbers) promises it happens almost surely, the [Weak Law](/topics/law-of-large-numbers) in probability, and the [law of the iterated logarithm](/topics/law-of-large-numbers) even pins down the precise a.s. oscillation rate $\sigma\sqrt{2\log\log n / n}$. What none of these tell us is the *shape* of the fluctuations at any given $n$.
+
+That gap matters. When we report $\hat{p} = 0.42$ from a survey of $n = 1000$, we want to say how confident we are that $p$ is near $0.42$ — not merely that $\hat{p} \to p$ eventually. Confidence requires a distribution on $\hat{p} - p$, and the LLN gives us nothing of the kind.
+
+The Central Limit Theorem fills that gap with one of the most surprising results in probability. Standardize the sample mean: subtract the true mean $\mu$, divide by the true standard error $\sigma/\sqrt{n}$. Call the result $Z_n$. Then — regardless of whether $X_i$ is Bernoulli, Exponential, Poisson, Uniform, or almost anything else with finite variance —
+
+$$
+Z_n \;=\; \frac{\sqrt{n}(\bar{X}_n - \mu)}{\sigma} \;\xrightarrow{d}\; \mathcal{N}(0, 1).
+$$
+
+The limiting distribution doesn't depend on the shape of $X_i$. Skewed, symmetric, heavy-tailed, bounded, discrete — they all converge to the same Gaussian. The CLT is the mathematical reason confidence intervals, $z$-tests, $p$-values, and the entire apparatus of frequentist inference work.
+
+<img src="/images/topics/central-limit-theorem/clt-overview.png"
+     alt="Three-panel CLT overview: (left) sample means shrinking toward μ (LLN), (center) standardized means converging in distribution to N(0,1), (right) convergence speed across distributions"
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+Here is the roadmap:
+
+| Section | Result | What it says |
+|---|---|---|
+| §2 | De Moivre–Laplace | The Binomial becomes Normal — the CLT's historical root |
+| §3 | Classical CLT (Lindeberg–Lévy) | iid + finite variance ⟹ $\sqrt{n}(\bar{X}_n - \mu)/\sigma \xrightarrow{d} \mathcal{N}(0,1)$ |
+| §4 | MGF proof | Taylor-expand $\log M(t/\sigma\sqrt{n})$, apply Lévy continuity |
+| §5 | CF proof | Same structure with characteristic functions; no MGF required |
+| §6 | Lindeberg CLT | iid is overkill — only need no single summand to dominate |
+| §7 | Berry–Esseen | The rate is $O(1/\sqrt{n})$, and skewness controls the constant |
+| §8 | Multivariate CLT | Random vectors converge to $\mathcal{N}(\mathbf{0}, \Sigma)$ |
+| §9 | Delta method | Nonlinear transformations inherit the CLT with variance $[g'(\mu)]^2 \sigma^2$ |
+| §10 | ML connections | Confidence intervals, SGD noise, Bayesian CLT |
+| §11 | Summary | Interactive explorer and reference table |
+
+Throughout, we use $\Phi$ for the standard Normal CDF, $\varphi$ for characteristic functions (not to be confused with $\Phi$), $M_X(t) = \mathbb{E}[e^{tX}]$ for moment-generating functions, and $\xrightarrow{d}$ for convergence in distribution (Topic 9, Definition 9.6).
+
+---
+
+## 11.2 De Moivre–Laplace: The First CLT
+
+The first CLT predates the general theory by almost two centuries. In 1733, Abraham de Moivre — working on a problem of fair games of chance — proved that the Binomial distribution, properly standardized, approaches the Normal. Laplace generalized it to arbitrary $p$ in 1812, and the result became known as the de Moivre–Laplace theorem. Every bell-curve-from-coin-flips demonstration the reader has ever seen is a visualization of this theorem.
+
+<TheoremBlock number={1} title="De Moivre–Laplace">
+
+Let $S_n \sim \text{Binomial}(n, p)$ for fixed $p \in (0, 1)$. Then
+
+$$
+\frac{S_n - np}{\sqrt{np(1-p)}} \;\xrightarrow{d}\; \mathcal{N}(0, 1).
+$$
+
+Equivalently, for any $a < b$,
+
+$$
+\mathbb{P}\!\left(a \le \frac{S_n - np}{\sqrt{np(1-p)}} \le b\right) \;\longrightarrow\; \Phi(b) - \Phi(a).
+$$
+
+</TheoremBlock>
+
+<ProofBlock>
+
+Write $S_n = X_1 + \cdots + X_n$ with $X_i \sim \text{Bernoulli}(p)$ iid. Let $q = 1 - p$. The Binomial PMF is
+
+$$
+\mathbb{P}(S_n = k) \;=\; \binom{n}{k} p^k q^{n-k}.
+$$
+
+Near the mode $k \approx np$ we apply Stirling's approximation, $n! \sim \sqrt{2\pi n}\,(n/e)^n$, to the three factorials:
+
+$$
+\binom{n}{k} \;=\; \frac{n!}{k!\,(n-k)!} \;\sim\; \frac{\sqrt{2\pi n}\,(n/e)^n}{\sqrt{2\pi k}\,(k/e)^k \cdot \sqrt{2\pi(n-k)}\,((n-k)/e)^{n-k}}.
+$$
+
+Simplify the prefactor:
+
+$$
+\binom{n}{k} \;\sim\; \sqrt{\frac{n}{2\pi k (n-k)}} \cdot \frac{n^n}{k^k (n-k)^{n-k}}.
+$$
+
+Change variables to $x = (k - np)/\sqrt{npq}$, so $k = np + x\sqrt{npq}$ and $n - k = nq - x\sqrt{npq}$. The prefactor becomes
+
+$$
+\sqrt{\frac{n}{2\pi k(n-k)}} \;=\; \sqrt{\frac{n}{2\pi \cdot np\cdot nq \cdot (1 + O(1/\sqrt{n}))}} \;=\; \frac{1}{\sqrt{2\pi npq}} \cdot (1 + o(1)).
+$$
+
+For the exponential factor, write $k = np(1 + x\sqrt{q/np})$ and $n-k = nq(1 - x\sqrt{p/nq})$. Then
+
+$$
+\log\!\left(\frac{p^k q^{n-k} \cdot n^n}{k^k(n-k)^{n-k}}\right) \;=\; k\log\frac{np}{k} + (n-k)\log\frac{nq}{n-k}.
+$$
+
+Expand each logarithm using $\log(1 + u) = u - u^2/2 + O(u^3)$ with $u_1 = x\sqrt{q/np}$ and $u_2 = -x\sqrt{p/nq}$. The first-order terms cancel (the mean of $S_n$ is $np$ by construction), and the second-order terms combine to
+
+$$
+-\tfrac{1}{2}\,x^2 \,(q + p) \;=\; -\tfrac{1}{2}\,x^2.
+$$
+
+Higher-order terms are $O(1/\sqrt{n})$ and vanish in the limit. Multiplying the prefactor and the exponential factor:
+
+$$
+\mathbb{P}(S_n = k) \;\sim\; \frac{1}{\sqrt{2\pi npq}} \, e^{-x^2/2}, \qquad x = \frac{k - np}{\sqrt{npq}}.
+$$
+
+The factor $1/\sqrt{npq}$ is the spacing between standardized values — it converts the PMF to a Riemann approximation of the density. Summing over $k$ with $a \le x \le b$ gives
+
+$$
+\mathbb{P}\!\left(a \le \frac{S_n - np}{\sqrt{npq}} \le b\right) \;\longrightarrow\; \int_a^b \frac{1}{\sqrt{2\pi}} e^{-x^2/2}\, dx \;=\; \Phi(b) - \Phi(a),
+$$
+
+which is exactly convergence in distribution to $\mathcal{N}(0,1)$. &#9724;
+
+</ProofBlock>
+
+<img src="/images/topics/central-limit-theorem/de-moivre-laplace.png"
+     alt="Three-panel de Moivre–Laplace: Binomial PMF bars approaching the Normal density as n grows; standardized Binomial CDF vs Φ; continuity correction effect"
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<ExampleBlock number={1} title="Binomial(100, 0.3): the 95 percent band">
+
+With $n = 100$, $p = 0.3$: $np = 30$, $\sqrt{npq} = \sqrt{21} \approx 4.58$. The standardization says $S_{100}$ is approximately $\mathcal{N}(30, 21)$. A 95% Normal band gives
+
+$$
+30 \pm 1.96 \cdot 4.58 \;\approx\; [21.02, 38.98].
+$$
+
+The exact Binomial probability $\mathbb{P}(21 \le S_{100} \le 39)$ is $0.9507$ — the Normal approximation is off by less than $0.001$. For discrete-data accuracy, a *continuity correction* replaces the integer endpoints by half-integer ones: $\mathbb{P}(a \le S_n \le b) \approx \Phi((b + 0.5 - np)/\sqrt{npq}) - \Phi((a - 0.5 - np)/\sqrt{npq})$. This is what the explorer below toggles on and off.
+
+</ExampleBlock>
+
+<DeMoivreLaplaceExplorer client:visible />
+
+<RemarkBlock number={1} title="Historical arc">
+
+De Moivre (1733) proved the $p = 1/2$ case. Laplace (1812) extended to general $p$. Lyapunov (1901) gave the first general CLT under a third-moment condition. Lindeberg (1922) gave the sharp necessary-and-sufficient condition. Lévy (1925) supplied the characteristic function machinery, and Berry (1941) and Esseen (1942) proved the rate. Two centuries of incremental sharpening separate de Moivre's coin-flip argument from the modern graduate-level CLT.
+
+</RemarkBlock>
+
+---
+
+## 11.3 The Classical CLT (Lindeberg–Lévy)
+
+The general CLT removes the Bernoulli restriction and asks only that the summands be iid with finite variance.
+
+<TheoremBlock number={2} title="Classical CLT (Lindeberg–Lévy)">
+
+Let $X_1, X_2, \ldots$ be iid with $\mathbb{E}[X_1] = \mu$ and $0 < \text{Var}(X_1) = \sigma^2 < \infty$. Let $\bar{X}_n = (1/n)\sum_{i=1}^n X_i$. Then
+
+$$
+Z_n \;=\; \frac{\sqrt{n}(\bar{X}_n - \mu)}{\sigma} \;\xrightarrow{d}\; \mathcal{N}(0, 1).
+$$
+
+</TheoremBlock>
+
+Two conditions, and only two: independence + identical distribution, and finite variance. No shape restrictions, no moment conditions beyond $\sigma^2 < \infty$. The theorem is blind to whether $X_1$ is discrete or continuous, bounded or unbounded, symmetric or skewed.
+
+<ExampleBlock number={2} title="Five distributions, one limit">
+
+We simulate $M = 5000$ replications of the standardized mean $Z_n$ at several values of $n$:
+
+| Distribution | $n = 5$ | $n = 10$ | $n = 30$ | $n = 100$ |
+|---|---|---|---|---|
+| Uniform(0,1) | KS ≈ 0.02 | KS ≈ 0.01 | KS ≈ 0.01 | KS < 0.01 |
+| Exponential(1) | KS ≈ 0.13 | KS ≈ 0.08 | KS ≈ 0.04 | KS ≈ 0.02 |
+| Bernoulli(0.3) | KS ≈ 0.09 | KS ≈ 0.05 | KS ≈ 0.03 | KS ≈ 0.02 |
+| Poisson(5) | KS ≈ 0.06 | KS ≈ 0.04 | KS ≈ 0.02 | KS ≈ 0.01 |
+| Chi²(3) | KS ≈ 0.18 | KS ≈ 0.11 | KS ≈ 0.06 | KS ≈ 0.03 |
+
+(KS = Kolmogorov–Smirnov distance from $\mathcal{N}(0,1)$; smaller is better.)
+
+Symmetric, bounded distributions (Uniform) hit target accuracy almost immediately. Skewed distributions (Chi², Exponential) take longer. The rate is $O(1/\sqrt{n})$ uniformly — §7 will pin it down.
+
+</ExampleBlock>
+
+<RemarkBlock number={2} title="Not actually about iid">
+
+The Lindeberg–Lévy hypothesis is restrictive — real data rarely comes iid. But the iid assumption is not necessary; §6 replaces it with the Lindeberg condition, which is the true mechanism making the CLT work: *no single summand should contribute an appreciable fraction of the total variance*. iid is simply the simplest setting in which this happens automatically.
+
+</RemarkBlock>
+
+---
+
+## 11.4 Proof via Moment-Generating Functions
+
+The MGF proof is the most concrete. It assumes $M_X(t) = \mathbb{E}[e^{tX}]$ exists in a neighborhood of zero (which excludes heavy-tailed distributions like Cauchy and Pareto without moments) but is otherwise a calculus exercise. The structure is identical to the Poisson limit proof of [Theorem 9.13](/topics/modes-of-convergence) — only the Taylor expansion differs.
+
+<ProofBlock>
+
+Without loss of generality take $\mu = 0$ and $\sigma = 1$ (otherwise work with $Y_i = (X_i - \mu)/\sigma$). Then $Z_n = (X_1 + \cdots + X_n)/\sqrt{n}$. By independence,
+
+$$
+M_{Z_n}(t) \;=\; \mathbb{E}\!\left[\exp\!\left(\tfrac{t}{\sqrt{n}}\sum_{i=1}^n X_i\right)\right] \;=\; \prod_{i=1}^n \mathbb{E}\!\left[e^{tX_i/\sqrt{n}}\right] \;=\; M_X(t/\sqrt{n})^n.
+$$
+
+Take logarithms:
+
+$$
+\log M_{Z_n}(t) \;=\; n \log M_X(t/\sqrt{n}).
+$$
+
+Since $M_X$ is smooth near $0$ and $M_X(0) = 1$, we can Taylor-expand $M_X$ around zero. Using $M_X'(0) = \mathbb{E}[X] = 0$ and $M_X''(0) = \mathbb{E}[X^2] = \sigma^2 = 1$:
+
+$$
+M_X(s) \;=\; 1 + 0 \cdot s + \tfrac{1}{2} s^2 + O(s^3) \;=\; 1 + \tfrac{1}{2} s^2 + O(s^3) \qquad \text{as } s \to 0.
+$$
+
+Substitute $s = t/\sqrt{n}$:
+
+$$
+M_X(t/\sqrt{n}) \;=\; 1 + \frac{t^2}{2n} + O(n^{-3/2}).
+$$
+
+Now apply $\log(1 + u) = u - u^2/2 + O(u^3)$ with $u = t^2/(2n) + O(n^{-3/2})$:
+
+$$
+\log M_X(t/\sqrt{n}) \;=\; \frac{t^2}{2n} + O(n^{-3/2}).
+$$
+
+Multiply by $n$:
+
+$$
+\log M_{Z_n}(t) \;=\; n \cdot \log M_X(t/\sqrt{n}) \;=\; \frac{t^2}{2} + O(n^{-1/2}) \;\longrightarrow\; \frac{t^2}{2}.
+$$
+
+Exponentiating gives the pointwise limit $M_{Z_n}(t) \to e^{t^2/2}$, which is the MGF of $\mathcal{N}(0, 1)$. By MGF uniqueness ([Expectation, Variance & Moments: Theorem 17](/topics/expectation-moments)) plus the MGF version of [Lévy's continuity theorem](/topics/modes-of-convergence), $Z_n \xrightarrow{d} \mathcal{N}(0, 1)$. &#9724;
+
+</ProofBlock>
+
+<img src="/images/topics/central-limit-theorem/clt-mgf-proof.png"
+     alt="Three-panel MGF proof: residual of log M(t/√n) vs t²/(2n); n·log M(t/√n) approaching t²/2 for several distributions; MGF of Zₙ approaching e^{t²/2}"
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<ExampleBlock number={3} title="Exponential(1): explicit Taylor expansion">
+
+For $X \sim \text{Exp}(1)$, $\mu = 1$ and $\sigma = 1$. Work with the centered variable $Y = X - 1$. Then
+
+$$
+M_Y(t) \;=\; \mathbb{E}[e^{t(X-1)}] \;=\; e^{-t} \cdot \frac{1}{1 - t} \qquad (t < 1).
+$$
+
+Expand: $e^{-t} = 1 - t + t^2/2 - t^3/6 + O(t^4)$ and $1/(1-t) = 1 + t + t^2 + t^3 + O(t^4)$. Multiply:
+
+$$
+M_Y(t) \;=\; 1 + 0\cdot t + \tfrac{1}{2} t^2 + \tfrac{1}{3} t^3 + O(t^4).
+$$
+
+The coefficient of $t^2$ is $1/2$ — consistent with $\sigma^2 = 1$. Substituting $s = t/\sqrt{n}$ and taking logs:
+
+$$
+n\log M_Y(t/\sqrt{n}) \;=\; \frac{t^2}{2} + \frac{t^3}{3\sqrt{n}} + O(n^{-1}).
+$$
+
+The cubic term is $O(1/\sqrt{n})$ — it vanishes as $n \to \infty$, giving the $\mathcal{N}(0,1)$ limit as expected. *But the cubic coefficient is the reason Exponential converges slower than Uniform* (where the cubic term vanishes by symmetry). This is the Berry–Esseen rate effect of §7.
+
+</ExampleBlock>
+
+<RemarkBlock number={3} title="The Poisson proof is the prototype">
+
+[Topic 9, Theorem 9.13](/topics/modes-of-convergence) proved the Poisson limit theorem by the same five-step recipe: (1) compute the MGF of the standardized sum, (2) take the log, (3) Taylor-expand in powers of $1/n$, (4) show the $n \to \infty$ limit is the target MGF, (5) invoke Lévy continuity and MGF uniqueness. Only step (3) differs between the two proofs: for Poisson, the Taylor expansion gives $\lambda(e^t - 1)$ in the limit; for the CLT, it gives $t^2/2$.
+
+</RemarkBlock>
+
+---
+
+## 11.5 Proof via Characteristic Functions
+
+MGFs have one flaw: they may not exist. The MGF $M_X(t) = \mathbb{E}[e^{tX}]$ is an integral that can diverge — Cauchy-distributed variables, Pareto, and anything with sub-exponential tails break it. The Fourier-analytic cousin, the characteristic function, is bulletproof: the integrand $e^{itX}$ has modulus one, so the integral always converges. This generality is why the textbook CLT proof is via characteristic functions.
+
+<DefinitionBlock number={1} title="Characteristic function">
+
+For a random variable $X$, the *characteristic function* is
+
+$$
+\varphi_X(t) \;=\; \mathbb{E}[e^{itX}] \;=\; \mathbb{E}[\cos(tX)] + i\,\mathbb{E}[\sin(tX)], \qquad t \in \mathbb{R},
+$$
+
+where $i = \sqrt{-1}$. Since $|e^{itX}| = 1$, the expectation exists for every distribution. The characteristic function uniquely determines the distribution: $\varphi_X = \varphi_Y$ implies $X \stackrel{d}{=} Y$.
+
+</DefinitionBlock>
+
+The CF of $\mathcal{N}(0, 1)$ is $\varphi(t) = e^{-t^2/2}$ (compute by contour integration or Hermite polynomials — standard). The CLT target is therefore $\varphi_{Z_n}(t) \to e^{-t^2/2}$ pointwise, and we need a continuity theorem to lift pointwise CF convergence to convergence in distribution.
+
+<TheoremBlock number={3} title="Lévy's continuity theorem (CF version)">
+
+Let $X_n, X$ be random variables with characteristic functions $\varphi_n, \varphi$. Then $X_n \xrightarrow{d} X$ if and only if $\varphi_n(t) \to \varphi(t)$ for every $t \in \mathbb{R}$ *and* $\varphi$ is continuous at $0$.
+
+</TheoremBlock>
+
+The CF version is strictly stronger than the MGF version in [Topic 9, Remark 2](/topics/modes-of-convergence): no moment conditions required, the result always applies. The continuity-at-zero requirement on $\varphi$ is usually automatic — any CF of a proper probability distribution is continuous.
+
+<ProofBlock>
+
+Take $\mu = 0$, $\sigma = 1$, so $Z_n = (X_1 + \cdots + X_n)/\sqrt{n}$. By independence,
+
+$$
+\varphi_{Z_n}(t) \;=\; \varphi_X(t/\sqrt{n})^n.
+$$
+
+Since $\mathbb{E}[X] = 0$ and $\mathbb{E}[X^2] = 1$, Taylor-expand $\varphi_X$ around zero using $\varphi_X'(0) = i\,\mathbb{E}[X] = 0$ and $\varphi_X''(0) = -\mathbb{E}[X^2] = -1$:
+
+$$
+\varphi_X(s) \;=\; 1 - \tfrac{1}{2} s^2 + o(s^2) \qquad \text{as } s \to 0.
+$$
+
+This expansion holds whenever $\mathbb{E}[X^2] < \infty$ — no higher moments needed. Substitute $s = t/\sqrt{n}$:
+
+$$
+\varphi_X(t/\sqrt{n}) \;=\; 1 - \frac{t^2}{2n} + o(1/n).
+$$
+
+Take logarithms (the principal branch is well-defined once $|t|/\sqrt{n}$ is small, which it is for all fixed $t$ and large enough $n$):
+
+$$
+\log \varphi_X(t/\sqrt{n}) \;=\; -\frac{t^2}{2n} + o(1/n).
+$$
+
+Multiply by $n$:
+
+$$
+n \log \varphi_X(t/\sqrt{n}) \;=\; -\frac{t^2}{2} + o(1) \;\longrightarrow\; -\frac{t^2}{2}.
+$$
+
+Exponentiate: $\varphi_{Z_n}(t) \to e^{-t^2/2} = \varphi_{\mathcal{N}(0,1)}(t)$, pointwise in $t$. Since $\varphi_{\mathcal{N}(0,1)}$ is continuous at zero, Lévy's continuity theorem (Theorem 3) gives $Z_n \xrightarrow{d} \mathcal{N}(0, 1)$. &#9724;
+
+</ProofBlock>
+
+<img src="/images/topics/central-limit-theorem/clt-cf-proof.png"
+     alt="Three-panel CF proof: real and imaginary parts of φ_Zn(t); |φn(t) − e^{−t²/2}| shrinking with n; side-by-side comparison of CF vs MGF convergence"
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<RemarkBlock number={4} title="CFs vs MGFs — when to use which">
+
+MGFs are real-valued, which makes Taylor expansion concrete and helps with first intuition. CFs are complex-valued but always exist. The MGF proof assumes $M_X(t)$ finite in a neighborhood of zero — a nontrivial restriction (no Cauchy, no power-law tails without moments). The CF proof requires only $\mathbb{E}[X^2] < \infty$. In graduate probability, the CF proof is standard; in a first exposure, the MGF proof is more transparent. We do both.
+
+</RemarkBlock>
+
+---
+
+## 11.6 The Lindeberg CLT
+
+The iid assumption is unnecessarily strong. What the CLT actually needs is that no single summand contributes an outsize share of the total variance. Lindeberg (1922) pinned this down with a truncation condition that is both sufficient and — by a theorem of Feller — necessary.
+
+<DefinitionBlock number={2} title="Lindeberg condition">
+
+Let $X_1, X_2, \ldots$ be independent (not necessarily identically distributed) with $\mathbb{E}[X_k] = 0$ and $\text{Var}(X_k) = \sigma_k^2 < \infty$. Set $s_n^2 = \sum_{k=1}^n \sigma_k^2$. The *Lindeberg condition* is
+
+$$
+L_n(\varepsilon) \;=\; \frac{1}{s_n^2} \sum_{k=1}^n \mathbb{E}\!\left[X_k^2 \cdot \mathbf{1}\{|X_k| > \varepsilon s_n\}\right] \;\longrightarrow\; 0 \qquad \text{as } n \to \infty, \text{ every } \varepsilon > 0.
+$$
+
+</DefinitionBlock>
+
+The condition asks that the fraction of variance carried by summands that are individually large compared with $s_n$ vanishes. It does not ask any $X_k$ to be bounded, only that tails are "not too concentrated in a few terms."
+
+<TheoremBlock number={4} title="Lindeberg CLT">
+
+Under the setup of Definition 2, if the Lindeberg condition holds, then
+
+$$
+\frac{S_n}{s_n} \;=\; \frac{X_1 + \cdots + X_n}{s_n} \;\xrightarrow{d}\; \mathcal{N}(0, 1).
+$$
+
+</TheoremBlock>
+
+<ProofBlock>
+
+*(Outline — the full proof is technical. See Durrett 2019, §3.4 for details.)*
+
+Define Gaussian surrogates $Z_1, \ldots, Z_n$ independent of each other and of $X_1, \ldots, X_n$, with $Z_k \sim \mathcal{N}(0, \sigma_k^2)$. Let $T_n = \sum Z_k$, which is exactly $\mathcal{N}(0, s_n^2)$ by independence. The strategy is to show that the CFs of $S_n/s_n$ and $T_n/s_n$ differ by $o(1)$.
+
+Writing $\varphi_X(t) = 1 - \tfrac{1}{2}\sigma^2 t^2 + r(t)$ where $|r(t)| \le t^2 \cdot \min(\sigma^2, t \cdot \mathbb{E}[|X|^3])$ for the Taylor remainder of a mean-zero variable (Feller 1971, Lemma XV.4.1), one bounds the difference $\varphi_{X_k}(t/s_n) - \varphi_{Z_k}(t/s_n)$ by the $k$-th Lindeberg contribution $\mathbb{E}[X_k^2 \mathbf{1}\{|X_k| > \varepsilon s_n\}]/s_n^2$ plus a term of order $\varepsilon \sigma_k^2/s_n^2$.
+
+Summing and using $\prod_k \varphi_{Z_k}(t/s_n) = e^{-t^2/2}$ gives
+
+$$
+\left|\varphi_{S_n/s_n}(t) - e^{-t^2/2}\right| \;\le\; \tfrac{1}{2} t^2 \varepsilon + t^2 L_n(\varepsilon) + o(1).
+$$
+
+Letting $n \to \infty$ first (so $L_n(\varepsilon) \to 0$) and then $\varepsilon \downarrow 0$ gives pointwise CF convergence to $e^{-t^2/2}$. Lévy continuity finishes. &#9724;
+
+</ProofBlock>
+
+The Lindeberg condition is often inconvenient to check because it involves truncated second moments. A sufficient condition using a higher moment — easier in practice — is due to Lyapunov.
+
+<TheoremBlock number={5} title="Lyapunov CLT">
+
+Under the Lindeberg setup, if there exists $\delta > 0$ such that
+
+$$
+\frac{1}{s_n^{2+\delta}} \sum_{k=1}^n \mathbb{E}[|X_k|^{2+\delta}] \;\longrightarrow\; 0,
+$$
+
+then $S_n/s_n \xrightarrow{d} \mathcal{N}(0, 1)$.
+
+</TheoremBlock>
+
+<TheoremBlock type="corollary" number={1} title="Lyapunov implies Lindeberg">
+
+The Lyapunov condition implies the Lindeberg condition.
+
+</TheoremBlock>
+
+<ProofBlock>
+
+On the event $\{|X_k| > \varepsilon s_n\}$, $|X_k|^{2+\delta} = |X_k|^2 \cdot |X_k|^\delta > |X_k|^2 \cdot (\varepsilon s_n)^\delta$. So
+
+$$
+\mathbb{E}[X_k^2 \mathbf{1}\{|X_k| > \varepsilon s_n\}] \;\le\; \frac{1}{(\varepsilon s_n)^\delta} \mathbb{E}[|X_k|^{2+\delta}].
+$$
+
+Summing over $k$ and dividing by $s_n^2$:
+
+$$
+L_n(\varepsilon) \;\le\; \frac{1}{\varepsilon^\delta} \cdot \frac{\sum_k \mathbb{E}[|X_k|^{2+\delta}]}{s_n^{2+\delta}} \;\longrightarrow\; 0.
+$$
+
+&#9724;
+
+</ProofBlock>
+
+<img src="/images/topics/central-limit-theorem/clt-lindeberg.png"
+     alt="Three-panel Lindeberg: CLT holds for mixed distributions; fails when one variable dominates; truncation fraction L_n(ε) as a diagnostic"
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<ExampleBlock number={4} title="Dominance breaks the CLT">
+
+Take $X_1 \sim \mathcal{N}(0, n^2)$ and $X_2, \ldots, X_n \sim \mathcal{N}(0, 1)$ all independent. Then
+
+$$
+s_n^2 \;=\; n^2 + (n-1) \;\approx\; n^2, \qquad \frac{\sigma_1^2}{s_n^2} \;\to\; 1.
+$$
+
+The Lindeberg condition *fails* because $X_1$ carries essentially all the variance. And sure enough, $S_n/s_n \approx X_1/n \sim \mathcal{N}(0, 1)$ already — but not because of the CLT. It's simply inheriting the single Gaussian's distribution. Replace $X_1$ with $X_1 \sim t(3) \cdot n$ (Student $t$ with three degrees of freedom scaled by $n$), still with variance $O(n^2)$, and $S_n/s_n$ will be approximately $t(3)$, not Normal — the CLT truly breaks.
+
+</ExampleBlock>
+
+<LindebergExplorer client:visible />
+
+<RemarkBlock number={5} title="Necessary, not just sufficient">
+
+Feller (1935) proved the converse: if $S_n/s_n \xrightarrow{d} \mathcal{N}(0, 1)$ *and* $\max_{k \le n} \sigma_k^2 / s_n^2 \to 0$ (a "negligibility" condition), then the Lindeberg condition holds. Together these constitute an if-and-only-if characterization: under negligibility, the Lindeberg condition is *the* precise mechanism making the CLT work. The Lyapunov condition is merely a more tractable sufficient one — it gives up some generality for ease of verification.
+
+</RemarkBlock>
+
+---
+
+## 11.7 Berry–Esseen: How Fast Is Convergence?
+
+The CLT is a limit theorem — it tells us where we end up, not how fast we get there. For applied work, the rate matters. A 95% confidence interval is meaningless if at our actual $n$ the standardized mean is only vaguely Normal. Berry (1941) and Esseen (1942) gave the definitive answer: the CLT converges at rate $1/\sqrt{n}$, with a constant driven by the absolute third moment.
+
+<TheoremBlock number={6} title="Berry–Esseen">
+
+Let $X_1, X_2, \ldots$ be iid with $\mathbb{E}[X_1] = \mu$, $\text{Var}(X_1) = \sigma^2 > 0$, and finite absolute third moment $\mathbb{E}[|X_1 - \mu|^3] < \infty$. Set $\rho = \mathbb{E}[|X_1 - \mu|^3]/\sigma^3$. Let $F_n$ be the CDF of $Z_n = \sqrt{n}(\bar{X}_n - \mu)/\sigma$. Then there is an absolute constant $C$ such that
+
+$$
+\sup_{x \in \mathbb{R}} |F_n(x) - \Phi(x)| \;\le\; \frac{C\,\rho}{\sqrt{n}} \qquad \text{for every } n \ge 1.
+$$
+
+The best known bound is $C \le 0.4748$ (Shevtsova, 2011).
+
+</TheoremBlock>
+
+Two reads:
+
+- **Rate.** The $1/\sqrt{n}$ factor is the headline: double your sample size, cut the worst-case deviation from the Normal approximation by a factor of $\sqrt{2} \approx 1.41$.
+- **Constant.** $\rho$ is the absolute third moment normalized by $\sigma^3$. For symmetric distributions $\rho = \mathbb{E}[|X|^3]/\sigma^3$ is modest; for right-skewed distributions like Exponential ($\rho = 6$) or Chi²(1) ($\rho = 8$), $\rho$ is large and the approximation is correspondingly slower. Skewness is the main enemy of normality.
+
+<img src="/images/topics/central-limit-theorem/berry-esseen.png"
+     alt="Three-panel Berry–Esseen: sup|Fₙ − Φ| for Uniform vs Exponential; convergence rate 1/√n with Berry–Esseen envelope; skewness ρ as the driver of the constant"
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<ExampleBlock number={5} title="Uniform vs Exponential at the same n">
+
+At $n = 50$ with $C = 0.4748$:
+
+- Uniform(0, 1): $\rho = 1.8$, bound $= 0.4748 \cdot 1.8 / \sqrt{50} \approx 0.121$. Empirical sup deviation: $\approx 0.02$.
+- Exponential(1): $\rho = 6$, bound $= 0.4748 \cdot 6 / \sqrt{50} \approx 0.403$. Empirical sup deviation: $\approx 0.05$.
+
+The bound is an upper envelope — the empirical deviation is typically 5–10× smaller than the bound. But the relative ordering is preserved: the ratio of Uniform to Exponential sup deviations tracks the ratio of their $\rho$ values. The bound is *not tight in general* (it overstates the deviation), but it is *tight in the worst case* — there exist distributions (the Bernoulli family) for which the constant $C$ cannot be improved.
+
+</ExampleBlock>
+
+<BerryEsseenExplorer client:visible />
+
+<RemarkBlock number={6} title="The Berry–Esseen constant saga">
+
+The original bound had $C \le 7.59$ (Esseen, 1942). Over eighty years of refinement, the constant has come down to $C \le 0.4748$ (Shevtsova, 2011). The true value is known to satisfy $C \ge (\sqrt{10} + 3)/(6\sqrt{2\pi}) \approx 0.40973$ by a sharp Bernoulli(p) example. The gap between $0.40973$ and $0.4748$ is the open problem.
+
+</RemarkBlock>
+
+---
+
+## 11.8 The Multivariate CLT
+
+Sample means of random *vectors* converge to the multivariate Normal. The statement is a verbatim translation of the univariate CLT with $\sigma^2$ replaced by the covariance matrix $\Sigma$.
+
+<TheoremBlock number={7} title="Multivariate CLT">
+
+Let $\mathbf{X}_1, \mathbf{X}_2, \ldots \in \mathbb{R}^d$ be iid with $\mathbb{E}[\mathbf{X}_1] = \boldsymbol{\mu}$ and finite covariance matrix $\Sigma = \text{Cov}(\mathbf{X}_1)$. Let $\bar{\mathbf{X}}_n = (1/n)\sum_{i=1}^n \mathbf{X}_i$. Then
+
+$$
+\sqrt{n}(\bar{\mathbf{X}}_n - \boldsymbol{\mu}) \;\xrightarrow{d}\; \mathcal{N}_d(\mathbf{0}, \Sigma).
+$$
+
+</TheoremBlock>
+
+The proof reduces to the univariate case by the *Cramér–Wold device*: $\mathbf{Y}_n \xrightarrow{d} \mathbf{Y}$ in $\mathbb{R}^d$ if and only if for every $\mathbf{a} \in \mathbb{R}^d$, $\mathbf{a}^\top \mathbf{Y}_n \xrightarrow{d} \mathbf{a}^\top \mathbf{Y}$. The linear projection $\mathbf{a}^\top \sqrt{n}(\bar{\mathbf{X}}_n - \boldsymbol{\mu})$ is a scalar iid sum, to which the univariate CLT applies, giving $\mathcal{N}(0, \mathbf{a}^\top \Sigma \mathbf{a})$ — which is exactly $\mathbf{a}^\top \mathcal{N}_d(\mathbf{0}, \Sigma)$.
+
+<img src="/images/topics/central-limit-theorem/multivariate-clt.png"
+     alt="Three-panel multivariate CLT: bivariate sample means converging to point; standardized means forming 2D Gaussian cloud; Mahalanobis distance distribution approaching χ²(2)"
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<ExampleBlock number={6} title="Bivariate example">
+
+Take $\mathbf{X}_i = (X_i, Y_i)$ with $X_i \sim \text{Exp}(1)$, $Y_i = X_i^2 - \mathbb{E}[X_i^2]$. Then
+
+$$
+\boldsymbol{\mu} = (1, 0), \qquad \Sigma = \begin{pmatrix} 1 & 4 \\ 4 & 20 \end{pmatrix}.
+$$
+
+(The cross-covariance is $\mathbb{E}[(X - 1)(X^2 - 2)] = \mathbb{E}[X^3 - X^2 - 2X + 2] = 6 - 2 - 2 + 2 = 4$.) By the multivariate CLT, for $n = 100$ the sample mean vector is approximately $\mathcal{N}_2(\boldsymbol{\mu}, \Sigma/100)$. The Mahalanobis distance $n(\bar{\mathbf{X}}_n - \boldsymbol{\mu})^\top \Sigma^{-1} (\bar{\mathbf{X}}_n - \boldsymbol{\mu}) \xrightarrow{d} \chi^2(2)$ — the standard recipe for multivariate hypothesis tests.
+
+</ExampleBlock>
+
+<RemarkBlock number={7} title="Cramér–Wold is the workhorse">
+
+The Cramér–Wold device reduces every multivariate convergence problem to a family of univariate problems. It does for convergence in distribution what linearity does for expectation: convert a $d$-dimensional question into a one-dimensional question indexed by the unit sphere. This is why the [multivariate Normal](/topics/multivariate-distributions) is characterized by its one-dimensional projections, why quadratic forms of multivariate Normals are $\chi^2$-distributed, and why multivariate Slutsky works.
+
+</RemarkBlock>
+
+---
+
+## 11.9 The Delta Method Revisited
+
+[Topic 9](/topics/modes-of-convergence) proved the delta method as Theorems 9.11–9.12. With the CLT now established, its most useful form — which is how every statistics textbook actually applies it — becomes rigorous.
+
+<TheoremBlock number={8} title="Delta method (CLT form)">
+
+Let $\hat{\theta}_n$ be a sequence of estimators with $\sqrt{n}(\hat{\theta}_n - \theta) \xrightarrow{d} \mathcal{N}(0, \sigma^2)$, and let $g : \mathbb{R} \to \mathbb{R}$ be differentiable at $\theta$ with $g'(\theta) \ne 0$. Then
+
+$$
+\sqrt{n}(g(\hat{\theta}_n) - g(\theta)) \;\xrightarrow{d}\; \mathcal{N}\!\left(0, [g'(\theta)]^2 \sigma^2\right).
+$$
+
+</TheoremBlock>
+
+The statement follows directly from [Topic 9, Theorem 9.11](/topics/modes-of-convergence) with the CLT supplying the root-$n$ normality hypothesis. The key consequence for applied statistics: any smooth transformation of an asymptotically Normal estimator is itself asymptotically Normal, with variance multiplied by $[g'(\theta)]^2$.
+
+<img src="/images/topics/central-limit-theorem/delta-method.png"
+     alt="Three-panel delta method: CLT around μ; CLT around g(μ) with transformed variance; asymptotic variance [g'(μ)]²σ²/n matching direct simulation"
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<ExampleBlock number={7} title="Log-transform confidence interval">
+
+Suppose $X_i \sim \text{Exp}(\lambda)$ iid, and we want a 95% CI for the rate parameter $\lambda$. The MLE is $\hat{\lambda}_n = 1/\bar{X}_n$. By the CLT, $\sqrt{n}(\bar{X}_n - 1/\lambda) \xrightarrow{d} \mathcal{N}(0, 1/\lambda^2)$. Apply the delta method with $g(x) = 1/x$ so $g'(x) = -1/x^2$:
+
+$$
+\sqrt{n}\!\left(\hat{\lambda}_n - \lambda\right) \;\xrightarrow{d}\; \mathcal{N}\!\left(0, \lambda^{-4} \cdot \lambda^{-2}\right) \;=\; \mathcal{N}(0, \lambda^2 \cdot \text{something wrong}).
+$$
+
+Wait — be careful. With $g(x) = 1/x$ at $x = 1/\lambda$, $g'(1/\lambda) = -\lambda^2$. So $[g'(\theta)]^2 \sigma^2 = \lambda^4 \cdot \lambda^{-2} = \lambda^2$, giving
+
+$$
+\sqrt{n}\!\left(\hat{\lambda}_n - \lambda\right) \;\xrightarrow{d}\; \mathcal{N}(0, \lambda^2).
+$$
+
+The 95% CI is $\hat{\lambda}_n \pm 1.96 \,\hat{\lambda}_n/\sqrt{n}$. For skewed estimators like this, a log transform often gives a better small-$n$ CI: $g(x) = \log(1/x) = -\log x$ has derivative $-1/x$, so $\sqrt{n}(\log \hat{\lambda}_n - \log \lambda) \xrightarrow{d} \mathcal{N}(0, 1)$. Build the CI on the log scale, then exponentiate: $\exp(\log \hat{\lambda}_n \pm 1.96/\sqrt{n})$. This symmetric-on-log-scale CI respects the non-negativity of $\lambda$ (unlike the naive linear CI, which can be negative for small $n$).
+
+</ExampleBlock>
+
+<DeltaMethodCLTExplorer client:visible />
+
+<RemarkBlock number={8} title="When the delta method fails">
+
+If $g'(\theta) = 0$, the first-order delta method gives a degenerate $\mathcal{N}(0, 0)$ limit — which is useless. The fix is a *second-order* delta method: if $g''(\theta) \ne 0$, then $n(g(\hat{\theta}_n) - g(\theta)) \xrightarrow{d} \tfrac{1}{2} g''(\theta) \sigma^2 \chi^2(1)$. Now the convergence rate is $1/n$, not $1/\sqrt{n}$, and the limit is a (shifted, scaled) chi-squared, not a Normal. This happens, for example, with $g(x) = x^2$ at $\theta = 0$: the sample mean is centered at zero, so $(\bar{X}_n)^2$ has a non-Normal limit.
+
+</RemarkBlock>
+
+---
+
+## 11.10 Connections to Machine Learning
+
+<img src="/images/topics/central-limit-theorem/ml-connections.png"
+     alt="Three-panel ML: confidence interval coverage simulation; SGD mini-batch gradient Gaussian noise; Bayesian posterior shrinking at 1/√n"
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<ExampleBlock number={8} title="Three places the CLT shows up in ML">
+
+**1. Confidence intervals for model accuracy.** After evaluating a classifier on $n$ test examples, the error rate $\hat{p} = (1/n)\sum \mathbf{1}\{\hat{y}_i \ne y_i\}$ is a Binomial average. By de Moivre–Laplace, $\hat{p} \pm 1.96\sqrt{\hat{p}(1-\hat{p})/n}$ is an approximate 95% CI for the true error rate. *Every reported accuracy on a test set has Binomial error bars whether the reporter acknowledges them or not* — and those bars are $\approx 0.03$ on a 1000-example test set even for a perfectly classified model, growing to $0.05$ at $n = 400$.
+
+**2. SGD mini-batch gradient noise.** The stochastic gradient $\hat{g}_B = (1/B)\sum_{i \in B} \nabla \ell(\theta; x_i)$ is an average of $B$ iid gradient samples (assuming the batch is uniform at random). By the multivariate CLT, $\hat{g}_B - \nabla L(\theta) \approx \mathcal{N}(\mathbf{0}, \Sigma/B)$ where $\Sigma$ is the per-sample gradient covariance. The optimization noise *is Gaussian* to leading order — this is why SGD trajectories look like Brownian motion on an energy landscape, and why the learning-rate schedule $\eta \propto 1/\sqrt{t}$ is the canonical rate. <ExternalLink href="https://formalml.com/topics/stochastic-gradient-descent" site="formalml" topic="Stochastic Gradient Descent" /> has the full story.
+
+**3. Bayesian posteriors (Bernstein–von Mises).** The Bernstein–von Mises theorem is the CLT for posteriors: under regularity, $\sqrt{n}(\theta - \theta_0) \mid X_1, \ldots, X_n \xrightarrow{d} \mathcal{N}(0, I(\theta_0)^{-1})$ where $I(\theta_0)$ is the Fisher information. The posterior concentrates around the MLE at rate $1/\sqrt{n}$ with a Gaussian shape — *regardless of the prior*. This is why Bayesian credible intervals and frequentist confidence intervals agree asymptotically, and why casual users can get away with ignoring prior choice on large datasets. See <ExternalLink href="https://formalml.com/topics/bayesian-neural-networks" site="formalml" topic="Bayesian Neural Networks" /> for where this machinery is indispensable (and where it breaks — small data, non-identifiable models).
+
+</ExampleBlock>
+
+<RemarkBlock number={9} title="Bernstein–von Mises — the Bayesian CLT">
+
+The Bernstein–von Mises theorem formalizes a result practitioners use implicitly every day: on large-enough data, frequentist and Bayesian inference coincide. The proof (Van der Vaart 1998, Chapter 10) uses the CLT via the score function — the derivative of the log-likelihood at the MLE is asymptotically Normal by the CLT, and Laplace's method extracts a Gaussian posterior from the likelihood. The rate $1/\sqrt{n}$ is inherited directly from the CLT rate. When Bernstein–von Mises fails — heavy-tailed priors, non-identifiable models, high-dimensional parameters with $d \sim n$ — it is precisely because one of the CLT's hypotheses fails for the score.
+
+</RemarkBlock>
+
+---
+
+## 11.11 Summary
+
+Two centuries of probability, compressed:
+
+| Theorem | Year | Says | Requires |
+|---|---|---|---|
+| De Moivre–Laplace | 1733 | Binomial → Normal | Bernoulli sum |
+| Lindeberg–Lévy | 1922 | $\sqrt{n}(\bar{X}_n - \mu)/\sigma \xrightarrow{d} \mathcal{N}(0,1)$ | iid, $\sigma^2 < \infty$ |
+| Lindeberg | 1922 | Same for non-identical summands | Lindeberg condition |
+| Lyapunov | 1901 | Sufficient version of Lindeberg | $\mathbb{E}[\|X_k\|^{2+\delta}]$ bound |
+| Lévy CF continuity | 1925 | CF convergence ⟺ convergence in distribution | CF continuous at $0$ |
+| Berry–Esseen | 1941 | $\sup\|F_n - \Phi\| \le C\rho/\sqrt{n}$ | Finite third moment |
+| Multivariate CLT | — | $\sqrt{n}(\bar{\mathbf{X}}_n - \boldsymbol{\mu}) \xrightarrow{d} \mathcal{N}_d(\mathbf{0}, \Sigma)$ | iid vectors, $\Sigma$ finite |
+| Delta method | — | Nonlinear transforms inherit CLT normality | $g$ differentiable, $g'(\theta) \ne 0$ |
+
+<img src="/images/topics/central-limit-theorem/convergence-speed.png"
+     alt="Convergence speed comparison across distributions — skewness-driven ordering of the Berry–Esseen rate"
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+Experiment with the CLT for any of nine underlying distributions below. Toggle between distributions to see the Berry–Esseen rate in action; toggle between $n$ values to watch the QQ plot go from curved (non-Normal) to straight (Normal).
+
+<CLTExplorer client:visible />
+
+**What comes next.** [Large Deviations & Tail Bounds](/topics/large-deviations) (coming soon) complements the CLT: where the CLT gives the shape of fluctuations at scale $1/\sqrt{n}$, large-deviations theory gives exponential rates at all scales, including the tails where the CLT is weakest. Together they give a complete picture of how sample means behave. Beyond Track 3, the CLT is the foundation for confidence intervals (coming soon), hypothesis testing (coming soon), the bootstrap (coming soon), and every asymptotic result in the statistical-inference tracks.
+
+---
+
+### References
+
+1. Durrett, R. (2019). [*Probability: Theory and Examples*](https://services.math.duke.edu/~rtd/PTE/PTE5_011119.pdf) (5th ed.). Cambridge University Press.
+2. Billingsley, P. (2012). [*Probability and Measure*](https://www.wiley.com/en-us/Probability+and+Measure%2C+Anniversary+Edition-p-9781118122372) (Anniversary ed.). Wiley.
+3. Casella, G., & Berger, R. L. (2002). [*Statistical Inference*](https://www.cengage.com/c/statistical-inference-2e-casella/9780534243128/) (2nd ed.). Cengage.
+4. Wasserman, L. (2004). [*All of Statistics*](https://link.springer.com/book/10.1007/978-0-387-21736-9). Springer.
+5. Feller, W. (1971). [*An Introduction to Probability Theory and Its Applications, Vol. 2*](https://www.wiley.com/en-us/An+Introduction+to+Probability+Theory+and+Its+Applications%2C+Volume+2%2C+2nd+Edition-p-9780471257097) (2nd ed.). Wiley.
+6. Bishop, C. M. (2006). [*Pattern Recognition and Machine Learning*](https://www.microsoft.com/en-us/research/people/cmbishop/prml-book/). Springer.

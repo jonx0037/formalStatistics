@@ -573,9 +573,9 @@ This is why, for large $\nu$, the $t$-distribution and the Normal give nearly id
 <RemarkBlock number={2} title="Levy's Continuity Theorem (MGF version)">
 If the moment-generating functions $M_{X_n}(t)$ converge to $M_X(t)$ for all $t$ in an open interval containing 0, and $M_X$ is the MGF of some distribution, then $X_n \xrightarrow{d} X$.
 
-This is the MGF version of Levy's continuity theorem (the full version uses characteristic functions, which always exist). It converts a convergence-in-distribution problem into a pointwise limit of MGFs — a calculus problem rather than a probability problem. This is exactly the technique we'll use to prove the Poisson limit theorem (Section 9.9) and the Central Limit Theorem (Topic 11, coming soon).
+This is the MGF version of Levy's continuity theorem (the full version uses characteristic functions, which always exist). It converts a convergence-in-distribution problem into a pointwise limit of MGFs — a calculus problem rather than a probability problem. This is exactly the technique we'll use to prove the Poisson limit theorem (Section 9.9) and the [Central Limit Theorem](/topics/central-limit-theorem).
 
-The MGF version requires that the limit MGF $M_X(t)$ exists in a neighborhood of 0. When it does, MGF uniqueness (Topic 4, Theorem 17) identifies the limiting distribution. The characteristic function version avoids this existence requirement, which is why the full CLT proof uses characteristic functions.
+The MGF version requires that the limit MGF $M_X(t)$ exists in a neighborhood of 0. When it does, MGF uniqueness (Topic 4, Theorem 17) identifies the limiting distribution. The characteristic function version avoids this existence requirement, which is why the full [CLT proof](/topics/central-limit-theorem) uses characteristic functions for the most general version.
 </RemarkBlock>
 
 <img src="/images/topics/modes-of-convergence/convergence-in-distribution.png"
@@ -958,7 +958,7 @@ Note the scaling changes from $\sqrt{n}$ to $n$: the convergence rate is slower 
 </TheoremBlock>
 
 <ExampleBlock number={8} title="Delta method for the log transform">
-Let $X_1, \ldots, X_n$ be iid with mean $\mu > 0$ and variance $\sigma^2$. By the CLT (which we're previewing — the full proof is Topic 11, coming soon):
+Let $X_1, \ldots, X_n$ be iid with mean $\mu > 0$ and variance $\sigma^2$. By the [CLT](/topics/central-limit-theorem) (proved in full in Topic 11):
 
 $$
 \sqrt{n}(\bar{X}_n - \mu) \xrightarrow{d} N(0, \sigma^2)
@@ -1067,7 +1067,7 @@ By MGF uniqueness (Topic 4, Theorem 17), the limiting distribution is uniquely i
      class="w-full rounded-lg border my-6"
      style="border-color: var(--color-border);" />
 
-This proof is the prototype for how the Central Limit Theorem will be proved in Topic 11 (coming soon). The technique is the same: compute the MGF of the sequence, show it converges pointwise to the MGF of the target distribution, and invoke Levy's continuity theorem. The CLT proof is more involved because the MGF of $\sqrt{n}(\bar{X}_n - \mu)/\sigma$ requires a careful Taylor expansion of $\log M_{X_1}(t/(\sigma\sqrt{n}))$, but the structure is identical.
+This proof is the prototype for the [Central Limit Theorem proof](/topics/central-limit-theorem). The technique is identical: compute the MGF, show pointwise convergence to the target MGF, and invoke Lévy's continuity theorem. The CLT proof is more involved because the MGF of $\sqrt{n}(\bar{X}_n - \mu)/\sigma$ requires a careful Taylor expansion of $\log M_{X_1}(t/(\sigma\sqrt{n}))$, but the structure established here carries over directly.
 
 ---
 
@@ -1122,7 +1122,7 @@ Knowing that a sequence converges is useful, but knowing *how fast* it converges
 
 - **Hoeffding's inequality** gives exponential decay for convergence in probability: $P(|\bar{X}_n - \mu| > \varepsilon) \leq 2\exp(-2n\varepsilon^2/(b-a)^2)$ for bounded random variables in $[a, b]$. This is much sharper than the $1/n$ rate from Chebyshev.
 
-- **The Berry-Esseen theorem** gives the rate for convergence in distribution in the CLT: $\sup_x |F_{\bar{Z}_n}(x) - \Phi(x)| \leq C \cdot E[|X_1|^3] / (\sigma^3 \sqrt{n})$, where $C \leq 0.4748$. The CLT convergence rate is $O(1/\sqrt{n})$.
+- **The [Berry–Esseen theorem](/topics/central-limit-theorem)** gives the rate for convergence in distribution in the CLT: $\sup_x |F_{\bar{Z}_n}(x) - \Phi(x)| \leq C \cdot E[|X_1|^3] / (\sigma^3 \sqrt{n})$, where $C \leq 0.4748$. The CLT convergence rate is $O(1/\sqrt{n})$.
 
 - **Large deviations theory** characterizes the exponential rate at which $P(\bar{X}_n \in A)$ decays for sets $A$ that are far from the mean. The rate function $I(x) = \sup_t (tx - \log M_X(t))$ is the Fenchel-Legendre transform of the log-MGF.
 
@@ -1198,7 +1198,7 @@ This topic established the *modes* of convergence — the different senses in wh
 
 - [Law of Large Numbers](/topics/law-of-large-numbers): The WLLN proves $\bar{X}_n \xrightarrow{P} \mu$ under finite variance (Theorem 10.1) and under finite mean alone (Khintchine, Theorem 10.3). The SLLN proves $\bar{X}_n \xrightarrow{\text{a.s.}} \mu$ under finite mean alone (Etemadi, Theorem 10.5). The Glivenko–Cantelli theorem proves uniform a.s. convergence of the empirical CDF.
 
-- **Central Limit Theorem** (Topic 11, coming soon): The CLT proves $\sqrt{n}(\bar{X}_n - \mu)/\sigma \xrightarrow{d} N(0,1)$ (convergence in distribution). The proof technique is MGF convergence — the same technique we used for the Poisson limit theorem in Section 9.9.
+- **[Central Limit Theorem](/topics/central-limit-theorem)**: The CLT proves $\sqrt{n}(\bar{X}_n - \mu)/\sigma \xrightarrow{d} N(0,1)$ (convergence in distribution). The proof via MGF convergence follows the same technique we used for the Poisson limit theorem in Section 9.9. The Lindeberg CLT extends the result to non-identical summands, and the Berry–Esseen theorem quantifies the convergence rate.
 
 - **Concentration Inequalities** (Topic 12, coming soon): While the CLT gives the *shape* of the limiting distribution, concentration inequalities give *rates* — how fast the convergence happens. Hoeffding, Bernstein, and sub-Gaussian tail bounds provide the exponential-rate guarantees that make finite-sample statistical learning theory work.
 

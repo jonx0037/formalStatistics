@@ -12,7 +12,7 @@
 
     { "id": "modes-of-convergence", "label": "Modes of Convergence", "domain": "convergence-limit-theorems", "status": "published", "url": "/topics/modes-of-convergence" },
     { "id": "law-of-large-numbers", "label": "Law of Large Numbers", "domain": "convergence-limit-theorems", "status": "published", "url": "/topics/law-of-large-numbers" },
-    { "id": "central-limit-theorem", "label": "Central Limit Theorem", "domain": "convergence-limit-theorems", "status": "planned", "url": "/topics/central-limit-theorem" },
+    { "id": "central-limit-theorem", "label": "Central Limit Theorem", "domain": "convergence-limit-theorems", "status": "published", "url": "/topics/central-limit-theorem" },
     { "id": "large-deviations", "label": "Large Deviations & Tail Bounds", "domain": "convergence-limit-theorems", "status": "planned", "url": "/topics/large-deviations" },
 
     { "id": "point-estimation", "label": "Point Estimation & Bias-Variance", "domain": "statistical-estimation", "status": "planned", "url": "/topics/point-estimation" },

@@ -9,8 +9,13 @@
  * Topic 9:  Sample path generation, running mean/variance, empirical CDF,
  *           KS statistic, total variation distance, typewriter sequence,
  *           Box–Muller normal sampling.
- * Topics 10–12 will extend with: bootstrapSample, cltNormalization,
- *           confidenceIntervalCoverage, concentrationBounds.
+ * Topic 10: Gamma/Student-t/Pareto sampling, bootstrapSample,
+ *           Chebyshev/Hoeffding bounds, DKW bound, running KS,
+ *           law of iterated logarithm envelope.
+ * Topic 11: CLT normalization and replications, empirical CF,
+ *           Berry–Esseen bound, chi-squared and beta samplers.
+ * Topic 12+ will extend with: confidenceIntervalCoverage and
+ *           additional concentration bounds.
  */
 
 // ── Sampling Utilities ────────────────────────────────────────────────────────
@@ -303,22 +308,25 @@ export function bernoulliSample(
 // ── Additional Sampling Functions ──────────────────────────────────────────
 
 /**
- * Generate a Gamma(shape, scale=1) sample using the Marsaglia–Tsang method.
- * Works for any shape > 0 (uses rejection for shape < 1).
- * @param shape — shape parameter (> 0)
+ * Generate a Gamma(α, β) sample using the Marsaglia–Tsang method.
+ * β is the rate parameter: mean = α/β, variance = α/β².
+ * Works for any α > 0 (uses rejection for α < 1).
+ * @param alpha — shape parameter (> 0)
+ * @param beta — rate parameter (> 0, default 1)
  * @param rng — uniform [0,1) generator (default Math.random)
  */
 export function gammaSample(
-  shape: number,
+  alpha: number,
+  beta: number = 1,
   rng: () => number = Math.random
 ): number {
-  // For shape < 1, use the identity: Gamma(a) = Gamma(a+1) * U^(1/a)
-  if (shape < 1) {
+  // For α < 1, use the identity: Gamma(α, 1) = Gamma(α+1, 1) · U^(1/α); then scale by 1/β.
+  if (alpha < 1) {
     const u = Math.max(rng(), Number.EPSILON);
-    return gammaSample(shape + 1, rng) * Math.pow(u, 1 / shape);
+    return gammaSample(alpha + 1, 1, rng) * Math.pow(u, 1 / alpha) / beta;
   }
-  // Marsaglia–Tsang method for shape >= 1
-  const d = shape - 1 / 3;
+  // Marsaglia–Tsang method for α ≥ 1 (returns Gamma(α, 1), then scale by 1/β).
+  const d = alpha - 1 / 3;
   const c = 1 / Math.sqrt(9 * d);
   while (true) {
     let x: number;
@@ -329,8 +337,8 @@ export function gammaSample(
     } while (v <= 0);
     v = v * v * v;
     const u = rng();
-    if (u < 1 - 0.0331 * (x * x) * (x * x)) return d * v;
-    if (Math.log(u) < 0.5 * x * x + d * (1 - v + Math.log(v))) return d * v;
+    if (u < 1 - 0.0331 * (x * x) * (x * x)) return (d * v) / beta;
+    if (Math.log(u) < 0.5 * x * x + d * (1 - v + Math.log(v))) return (d * v) / beta;
   }
 }
 
@@ -346,8 +354,8 @@ export function tSample(
   rng: () => number = Math.random
 ): number {
   const z = normalSample(0, 1, rng);
-  // χ²(ν) = Gamma(ν/2, 2) = 2 * Gamma(ν/2, 1)
-  const v = 2 * gammaSample(nu / 2, rng);
+  // χ²(ν) = Gamma(ν/2, 1/2), so 2 · Gamma(ν/2, 1) works too.
+  const v = 2 * gammaSample(nu / 2, 1, rng);
   return z / Math.sqrt(v / nu);
 }
 
@@ -468,4 +476,132 @@ export function runningKSStatistic(
 export function lilEnvelope(n: number, sigma: number): number {
   if (n < 3) return Infinity;
   return sigma * Math.sqrt(2 * Math.log(Math.log(n)) / n);
+}
+
+// ── Topic 11: Central Limit Theorem Extensions ─────────────────────────────
+
+// ── CLT Normalization ──────────────────────────────────────────────────────
+
+/**
+ * Compute the CLT-standardized sample mean: √n(X̄ₙ − μ) / σ.
+ * @param samples — array of iid observations
+ * @param mu — true population mean
+ * @param sigma — true population standard deviation (σ, not σ²)
+ * @returns the standardized value √n(X̄ₙ − μ)/σ, or 0 if samples is empty
+ *          or sigma is zero (guard against division by zero)
+ */
+export function cltNormalization(
+  samples: number[],
+  mu: number,
+  sigma: number
+): number {
+  const n = samples.length;
+  if (n === 0 || sigma === 0) return 0;
+  const mean = sampleMean(samples);
+  return (Math.sqrt(n) * (mean - mu)) / sigma;
+}
+
+/**
+ * Generate M replications of the CLT-standardized sample mean.
+ * For each replication: draw n samples, compute √n(X̄ − μ)/σ.
+ * The workhorse for CLTExplorer and BerryEsseenExplorer —
+ * avoids intermediate array allocation inside the hot loop so that
+ * M = 10,000 at n = 200 stays under ~500 ms in modern browsers.
+ * @param sampler — function that generates one sample per call
+ * @param n — sample size per replication
+ * @param M — number of replications
+ * @param mu — true mean
+ * @param sigma — true standard deviation
+ */
+export function cltReplications(
+  sampler: () => number,
+  n: number,
+  M: number,
+  mu: number,
+  sigma: number
+): number[] {
+  const out = new Array<number>(M);
+  const sqrtN = Math.sqrt(n);
+  for (let rep = 0; rep < M; rep++) {
+    let sum = 0;
+    for (let i = 0; i < n; i++) sum += sampler();
+    const mean = sum / n;
+    out[rep] = (sqrtN * (mean - mu)) / sigma;
+  }
+  return out;
+}
+
+// ── Characteristic Function Helpers ────────────────────────────────────────
+
+/**
+ * Evaluate the empirical characteristic function at point t:
+ *   φ̂ₙ(t) = (1/n) Σ exp(i·t·Xⱼ) = (1/n) Σ [cos(t·Xⱼ) + i·sin(t·Xⱼ)].
+ * @param samples — array of observations
+ * @param t — evaluation point
+ * @returns [real part, imaginary part]
+ */
+export function empiricalCF(
+  samples: number[],
+  t: number
+): [number, number] {
+  const n = samples.length;
+  if (n === 0) return [0, 0];
+  let re = 0;
+  let im = 0;
+  for (let j = 0; j < n; j++) {
+    re += Math.cos(t * samples[j]);
+    im += Math.sin(t * samples[j]);
+  }
+  return [re / n, im / n];
+}
+
+/**
+ * Berry–Esseen bound: C · ρ / √n, giving an upper bound on
+ *   sup_x |Fₙ(x) − Φ(x)|
+ * for the standardized sample mean of an iid sequence with finite
+ * absolute third moment.
+ * @param rho — E[|X − μ|³] / σ³ (absolute third-moment ratio)
+ * @param n — sample size
+ * @param C — Berry–Esseen constant (default 0.4748, Shevtsova 2011)
+ */
+export function berryEsseenBound(
+  rho: number,
+  n: number,
+  C: number = 0.4748
+): number {
+  if (n <= 0) return Infinity;
+  return (C * rho) / Math.sqrt(n);
+}
+
+// ── Additional Samplers ────────────────────────────────────────────────────
+
+/**
+ * Generate a Chi-squared(k) sample as Gamma(k/2, 1/2).
+ * Equivalent to the sum of k squared iid standard Normals, but much
+ * faster for moderate-to-large k via the Gamma route.
+ * @param k — degrees of freedom (> 0)
+ * @param rng — uniform [0,1) generator (default Math.random)
+ */
+export function chiSquaredSample(
+  k: number,
+  rng: () => number = Math.random
+): number {
+  return gammaSample(k / 2, 0.5, rng);
+}
+
+/**
+ * Generate a Beta(a, b) sample via the Gamma ratio:
+ *   X / (X + Y), with X ~ Gamma(a, 1), Y ~ Gamma(b, 1).
+ * @param a — first shape parameter (> 0)
+ * @param b — second shape parameter (> 0)
+ * @param rng — uniform [0,1) generator (default Math.random)
+ */
+export function betaSample(
+  a: number,
+  b: number,
+  rng: () => number = Math.random
+): number {
+  const x = gammaSample(a, 1, rng);
+  const y = gammaSample(b, 1, rng);
+  return x / (x + y);
 }
