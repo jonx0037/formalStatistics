@@ -44,6 +44,7 @@ references:
     edition: "Anniversary Edition"
     publisher: "Wiley"
     note: "The canonical measure-theoretic probability text. Chapters 1-2 cover sample spaces and probability measures with full rigor."
+    url: "https://www.wiley.com/en-us/Probability+and+Measure%2C+Anniversary+Edition-p-9781118122372"
   - type: "book"
     title: "Probability: Theory and Examples"
     author: "Rick Durrett"
@@ -51,6 +52,7 @@ references:
     edition: "5th"
     publisher: "Cambridge University Press"
     note: "Graduate probability with excellent examples. Chapter 1 provides a concise treatment of the axioms."
+    url: "https://services.math.duke.edu/~rtd/PTE/pte.html"
   - type: "book"
     title: "Probability and Random Processes"
     author: "Geoffrey Grimmett & David Stirzaker"
@@ -58,18 +60,21 @@ references:
     edition: "4th"
     publisher: "Oxford University Press"
     note: "Strong on combinatorial probability and classical examples."
+    url: "https://global.oup.com/academic/product/probability-and-random-processes-9780198847595"
   - type: "book"
     title: "All of Statistics"
     author: "Larry Wasserman"
     year: 2004
     publisher: "Springer"
     note: "Compact reference bridging probability and statistics for ML practitioners."
+    url: "https://link.springer.com/book/10.1007/978-0-387-21736-9"
   - type: "book"
     title: "Understanding Machine Learning: From Theory to Algorithms"
     author: "Shai Shalev-Shwartz & Shai Ben-David"
     year: 2014
     publisher: "Cambridge University Press"
     note: "Chapter 2 uses the union bound as the starting point for PAC learning theory."
+    url: "https://www.cs.huji.ac.il/~shais/UnderstandingMachineLearning/"
 ---
 
 import DefinitionBlock from '../../components/ui/DefinitionBlock.astro';
@@ -521,10 +526,12 @@ This seems abstract now, but when we get to martingales and stochastic processes
 
 The next topic — [**Conditional Probability & Independence**](/topics/conditional-probability) — builds on this foundation to answer: "how does new information change probabilities?" We'll derive Bayes' theorem, formalize independence, and see why conditional independence is the structural assumption that makes probabilistic ML tractable.
 
+---
+
 ### References
 
-1. Billingsley, P. (2012). *Probability and Measure* (Anniversary ed.). Wiley.
-2. Durrett, R. (2019). *Probability: Theory and Examples* (5th ed.). Cambridge University Press.
-3. Grimmett, G. & Stirzaker, D. (2020). *Probability and Random Processes* (4th ed.). Oxford University Press.
-4. Wasserman, L. (2004). *All of Statistics*. Springer.
-5. Shalev-Shwartz, S. & Ben-David, S. (2014). *Understanding Machine Learning: From Theory to Algorithms*. Cambridge University Press.
+1. Billingsley, P. (2012). [*Probability and Measure*](https://www.wiley.com/en-us/Probability+and+Measure%2C+Anniversary+Edition-p-9781118122372) (Anniversary ed.). Wiley.
+2. Durrett, R. (2019). [*Probability: Theory and Examples*](https://services.math.duke.edu/~rtd/PTE/pte.html) (5th ed.). Cambridge University Press.
+3. Grimmett, G. & Stirzaker, D. (2020). [*Probability and Random Processes*](https://global.oup.com/academic/product/probability-and-random-processes-9780198847595) (4th ed.). Oxford University Press.
+4. Wasserman, L. (2004). [*All of Statistics*](https://link.springer.com/book/10.1007/978-0-387-21736-9). Springer.
+5. Shalev-Shwartz, S. & Ben-David, S. (2014). [*Understanding Machine Learning: From Theory to Algorithms*](https://www.cs.huji.ac.il/~shais/UnderstandingMachineLearning/). Cambridge University Press.
