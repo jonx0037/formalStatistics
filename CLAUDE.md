@@ -119,6 +119,15 @@ formalCalculus → formalStatistics → formalML
 - **No circular dependencies:** formalStatistics should never assume knowledge from formalml.com topics. It *may* assume knowledge of topics from formalcalculus.com.
 - The three sites share a tech stack and editorial voice but are independent codebases and deployments.
 
+### Citations and references
+
+- Every MDX topic file MUST end with a rendered `### References` section as the last content in the file, preceded by a `---` horizontal rule.
+- The references section lists every entry from the topic's frontmatter `references:` array, in the same order, as a numbered Markdown list.
+- Format for books: `N. Author(s). (Year). [*Title*](URL) (Edition). Publisher.`
+- Format for articles: `N. Author(s). (Year). [*Title*](URL). *Journal*, Volume(Issue), Pages.`
+- Every frontmatter reference entry MUST include a `url:` field with a working hyperlink.
+- This section is non-negotiable. A topic without visible citations does not ship.
+
 ## Code Style
 
 - TypeScript throughout (Astro + React)

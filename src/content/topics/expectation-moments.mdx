@@ -69,6 +69,7 @@ references:
     edition: "Anniversary Edition"
     publisher: "Wiley"
     note: "Chapters 5 and 21 cover expectation and conditional expectation with full measure-theoretic rigor."
+    url: "https://www.wiley.com/en-us/Probability+and+Measure%2C+Anniversary+Edition-p-9781118122372"
   - type: "book"
     title: "Probability: Theory and Examples"
     author: "Rick Durrett"
@@ -76,6 +77,7 @@ references:
     edition: "5th"
     publisher: "Cambridge University Press"
     note: "Chapter 1 covers expectation, variance, and moment-generating functions. Chapter 4 covers conditional expectation."
+    url: "https://services.math.duke.edu/~rtd/PTE/pte.html"
   - type: "book"
     title: "Probability and Random Processes"
     author: "Geoffrey Grimmett & David Stirzaker"
@@ -83,12 +85,14 @@ references:
     edition: "4th"
     publisher: "Oxford University Press"
     note: "Chapter 3 (Discrete) and Chapter 4 (Continuous) cover expectations and generating functions with many worked examples."
+    url: "https://global.oup.com/academic/product/probability-and-random-processes-9780198847595"
   - type: "book"
     title: "All of Statistics"
     author: "Larry Wasserman"
     year: 2004
     publisher: "Springer"
     note: "Compact reference. Chapter 3 covers expectation, variance, and covariance; Chapter 3.5 covers inequalities and moment-generating functions."
+    url: "https://link.springer.com/book/10.1007/978-0-387-21736-9"
   - type: "book"
     title: "Statistical Inference"
     author: "George Casella & Roger L. Berger"
@@ -96,12 +100,14 @@ references:
     edition: "2nd"
     publisher: "Duxbury"
     note: "Chapter 2 covers expected values and moments with the rigor expected in a graduate statistics course."
+    url: "https://www.cengage.com/c/statistical-inference-2e-casella/"
   - type: "book"
     title: "Pattern Recognition and Machine Learning"
     author: "Christopher M. Bishop"
     year: 2006
     publisher: "Springer"
     note: "Chapter 1.2 covers expectation and covariance in the ML context. Chapter 3.2 derives the bias-variance decomposition."
+    url: "https://www.microsoft.com/en-us/research/publication/pattern-recognition-machine-learning/"
   - type: "book"
     title: "The Elements of Statistical Learning"
     author: "Trevor Hastie, Robert Tibshirani & Jerome Friedman"
@@ -109,12 +115,14 @@ references:
     edition: "2nd"
     publisher: "Springer"
     note: "Chapter 7.3 derives the bias-variance decomposition for prediction error."
+    url: "https://hastie.su.domains/ElemStatLearn/"
   - type: "article"
     title: "Variational Inference: A Review for Statisticians"
     author: "David M. Blei, Alp Kucukelbir & Jon D. McAuliffe"
     year: 2017
     publisher: "Journal of the American Statistical Association"
     note: "Section 2 derives the ELBO using Jensen's inequality. The expectation and conditional expectation machinery from this topic is the foundation."
+    url: "https://doi.org/10.1080/01621459.2017.1285773"
 ---
 
 import DefinitionBlock from '../../components/ui/DefinitionBlock.astro';
@@ -864,3 +872,16 @@ This topic completes **Track 1: Foundations of Probability**. We now have the co
 - [Modes of Convergence](/topics/modes-of-convergence) uses Markov and Chebyshev as the starting point for the law of large numbers and the central limit theorem.
 - **Point Estimation** (coming soon) defines bias as $E[\hat{\theta}] - \theta$ and MSE as $\text{Var}(\hat{\theta}) + \text{Bias}^2$.
 - **Method of Moments** (coming soon) equates sample moments $\bar{X}, \overline{X^2}, \ldots$ to population moments $E[X], E[X^2], \ldots$.
+
+---
+
+### References
+
+1. Billingsley, P. (2012). [*Probability and Measure*](https://www.wiley.com/en-us/Probability+and+Measure%2C+Anniversary+Edition-p-9781118122372) (Anniversary ed.). Wiley.
+2. Durrett, R. (2019). [*Probability: Theory and Examples*](https://services.math.duke.edu/~rtd/PTE/pte.html) (5th ed.). Cambridge University Press.
+3. Grimmett, G. & Stirzaker, D. (2020). [*Probability and Random Processes*](https://global.oup.com/academic/product/probability-and-random-processes-9780198847595) (4th ed.). Oxford University Press.
+4. Wasserman, L. (2004). [*All of Statistics*](https://link.springer.com/book/10.1007/978-0-387-21736-9). Springer.
+5. Casella, G. & Berger, R. L. (2002). [*Statistical Inference*](https://www.cengage.com/c/statistical-inference-2e-casella/) (2nd ed.). Duxbury.
+6. Bishop, C. M. (2006). [*Pattern Recognition and Machine Learning*](https://www.microsoft.com/en-us/research/publication/pattern-recognition-machine-learning/). Springer.
+7. Hastie, T., Tibshirani, R. & Friedman, J. (2009). [*The Elements of Statistical Learning*](https://hastie.su.domains/ElemStatLearn/) (2nd ed.). Springer.
+8. Blei, D. M., Kucukelbir, A. & McAuliffe, J. D. (2017). [*Variational Inference: A Review for Statisticians*](https://doi.org/10.1080/01621459.2017.1285773). *JASA*, 112(518), 859–877.
