@@ -183,7 +183,7 @@ Append after the final paragraph (the "What's Next" section):
 5. Casella, G. & Berger, R. L. (2002). [*Statistical Inference*](https://www.cengage.com/c/statistical-inference-2e-casella/) (2nd ed.). Duxbury.
 6. Bishop, C. M. (2006). [*Pattern Recognition and Machine Learning*](https://www.microsoft.com/en-us/research/publication/pattern-recognition-machine-learning/). Springer.
 7. Goodfellow, I., Bengio, Y. & Courville, A. (2016). [*Deep Learning*](https://www.deeplearningbook.org/). MIT Press.
-8. Kobyzev, I., Prince, S. J. D. & Brubaker, M. A. (2021). [*Normalizing Flows: An Introduction and Review of Current Methods*](https://doi.org/10.1109/TPAMI.2020.2992934). *IEEE TPAMI*, 43(11).
+8. Kobyzev, I., Prince, S. J. D. & Brubaker, M. A. (2021). [*Normalizing Flows: An Introduction and Review of Current Methods*](https://doi.org/10.1109/TPAMI.2020.2992934). *IEEE TPAMI*, 43(11), 3964–3979.
 ```
 
 ### 4.2 `expectation-moments.mdx`

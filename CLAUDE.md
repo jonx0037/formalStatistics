@@ -126,6 +126,7 @@ formalCalculus → formalStatistics → formalML
 - Format for books: `N. Author(s). (Year). [*Title*](URL) (Edition). Publisher.`
 - Format for articles: `N. Author(s). (Year). [*Title*](URL). *Journal*, Volume(Issue), Pages.`
 - Every frontmatter reference entry MUST include a `url:` field with a working hyperlink.
+- **Schema note:** The current `src/content.config.ts` does not declare `url`, `isbn`, `journal`, or `pages` in the references schema. These fields exist in frontmatter for data integrity but are stripped from `entry.data` by Astro content collections. When building the automated `References.astro` component, update the schema first.
 - This section is non-negotiable. A topic without visible citations does not ship.
 
 ## Code Style
