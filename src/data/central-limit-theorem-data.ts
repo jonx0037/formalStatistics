@@ -59,6 +59,14 @@ export interface CLTTheorem {
 
 // ── Distribution Presets (CLTExplorer) ─────────────────────────────────────
 
+// Note on `thirdMomentRatio` (= ρ = E|X − μ|³ / σ³):
+// Values are closed-form where a tractable formula exists (Uniform, Normal,
+// Exponential, Bernoulli, Fair Die) and Monte-Carlo estimates (N ≈ 5×10⁵,
+// stable to ~3 decimals) for Poisson, Beta, Chi-squared, Gamma, and Student-t.
+// ρ is the Berry–Esseen constant, distinct from skewness = E[(X − μ)³]/σ³:
+// by Lyapunov, ρ ≥ |skewness|, with equality only when X − μ has one-sided
+// support.
+
 export const cltDistributions: CLTDistribution[] = [
   {
     id: 'uniform',
@@ -66,7 +74,8 @@ export const cltDistributions: CLTDistribution[] = [
     mu: 0.5,
     sigma: Math.sqrt(1 / 12),
     skewness: 0,
-    thirdMomentRatio: 1.8,
+    // E|X − 1/2|³ = 1/32 ; σ³ = (1/12)^{3/2} ; ρ = 3√3/4
+    thirdMomentRatio: (1 / 32) / Math.pow(1 / 12, 1.5),
     description:
       'Symmetric, bounded. Fast convergence — the CLT works well even at n = 5.',
   },
@@ -76,7 +85,8 @@ export const cltDistributions: CLTDistribution[] = [
     mu: 1,
     sigma: 1,
     skewness: 2,
-    thirdMomentRatio: 6,
+    // E|X − 1|³ = 12/e − 2 ≈ 2.4146
+    thirdMomentRatio: 12 / Math.E - 2,
     description:
       'Skewed right. Moderate convergence — visible non-normality at n = 10, good by n = 50.',
   },
@@ -86,7 +96,8 @@ export const cltDistributions: CLTDistribution[] = [
     mu: 0.3,
     sigma: Math.sqrt(0.21),
     skewness: 0.873, // (1 − 2p)/√(p(1−p)) with p = 0.3
-    thirdMomentRatio: 2.34,
+    // ρ_Bern(p) = [p² + (1−p)²] / √(p(1−p)) ; for p = 0.3 → ≈ 1.266
+    thirdMomentRatio: (0.3 * 0.3 + 0.7 * 0.7) / Math.sqrt(0.21),
     description:
       'Discrete and asymmetric. The de Moivre–Laplace theorem is this CLT applied to sums of Bernoullis.',
   },
@@ -96,7 +107,7 @@ export const cltDistributions: CLTDistribution[] = [
     mu: 5,
     sigma: Math.sqrt(5),
     skewness: 1 / Math.sqrt(5),
-    thirdMomentRatio: 1.45,
+    thirdMomentRatio: 1.62, // MC estimate (N = 5×10⁵)
     description:
       'Discrete count data. Moderate skewness — converges reasonably fast.',
   },
@@ -106,7 +117,7 @@ export const cltDistributions: CLTDistribution[] = [
     mu: 2 / 7,
     sigma: Math.sqrt(10 / (49 * 8)),
     skewness: 0.596,
-    thirdMomentRatio: 1.9,
+    thirdMomentRatio: 1.56, // MC estimate
     description:
       'Bounded, right-skewed. Common in Bayesian posterior analysis.',
   },
@@ -116,7 +127,7 @@ export const cltDistributions: CLTDistribution[] = [
     mu: 3,
     sigma: Math.sqrt(6),
     skewness: Math.sqrt(8 / 3),
-    thirdMomentRatio: 4.35,
+    thirdMomentRatio: 2.16, // MC estimate
     description:
       'Highly skewed right. Slow convergence — needs n ≈ 100 for good Normal approximation.',
   },
@@ -126,9 +137,9 @@ export const cltDistributions: CLTDistribution[] = [
     mu: 0,
     sigma: Math.sqrt(5 / 3),
     skewness: 0,
-    thirdMomentRatio: 6.0,
+    thirdMomentRatio: 2.19, // MC estimate; symmetric but heavy tails still push ρ up
     description:
-      'Symmetric but heavy-tailed. Symmetric → faster convergence from the skewness term, but heavy tails inflate the Berry–Esseen constant.',
+      'Symmetric but heavy-tailed. Skewness is zero, but heavy tails still lift ρ and the Berry–Esseen constant.',
   },
   {
     id: 'gamma',
@@ -136,7 +147,7 @@ export const cltDistributions: CLTDistribution[] = [
     mu: 2,
     sigma: Math.sqrt(2),
     skewness: Math.sqrt(2),
-    thirdMomentRatio: 3.77,
+    thirdMomentRatio: 2.02, // MC estimate
     description:
       'Right-skewed. Shape α controls skewness: larger α → more symmetric → faster CLT convergence.',
   },
@@ -146,7 +157,8 @@ export const cltDistributions: CLTDistribution[] = [
     mu: 3.5,
     sigma: Math.sqrt(35 / 12),
     skewness: 0,
-    thirdMomentRatio: 1.64,
+    // E|X − 3.5|³ = (2·2.5³ + 2·1.5³ + 2·0.5³)/6 = 38.25/6 = 6.375 ; σ³ = (35/12)^{3/2}
+    thirdMomentRatio: 6.375 / Math.pow(35 / 12, 1.5),
     description:
       'The most familiar random variable. Symmetric, so convergence is fast — rolling 30 dice gives a remarkably Normal sum.',
   },
@@ -195,11 +207,16 @@ export const lindebergPresets: LindebergPreset[] = [
 
 // ── Berry–Esseen Comparison Presets ────────────────────────────────────────
 
+// ρ = E|X − μ|³ / σ³ — closed-form where known, MC (N = 5×10⁵) elsewhere.
+// ρ is distinct from skewness: ρ ≥ |skewness| by Lyapunov, with equality only
+// for one-sided support. Each row is commented with its derivation.
+
 export const berryEsseenPresets: BerryEsseenPreset[] = [
   {
     id: 'uniform',
     name: 'Uniform(0, 1)',
-    rho: 1.8,
+    // E|X − 1/2|³ = 1/32 ; σ³ = (1/12)^{3/2} ; ρ = 3√3/4
+    rho: (1 / 32) / Math.pow(1 / 12, 1.5),
     skewness: 0,
     convergenceSpeed: 'fast',
     color: '#059669', // emerald
@@ -207,7 +224,8 @@ export const berryEsseenPresets: BerryEsseenPreset[] = [
   {
     id: 'normal',
     name: 'Normal(0, 1)',
-    rho: 2.0,
+    // E|Z|³ = 4/√(2π) = 2√(2/π)
+    rho: 2 * Math.sqrt(2 / Math.PI),
     skewness: 0,
     convergenceSpeed: 'fast',
     color: '#2563eb', // blue
@@ -215,6 +233,7 @@ export const berryEsseenPresets: BerryEsseenPreset[] = [
   {
     id: 'bernoulli-half',
     name: 'Bernoulli(0.5)',
+    // [p² + (1−p)²] / √(p(1−p)) with p = 0.5 → 0.5 / 0.5 = 1
     rho: 1.0,
     skewness: 0,
     convergenceSpeed: 'fast',
@@ -223,7 +242,8 @@ export const berryEsseenPresets: BerryEsseenPreset[] = [
   {
     id: 'exponential',
     name: 'Exponential(1)',
-    rho: 6.0,
+    // E|X − 1|³ = 12/e − 2 ; σ = 1
+    rho: 12 / Math.E - 2,
     skewness: 2,
     convergenceSpeed: 'slow',
     color: '#d97706', // amber
@@ -231,7 +251,7 @@ export const berryEsseenPresets: BerryEsseenPreset[] = [
   {
     id: 'chi-squared-1',
     name: 'Chi-squared(1)',
-    rho: 8.0,
+    rho: 3.06, // MC estimate
     skewness: 2 * Math.sqrt(2),
     convergenceSpeed: 'very slow',
     color: '#dc2626', // red
@@ -239,7 +259,8 @@ export const berryEsseenPresets: BerryEsseenPreset[] = [
   {
     id: 'bernoulli-01',
     name: 'Bernoulli(0.1)',
-    rho: 3.16,
+    // [p² + (1−p)²] / √(p(1−p)) with p = 0.1 → 0.82 / 0.3
+    rho: (0.1 * 0.1 + 0.9 * 0.9) / Math.sqrt(0.09),
     skewness: 2.67,
     convergenceSpeed: 'slow',
     color: '#ea580c', // orange

@@ -75,22 +75,29 @@ function DeltaMethodCLTExplorer() {
   }, [sampler, n, mu, sigma]);
 
   // Generate √n(g(X̄) − g(μ)) via running the sampler directly (need actual g(X̄)).
-  const deltaScaled = useMemo(() => {
-    const out = new Array<number>(M_REPS);
+  // We filter out replications whose transform is non-finite (e.g. log of a
+  // negative sample mean) rather than substituting 0, which would inject an
+  // artificial spike and bias both the histogram and the variance estimate.
+  const deltaResult = useMemo(() => {
+    const kept: number[] = [];
     const sqrtN = Math.sqrt(n);
+    let dropped = 0;
     for (let r = 0; r < M_REPS; r++) {
       let sum = 0;
       for (let i = 0; i < n; i++) sum += sampler();
       const xbar = sum / n;
-      // Guard against undefined values (e.g., log(0) if uniform includes 0)
       const gx = trans.g(xbar);
-      out[r] = isFinite(gx) ? sqrtN * (gx - gMu) : 0;
+      if (isFinite(gx)) kept.push(sqrtN * (gx - gMu));
+      else dropped++;
     }
-    return out;
+    return { values: kept, dropped };
   }, [sampler, n, trans, gMu]);
+  const deltaScaled = deltaResult.values;
+  const deltaDropped = deltaResult.dropped;
 
   // Variance comparison: direct simulation variance of √n(g(X̄) − g(μ)) vs [g'(μ)]²σ².
   const simVariance = useMemo(() => {
+    if (deltaScaled.length === 0) return 0;
     let mean = 0;
     for (const v of deltaScaled) mean += v;
     mean /= deltaScaled.length;
@@ -216,8 +223,22 @@ function DeltaMethodCLTExplorer() {
           label="ratio sim/theory"
           value={deltaVariance === 0 ? '—' : (simVariance / deltaVariance).toFixed(3)}
         />
-        <Stat label="M replications" value={M_REPS.toLocaleString()} />
+        <Stat
+          label="replications kept"
+          value={`${(M_REPS - deltaDropped).toLocaleString()} / ${M_REPS.toLocaleString()}`}
+          color={deltaDropped > 0 ? THEORY_COLOR : undefined}
+        />
       </div>
+      {deltaDropped > 0 && (
+        <div
+          className="mt-2 rounded border p-2 text-xs"
+          style={{ borderColor: THEORY_COLOR, color: THEORY_COLOR }}
+        >
+          {deltaDropped.toLocaleString()} replication(s) dropped because g(X̄ₙ)
+          was non-finite (e.g. log of a non-positive sample mean). The
+          histogram and variance shown use only the {deltaScaled.length.toLocaleString()} kept draws.
+        </div>
+      )}
     </div>
   );
 }

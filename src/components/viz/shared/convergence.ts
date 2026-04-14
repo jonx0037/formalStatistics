@@ -507,6 +507,8 @@ export function cltNormalization(
  * The workhorse for CLTExplorer and BerryEsseenExplorer —
  * avoids intermediate array allocation inside the hot loop so that
  * M = 10,000 at n = 200 stays under ~500 ms in modern browsers.
+ * Returns an empty array when n or M is non-positive, or when σ = 0
+ * (mirrors the guards in cltNormalization to avoid NaN/Infinity).
  * @param sampler — function that generates one sample per call
  * @param n — sample size per replication
  * @param M — number of replications
@@ -520,6 +522,7 @@ export function cltReplications(
   mu: number,
   sigma: number
 ): number[] {
+  if (n <= 0 || M <= 0 || sigma === 0) return [];
   const out = new Array<number>(M);
   const sqrtN = Math.sqrt(n);
   for (let rep = 0; rep < M; rep++) {

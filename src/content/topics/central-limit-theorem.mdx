@@ -678,13 +678,15 @@ The statement follows directly from [Topic 9, Theorem 9.11](/topics/modes-of-con
 
 <ExampleBlock number={7} title="Log-transform confidence interval">
 
-Suppose $X_i \sim \text{Exp}(\lambda)$ iid, and we want a 95% CI for the rate parameter $\lambda$. The MLE is $\hat{\lambda}_n = 1/\bar{X}_n$. By the CLT, $\sqrt{n}(\bar{X}_n - 1/\lambda) \xrightarrow{d} \mathcal{N}(0, 1/\lambda^2)$. Apply the delta method with $g(x) = 1/x$ so $g'(x) = -1/x^2$:
+Suppose $X_i \sim \text{Exp}(\lambda)$ iid, and we want a 95% CI for the rate parameter $\lambda$. The MLE is $\hat{\lambda}_n = 1/\bar{X}_n$. By the CLT, $\sqrt{n}(\bar{X}_n - 1/\lambda) \xrightarrow{d} \mathcal{N}(0, 1/\lambda^2)$. Apply the delta method with $g(x) = 1/x$ so $g'(x) = -1/x^2$.
+
+The key subtlety: $g'$ must be evaluated at the *true mean* $\mu = 1/\lambda$, not left as a function of $x$. A common pitfall is to mechanically plug $g'(x) = -1/x^2$ into $[g'(\mu)]^2 \sigma^2$ with the symbol $x$ still floating, producing an expression like $\lambda^{-4} \cdot \lambda^{-2}$ that has no stable interpretation. Evaluate first:
 
 $$
-\sqrt{n}\!\left(\hat{\lambda}_n - \lambda\right) \;\xrightarrow{d}\; \mathcal{N}\!\left(0, \lambda^{-4} \cdot \lambda^{-2}\right) \;=\; \mathcal{N}(0, \lambda^2 \cdot \text{something wrong}).
+g'(1/\lambda) \;=\; -\lambda^2, \qquad [g'(1/\lambda)]^2 \,\sigma^2 \;=\; \lambda^4 \cdot \lambda^{-2} \;=\; \lambda^2.
 $$
 
-Wait — be careful. With $g(x) = 1/x$ at $x = 1/\lambda$, $g'(1/\lambda) = -\lambda^2$. So $[g'(\theta)]^2 \sigma^2 = \lambda^4 \cdot \lambda^{-2} = \lambda^2$, giving
+With $g'$ pinned to $\mu$, the delta method gives
 
 $$
 \sqrt{n}\!\left(\hat{\lambda}_n - \lambda\right) \;\xrightarrow{d}\; \mathcal{N}(0, \lambda^2).

@@ -112,7 +112,8 @@ function lindebergFraction(summands: Summand[], epsilon: number, sN: number): nu
   if (sN === 0) return 0;
   const threshold = epsilon * sN;
   let total = 0;
-  // Use 2000 samples per summand to estimate E[X² · 1(|X| > ε sN)]
+  // Use 1500 samples per summand to estimate E[X² · 1(|X| > ε sN)]
+  // (compromise between precision and interactive responsiveness).
   const samplesPer = 1500;
   for (const s of summands) {
     let sum = 0;
