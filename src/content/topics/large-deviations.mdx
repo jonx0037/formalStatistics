@@ -1,0 +1,909 @@
+---
+title: "Large Deviations & Tail Bounds"
+subtitle: "From Chebyshev to Hoeffding to sub-Gaussian — exponential-rate concentration and the finite-sample tools that power statistical learning theory."
+status: "published"
+difficulty: "intermediate"
+prerequisites:
+  - "expectation-moments"
+  - "modes-of-convergence"
+tags:
+  - "probability"
+  - "convergence"
+  - "concentration-inequalities"
+  - "large-deviations"
+  - "hoeffding"
+  - "bernstein"
+  - "sub-gaussian"
+  - "sub-exponential"
+  - "chernoff-bound"
+  - "mcdiarmid"
+  - "pac-learning"
+  - "tail-bounds"
+domain: "convergence-limit-theorems"
+videoId: null
+notebookPath: "notebooks/large-deviations/12_large_deviations.ipynb"
+githubUrl: "https://github.com/jonx0037/formalStatistics/blob/main/src/content/topics/large-deviations.mdx"
+datePublished: 2026-04-16
+estimatedReadTime: 50
+abstract: "The Law of Large Numbers says the sample mean converges. The Central Limit Theorem says the fluctuations are Gaussian at the 1/√n scale. But neither tells you how many samples you actually need for a given accuracy guarantee. Concentration inequalities answer this question with exponential-rate bounds: for bounded random variables, P(|X̄ₙ − μ| ≥ ε) ≤ 2 exp(−2nε²/(b−a)²). This is Hoeffding's inequality — and it is just the beginning. This topic develops the Chernoff bounding technique (the master method behind all exponential tail bounds), proves Hoeffding's inequality in full (completing the deferred proof from Topic 10), derives Bernstein's variance-aware refinement, introduces the sub-Gaussian and sub-exponential classification of random variables (the modern vocabulary of high-dimensional probability), states the large deviations principle with the Cramér rate function, and proves McDiarmid's bounded-differences inequality for functions of independent variables. The payoff is immediate: PAC learning bounds, Rademacher complexity, the Johnson–Lindenstrauss lemma, differential privacy calibration, and non-asymptotic confidence intervals — the finite-sample toolkit that makes statistical learning theory rigorous."
+formalcalculusPrereqs:
+  - topic: "sequences-limits"
+    site: "formalcalculus"
+    relationship: "Limits for the n → ∞ asymptotics in the LDP statement and the Cramér rate function evaluation."
+  - topic: "differentiation"
+    site: "formalcalculus"
+    relationship: "First-order optimization of the Chernoff bound over t (the tilting parameter). The Legendre transform I(x) = sup_t(tx − log M(t)) is a convex conjugate, requiring differentiation to evaluate. Taylor's theorem enters the Hoeffding lemma."
+  - topic: "series-convergence"
+    site: "formalcalculus"
+    relationship: "Taylor expansion of e^x and log(1 + x) in the sub-Gaussian characterization and the Hoeffding lemma. The MGF expansion M(t) = Σ E[X^n] t^n / n! from Topic 4."
+  - topic: "integration"
+    site: "formalcalculus"
+    relationship: "Expectation integrals in MGF computations. The Cramér rate function involves a supremum over an integral expression."
+formalmlConnections:
+  - topic: "generalization-bounds"
+    site: "formalml"
+    relationship: "PAC learning bounds use Hoeffding: P(|R(ĥ) − R̂ₙ(ĥ)| > ε) ≤ 2|H| exp(−2nε²). Rademacher symmetrization uses McDiarmid's inequality. The O(1/√n) generalization rate for bounded loss classes originates from these concentration bounds."
+  - topic: "dimensionality-reduction"
+    site: "formalml"
+    relationship: "The Johnson–Lindenstrauss lemma proves that random projections from ℝᵈ to ℝᵏ with k = O(ε⁻² log n) approximately preserve pairwise distances among n points. The proof uses sub-Gaussian concentration of the projected inner products."
+  - topic: "differential-privacy"
+    site: "formalml"
+    relationship: "The Gaussian mechanism adds N(0, σ²) noise with σ calibrated via sub-Gaussian tail bounds: σ = Δ√(2 ln(1.25/δ))/ε. Concentrated differential privacy (zCDP) uses the sub-Gaussian MGF bound directly."
+  - topic: "stochastic-gradient-descent"
+    site: "formalml"
+    relationship: "Sub-Gaussian gradient noise analysis justifies step-size schedules. Azuma–Hoeffding applies to the martingale formed by cumulative SGD gradient errors, giving non-asymptotic convergence rates."
+  - topic: "monte-carlo-methods"
+    site: "formalml"
+    relationship: "Hoeffding gives non-asymptotic confidence bands for bounded Monte Carlo estimators: n ≥ (b−a)² ln(2/δ)/(2ε²) samples suffice for ε-accuracy with probability 1 − δ. This complements the CLT's asymptotic ±1.96σ/√n band."
+connections:
+  - topic: "expectation-moments"
+    relationship: "Topic 4 proved Markov (Theorem 11), Chebyshev (Theorem 12), and Jensen (Theorem 13) — the starting point. Markov is the engine of the Chernoff technique; Jensen enters the Hoeffding lemma; MGF machinery (Theorems 15–17) powers all exponential bounds."
+  - topic: "modes-of-convergence"
+    relationship: "Topic 9 defined convergence in probability. Concentration inequalities quantify the rate of this convergence — they bridge the gap between the qualitative statement (X̄ₙ →ᴾ μ) and a quantitative guarantee (how many samples for ε-accuracy?)."
+  - topic: "law-of-large-numbers"
+    relationship: "Topic 10 stated Hoeffding's inequality (Theorem 10.7) without proof, explicitly deferring the proof to this topic. Topic 12 proves it via the Chernoff bounding technique and extends to Bernstein, sub-Gaussian, and McDiarmid."
+  - topic: "central-limit-theorem"
+    relationship: "Topic 11 gives the shape (Gaussian) at scale 1/√n. Topic 12 gives the rate (exponential) at all scales. They are complementary: the CLT describes the body of the distribution, concentration describes the tails."
+  - topic: "continuous-distributions"
+    relationship: "Topic 6 developed the Normal, Exponential, Gamma, and other distributions whose tail behavior is classified in §12.5 (sub-Gaussian vs sub-exponential)."
+  - topic: "exponential-families"
+    relationship: "Topic 7 developed the exponential family framework. The Cramér rate function (§12.6) is the Legendre transform of the log-partition function — a direct connection to exponential family structure."
+references:
+  - type: "book"
+    title: "Concentration Inequalities: A Nonasymptotic Theory of Independence"
+    author: "Stéphane Boucheron, Gábor Lugosi & Pascal Massart"
+    year: 2013
+    publisher: "Oxford University Press"
+    isbn: "978-0-19-953525-5"
+    url: "https://global.oup.com/academic/product/concentration-inequalities-9780199535255"
+    note: "The definitive reference for concentration inequalities. Chapters 2–3 cover sub-Gaussian and bounded-differences methods. Chapter 4 covers the entropy method."
+  - type: "book"
+    title: "High-Dimensional Probability: An Introduction with Applications to Data Science"
+    author: "Roman Vershynin"
+    year: 2018
+    publisher: "Cambridge University Press"
+    isbn: "978-1-108-41519-4"
+    url: "https://www.math.uci.edu/~rvershyn/papers/HDP-book/HDP-book.html"
+    note: "Chapters 2–3 cover sub-Gaussian and sub-exponential random variables with the Orlicz norm characterization. The most accessible modern treatment for ML practitioners."
+  - type: "book"
+    title: "High-Dimensional Statistics: A Non-Asymptotic Viewpoint"
+    author: "Martin J. Wainwright"
+    year: 2019
+    publisher: "Cambridge University Press"
+    isbn: "978-1-108-49802-9"
+    url: "https://www.cambridge.org/highereducation/books/high-dimensional-statistics/8A91ECEEC38F46DAB53E9FF8757D7A4E"
+    note: "Chapter 2 covers concentration inequalities with applications to high-dimensional estimation. The PAC and Rademacher treatments are excellent."
+  - type: "book"
+    title: "Large Deviations Techniques and Applications"
+    author: "Amir Dembo & Ofer Zeitouni"
+    year: 2010
+    edition: "2nd"
+    publisher: "Springer"
+    isbn: "978-3-642-03310-0"
+    url: "https://link.springer.com/book/10.1007/978-3-642-03311-7"
+    note: "The standard graduate reference for large deviations theory. Chapter 2 covers the Cramér rate function and the LDP for sample means."
+  - type: "book"
+    title: "Probability: Theory and Examples"
+    author: "Rick Durrett"
+    year: 2019
+    edition: "5th"
+    publisher: "Cambridge University Press"
+    isbn: "978-1-108-47368-2"
+    url: "https://services.math.duke.edu/~rtd/PTE/PTE5_011119.pdf"
+    note: "Section 2.6 covers large deviations. The Cramér rate function treatment is concise and rigorous."
+  - type: "book"
+    title: "Probability and Measure"
+    author: "Patrick Billingsley"
+    year: 2012
+    edition: "Anniversary"
+    publisher: "Wiley"
+    isbn: "978-1-118-12237-2"
+    url: "https://www.wiley.com/en-us/Probability+and+Measure%2C+Anniversary+Edition-p-9781118122372"
+    note: "Chapter 9 covers large deviations. The MGF-based approach aligns with our treatment."
+  - type: "book"
+    title: "Statistical Inference"
+    author: "George Casella & Roger L. Berger"
+    year: 2002
+    edition: "2nd"
+    publisher: "Cengage"
+    isbn: "978-0-534-24312-8"
+    url: "https://www.cengage.com/c/statistical-inference-2e-casella/9780534243128/"
+    note: "Chapter 5 covers tail bounds in the context of consistency and convergence."
+  - type: "book"
+    title: "All of Statistics"
+    author: "Larry Wasserman"
+    year: 2004
+    publisher: "Springer"
+    isbn: "978-0-387-40272-7"
+    url: "https://link.springer.com/book/10.1007/978-0-387-21736-9"
+    note: "Chapter 4 covers concentration inequalities with applications to confidence intervals and sample complexity."
+  - type: "book"
+    title: "Pattern Recognition and Machine Learning"
+    author: "Christopher M. Bishop"
+    year: 2006
+    publisher: "Springer"
+    isbn: "978-0-387-31073-2"
+    url: "https://www.microsoft.com/en-us/research/publication/pattern-recognition-machine-learning/"
+    note: "Chapter 1 uses concentration to motivate generalization bounds. The PAC framework discussion connects to our §12.8."
+---
+
+import DefinitionBlock from '../../components/ui/DefinitionBlock.astro';
+import TheoremBlock from '../../components/ui/TheoremBlock.astro';
+import ProofBlock from '../../components/ui/ProofBlock.astro';
+import ExampleBlock from '../../components/ui/ExampleBlock.astro';
+import RemarkBlock from '../../components/ui/RemarkBlock.astro';
+import ExternalLink from '../../components/ui/ExternalLink.astro';
+
+import ConcentrationBoundComparison from '../../components/viz/ConcentrationBoundComparison.tsx';
+import ChernoffOptimizationExplorer from '../../components/viz/ChernoffOptimizationExplorer.tsx';
+import SubGaussianClassifier from '../../components/viz/SubGaussianClassifier.tsx';
+import RateFunctionExplorer from '../../components/viz/RateFunctionExplorer.tsx';
+import SampleSizeCalculator from '../../components/viz/SampleSizeCalculator.tsx';
+
+## 12.1 Why Chebyshev Isn't Enough
+
+The [Law of Large Numbers](/topics/law-of-large-numbers) tells us that $\bar{X}_n \to \mu$, and [Chebyshev's inequality](/topics/expectation-moments) gives us a rate: $P(|\bar{X}_n - \mu| \geq \varepsilon) \leq \sigma^2 / (n\varepsilon^2)$. That rate is $O(1/n)$ — polynomial, not exponential. For an ML practitioner designing a model that has to perform within $\varepsilon = 0.01$ of its expected risk with failure probability $\delta = 0.05$, Chebyshev says you need roughly $\sigma^2 / (\varepsilon^2 \delta) \approx 50{,}000$ samples. For a bounded random variable on $[0, 1]$ with $\sigma^2 \leq 1/4$, the true answer (we'll see) is closer to $15{,}000$. Chebyshev is off by more than a factor of three — and it gets worse as $\delta$ shrinks, because $\delta$ enters polynomially rather than logarithmically.
+
+The gap matters. A factor of three in sample complexity is the difference between running an experiment overnight and running it for a week. A factor of twenty (at $\delta = 10^{-3}$) is the difference between running it at all and giving up. The fundamental tension is this: Chebyshev uses only the variance, and the variance is the coarsest summary of a distribution that has any connection to its tails. The true tail probability depends on the whole shape of the distribution — and for many distributions that shape is *much* better than what the variance suggests.
+
+Concentration inequalities are the tools that exploit this gap. They trade additional structural assumptions (boundedness, sub-Gaussian behavior, a known variance bound) for exponentially tighter rates. The payoff is not incremental: it transforms the rate from $O(1/n)$ to $O(e^{-cn\varepsilon^2})$, which at $n = 100, \varepsilon = 0.1$ is $e^{-2} \approx 0.14$ versus Chebyshev's $\sigma^2 / n\varepsilon^2 = 0.25 / 1 = 0.25$ (for Bernoulli). At $n = 1000$, it's $e^{-20} \approx 2 \times 10^{-9}$ versus $0.025$. That's the difference between "maybe safe" and "safe to a billion trials."
+
+<img src="/images/topics/large-deviations/concentration-overview.png"
+     alt="Three-panel overview: (left) Chebyshev σ²/(nε²) vs Hoeffding 2e^(−2nε²) showing polynomial vs exponential decay; (center) sample-size requirements — how many samples for P<0.05 under each bound; (right) CLT shape at 1/√n vs concentration rate at e^(−cn) — the complementary-theorems story"
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+**The structural thesis of this topic.** Where the CLT (Topic 11) describes *the shape* of the distribution of $\bar{X}_n$ at scale $1/\sqrt{n}$ — it's Gaussian — concentration inequalities describe *the rate* at which the tails decay, at all scales. These are complementary: the CLT tells you "for $n = 100$, the histogram of replications looks roughly Gaussian with spread $\sigma/\sqrt{n}$"; concentration tells you "the probability of a deviation of size $\varepsilon$ is at most $2 e^{-cn\varepsilon^2}$, and this is non-asymptotic — it holds for every $n$, not just in the limit." Together, they give a complete picture of how sample means behave.
+
+The rest of this topic develops four families of exponential-rate bounds, in increasing order of specificity: Chernoff (generic, MGF-based), Hoeffding (bounded), Bernstein (bounded + known variance), and sub-Gaussian (modern parametrization). Each uses more information about the distribution than the last, and each gives a correspondingly tighter bound. Then we step up to the Cramér rate function — the optimal exponent, captured as a Legendre transform — and McDiarmid's inequality for functions of independent variables. The topic closes with PAC learning, Johnson–Lindenstrauss, and the other ML applications that made these tools indispensable.
+
+## 12.2 The Chernoff Bounding Technique
+
+The engine behind every exponential tail bound is a single idea: Markov's inequality applied to the exponential of the random variable. We take a positive function of $X$ whose expectation we can control — namely $e^{tX}$ — and let Markov do the rest. Optimizing over the free parameter $t$ gives the tightest bound in the family.
+
+<img src="/images/topics/large-deviations/chernoff-technique.png"
+     alt="Three-panel Chernoff technique: (left) upper bound e^(−ta)·M(t) as a function of t for Bernoulli(0.3) with optimal t* marked; (center) Chernoff bound vs true tail probability for the Binomial, showing tightness; (right) geometric interpretation — the exponential tilt e^(tx) reweights the distribution"
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<TheoremBlock number={1} title="Chernoff bound (generic)">
+Let $X$ be a random variable whose moment-generating function $M_X(t) = \mathbb{E}[e^{tX}]$ is finite in a neighborhood of $0$. Then for any $a \in \mathbb{R}$:
+
+$$
+P(X \geq a) \;\leq\; \inf_{t > 0} \, e^{-ta} \, M_X(t).
+$$
+
+For sums of independent random variables $S_n = X_1 + \cdots + X_n$ with iid summands, this becomes
+
+$$
+P(S_n \geq na) \;\leq\; \inf_{t > 0} \, e^{-tna} \, M_X(t)^n.
+$$
+</TheoremBlock>
+
+<ProofBlock>
+The core step uses [Markov's inequality](/topics/expectation-moments) applied to the non-negative random variable $e^{tX}$. For any $t > 0$, the event $\{X \geq a\}$ is identical to the event $\{e^{tX} \geq e^{ta}\}$ because the exponential is strictly increasing. So
+
+$$
+P(X \geq a) \;=\; P(e^{tX} \geq e^{ta}).
+$$
+
+Markov's inequality applied to $e^{tX}$ with threshold $e^{ta}$ gives
+
+$$
+P(e^{tX} \geq e^{ta}) \;\leq\; \frac{\mathbb{E}[e^{tX}]}{e^{ta}} \;=\; e^{-ta} \, M_X(t).
+$$
+
+This holds for every $t > 0$, so we may take the infimum over $t$:
+
+$$
+P(X \geq a) \;\leq\; \inf_{t > 0} \, e^{-ta} \, M_X(t).
+$$
+
+For the iid sum: by independence, the MGF factorizes, $M_{S_n}(t) = M_X(t)^n$. Apply the single-variable result to $S_n$ with threshold $na$ and factor the MGF. $\blacksquare$
+</ProofBlock>
+
+The Chernoff bound is not one bound — it is a *family* of bounds parametrized by $t$. The art is choosing $t$ to make the bound as tight as possible, which is a convex optimization problem: the log of the objective, $\log(e^{-ta} M_X(t)) = -ta + \log M_X(t)$, is convex in $t$ (the cumulant-generating function $\Lambda(t) = \log M_X(t)$ is convex, as follows from Hölder's inequality applied to the MGF). The minimum is interior whenever the first-order condition $\Lambda'(t^*) = a$ has a solution in the MGF's domain. This $t^*$ is called the *tilting parameter*: it defines a new probability measure under which $X$ has mean $a$ instead of $\mu$, making the event $\{X \geq a\}$ typical rather than rare.
+
+<ChernoffOptimizationExplorer client:visible />
+
+<ExampleBlock number={1} title="Chernoff bound for coin flips">
+Let $X_1, \ldots, X_n$ be iid Bernoulli$(p)$ and $S_n = \sum X_i$. The MGF of a single Bernoulli is $M(t) = 1 - p + p e^t$, so
+
+$$
+e^{-tna(1+\delta)} M(t)^n \;=\; \exp\!\left(-tn p(1+\delta) + n\log(1 - p + p e^t)\right),
+$$
+
+where we've written the threshold as $np(1+\delta)$ for $\delta > 0$. The first-order condition $\Lambda'(t) = p(1+\delta)$ solves explicitly:
+
+$$
+e^{t^*} \;=\; \frac{(1+\delta)(1-p)}{1 - p(1+\delta)}.
+$$
+
+Substituting back, the Chernoff bound for the upper tail of a sum of iid Bernoullis is
+
+$$
+P(S_n \geq np(1+\delta)) \;\leq\; \left(\frac{e^{\delta}}{(1+\delta)^{1+\delta}}\right)^{np}.
+$$
+
+For $p = 0.3, n = 100, \delta = 0.5$ (so threshold $= 45$), this gives a bound of about $0.0117$. The exact probability from the Binomial CDF is about $0.0068$ — the Chernoff bound is loose by less than a factor of two, while Chebyshev for the same event gives a bound of $\sigma^2 / (n (p\delta)^2) = (0.21/100) / (0.15)^2 \approx 0.093$, almost $14\times$ worse.
+</ExampleBlock>
+
+<RemarkBlock number={1} title="The optimal t and the rate function">
+The Chernoff bound is tight in a precise asymptotic sense. Substituting the optimal $t^*$ gives the exponent
+
+$$
+n \cdot \big(t^* a - \Lambda(t^*)\big) \;=\; n \cdot I(a),
+$$
+
+where $I(a) = \sup_t (ta - \Lambda(t))$ is the *Cramér rate function*. So the Chernoff bound for the iid sum is
+
+$$
+P(\bar{X}_n \geq a) \;\leq\; e^{-n I(a)},
+$$
+
+and Cramér's theorem (§12.6) says the bound is actually achieved at the exponential rate: $\lim_{n \to \infty} \frac{1}{n} \log P(\bar{X}_n \geq a) = -I(a)$. The Chernoff technique is *the* optimal exponential bound — nothing better is possible using the MGF alone.
+</RemarkBlock>
+
+## 12.3 Hoeffding's Inequality
+
+For bounded random variables we can control the MGF without computing it exactly. This is the content of *Hoeffding's lemma* — a statement about the MGF of a bounded, centered random variable — and it's the key step that makes the Chernoff technique yield a clean, distribution-free bound. Combining Hoeffding's lemma with the Chernoff technique and independence gives Hoeffding's inequality, which is the workhorse of statistical learning theory.
+
+<img src="/images/topics/large-deviations/hoeffding-proof.png"
+     alt="Three-panel Hoeffding proof: (left) the MGF of a bounded centered variable vs the Gaussian MGF envelope e^(t²(b−a)²/8); (center) Hoeffding bound for [0,1] Bernoulli at several p values; (right) Chebyshev vs Hoeffding comparison extending the convergence-rates figure from Topic 10"
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<TheoremBlock number={2} title="Hoeffding's lemma">
+Let $X$ be a random variable with $a \leq X \leq b$ almost surely and $\mathbb{E}[X] = 0$. Then for every $t \in \mathbb{R}$:
+
+$$
+\mathbb{E}[e^{tX}] \;\leq\; \exp\!\left(\frac{t^2 (b - a)^2}{8}\right).
+$$
+</TheoremBlock>
+
+<ProofBlock>
+The key observation is that convexity of $e^{tx}$ lets us bound $e^{tX}$ above by its chord on $[a, b]$. For any $x \in [a, b]$, write
+
+$$
+x \;=\; \frac{b - x}{b - a} \cdot a \;+\; \frac{x - a}{b - a} \cdot b,
+$$
+
+a convex combination of the endpoints with weights summing to $1$. By convexity of the exponential,
+
+$$
+e^{tx} \;\leq\; \frac{b - x}{b - a} \, e^{ta} \;+\; \frac{x - a}{b - a} \, e^{tb}.
+$$
+
+Taking expectations, using linearity and $\mathbb{E}[X] = 0$:
+
+$$
+\mathbb{E}[e^{tX}] \;\leq\; \frac{b}{b - a} \, e^{ta} \;-\; \frac{a}{b - a} \, e^{tb}.
+$$
+
+It remains to bound this right-hand side by a Gaussian-style quantity. Define
+
+$$
+\varphi(u) \;=\; \log\!\left(\frac{b \, e^{ua} - a \, e^{ub}}{b - a}\right)
+$$
+
+where we've substituted $u = t$ for bookkeeping. We will show $\varphi(u) \leq u^2 (b-a)^2 / 8$ for all $u \in \mathbb{R}$. Direct computation gives $\varphi(0) = 0$, $\varphi'(0) = 0$ (check: $\varphi'(u) = (ab \, e^{ua} - ab \, e^{ub})/(b e^{ua} - a e^{ub})$, which vanishes at $u = 0$), and — after a short algebraic manipulation letting $p = -a/(b-a)$ and $q = 1 - p = b/(b-a)$:
+
+$$
+\varphi''(u) \;=\; \frac{pq(b-a)^2 \, e^{u(a+b)}}{(q \, e^{ua} + p \, e^{ub})^2}.
+$$
+
+By the arithmetic–geometric mean inequality, $q e^{ua} + p e^{ub} \geq e^{u(qa + pb)}$... actually, a cleaner bound comes from the identity $4pq \leq 1$ for $p, q \geq 0, p + q = 1$ combined with $q e^{ua} + p e^{ub} \geq 2\sqrt{pq} \, e^{u(a+b)/2}$ (AM-GM). Squaring:
+
+$$
+(q e^{ua} + p e^{ub})^2 \;\geq\; 4pq \, e^{u(a+b)}.
+$$
+
+Therefore
+
+$$
+\varphi''(u) \;\leq\; \frac{pq(b-a)^2 e^{u(a+b)}}{4pq \, e^{u(a+b)}} \;=\; \frac{(b-a)^2}{4}.
+$$
+
+Now use Taylor's theorem with the Lagrange remainder at $u = 0$: for some $\xi$ between $0$ and $u$,
+
+$$
+\varphi(u) \;=\; \varphi(0) + u \varphi'(0) + \frac{u^2}{2} \varphi''(\xi) \;\leq\; 0 + 0 + \frac{u^2}{2} \cdot \frac{(b-a)^2}{4} \;=\; \frac{u^2 (b-a)^2}{8}.
+$$
+
+Exponentiating and reading off $u = t$ gives
+
+$$
+\mathbb{E}[e^{tX}] \;\leq\; e^{\varphi(t)} \;\leq\; \exp\!\left(\frac{t^2 (b-a)^2}{8}\right). \quad \blacksquare
+$$
+</ProofBlock>
+
+Hoeffding's lemma says a centered bounded random variable has a sub-Gaussian MGF — its MGF is at most the MGF of a Gaussian with variance proxy $(b-a)^2/4$. This is the key fact. Every subsequent proof in this section just plugs this MGF bound into the Chernoff technique.
+
+<TheoremBlock number={3} title="Hoeffding's inequality">
+Let $X_1, \ldots, X_n$ be independent with $X_i \in [a_i, b_i]$ almost surely. Write $\mu_i = \mathbb{E}[X_i]$ and $\mu = \frac{1}{n}\sum_i \mu_i$. Then for every $\varepsilon > 0$:
+
+$$
+P\!\left(\bar{X}_n - \mu \geq \varepsilon\right) \;\leq\; \exp\!\left(-\frac{2 n^2 \varepsilon^2}{\sum_{i=1}^n (b_i - a_i)^2}\right),
+$$
+
+and by symmetry
+
+$$
+P\!\left(\left|\bar{X}_n - \mu\right| \geq \varepsilon\right) \;\leq\; 2 \exp\!\left(-\frac{2 n^2 \varepsilon^2}{\sum_{i=1}^n (b_i - a_i)^2}\right).
+$$
+
+In the iid case with $X_i \in [a, b]$ for all $i$, this simplifies to the form previewed in Theorem 10.7:
+
+$$
+P\!\left(\left|\bar{X}_n - \mu\right| \geq \varepsilon\right) \;\leq\; 2 \exp\!\left(-\frac{2n\varepsilon^2}{(b - a)^2}\right).
+$$
+</TheoremBlock>
+
+<ProofBlock>
+We bound the upper tail $P(\bar{X}_n - \mu \geq \varepsilon)$; the lower tail follows by symmetry applied to $-X_i$, and the two-sided bound by the union bound.
+
+Let $Y_i = X_i - \mu_i$, so $Y_i \in [a_i - \mu_i, b_i - \mu_i]$ and $\mathbb{E}[Y_i] = 0$. The centered range is the same: $(b_i - \mu_i) - (a_i - \mu_i) = b_i - a_i$. The sum $\sum_i Y_i = n(\bar{X}_n - \mu)$, so
+
+$$
+P(\bar{X}_n - \mu \geq \varepsilon) \;=\; P\!\left(\sum_{i=1}^n Y_i \geq n\varepsilon\right).
+$$
+
+Apply the Chernoff technique (Theorem 12.1) to $\sum Y_i$. For any $t > 0$:
+
+$$
+P\!\left(\sum_i Y_i \geq n\varepsilon\right) \;\leq\; e^{-tn\varepsilon} \, \mathbb{E}\!\left[\exp\!\left(t \sum_i Y_i\right)\right].
+$$
+
+By independence, the joint MGF factorizes:
+
+$$
+\mathbb{E}\!\left[e^{t \sum_i Y_i}\right] \;=\; \prod_{i=1}^n \mathbb{E}[e^{t Y_i}].
+$$
+
+Applying Hoeffding's lemma (Theorem 12.2) to each $Y_i$:
+
+$$
+\mathbb{E}[e^{t Y_i}] \;\leq\; \exp\!\left(\frac{t^2 (b_i - a_i)^2}{8}\right),
+$$
+
+so the product is
+
+$$
+\prod_{i=1}^n \mathbb{E}[e^{t Y_i}] \;\leq\; \exp\!\left(\frac{t^2}{8} \sum_{i=1}^n (b_i - a_i)^2\right).
+$$
+
+Combining:
+
+$$
+P\!\left(\sum_i Y_i \geq n\varepsilon\right) \;\leq\; \exp\!\left(-tn\varepsilon + \frac{t^2}{8} \sum_{i=1}^n (b_i - a_i)^2\right).
+$$
+
+This is a quadratic in $t$ that opens upward. Minimizing over $t > 0$ by setting the derivative to zero:
+
+$$
+-n\varepsilon + \frac{t}{4} \sum_{i=1}^n (b_i - a_i)^2 \;=\; 0
+\quad \Longrightarrow \quad
+t^* \;=\; \frac{4 n \varepsilon}{\sum_{i=1}^n (b_i - a_i)^2}.
+$$
+
+Substituting $t^*$ back into the exponent:
+
+$$
+-t^* n \varepsilon + \frac{(t^*)^2}{8} \sum_i (b_i - a_i)^2 \;=\; -\frac{2 n^2 \varepsilon^2}{\sum_i (b_i - a_i)^2}.
+$$
+
+Therefore
+
+$$
+P(\bar{X}_n - \mu \geq \varepsilon) \;\leq\; \exp\!\left(-\frac{2 n^2 \varepsilon^2}{\sum_i (b_i - a_i)^2}\right).
+$$
+
+Applying the same argument to $-Y_i$ (which has the same centered range) yields the lower tail, and adding the two bounds gives the two-sided statement. In the iid case, $\sum_i (b_i - a_i)^2 = n(b-a)^2$, so the exponent becomes $-2n\varepsilon^2/(b-a)^2$ as claimed. $\blacksquare$
+</ProofBlock>
+
+This completes the proof deferred in Theorem 10.7. The bound is remarkably clean: **no variance appears**, only the range. That's both Hoeffding's strength (you don't need to know the variance) and its weakness (you can't benefit from knowing the variance is small).
+
+<ExampleBlock number={2} title="Hoeffding and survey sampling">
+You want to estimate the fraction of voters supporting candidate A to within $\varepsilon = 0.03$ with confidence $1 - \delta = 0.95$. Each response is a Bernoulli$(p)$ with unknown $p \in [0, 1]$. Hoeffding says:
+
+$$
+n \;\geq\; \frac{(b - a)^2 \ln(2/\delta)}{2\varepsilon^2} \;=\; \frac{1 \cdot \ln(40)}{2 \cdot 0.0009} \;\approx\; 2{,}050.
+$$
+
+That matches the "margin of error $\pm 3\%$ with 95% confidence, $n \approx 2000$" rule of thumb reported by polling organizations. The beauty of the Hoeffding derivation is that it's *distribution-free*: it works for any $p$, doesn't require estimating variance, and doesn't rely on a normal approximation. Compare with Chebyshev, which would give $n \geq \sigma^2 / (\varepsilon^2 \delta) \leq 0.25 / (0.0009 \cdot 0.05) \approx 5{,}555$ — the factor of three difference we advertised in §12.1.
+</ExampleBlock>
+
+<RemarkBlock number={2} title="Hoeffding is distribution-free, and that's the trade">
+Hoeffding's inequality uses only the range $[a, b]$, not the variance. For a Bernoulli$(p)$ with $p$ small, this is wasteful: the variance is $p(1-p)$, which can be much smaller than $(b-a)^2/4 = 1/4$. Hoeffding doesn't care — it treats the worst-case range as though it always applied. This is sometimes exactly what you want (in PAC-learning scenarios where the distribution is unknown) and sometimes a real loss. Bernstein's inequality (§12.4) fixes this by letting the bound shrink when the variance shrinks.
+</RemarkBlock>
+
+## 12.4 Bernstein's Inequality
+
+Hoeffding wastes information when the variance is small. For a rare event like Bernoulli$(0.01)$, the variance is $0.0099$ while the worst-case range-squared is $1$ — two orders of magnitude. Bernstein's inequality recovers this loss by using both the variance and the range, and it produces a two-regime bound: sub-Gaussian behavior for small $\varepsilon$ (dominated by variance) and sub-exponential behavior for large $\varepsilon$ (dominated by the range).
+
+<img src="/images/topics/large-deviations/bernstein-comparison.png"
+     alt="Three-panel Bernstein comparison: (left) Bernstein vs Hoeffding for Bernoulli(0.01) — low variance makes Bernstein much tighter; (center) two-regime behavior — sub-Gaussian for small ε, sub-exponential for large ε; (right) Bernstein condition region where Bernstein beats Hoeffding as a function of σ²/(b−a)²"
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<TheoremBlock number={4} title="Bernstein's inequality">
+Let $X_1, \ldots, X_n$ be independent with $\mathbb{E}[X_i] = \mu$, $\text{Var}(X_i) = \sigma^2$, and $|X_i - \mu| \leq M$ almost surely. Then for every $\varepsilon > 0$:
+
+$$
+P\!\left(\left|\bar{X}_n - \mu\right| \geq \varepsilon\right) \;\leq\; 2 \exp\!\left(-\frac{n \varepsilon^2}{2\sigma^2 + \tfrac{2 M \varepsilon}{3}}\right).
+$$
+</TheoremBlock>
+
+<ProofBlock>
+As in Hoeffding, center the variables: let $Y_i = X_i - \mu$ so $|Y_i| \leq M$ and $\mathbb{E}[Y_i] = 0$, $\mathbb{E}[Y_i^2] = \sigma^2$. We bound the upper tail via the Chernoff technique and treat the lower tail symmetrically.
+
+The key step is a sharper MGF bound than Hoeffding's lemma, exploiting the variance. Expand $e^{tY_i}$ as a power series:
+
+$$
+e^{tY_i} \;=\; 1 + tY_i + \sum_{k=2}^{\infty} \frac{t^k Y_i^k}{k!}.
+$$
+
+Taking expectations (since $\mathbb{E}[Y_i] = 0$):
+
+$$
+\mathbb{E}[e^{tY_i}] \;=\; 1 + \sum_{k=2}^{\infty} \frac{t^k \mathbb{E}[Y_i^k]}{k!}.
+$$
+
+For $k \geq 2$, the boundedness $|Y_i| \leq M$ gives $|Y_i^k| \leq M^{k-2} Y_i^2$, so $|\mathbb{E}[Y_i^k]| \leq M^{k-2} \sigma^2$. Therefore
+
+$$
+\mathbb{E}[e^{tY_i}] \;\leq\; 1 + \sigma^2 \sum_{k=2}^{\infty} \frac{t^k M^{k-2}}{k!} \;=\; 1 + \frac{\sigma^2}{M^2}\left(e^{tM} - 1 - tM\right).
+$$
+
+Using the Taylor expansion $e^u - 1 - u = u^2/2 + u^3/6 + \cdots \leq (u^2/2) \cdot e^{\max(u, 0)/3}$... a cleaner route: for $|tM| < 3$, the inequality $e^{tM} - 1 - tM \leq \frac{(tM)^2}{2(1 - tM/3)}$ holds (verify by expanding both sides as series). Using $\log(1 + x) \leq x$:
+
+$$
+\log \mathbb{E}[e^{tY_i}] \;\leq\; \frac{\sigma^2 t^2 / 2}{1 - tM/3}, \qquad 0 < t < 3/M.
+$$
+
+This is the sub-exponential MGF bound: it grows like a sub-Gaussian MGF for small $t$ but blows up as $t \to 3/M$. Summing over independent variables:
+
+$$
+\log \mathbb{E}\!\left[\exp\!\left(t \sum_i Y_i\right)\right] \;=\; \sum_i \log \mathbb{E}[e^{tY_i}] \;\leq\; \frac{n \sigma^2 t^2 / 2}{1 - tM/3}.
+$$
+
+Chernoff: for $t \in (0, 3/M)$,
+
+$$
+P\!\left(\sum Y_i \geq n\varepsilon\right) \;\leq\; \exp\!\left(-tn\varepsilon + \frac{n \sigma^2 t^2 / 2}{1 - tM/3}\right).
+$$
+
+Optimizing over $t$: setting the derivative of the exponent to zero gives
+
+$$
+t^* \;=\; \frac{\varepsilon}{\sigma^2 + M \varepsilon / 3}.
+$$
+
+Substituting back (a calculation the reader is welcome to verify term-by-term):
+
+$$
+-t^* n\varepsilon + \frac{n\sigma^2 (t^*)^2 / 2}{1 - t^* M/3} \;=\; -\frac{n \varepsilon^2}{2\sigma^2 + 2M\varepsilon/3}.
+$$
+
+Therefore
+
+$$
+P\!\left(\bar{X}_n - \mu \geq \varepsilon\right) \;\leq\; \exp\!\left(-\frac{n\varepsilon^2}{2\sigma^2 + 2M\varepsilon/3}\right).
+$$
+
+The two-sided version follows by applying the same argument to $-Y_i$ and union-bounding. $\blacksquare$
+</ProofBlock>
+
+Now the comparison between Chebyshev, Hoeffding, Bernstein, sub-Gaussian, and the exact tail — all on a single chart — makes the full progression concrete.
+
+<ConcentrationBoundComparison client:visible />
+
+<ExampleBlock number={3} title="Bernstein vs Hoeffding for rare events">
+Take $X_i \sim$ Bernoulli$(0.01)$, iid, $n = 1000$. Then $\mu = 0.01$, $\sigma^2 = 0.0099$, $M = 0.99$ (the deviation $|X_i - \mu|$ is at most $1 - 0.01 = 0.99$), $b - a = 1$. For $\varepsilon = 0.01$:
+
+- **Hoeffding:** $2 \exp(-2 \cdot 1000 \cdot 0.0001 / 1) = 2 e^{-0.2} \approx 1.64$ — clamped to $1$; useless.
+- **Bernstein:** $2 \exp\!\big(-\frac{1000 \cdot 0.0001}{2 \cdot 0.0099 + 2 \cdot 0.99 \cdot 0.01 / 3}\big) = 2 \exp(-0.1 / 0.02585) \approx 2 e^{-3.87} \approx 0.042$.
+
+Bernstein gives a useful bound while Hoeffding gives nothing. The reason is the variance: when $p$ is small, $\sigma^2 = p(1-p) \approx p$ is much smaller than $(b-a)^2/4 = 0.25$. Bernstein exploits this; Hoeffding cannot.
+</ExampleBlock>
+
+<RemarkBlock number={3} title="Two regimes: sub-Gaussian and sub-exponential">
+Bernstein's denominator $2\sigma^2 + 2M\varepsilon/3$ interpolates two behaviors. For small $\varepsilon$ (the *sub-Gaussian regime*), the $2\sigma^2$ term dominates and the exponent is $\approx -n\varepsilon^2/(2\sigma^2)$ — Gaussian-like tail decay with variance proxy $\sigma^2$. For large $\varepsilon$ (the *sub-exponential regime*), the $2M\varepsilon/3$ term dominates and the exponent is $\approx -3n\varepsilon/(2M)$ — exponential (not Gaussian) tail decay. The crossover happens around $\varepsilon \approx 3\sigma^2/M$. This two-regime behavior is exactly what we mean by a *sub-exponential* random variable, which we define next.
+</RemarkBlock>
+
+## 12.5 Sub-Gaussian and Sub-Exponential Random Variables
+
+The modern approach to concentration is not to prove each bound separately but to classify random variables by how their MGF behaves near $t = 0$. Sub-Gaussian variables have MGFs bounded by a Gaussian; sub-exponential variables have MGFs bounded by a looser one that only works in a neighborhood. Each class has a clean tail bound and closure properties (sums, products, powers) that let you combine simple building blocks into sophisticated bounds.
+
+<img src="/images/topics/large-deviations/sub-gaussian-classification.png"
+     alt="Three-panel sub-Gaussian classification: (left) tail decay comparison — Gaussian vs χ²(1) vs Cauchy with sub-Gaussian envelope; (center) Orlicz norm ψ₂ and ψ₁ for common distributions; (right) hierarchy — bounded ⊂ sub-Gaussian ⊂ sub-exponential ⊂ finite-variance"
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<DefinitionBlock number={1} title="Sub-Gaussian random variable">
+A random variable $X$ with $\mathbb{E}[X] = \mu$ is *sub-Gaussian with parameter* $\sigma \geq 0$ if for every $t \in \mathbb{R}$:
+
+$$
+\mathbb{E}\!\left[e^{t(X - \mu)}\right] \;\leq\; \exp\!\left(\frac{\sigma^2 t^2}{2}\right).
+$$
+
+The parameter $\sigma$ is sometimes called the *variance proxy*. It need not equal the actual standard deviation of $X$.
+</DefinitionBlock>
+
+<DefinitionBlock number={2} title="Sub-exponential random variable">
+A random variable $X$ with $\mathbb{E}[X] = \mu$ is *sub-exponential with parameters* $(\nu^2, b)$ (both positive) if for every $|t| < 1/b$:
+
+$$
+\mathbb{E}\!\left[e^{t(X - \mu)}\right] \;\leq\; \exp\!\left(\frac{\nu^2 t^2}{2}\right).
+$$
+
+Compared to the sub-Gaussian definition, the MGF bound only holds in a *neighborhood* of $t = 0$, not for all $t$. This allows heavier tails, but the tail probability decays only exponentially (not Gaussian) past a certain scale.
+</DefinitionBlock>
+
+<TheoremBlock number={5} title="Sub-Gaussian equivalences">
+Let $X$ be a random variable with $\mathbb{E}[X] = \mu$. The following are equivalent (up to universal constants in the parameter):
+
+1. **MGF condition:** $X$ is sub-Gaussian with parameter $\sigma$: $\mathbb{E}[e^{t(X - \mu)}] \leq e^{\sigma^2 t^2/2}$ for all $t$.
+2. **Tail condition:** $P(|X - \mu| \geq u) \leq 2 e^{-u^2/(2\sigma^2)}$ for all $u \geq 0$.
+3. **Moment condition:** $(\mathbb{E}[|X - \mu|^p])^{1/p} \leq C \sigma \sqrt{p}$ for all $p \geq 1$, with $C$ a universal constant.
+4. **Orlicz norm condition:** $\|X - \mu\|_{\psi_2} < \infty$, where $\|Y\|_{\psi_2} = \inf\{c > 0 : \mathbb{E}[\exp(Y^2/c^2)] \leq 2\}$.
+</TheoremBlock>
+
+The proof of Theorem 12.5 is an exercise in manipulating the MGF, the tail, and the moments against each other — the key tools are Markov's inequality (MGF ⟹ tail, via the Chernoff argument) and integration-by-parts (tail ⟹ moments) — and the universal-constant factors relating the four parameters are small and can be read off from Vershynin (2018, Chapter 2). We will not reproduce the proof here; the practically important thing is the equivalence itself, which means that "sub-Gaussian" is a single property that can be checked in whichever formulation is most convenient.
+
+<SubGaussianClassifier client:visible />
+
+<ExampleBlock number={4} title="Classification of common distributions">
+- **Normal$(\mu, \sigma^2)$:** The MGF is exactly $e^{\mu t + \sigma^2 t^2/2}$, so it is sub-Gaussian with parameter $\sigma$ — the variance proxy equals the actual standard deviation.
+- **Bounded $X \in [a, b]$:** By Hoeffding's lemma, $X$ centered is sub-Gaussian with parameter $(b-a)/2$. So *every bounded random variable is sub-Gaussian*, though the variance proxy may be loose.
+- **Rademacher $X \in \{-1, +1\}$:** Sub-Gaussian with $\sigma = 1$. The key building block of Rademacher complexity.
+- **Exponential$(\lambda)$ centered at $1/\lambda$:** Sub-exponential with parameters $(\nu^2, b) = (4/\lambda^2, 2/\lambda)$, but *not* sub-Gaussian — the right tail $P(X > t) = e^{-\lambda t}$ decays like $e^{-\lambda t}$ rather than $e^{-t^2}$.
+- **$\chi^2(1) - 1$:** Sub-exponential but not sub-Gaussian. This matters: $\chi^2$ variables arise as squared Gaussians, and the square of a sub-Gaussian is always sub-exponential.
+- **Poisson$(\lambda)$ centered at $\lambda$:** Sub-exponential, not sub-Gaussian.
+- **Cauchy$(0, 1)$:** Has no finite mean, let alone a sub-Gaussian or sub-exponential MGF. Heavy-tailed. Concentration inequalities do not apply; even the LLN fails for Cauchy.
+- **Student-$t(\nu)$ for $\nu \geq 3$:** Has finite variance but only polynomial tail decay. Not sub-exponential.
+</ExampleBlock>
+
+<ExampleBlock number={5} title="Sums of sub-Gaussians are sub-Gaussian">
+If $X_1, \ldots, X_n$ are independent and sub-Gaussian with parameters $\sigma_1, \ldots, \sigma_n$, then $\sum_i X_i$ is sub-Gaussian with parameter $\sqrt{\sum_i \sigma_i^2}$, and $\bar{X}_n$ is sub-Gaussian with parameter $\sigma/\sqrt{n}$ (in the iid case with common $\sigma$). The proof is a one-line MGF computation:
+
+$$
+\mathbb{E}\!\left[e^{t \sum_i (X_i - \mu_i)}\right] \;=\; \prod_i \mathbb{E}[e^{t(X_i - \mu_i)}] \;\leq\; \prod_i e^{\sigma_i^2 t^2/2} \;=\; \exp\!\left(\frac{t^2 \sum_i \sigma_i^2}{2}\right).
+$$
+
+This is why sub-Gaussian is the right abstraction for statistical learning: every class closed under finite sums gives a rate that decays at the correct $1/\sqrt{n}$ scale. Apply the tail condition to $\bar{X}_n$ with variance proxy $\sigma^2/n$:
+
+$$
+P(|\bar{X}_n - \mu| \geq \varepsilon) \;\leq\; 2 \exp\!\left(-\frac{n\varepsilon^2}{2\sigma^2}\right).
+$$
+
+This is the sub-Gaussian form of the bound — cleaner than Hoeffding because it parametrizes by $\sigma$ rather than by $(b-a)$.
+</ExampleBlock>
+
+<RemarkBlock number={4} title="The hierarchy and the Orlicz norm">
+There is a strict hierarchy of tail classes:
+
+$$
+\text{bounded} \;\subset\; \text{sub-Gaussian} \;\subset\; \text{sub-exponential} \;\subset\; \{\text{finite variance}\} \;\subset\; \{\text{all}\}.
+$$
+
+Each inclusion is strict: a Normal is sub-Gaussian but not bounded; an Exponential is sub-exponential but not sub-Gaussian; a Student-$t(3)$ has finite variance but is not sub-exponential; a Cauchy has neither. Closure properties sit nicely on top: products of sub-Gaussians are sub-exponential (as in $\chi^2 = Z^2$), sums of sub-Gaussians are sub-Gaussian, maxima of finitely many sub-Gaussians are sub-Gaussian (with parameter scaled by $\sqrt{\log n}$). The Orlicz norm $\|X\|_{\psi_2}$ is a *single number* that controls the full tail behavior — Vershynin's Chapter 2 develops this formalism in detail, and it's the vocabulary of choice in high-dimensional statistics.
+</RemarkBlock>
+
+## 12.6 The Cramér Rate Function and Large Deviations
+
+We've seen that the Chernoff bound gives an exponential rate of decay for tail probabilities, and that the optimal exponent is $I(a) = \sup_t (ta - \Lambda(t))$. This exponent deserves a name and a theory of its own. The study of exponential rates — of the form $P(\bar{X}_n \in A) \approx e^{-n I(A)}$ for sets $A$ far from the mean — is the subject of *large deviations theory*. Its central result for iid sample means is Cramér's theorem: the exponent is *exactly* the rate function, not just an upper bound.
+
+<img src="/images/topics/large-deviations/rate-function.png"
+     alt="Three-panel rate function: (left) Cramér rate I(x) for Bernoulli(p) = KL divergence for several p; (center) I(x) for N(μ, σ²) as the parabola (x−μ)²/(2σ²); (right) geometric interpretation — I(x) = sup_t(tx − Λ(t)) is the gap between the tangent line and the cumulant generating function"
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<DefinitionBlock number={3} title="Cramér rate function">
+For a random variable $X$ with cumulant-generating function $\Lambda(t) = \log \mathbb{E}[e^{tX}]$ (finite in a neighborhood of $0$), the *Cramér rate function* is the Legendre transform of $\Lambda$:
+
+$$
+I(x) \;=\; \sup_{t \in \mathbb{R}} \, \big(tx - \Lambda(t)\big).
+$$
+
+The rate function is non-negative, convex, and vanishes at $x = \mathbb{E}[X]$.
+</DefinitionBlock>
+
+The non-negativity and the zero at the mean are both consequences of the definition: choose $t = 0$ to get $I(x) \geq 0x - \Lambda(0) = 0$, and at $x = \mu$ the function $tx - \Lambda(t) = t\mu - \Lambda(t)$ is maximized at $t = 0$ (since $\Lambda'(0) = \mu$), giving $I(\mu) = 0$. Convexity follows because $I$ is a supremum of affine functions of $x$.
+
+<TheoremBlock number={6} title="Cramér's theorem (LDP for iid sample means)">
+Let $X_1, X_2, \ldots$ be iid with cumulant-generating function $\Lambda(t)$ finite in a neighborhood of $0$, and let $\mu = \mathbb{E}[X_1]$. Then for every $a > \mu$:
+
+$$
+\lim_{n \to \infty} \frac{1}{n} \log P(\bar{X}_n \geq a) \;=\; -I(a),
+$$
+
+and for every $a < \mu$:
+
+$$
+\lim_{n \to \infty} \frac{1}{n} \log P(\bar{X}_n \leq a) \;=\; -I(a).
+$$
+
+Equivalently, $P(\bar{X}_n \geq a)$ decays exponentially at the rate $I(a)$.
+</TheoremBlock>
+
+Cramér's theorem says the Chernoff upper bound is *exponentially tight*: there is no better exponent than $I(a)$. The proof of the upper bound is exactly the Chernoff argument (Theorem 12.1). The proof of the matching lower bound — that $P(\bar{X}_n \geq a) \geq e^{-n(I(a) + o(1))}$ — uses a *change of measure*: tilt the distribution so that the mean becomes $a$, the event $\{\bar{X}_n \geq a\}$ becomes typical under the tilted measure, and then bound the likelihood ratio. We refer the reader to Dembo & Zeitouni (2010, Theorem 2.2.3) for the full argument.
+
+<RateFunctionExplorer client:visible />
+
+<ExampleBlock number={6} title="The Bernoulli rate function is the KL divergence">
+For $X_i \sim$ Bernoulli$(p)$, $\Lambda(t) = \log(1 - p + p e^t)$. The first-order condition $\Lambda'(t^*) = x$ becomes $p e^{t^*}/(1 - p + p e^{t^*}) = x$, which solves to $e^{t^*} = x(1-p)/[p(1-x)]$. Substituting:
+
+$$
+I(x) \;=\; t^* x - \Lambda(t^*) \;=\; x \log\!\frac{x}{p} + (1-x) \log\!\frac{1-x}{1-p} \;=\; D_{\text{KL}}\!\big(\text{Ber}(x) \,\|\, \text{Ber}(p)\big).
+$$
+
+So the large-deviation rate for a Bernoulli average deviating to $x$ is the Kullback–Leibler divergence between the empirical distribution Ber$(x)$ and the true distribution Ber$(p)$. This is not a coincidence — it is the Bernoulli case of Sanov's theorem (next remark), which says the rate for the empirical measure is *always* the KL divergence.
+
+For example, at $p = 0.3, x = 0.5$: $I(0.5) = 0.5 \log(5/3) + 0.5 \log(5/7) \approx 0.0872$, so $P(\bar{X}_n \geq 0.5) \lesssim e^{-0.0872 n}$. For $n = 100$ this is about $1.7 \times 10^{-4}$; the true binomial probability at $p = 0.3$ is about $1.8 \times 10^{-5}$. The Cramér rate captures the exponential order correctly; the sub-exponential prefactor (which Cramér does not capture) accounts for the remaining factor of $10$.
+</ExampleBlock>
+
+<RemarkBlock number={5} title="Sanov's theorem — the rate is KL divergence">
+Sanov's theorem generalizes Cramér from the scalar sample mean to the full empirical distribution. If $X_1, \ldots, X_n$ are iid from a distribution $P$ and $\hat{P}_n$ is the empirical measure (point masses at the observations), then for a "nice" set of distributions $\mathcal{Q}$ far from $P$:
+
+$$
+\lim_{n \to \infty} \frac{1}{n} \log P(\hat{P}_n \in \mathcal{Q}) \;=\; -\inf_{Q \in \mathcal{Q}} D_{\text{KL}}(Q \,\|\, P).
+$$
+
+In words: the rate at which the empirical distribution deviates to any fixed target $Q$ is the KL divergence between $Q$ and $P$. This is the information-theoretic interpretation of large deviations — rare events are improbable in proportion to how much information they would contain about the wrong distribution. The proof uses the method of types or topological machinery that we do not develop here; Dembo & Zeitouni (Chapter 6) is the standard reference. For our purposes, the Bernoulli case (Example 12.6) is the concrete instance that matters.
+</RemarkBlock>
+
+<RemarkBlock number={6} title="Exponential families and the Legendre transform">
+The rate function $I(x)$ is the Legendre transform of the cumulant-generating function $\Lambda(t) = \log M_X(t)$. For [exponential families](/topics/exponential-families), $\Lambda(t)$ is the log-partition function (up to a shift in parameterization). So the rate function of an exponential-family sample mean is the *conjugate* of the log-partition function — a direct mathematical connection between large deviations and the exponential-family machinery of Topic 7. In Bayesian inference, this same conjugacy structure appears: the posterior concentrates around the MLE at the rate given by the KL divergence, and the quadratic approximation to $I(x)$ at the MLE is the Fisher information — the curvature of the log-likelihood. All of these are manifestations of the same Legendre duality.
+</RemarkBlock>
+
+## 12.7 Concentration for Functions of Independent Variables
+
+So far we've concentrated sample means — linear functions of the data. But many quantities in statistics and ML are *non-linear* functions of the data: the empirical CDF $F_n(x)$, the sample median, the kernel density estimator, the supremum deviation $\sup_x |F_n(x) - F(x)|$, the Rademacher complexity of a function class. We need tools that apply to any function of $(X_1, \ldots, X_n)$ that doesn't change too much when one input is changed.
+
+The machinery is *McDiarmid's inequality*, which is the direct corollary of the *Azuma–Hoeffding inequality* for martingales. We state Azuma–Hoeffding without proving it (the proof requires some martingale theory we don't develop) and use it to prove McDiarmid.
+
+<img src="/images/topics/large-deviations/mcdiarmid-application.png"
+     alt="Three-panel McDiarmid: (left) Doob martingale construction for f(X₁,...,Xₙ) — each step reveals one variable; (center) McDiarmid applied to the empirical mean recovering Hoeffding; (right) McDiarmid applied to the kernel density estimator — bounded differences with cᵢ = sup K(x)/(nh)"
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+A *martingale* $(M_0, M_1, \ldots, M_n)$ is a sequence of random variables with the property that each $M_k$ equals the conditional expectation of $M_{k+1}$ given the history: $\mathbb{E}[M_{k+1} \mid M_0, \ldots, M_k] = M_k$. Intuitively, it's a "fair game" process: knowing the past doesn't help you predict whether the next step will go up or down. The *increments* $M_k - M_{k-1}$ have mean zero given the past, and they can be arbitrarily dependent — what matters is only that they are not too large in magnitude.
+
+<TheoremBlock number={7} title="Azuma–Hoeffding inequality">
+Let $(M_0, M_1, \ldots, M_n)$ be a martingale with $|M_k - M_{k-1}| \leq c_k$ almost surely for each $k = 1, \ldots, n$. Then for every $t \geq 0$:
+
+$$
+P\!\left(|M_n - M_0| \geq t\right) \;\leq\; 2 \exp\!\left(-\frac{t^2}{2 \sum_{k=1}^n c_k^2}\right).
+$$
+</TheoremBlock>
+
+Azuma–Hoeffding is Hoeffding for martingale increments — the same sub-Gaussian MGF argument goes through, replacing independence with the martingale property (conditional expectation in place of unconditional). The full proof is in Boucheron, Lugosi & Massart (2013, §2.5) or Dembo & Zeitouni (Chapter 2).
+
+<TheoremBlock number={8} title="McDiarmid's inequality (bounded differences)">
+Let $f : \mathcal{X}^n \to \mathbb{R}$ be a function of $n$ variables satisfying the *bounded-differences property* with constants $c_1, \ldots, c_n$: for every $i$ and every $x_1, \ldots, x_n, x_i' \in \mathcal{X}$,
+
+$$
+\left|f(x_1, \ldots, x_i, \ldots, x_n) - f(x_1, \ldots, x_i', \ldots, x_n)\right| \;\leq\; c_i.
+$$
+
+If $X_1, \ldots, X_n$ are independent random variables, then for every $t \geq 0$:
+
+$$
+P\!\left(\left|f(X_1, \ldots, X_n) - \mathbb{E}[f(X_1, \ldots, X_n)]\right| \geq t\right) \;\leq\; 2 \exp\!\left(-\frac{2 t^2}{\sum_{i=1}^n c_i^2}\right).
+$$
+</TheoremBlock>
+
+<ProofBlock>
+The proof uses the *Doob martingale* construction: a sequence of conditional expectations that reveals the inputs one at a time. Define
+
+$$
+M_k \;=\; \mathbb{E}[f(X_1, \ldots, X_n) \mid X_1, \ldots, X_k], \qquad k = 0, 1, \ldots, n.
+$$
+
+Then $M_0 = \mathbb{E}[f]$ (no conditioning), $M_n = f(X_1, \ldots, X_n)$ (fully conditioned), and by the tower property $\mathbb{E}[M_{k+1} \mid M_0, \ldots, M_k] = M_k$ — so $(M_k)$ is a martingale.
+
+The key step is bounding the increments. Because the $X_i$ are independent, we can integrate out $X_{k+1}$ conditional on $(X_1, \ldots, X_k)$ to express both $M_k$ and $M_{k+1}$ as integrals over $X_{k+1}$. Using the bounded-differences property:
+
+$$
+|M_{k+1} - M_k| \;=\; \left|\mathbb{E}[f \mid X_1, \ldots, X_{k+1}] - \mathbb{E}[f \mid X_1, \ldots, X_k]\right|.
+$$
+
+We can write this as $|\mathbb{E}[f(X_1, \ldots, X_{k+1}, X'_{k+2}, \ldots, X'_n) - f(X_1, \ldots, X_k, X'_{k+1}, \ldots, X'_n)]|$ where the $X'_j$ are independent copies integrated out. The bounded-differences assumption in coordinate $k+1$ gives
+
+$$
+|M_{k+1} - M_k| \;\leq\; c_{k+1}.
+$$
+
+Applying Azuma–Hoeffding (Theorem 12.7) with these increment bounds:
+
+$$
+P(|M_n - M_0| \geq t) \;\leq\; 2 \exp\!\left(-\frac{t^2}{2 \sum_k c_k^2}\right).
+$$
+
+The factor of $2$ in the final bound (McDiarmid has $2t^2$ in the numerator, while Azuma has $t^2/2$) is because the martingale construction gives $c_k$ as a bound on $|M_k - M_{k-1}|$, which is actually $\leq c_k/2$ when $f$ has symmetric bounded differences — this sharpening is the standard factor-of-4 in moving from Azuma to McDiarmid. For the symmetric statement above, $|M_{k+1} - M_k| \leq c_{k+1}/2$, giving the factor-of-$2$-in-exponent improvement. $\blacksquare$
+</ProofBlock>
+
+McDiarmid is the Swiss army knife of concentration. It applies to *any* function of independent inputs that has bounded differences, regardless of the function's structure. The variance of $f$ doesn't enter — only the coordinate-wise Lipschitz constants $c_i$.
+
+<ExampleBlock number={7} title="The empirical CDF satisfies bounded differences">
+For iid samples $X_1, \ldots, X_n$ from distribution $F$, the empirical CDF is $F_n(x) = \frac{1}{n} \sum_{i=1}^n \mathbf{1}\{X_i \leq x\}$. For any fixed $x$, changing one input $X_i$ changes $F_n(x)$ by at most $1/n$ (it either adds or removes one indicator). So $F_n(x)$ satisfies bounded differences with $c_i = 1/n$ for each $i$, and McDiarmid gives
+
+$$
+P\!\left(\left|F_n(x) - F(x)\right| \geq t\right) \;\leq\; 2 \exp\!\left(-2 n t^2\right).
+$$
+
+This is pointwise in $x$. The supremum $\sup_x |F_n(x) - F(x)|$ requires the stronger [Dvoretzky–Kiefer–Wolfowitz inequality](/topics/law-of-large-numbers) (Theorem 10.9), which gives the same exponential rate but uniformly over $x$.
+
+A more substantial example: the kernel density estimator $\hat{f}_h(x) = \frac{1}{nh} \sum_i K((x - X_i)/h)$. Changing one $X_i$ changes $\hat{f}_h(x)$ by at most $\sup_u K(u) / (nh)$, so $c_i = \|K\|_\infty / (nh)$, and McDiarmid gives exponential concentration of $\hat{f}_h(x)$ around its expectation at rate $2n^2 h^2 t^2 / (n \|K\|_\infty^2) = 2nh^2 t^2 / \|K\|_\infty^2$. This is the starting point for uniform convergence of density estimators.
+</ExampleBlock>
+
+<RemarkBlock number={7} title="Why McDiarmid rather than Hoeffding for sums of Lipschitz-like functionals">
+When $f$ is a linear function — the sample mean — McDiarmid with $c_i = (b-a)/n$ recovers Hoeffding exactly: $P(|\bar{X}_n - \mu| \geq t) \leq 2 \exp(-2 n t^2 / (b-a)^2)$. But McDiarmid goes much further: it concentrates *nonlinear* functionals (empirical CDFs, kernel densities, Rademacher complexities, the maximum discrepancy of a VC class over a sample) with no additional work beyond checking the bounded-differences property. This is why it dominates statistical learning theory. The cost — relative to a dedicated argument for a specific functional — is that the bound is always worst-case in a coordinate-wise sense; variance-sensitive refinements exist (Bousquet's inequality, Talagrand's inequality) but require substantially more machinery.
+</RemarkBlock>
+
+## 12.8 From Bounds to Algorithms: PAC, Johnson–Lindenstrauss, Differential Privacy
+
+The payoff of the concentration machinery is immediate and broad. Three examples illustrate the range.
+
+<img src="/images/topics/large-deviations/ml-applications.png"
+     alt="Three-panel ML applications: (left) PAC bound — sample complexity n(ε, δ, |H|) for several |H|; (center) Johnson–Lindenstrauss — target dimension k vs number of points n for several ε; (right) differential privacy — noise scale σ vs privacy parameter ε for several δ"
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<TheoremBlock number={9} title="PAC bound for finite hypothesis classes">
+Let $\mathcal{H}$ be a finite set of hypotheses $h : \mathcal{X} \to \{0, 1\}$, each with $0$–$1$ loss on the data distribution $P$: $R(h) = \mathbb{E}[L(h(X), Y)]$. Given iid training samples $(X_1, Y_1), \ldots, (X_n, Y_n)$, let $\hat{R}_n(h)$ be the training error. Then for every $\varepsilon > 0, \delta \in (0, 1)$:
+
+$$
+P\!\left(\sup_{h \in \mathcal{H}} \big|R(h) - \hat{R}_n(h)\big| \geq \varepsilon\right) \;\leq\; 2 |\mathcal{H}| \exp(-2 n \varepsilon^2),
+$$
+
+and therefore $n \geq \frac{1}{2\varepsilon^2} \log\!\frac{2|\mathcal{H}|}{\delta}$ samples suffice to guarantee that the training error approximates the true error uniformly over $\mathcal{H}$ within $\varepsilon$, with probability at least $1 - \delta$.
+</TheoremBlock>
+
+<ProofBlock>
+For each fixed $h \in \mathcal{H}$, the loss $L(h(X_i), Y_i)$ is bounded in $[0, 1]$, so Hoeffding's inequality gives
+
+$$
+P\!\left(|R(h) - \hat{R}_n(h)| \geq \varepsilon\right) \;\leq\; 2 \exp(-2 n \varepsilon^2).
+$$
+
+By the union bound over $\mathcal{H}$:
+
+$$
+P\!\left(\exists h \in \mathcal{H} : |R(h) - \hat{R}_n(h)| \geq \varepsilon\right) \;\leq\; \sum_{h \in \mathcal{H}} P(|R(h) - \hat{R}_n(h)| \geq \varepsilon) \;\leq\; 2 |\mathcal{H}| \exp(-2 n \varepsilon^2).
+$$
+
+Setting this $\leq \delta$ and solving for $n$ gives the sample complexity bound. $\blacksquare$
+</ProofBlock>
+
+<SampleSizeCalculator client:visible />
+
+<ExampleBlock number={8} title="Empirical risk minimization is consistent">
+Let $\hat{h}_n = \arg\min_{h \in \mathcal{H}} \hat{R}_n(h)$ be the empirical risk minimizer. Theorem 12.9 implies $R(\hat{h}_n) \leq R^* + 2\varepsilon$ with probability $\geq 1 - \delta$, where $R^* = \min_{h \in \mathcal{H}} R(h)$ is the best possible risk in the class. This is the *Probably Approximately Correct* (PAC) guarantee: with high probability (at least $1 - \delta$), the learned hypothesis is approximately optimal (within $2\varepsilon$ of the best). The sample complexity $n \propto \log|\mathcal{H}|/\varepsilon^2$ is what powers VC-dimension bounds, Rademacher-complexity bounds, and the modern statistical learning theory of Vapnik, Bousquet, and others.
+</ExampleBlock>
+
+<ExampleBlock number={9} title="Johnson–Lindenstrauss: random projections preserve distances">
+Given $n$ points in $\mathbb{R}^d$, project them into $\mathbb{R}^k$ using a random Gaussian matrix $A \in \mathbb{R}^{k \times d}$ with iid $\mathcal{N}(0, 1/k)$ entries. The Johnson–Lindenstrauss lemma says that if
+
+$$
+k \;\geq\; \frac{8 \ln(n / \delta)}{\varepsilon^2},
+$$
+
+then with probability at least $1 - \delta$, every pairwise distance $\|x_i - x_j\|$ is preserved within a factor of $(1 \pm \varepsilon)$ after projection: $\|A(x_i - x_j)\|^2 \in [(1-\varepsilon), (1+\varepsilon)] \|x_i - x_j\|^2$.
+
+The proof: fix a single pair $x, y$ and their difference $v = x - y$. The random variable $\|Av\|^2 / \|v\|^2$ is a scaled chi-squared (a sum of $k$ squared Gaussians, divided by $k$), and concentration of sub-exponential random variables (Bernstein's inequality applied to a chi-squared, or direct MGF calculations) gives $P(\|Av\|^2 / \|v\|^2 \notin [1 - \varepsilon, 1 + \varepsilon]) \leq 2 e^{-k\varepsilon^2/8}$. Union-bounding over all $\binom{n}{2}$ pairs gives the claimed target dimension.
+
+The punchline: $k = O(\varepsilon^{-2} \log n)$ dimensions suffice — *independent of the original dimension $d$*. This is the entire theoretical foundation of dimensionality reduction by random projection, which underlies sketching algorithms, fast nearest-neighbor search, and compressed sensing.
+</ExampleBlock>
+
+<RemarkBlock number={8} title="Differential privacy: noise calibration via sub-Gaussian tails">
+The *Gaussian mechanism* for differential privacy releases a query $f(D)$ on a dataset $D$ with added noise: $f(D) + Z$ where $Z \sim \mathcal{N}(0, \sigma^2)$. To achieve $(\varepsilon, \delta)$-differential privacy, we need to control how much the output distribution shifts when one person's data changes — which is controlled by the sensitivity $\Delta_f = \sup_{D, D'} |f(D) - f(D')|$, where the sup is over datasets differing in one record.
+
+A calculation using the sub-Gaussian tail bound shows that the noise scale
+
+$$
+\sigma \;=\; \frac{\Delta_f \sqrt{2 \ln(1.25 / \delta)}}{\varepsilon}
+$$
+
+is sufficient. The derivation: the privacy loss random variable $\log(P_D(o) / P_{D'}(o))$ is sub-Gaussian with parameter $\Delta_f/\sigma$, and the $(\varepsilon, \delta)$-privacy condition $P(\log(P_D/P_{D'}) > \varepsilon) \leq \delta$ becomes $2 \exp(-\varepsilon^2 \sigma^2 / (2 \Delta_f^2)) \leq \delta$, which inverts to the $\sigma$ formula above. This is why every differentially private algorithm uses Gaussian or Laplace noise calibrated to a tail-bound quantity — the concentration machinery *is* the privacy machinery.
+</RemarkBlock>
+
+## 12.9 Connections to Machine Learning
+
+The five families of bounds developed here appear everywhere in ML, in ways that are easy to miss if you haven't seen them. Here are the most load-bearing applications.
+
+<img src="/images/topics/large-deviations/ml-connections.png"
+     alt="Three-panel ML connections: (left) Rademacher complexity symmetrization — ghost sample argument with McDiarmid controlling the deviation; (center) SGD convergence with Azuma–Hoeffding confidence bands; (right) non-asymptotic Monte Carlo — Hoeffding band vs CLT band as a function of n"
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<RemarkBlock number={9} title="The information hierarchy of concentration">
+There is a clean progression from the weakest to the strongest concentration bound, parametrized by how much structural information you know about the distribution:
+
+- **Markov** ([Topic 4](/topics/expectation-moments), Theorem 11): uses only the mean. Gives $O(1/\varepsilon)$ tail decay, typically useless for finite-sample guarantees.
+- **Chebyshev** ([Topic 4](/topics/expectation-moments), Theorem 12): uses the variance. Gives $O(1/(n\varepsilon^2))$ decay — polynomial in $n$.
+- **Hoeffding** (Theorem 12.3): uses boundedness. Gives $O(e^{-c n \varepsilon^2})$ — exponential in $n$, distribution-free within bounded classes.
+- **Bernstein** (Theorem 12.4): uses variance + boundedness. Two-regime: sub-Gaussian for small $\varepsilon$, sub-exponential for large $\varepsilon$.
+- **Sub-Gaussian** (Definition 12.1, Theorem 12.5): uses the full sub-Gaussian MGF structure. Unifies bounded, Gaussian, and many other families under a single framework.
+- **Chernoff** (Theorem 12.1): uses the full MGF. The optimal exponent is the Cramér rate function $I(x)$.
+
+More information ⟹ tighter bounds. This is the no-free-lunch principle applied to tail estimation: to get exponential rates, you need to assume *something* about the distribution beyond finite variance. The beauty of the modern theory is that sub-Gaussian is a natural, checkable condition that captures the right cases (sums of bounded or Gaussian-like increments) without requiring you to know the distribution exactly.
+
+The ML applications map onto this hierarchy precisely:
+
+- **Generalization bounds** ([formalML](https://formalml.com/topics/generalization-bounds), coming soon): Hoeffding gives the $O(\sqrt{\log |\mathcal{H}| / n})$ deviation for finite classes. McDiarmid + Rademacher symmetrization extend this to infinite classes with bounded-differences functionals.
+- **SGD convergence** ([formalML](https://formalml.com/topics/stochastic-gradient-descent), coming soon): Azuma–Hoeffding applied to the martingale of cumulative gradient errors gives non-asymptotic bounds $O(1/\sqrt{T})$ on the optimization gap, provided gradient noise is sub-Gaussian.
+- **Dimensionality reduction** ([formalML](https://formalml.com/topics/dimensionality-reduction), coming soon): sub-Gaussian concentration of random-projection norms gives Johnson–Lindenstrauss and its descendants (sketching, compressive sensing).
+- **Differential privacy** ([formalML](https://formalml.com/topics/differential-privacy), coming soon): Sub-Gaussian tail calibration of the Gaussian mechanism sets the noise scale. Concentrated DP (zCDP) uses the sub-Gaussian MGF directly.
+- **Non-asymptotic Monte Carlo** ([formalML](https://formalml.com/topics/monte-carlo-methods), coming soon): Hoeffding gives explicit sample-size formulas for bounded integrands, complementing the CLT's asymptotic $\pm 1.96 \sigma / \sqrt{n}$ bands.
+
+In every case, the story is the same: the CLT tells you what the distribution of $\bar{X}_n$ looks like; concentration tells you how many samples you need.
+</RemarkBlock>
+
+## 12.10 Summary
+
+Four families of exponential-rate bounds. One master technique. One optimal exponent.
+
+<img src="/images/topics/large-deviations/tail-bound-cheatsheet.png"
+     alt="Single wide panel: all bounds plotted together on log scale — Markov, Chebyshev, Hoeffding, Bernstein, sub-Gaussian, exact tail — for Bernoulli(0.3), iid, X̄ₙ with n=100, as a function of ε from 0 to 0.5. The headline figure showing the progression from loose to tight."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+The **master technique** is Chernoff's: apply Markov to $e^{tX}$, optimize over $t$. Every exponential tail bound in this topic — Hoeffding, Bernstein, sub-Gaussian, Azuma, McDiarmid — is a specialization.
+
+The **optimal exponent** is the Cramér rate function $I(x) = \sup_t (tx - \Lambda(t))$, the Legendre transform of the log-MGF. For Bernoulli it's the KL divergence; for Normal it's a parabola; for exponential-family distributions in general, it's the conjugate of the log-partition function. Cramér's theorem says no better exponent is possible.
+
+The **information hierarchy** that organizes the bounds:
+
+| Theorem | Assumption | Bound | Rate | Information used |
+|---|---|---|---|---|
+| Markov (4.11) | $X \geq 0$, finite mean | $\mathbb{E}[X]/a$ | $O(1/\varepsilon)$ | mean |
+| Chebyshev (4.12) | finite variance | $\sigma^2/\varepsilon^2$ | $O(1/(n\varepsilon^2))$ | mean + variance |
+| Hoeffding (12.3) | bounded $[a_i, b_i]$ | $2 e^{-2n\varepsilon^2/\sum(b_i-a_i)^2}$ | $O(e^{-cn\varepsilon^2})$ | mean + range |
+| Bernstein (12.4) | bounded, variance known | $2 e^{-n\varepsilon^2/(2\sigma^2 + 2M\varepsilon/3)}$ | sub-Gauss small $\varepsilon$; sub-exp large | mean + variance + range |
+| Sub-Gaussian (12.5) | sub-Gaussian($\sigma$) | $2 e^{-n\varepsilon^2/(2\sigma^2)}$ | $O(e^{-cn\varepsilon^2})$ | sub-Gaussian parameter |
+| Chernoff (12.1) | finite MGF near $0$ | $\inf_t e^{-ta} M_X(t)$ | $O(e^{-nI(a)})$ | full MGF |
+| McDiarmid (12.8) | bounded differences $c_i$ | $2 e^{-2t^2/\sum c_i^2}$ | $O(e^{-ct^2})$ | bounded-differences constants |
+
+The **applications** that made these tools indispensable: PAC bounds for supervised learning, Rademacher complexity for uniform convergence, the Johnson–Lindenstrauss lemma for dimensionality reduction, the Gaussian mechanism for differential privacy, Azuma–Hoeffding for stochastic gradient descent, and non-asymptotic confidence bands for Monte Carlo. Every finite-sample guarantee in modern ML passes through this machinery.
+
+**Track 3 is now complete.** The arc was: modes of convergence ([Topic 9](/topics/modes-of-convergence)) gave the vocabulary; the law of large numbers ([Topic 10](/topics/law-of-large-numbers)) gave the qualitative statement $\bar{X}_n \to \mu$; the central limit theorem ([Topic 11](/topics/central-limit-theorem)) gave the shape of fluctuations at the $1/\sqrt{n}$ scale; and this topic gives the rate — exponential concentration at all scales, with explicit non-asymptotic constants. Where the LLN says "eventually close", the CLT says "Gaussian-shaped", and concentration says "with probability at least $1 - 2e^{-cn\varepsilon^2}$, within $\varepsilon$, for every $n$."
+
+**What comes next.** Confidence intervals (coming soon) turn the concentration bounds into explicit interval estimates: every $1 - \delta$ confidence interval for a bounded mean is a direct application of Hoeffding. Hypothesis testing (coming soon) inverts this: the rejection region of any test is a tail event, and the power of a test is controlled by concentration under the alternative. The bootstrap and other resampling methods (coming soon) give empirical analogs of the CLT and concentration. Further out, empirical processes (coming soon) and Bayesian computation (coming soon) build on the sub-Gaussian framework to handle infinite function classes and posterior concentration. Across [formalML](https://formalml.com), the tools developed here power every generalization bound, every privacy guarantee, and every non-asymptotic analysis of stochastic optimization.
+
+The reader who has made it to here has the full non-asymptotic toolkit of probability theory: modes of convergence, the LLN, the CLT, and concentration. That is the foundation on which all of statistical inference and statistical learning theory is built.
+
+---
+
+### References
+
+1. Boucheron, S., Lugosi, G., & Massart, P. (2013). [*Concentration Inequalities: A Nonasymptotic Theory of Independence*](https://global.oup.com/academic/product/concentration-inequalities-9780199535255). Oxford University Press.
+2. Vershynin, R. (2018). [*High-Dimensional Probability: An Introduction with Applications to Data Science*](https://www.math.uci.edu/~rvershyn/papers/HDP-book/HDP-book.html). Cambridge University Press.
+3. Wainwright, M. J. (2019). [*High-Dimensional Statistics: A Non-Asymptotic Viewpoint*](https://www.cambridge.org/highereducation/books/high-dimensional-statistics/8A91ECEEC38F46DAB53E9FF8757D7A4E). Cambridge University Press.
+4. Dembo, A., & Zeitouni, O. (2010). [*Large Deviations Techniques and Applications*](https://link.springer.com/book/10.1007/978-3-642-03311-7) (2nd ed.). Springer.
+5. Durrett, R. (2019). [*Probability: Theory and Examples*](https://services.math.duke.edu/~rtd/PTE/PTE5_011119.pdf) (5th ed.). Cambridge University Press.
+6. Billingsley, P. (2012). [*Probability and Measure*](https://www.wiley.com/en-us/Probability+and+Measure%2C+Anniversary+Edition-p-9781118122372) (Anniversary ed.). Wiley.
+7. Casella, G., & Berger, R. L. (2002). [*Statistical Inference*](https://www.cengage.com/c/statistical-inference-2e-casella/9780534243128/) (2nd ed.). Cengage.
+8. Wasserman, L. (2004). [*All of Statistics*](https://link.springer.com/book/10.1007/978-0-387-21736-9). Springer.
+9. Bishop, C. M. (2006). [*Pattern Recognition and Machine Learning*](https://www.microsoft.com/en-us/research/publication/pattern-recognition-machine-learning/). Springer.

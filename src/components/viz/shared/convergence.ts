@@ -14,8 +14,10 @@
  *           law of iterated logarithm envelope.
  * Topic 11: CLT normalization and replications, empirical CF,
  *           Berry–Esseen bound, chi-squared and beta samplers.
- * Topic 12+ will extend with: confidenceIntervalCoverage and
- *           additional concentration bounds.
+ * Topic 12: Bernstein, sub-Gaussian, Chernoff, and McDiarmid bounds;
+ *           Cramér rate function; KL divergence (generic + Bernoulli);
+ *           Johnson–Lindenstrauss target dimension; sample-size
+ *           requirements under each bound family.
  */
 
 // ── Sampling Utilities ────────────────────────────────────────────────────────
@@ -607,4 +609,266 @@ export function betaSample(
   const x = gammaSample(a, 1, rng);
   const y = gammaSample(b, 1, rng);
   return x / (x + y);
+}
+
+// ── Topic 12: Large Deviations & Tail Bounds ───────────────────────────────
+
+/**
+ * Bernstein upper bound: P(|X̄ₙ − μ| ≥ ε) ≤ 2·exp(−nε²/(2σ² + 2Mε/3)).
+ * Variance-aware refinement of Hoeffding: when σ² ≪ (b−a)²/4 the variance
+ * term dominates, giving a much tighter bound than Hoeffding.
+ * Two-regime behaviour: sub-Gaussian for small ε (2σ² dominates the
+ * denominator), sub-exponential for large ε (2Mε/3 dominates).
+ * Clamped to [0, 1].
+ * @param n — sample size
+ * @param sigmaSquared — per-variable variance σ² = Var(Xᵢ)
+ * @param M — a.s. bound on |Xᵢ − μ|
+ * @param epsilon — deviation tolerance ε
+ */
+export function bernsteinBound(
+  n: number,
+  sigmaSquared: number,
+  M: number,
+  epsilon: number
+): number {
+  const denom = 2 * sigmaSquared + (2 * M * epsilon) / 3;
+  if (denom <= 0) return 1;
+  return Math.min(2 * Math.exp(-(n * epsilon * epsilon) / denom), 1);
+}
+
+/**
+ * Sub-Gaussian tail bound: P(|X̄ₙ − μ| ≥ ε) ≤ 2·exp(−nε²/(2σ²)).
+ * Assumes each Xᵢ is sub-Gaussian with parameter σ — i.e.
+ *   E[exp(t(Xᵢ − μ))] ≤ exp(σ²t²/2) for all t ∈ ℝ.
+ * For Uniform(0, 1), the sub-Gaussian parameter is (b−a)/2 = 0.5, so
+ * this recovers Hoeffding exactly. Clamped to [0, 1].
+ * @param n — sample size
+ * @param subGaussianParam — sub-Gaussian parameter σ
+ * @param epsilon — deviation tolerance ε
+ */
+export function subGaussianBound(
+  n: number,
+  subGaussianParam: number,
+  epsilon: number
+): number {
+  if (subGaussianParam <= 0) return 1;
+  const denom = 2 * subGaussianParam * subGaussianParam;
+  return Math.min(2 * Math.exp(-(n * epsilon * epsilon) / denom), 1);
+}
+
+/**
+ * Generic Chernoff bound for iid sums: minimize exp(−tnε) · Mₓ(t)ⁿ
+ * over t > 0. Returns { bound, optimalT }. Uses golden-section search
+ * on the log objective φ(t) = n(−tε + log Mₓ(t)), which is convex in t.
+ * @param mgf — per-sample MGF Mₓ(t) as a callable
+ * @param epsilon — deviation threshold
+ * @param n — sample size (the iid sum)
+ * @param tRange — search interval [tMin, tMax] (default [0.001, 10])
+ */
+export function chernoffBound(
+  mgf: (t: number) => number,
+  epsilon: number,
+  n: number,
+  tRange: [number, number] = [0.001, 10]
+): { bound: number; optimalT: number } {
+  const objective = (t: number): number => {
+    const m = mgf(t);
+    if (!isFinite(m) || m <= 0) return Infinity;
+    return n * (-t * epsilon + Math.log(m));
+  };
+  const phi = (Math.sqrt(5) - 1) / 2; // golden ratio reciprocal
+  let [a, b] = tRange;
+  let c = b - phi * (b - a);
+  let d = a + phi * (b - a);
+  for (let i = 0; i < 100; i++) {
+    if (objective(c) < objective(d)) b = d;
+    else a = c;
+    c = b - phi * (b - a);
+    d = a + phi * (b - a);
+    if (Math.abs(b - a) < 1e-8) break;
+  }
+  const optimalT = (a + b) / 2;
+  const bound = Math.min(Math.exp(objective(optimalT)), 1);
+  return { bound, optimalT };
+}
+
+/**
+ * Cramér rate function: I(x) = sup_t (t·x − Λ(t)), where Λ(t) = log Mₓ(t)
+ * is the cumulant-generating function. Computed numerically via
+ * golden-section search over t. For x above the mean, the supremum is
+ * attained at t > 0; for x below, at t < 0. The function is convex and
+ * non-negative with I(μ) = 0.
+ * @param logMgf — Λ(t) = log Mₓ(t) as a callable
+ * @param x — point at which to evaluate the rate function
+ * @param tRange — search interval (default [−10, 10])
+ */
+export function cramerRateFunction(
+  logMgf: (t: number) => number,
+  x: number,
+  tRange: [number, number] = [-10, 10]
+): { rateValue: number; optimalT: number } {
+  // We maximize g(t) = t·x − Λ(t) via golden-section search.
+  // Search for the minimum of −g(t).
+  const neg = (t: number): number => {
+    const lambda = logMgf(t);
+    if (!isFinite(lambda)) return Infinity;
+    return -(t * x - lambda);
+  };
+  const phi = (Math.sqrt(5) - 1) / 2;
+  let [a, b] = tRange;
+  let c = b - phi * (b - a);
+  let d = a + phi * (b - a);
+  for (let i = 0; i < 100; i++) {
+    if (neg(c) < neg(d)) b = d;
+    else a = c;
+    c = b - phi * (b - a);
+    d = a + phi * (b - a);
+    if (Math.abs(b - a) < 1e-8) break;
+  }
+  const optimalT = (a + b) / 2;
+  const rateValue = Math.max(0, -neg(optimalT));
+  return { rateValue, optimalT };
+}
+
+/**
+ * McDiarmid bound: for f satisfying the bounded-differences property with
+ * constants cᵢ, P(|f(X₁,…,Xₙ) − E[f]| ≥ t) ≤ 2·exp(−2t²/Σcᵢ²).
+ * Recovers Hoeffding when f is the empirical mean with cᵢ = (bᵢ − aᵢ)/n.
+ * Clamped to [0, 1].
+ * @param boundedDifferences — array of cᵢ constants
+ * @param t — deviation tolerance
+ */
+export function mcDiarmidBound(
+  boundedDifferences: number[],
+  t: number
+): number {
+  let sumCi2 = 0;
+  for (let i = 0; i < boundedDifferences.length; i++) {
+    sumCi2 += boundedDifferences[i] * boundedDifferences[i];
+  }
+  if (sumCi2 <= 0) return 1;
+  return Math.min(2 * Math.exp(-(2 * t * t) / sumCi2), 1);
+}
+
+/**
+ * KL divergence D_KL(P ‖ Q) for discrete distributions on a shared
+ * support. Convention: 0·log(0/q) = 0; if pᵢ > 0 and qᵢ = 0, the
+ * divergence is +∞. Returns NaN if the two arrays have different lengths.
+ * Uses natural logarithm (nats), consistent with the Cramér rate function.
+ * @param p — probability array for P
+ * @param q — probability array for Q (same length as p)
+ */
+export function klDivergence(p: number[], q: number[]): number {
+  if (p.length !== q.length) return NaN;
+  let kl = 0;
+  for (let i = 0; i < p.length; i++) {
+    if (p[i] === 0) continue;
+    if (q[i] <= 0) return Infinity;
+    kl += p[i] * Math.log(p[i] / q[i]);
+  }
+  return kl;
+}
+
+/**
+ * KL divergence between two Bernoulli distributions:
+ *   D_KL(Ber(p) ‖ Ber(q)) = p·log(p/q) + (1−p)·log((1−p)/(1−q)).
+ * This is the Cramér rate function for Bernoulli(q) evaluated at x = p.
+ * Edge cases: 0·log(0/q) = 0; if the numerator is positive while the
+ * denominator is 0, returns +∞.
+ * @param p — parameter of the first Bernoulli (0 ≤ p ≤ 1)
+ * @param q — parameter of the second Bernoulli (0 < q < 1 for finiteness)
+ */
+export function bernoulliKL(p: number, q: number): number {
+  const term1 = p === 0 ? 0 : q <= 0 ? Infinity : p * Math.log(p / q);
+  const term2 =
+    p === 1 ? 0 : q >= 1 ? Infinity : (1 - p) * Math.log((1 - p) / (1 - q));
+  return term1 + term2;
+}
+
+/**
+ * Johnson–Lindenstrauss target dimension: minimum k for which a random
+ * projection from ℝᵈ to ℝᵏ approximately preserves pairwise distances
+ * among n points within factor (1 ± ε) with probability ≥ 1 − δ.
+ * Formula (sub-Gaussian concentration + union bound over (n choose 2)
+ * pairs): k ≥ 8·ln(n / δ̃) / ε², with δ̃ = δ/(n choose 2). We use the
+ * conservative textbook bound k ≥ 8·ln(n²/δ) / ε² ≈ 8·(2 ln n − ln δ)/ε².
+ * @param n — number of points to embed
+ * @param epsilon — distortion tolerance
+ * @param delta — failure probability
+ */
+export function johnsonLindenstraussDim(
+  n: number,
+  epsilon: number,
+  delta: number
+): number {
+  if (n <= 1 || epsilon <= 0 || delta <= 0) return Infinity;
+  return Math.ceil((8 * (2 * Math.log(n) - Math.log(delta))) / (epsilon * epsilon));
+}
+
+/**
+ * Sample-size requirements under each bound family for achieving
+ *   P(|X̄ₙ − μ| ≥ ε) ≤ δ.
+ * Returns the minimum n implied by each applicable bound; fields are
+ * undefined when the required parameter is not supplied.
+ *   • markov:     n ≥ μ/ε       (requires mu; often loose)
+ *   • chebyshev:  n ≥ σ²/(ε²δ)
+ *   • hoeffding:  n ≥ (b−a)²·ln(2/δ) / (2ε²)
+ *   • bernstein:  n ≥ (2σ² + 2Mε/3)·ln(2/δ) / ε²
+ *   • subGauss:   n ≥ 2σ_sg²·ln(2/δ) / ε²
+ *   • clt:        n ≥ (z_{δ/2}·σ/ε)²  (approximate, using z = Φ⁻¹(1−δ/2))
+ * @param epsilon — accuracy tolerance
+ * @param delta — failure probability
+ * @param params — distribution parameters (any subset)
+ */
+export function sampleSizeRequirements(
+  epsilon: number,
+  delta: number,
+  params: {
+    mu?: number;
+    sigma2?: number;
+    range?: [number, number];
+    M?: number;
+    subGaussianParam?: number;
+    zScore?: number;
+  }
+): {
+  markov?: number;
+  chebyshev?: number;
+  hoeffding?: number;
+  bernstein?: number;
+  subGaussian?: number;
+  clt?: number;
+} {
+  const out: Record<string, number | undefined> = {};
+  const lnFactor = Math.log(2 / delta);
+  const eps2 = epsilon * epsilon;
+
+  if (params.mu !== undefined && epsilon > 0) {
+    out.markov = Math.ceil(params.mu / epsilon);
+  }
+  if (params.sigma2 !== undefined && eps2 > 0) {
+    out.chebyshev = Math.ceil(params.sigma2 / (eps2 * delta));
+  }
+  if (params.range !== undefined) {
+    const r = params.range[1] - params.range[0];
+    out.hoeffding = Math.ceil((r * r * lnFactor) / (2 * eps2));
+  }
+  if (
+    params.sigma2 !== undefined &&
+    params.M !== undefined &&
+    eps2 > 0
+  ) {
+    out.bernstein = Math.ceil(
+      ((2 * params.sigma2 + (2 * params.M * epsilon) / 3) * lnFactor) / eps2
+    );
+  }
+  if (params.subGaussianParam !== undefined && eps2 > 0) {
+    const sg = params.subGaussianParam;
+    out.subGaussian = Math.ceil((2 * sg * sg * lnFactor) / eps2);
+  }
+  if (params.sigma2 !== undefined && params.zScore !== undefined) {
+    const z = params.zScore;
+    out.clt = Math.ceil((z * z * params.sigma2) / eps2);
+  }
+  return out;
 }

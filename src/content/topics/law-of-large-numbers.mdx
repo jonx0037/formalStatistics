@@ -167,7 +167,7 @@ Here is the roadmap:
 | 10.8 | Convergence rates | Chebyshev ($1/\varepsilon^2 n$), Hoeffding ($e^{-2n\varepsilon^2}$), LIL ($\sqrt{2\ln\ln n / n}$) |
 | 10.9 | ML connections | Monte Carlo, SGD/Polyak, ERM, and Glivenko--Cantelli in practice |
 
-The first seven results are fully proved in this topic. Theorems 10.7 and 10.8 are stated without proof — the former is proved in Topic 12 (Large Deviations), the latter is a deep result requiring tools beyond our current scope.
+The first seven results are fully proved in this topic. Theorems 10.7 and 10.8 are stated without proof — the former is proved in [Topic 12 (Large Deviations & Tail Bounds)](/topics/large-deviations) as Theorem 12.3, the latter is a deep result requiring tools beyond our current scope.
 
 ---
 
@@ -1001,7 +1001,7 @@ At $n = 1000$, Chebyshev says the probability of a 0.1 deviation is at most 25%,
 
 The practical implication: if you need a confidence guarantee of $P(|\bar{X}_n - \mu| \geq 0.01) \leq 0.05$ for bounded $[0,1]$ variables, Chebyshev requires $n \geq \sigma^2/(0.01^2 \cdot 0.05) = 200,\!000/\sigma^2$ samples (at least $50,\!000$ for $\sigma^2 = 1/4$). Hoeffding requires $n \geq -\ln(0.025)/(2 \cdot 0.0001) \approx 18,\!400$ samples — nearly three times fewer. The Chebyshev bound is useless for practical sample-size calculations; the Hoeffding bound is tight enough to be actionable.
 
-The full proof of Hoeffding's inequality uses the **Chernoff bounding technique**: apply Markov's inequality to $e^{t(X - \mu)}$ instead of $|X - \mu|$, then optimize over $t$. The exponential transform converts additive structure (the sum of independent variables) into multiplicative structure (a product of MGFs), which is much easier to control. The boundedness assumption $X_i \in [a_i, b_i]$ enters through the Hoeffding lemma, which bounds the MGF of a bounded random variable. The full development is the subject of Large Deviations and Tail Bounds (Topic 12, coming soon).
+The full proof of Hoeffding's inequality uses the **Chernoff bounding technique**: apply Markov's inequality to $e^{t(X - \mu)}$ instead of $|X - \mu|$, then optimize over $t$. The exponential transform converts additive structure (the sum of independent variables) into multiplicative structure (a product of MGFs), which is much easier to control. The boundedness assumption $X_i \in [a_i, b_i]$ enters through the Hoeffding lemma, which bounds the MGF of a bounded random variable. The full development is the subject of [Large Deviations & Tail Bounds](/topics/large-deviations) — the Chernoff technique, Hoeffding's lemma, and the complete proof are in §§12.2–12.3.
 
 The third result tells us the *exact* a.s. rate at which $\bar{X}_n$ fluctuates around $\mu$.
 
@@ -1032,7 +1032,7 @@ Three results describe $\bar{X}_n - \mu$ at different levels of precision:
 
 Each tells you more. The SLLN says "it converges." The LIL says "the deviations decay like $\sqrt{\ln\ln n / n}$." The CLT says "at the scale $1/\sqrt{n}$, the deviations look Gaussian."
 
-These are not competing statements — they complement each other. The SLLN is a *pathwise* result (it says something about almost every $\omega \in \Omega$). The LIL is also pathwise (it gives the exact a.s. oscillation). The CLT is *distributional* (it says what the distribution of $\sqrt{n}(\bar{X}_n - \mu)$ looks like for large $n$). Concentration inequalities like Hoeffding (Theorem 10.7) are *tail probability* bounds (they say how fast $P(|\bar{X}_n - \mu| > \varepsilon)$ decays). Large Deviations and Tail Bounds (Topic 12, coming soon) develops these exponential-rate guarantees — the most useful results for practical sample-size calculations.
+These are not competing statements — they complement each other. The SLLN is a *pathwise* result (it says something about almost every $\omega \in \Omega$). The LIL is also pathwise (it gives the exact a.s. oscillation). The CLT is *distributional* (it says what the distribution of $\sqrt{n}(\bar{X}_n - \mu)$ looks like for large $n$). Concentration inequalities like Hoeffding (Theorem 10.7) are *tail probability* bounds (they say how fast $P(|\bar{X}_n - \mu| > \varepsilon)$ decays). [Large Deviations & Tail Bounds](/topics/large-deviations) develops these exponential-rate guarantees — the most useful results for practical sample-size calculations.
 </RemarkBlock>
 
 <img src="/images/topics/law-of-large-numbers/convergence-rates.png" alt="Convergence rates: Chebyshev (1/n) vs Hoeffding (exponential) bounds, LIL envelope around sample paths" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
@@ -1060,7 +1060,7 @@ $$
 
 The SLLN guarantees $\hat{\theta}_n \to E[g(X)]$ almost surely — your single simulation run converges to the truth. This is the entire theoretical justification for Monte Carlo estimation.
 
-**Concrete example:** Suppose $X \sim N(2, 1)$ and you want to estimate $\theta = E[X^2]$. The true value is $\text{Var}(X) + (E[X])^2 = 1 + 4 = 5$. Drawing $X_1, \ldots, X_n$ iid from $N(2,1)$ and computing $\hat{\theta}_n = \frac{1}{n}\sum_{i=1}^n X_i^2$ gives an estimate that converges to 5 almost surely by the SLLN (since $E[X^2] = 5 < \infty$). The [CLT](/topics/central-limit-theorem) will tell us that the error is approximately $N(0, \text{Var}(X^2)/n)$, giving confidence intervals. And concentration inequalities (Topic 12, coming soon) will give non-asymptotic bounds like $P(|\hat{\theta}_n - 5| > \varepsilon) \leq 2\exp(-cn\varepsilon^2)$ for bounded transformations.
+**Concrete example:** Suppose $X \sim N(2, 1)$ and you want to estimate $\theta = E[X^2]$. The true value is $\text{Var}(X) + (E[X])^2 = 1 + 4 = 5$. Drawing $X_1, \ldots, X_n$ iid from $N(2,1)$ and computing $\hat{\theta}_n = \frac{1}{n}\sum_{i=1}^n X_i^2$ gives an estimate that converges to 5 almost surely by the SLLN (since $E[X^2] = 5 < \infty$). The [CLT](/topics/central-limit-theorem) will tell us that the error is approximately $N(0, \text{Var}(X^2)/n)$, giving confidence intervals. And [concentration inequalities](/topics/large-deviations) give non-asymptotic bounds like $P(|\hat{\theta}_n - 5| > \varepsilon) \leq 2\exp(-cn\varepsilon^2)$ for bounded transformations — see Hoeffding's inequality (Theorem 12.3).
 
 The Monte Carlo method extends to high-dimensional integrals where deterministic quadrature fails: if $X \in \mathbb{R}^d$ and $d$ is large, grid-based methods require $O(\varepsilon^{-d})$ evaluations for accuracy $\varepsilon$ (the curse of dimensionality), while Monte Carlo requires only $O(\varepsilon^{-2})$ evaluations regardless of $d$ — courtesy of the SLLN and CLT.
 
@@ -1144,7 +1144,7 @@ This topic traced the arc from the simplest weak law to the strongest convergenc
 | Theorem 10.4 (Kolmogorov) | independent, $E[X_i] = 0$ | $P(\max\lvert S_k \rvert \geq \varepsilon) \leq \text{Var}(S_n)/\varepsilon^2$ | Stopping time decomposition |
 | Theorem 10.5 (SLLN) | pairwise iid, $E[\lvert X \rvert] < \infty$ | $\bar{X}_n \xrightarrow{\text{a.s.}} \mu$ | Etemadi (truncation + Kolmogorov + B-C) |
 | Theorem 10.6 (Glivenko--Cantelli) | iid | $\sup_x \lvert F_n(x) - F(x) \rvert \xrightarrow{\text{a.s.}} 0$ | SLLN for indicators + monotonicity |
-| Theorem 10.7 (Hoeffding) | independent, bounded | $P(\lvert\bar{X}_n - \mu\rvert \geq \varepsilon) \leq 2e^{-2n\varepsilon^2/(b-a)^2}$ | (Proof in Topic 12) |
+| Theorem 10.7 (Hoeffding) | independent, bounded | $P(\lvert\bar{X}_n - \mu\rvert \geq \varepsilon) \leq 2e^{-2n\varepsilon^2/(b-a)^2}$ | (Proof: [Topic 12, Theorem 12.3](/topics/large-deviations)) |
 | Theorem 10.8 (LIL) | iid, $\sigma^2 < \infty$ | $\limsup (\bar{X}_n - \mu)/\sigma\sqrt{2\ln\ln n/n} = 1$ a.s. | (Statement only) |
 
 The logical dependencies form a clear ladder:
@@ -1182,7 +1182,7 @@ The law of large numbers says $\bar{X}_n \to \mu$. Two natural follow-up questio
 
   The CLT is the *distributional* complement to the LLN's *qualitative* statement. The LLN says $\bar{X}_n \to \mu$; the CLT says how $\bar{X}_n$ deviates from $\mu$ at scale $1/\sqrt{n}$.
 
-- **How fast does the convergence happen?** Large Deviations and Tail Bounds (Topic 12, coming soon) answers this with exponential-rate guarantees. Hoeffding's inequality (previewed in Theorem 10.7) is the simplest such bound; Bernstein's inequality gives tighter results when the variance is small; sub-Gaussian and sub-exponential tail bounds handle the most common distributional families. These are the finite-sample tools that power statistical learning theory: PAC bounds, uniform convergence rates, and sample complexity calculations.
+- **How fast does the convergence happen?** [Large Deviations & Tail Bounds](/topics/large-deviations) answers this with exponential-rate guarantees. [Hoeffding's inequality](/topics/large-deviations) (previewed in Theorem 10.7, proved in Topic 12 as Theorem 12.3) is the simplest such bound; [Bernstein's inequality](/topics/large-deviations) gives tighter results when the variance is small; sub-Gaussian and sub-exponential tail bounds handle the most common distributional families. These are the finite-sample tools that power statistical learning theory: PAC bounds, uniform convergence rates, and sample complexity calculations — all developed in [Large Deviations & Tail Bounds](/topics/large-deviations).
 
   These concentration inequalities are the *quantitative* complement to the LLN's *qualitative* statement. The LLN says $\bar{X}_n \to \mu$; the concentration inequalities say exactly how many samples you need for $|\bar{X}_n - \mu| \leq \varepsilon$ with probability at least $1 - \delta$.
 

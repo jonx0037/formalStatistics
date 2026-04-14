@@ -1126,7 +1126,7 @@ Knowing that a sequence converges is useful, but knowing *how fast* it converges
 
 - **Large deviations theory** characterizes the exponential rate at which $P(\bar{X}_n \in A)$ decays for sets $A$ that are far from the mean. The rate function $I(x) = \sup_t (tx - \log M_X(t))$ is the Fenchel-Legendre transform of the log-MGF.
 
-These rate results are the subject of Topic 12 (coming soon) on concentration inequalities and large deviations. They bridge the gap between the *existence* of convergence (this topic) and the *speed* of convergence (which determines sample size requirements in practice).
+These rate results are the subject of [Large Deviations & Tail Bounds](/topics/large-deviations). They bridge the gap between the *existence* of convergence (this topic) and the *speed* of convergence (which determines sample size requirements in practice) — Hoeffding, Bernstein, and the Cramér rate function quantify exactly how fast convergence occurs.
 </RemarkBlock>
 
 <img src="/images/topics/modes-of-convergence/ml-connections.png"
@@ -1200,7 +1200,7 @@ This topic established the *modes* of convergence — the different senses in wh
 
 - **[Central Limit Theorem](/topics/central-limit-theorem)**: The CLT proves $\sqrt{n}(\bar{X}_n - \mu)/\sigma \xrightarrow{d} N(0,1)$ (convergence in distribution). The proof via MGF convergence follows the same technique we used for the Poisson limit theorem in Section 9.9. The Lindeberg CLT extends the result to non-identical summands, and the Berry–Esseen theorem quantifies the convergence rate.
 
-- **Concentration Inequalities** (Topic 12, coming soon): While the CLT gives the *shape* of the limiting distribution, concentration inequalities give *rates* — how fast the convergence happens. Hoeffding, Bernstein, and sub-Gaussian tail bounds provide the exponential-rate guarantees that make finite-sample statistical learning theory work.
+- **[Concentration Inequalities](/topics/large-deviations)**: While the CLT gives the *shape* of the limiting distribution, concentration inequalities give *rates* — how fast the convergence happens. Hoeffding, Bernstein, and sub-Gaussian tail bounds provide the exponential-rate guarantees that power finite-sample statistical learning theory — PAC bounds, Rademacher complexity, and sample complexity calculations.
 
 ---
 
