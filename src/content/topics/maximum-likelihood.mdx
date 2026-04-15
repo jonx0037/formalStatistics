@@ -134,6 +134,9 @@ import ExampleBlock from '../../components/ui/ExampleBlock.astro';
 import RemarkBlock from '../../components/ui/RemarkBlock.astro';
 import ExternalLink from '../../components/ui/ExternalLink.astro';
 
+import LikelihoodSurfaceExplorer from '../../components/viz/LikelihoodSurfaceExplorer.tsx';
+import MLESamplingExplorer from '../../components/viz/MLESamplingExplorer.tsx';
+
 ## 14.1 The Likelihood Function
 
 Topic 13 built the machinery for evaluating estimators — bias, variance, MSE, consistency, asymptotic normality, Fisher information, the Cramér–Rao bound. It did not tell us where estimators *come from*. For specific families we pulled the sample mean and sample variance out of the air and verified their properties. What we need now is a principle — a recipe that takes a parametric model and spits out an estimator with good properties whenever the regularity conditions hold. The **likelihood principle** is that recipe, and the maximum-likelihood estimator is the estimator it produces.
@@ -313,6 +316,10 @@ and setting this to zero gives $\hat{\lambda}_{\text{MLE}} = \bar{X}_n$. The Poi
 <RemarkBlock number={2} title="When no closed-form MLE exists">
 The four examples above all give the MLE as a clean function of the sample mean. That is a feature of their exponential-family structure, not a general property of MLE. For most parametric families — Gamma shape, beta shape, Weibull, Cauchy location, logistic regression, hidden Markov models, neural networks — the score equation has no closed-form solution, and the MLE must be computed numerically. Section 14.7 develops Newton-Raphson for exactly this situation: write down the score and the observed Fisher information, pick a starting value, iterate $\theta^{(t+1)} = \theta^{(t)} + S(\theta^{(t)}) / J(\theta^{(t)})$, and stop when the steps become small. Every optimization method in modern machine learning — SGD, Adam, L-BFGS — is a variation on this theme applied to the log-likelihood or a regularized variant.
 </RemarkBlock>
+
+Before moving on, explore the log-likelihood landscape for these four families. The panel below draws a sample of size $n$ from the true parameter $\theta_0$, plots $\ell(\theta)$, and overlays the quadratic approximation $\ell(\hat\theta) - \tfrac{1}{2} n I(\hat\theta)(\theta - \hat\theta)^2$ together with the 95% Wald confidence interval $\hat\theta \pm 1.96/\sqrt{nI(\hat\theta)}$. Sweep $n$ from $5$ to $500$ and watch the likelihood sharpen — the curvature at the peak (Fisher information) grows linearly with $n$, so the Wald interval shrinks like $1/\sqrt{n}$.
+
+<LikelihoodSurfaceExplorer client:visible />
 
 ## 14.3 Functional Invariance
 
@@ -534,6 +541,10 @@ $$
 
 This is the formula every introductory statistics class derives ad hoc — it is the MLE Wald interval applied to the Bernoulli family. The interval has known coverage issues near $p = 0$ or $p = 1$; the Wilson score interval and the Agresti–Coull interval are alternatives. What the MLE machinery gives us is the *default* construction; better intervals require more careful analysis of finite-sample behavior.
 </ExampleBlock>
+
+The Monte-Carlo explorer below makes Theorem 4 concrete. For each MC draw, we sample $n$ observations from the true parameter, compute the MLE, and add it to a running histogram. Toggle *standardized* to watch $\sqrt{n}(\hat\theta - \theta_0)$ collapse onto $\mathcal{N}(0, 1/I(\theta_0))$ — the asymptotic statement in pixels. The readout reports the MC efficiency $\mathrm{CRLB}/\widehat{\mathrm{Var}}$, which should approach $1$ as $n$ grows.
+
+<MLESamplingExplorer client:visible />
 
 <RemarkBlock number={5} title="Finite-sample caution: asymptotics can mislead">
 The arrow $\overset{d}{\to}$ is deceptively clean. In finite samples, three things can go wrong:
