@@ -1,0 +1,934 @@
+---
+title: "Maximum Likelihood Estimation"
+subtitle: "Likelihood function, score equation, consistency, asymptotic normality, efficiency — the workhorse of parametric inference."
+status: "published"
+difficulty: "intermediate"
+prerequisites:
+  - "point-estimation"
+  - "exponential-families"
+tags:
+  - "statistics"
+  - "estimation"
+  - "maximum-likelihood"
+  - "mle"
+  - "likelihood"
+  - "log-likelihood"
+  - "score-equation"
+  - "fisher-information"
+  - "asymptotic-normality"
+  - "consistency"
+  - "efficiency"
+  - "newton-raphson"
+  - "observed-information"
+  - "invariance"
+domain: "statistical-estimation"
+videoId: null
+notebookPath: "notebooks/maximum-likelihood/14_maximum_likelihood.ipynb"
+githubUrl: "https://github.com/jonx0037/formalStatistics/blob/main/src/content/topics/maximum-likelihood.mdx"
+datePublished: 2026-04-14
+estimatedReadTime: 45
+abstract: "The maximum likelihood estimator finds the parameter value that makes the observed data most probable — the peak of the likelihood function. Equivalently, it is the root of the score equation. Under regularity conditions, the MLE is consistent (it converges to the true parameter by a law of large numbers on the log-likelihood), asymptotically normal (by a Taylor expansion of the score together with the CLT, √n(θ̂ − θ₀) converges in distribution to N(0, 1/I(θ₀))), and asymptotically efficient (it achieves the Cramér-Rao lower bound). The MLE is functionally invariant: if θ̂ is the MLE of θ, then g(θ̂) is the MLE of g(θ). When no closed form exists, Newton-Raphson takes quadratically convergent steps using the observed Fisher information. The MLE bridges statistics and machine learning: maximizing the likelihood is equivalent to minimizing cross-entropy, and adding a prior penalty gives MAP estimation — the Bayesian bridge to regularization."
+formalcalculusPrereqs:
+  - topic: "differentiation"
+    site: "formalcalculus"
+    relationship: "The score function is ∂/∂θ log L(θ), and the asymptotic-normality proof Taylor-expands the score around θ₀. Newton-Raphson requires the second derivative ∂²/∂θ² log L(θ) = −observed Fisher information."
+  - topic: "integration"
+    site: "formalcalculus"
+    relationship: "Regularity conditions for the MLE require interchange of derivative and integral — the same conditions as the CRLB in Topic 13."
+  - topic: "sequences-limits"
+    site: "formalcalculus"
+    relationship: "Consistency is convergence in probability; the asymptotic-normality proof uses Slutsky's theorem and convergence of the observed information to the expected information."
+formalmlConnections:
+  - topic: "cross-entropy-loss"
+    site: "formalml"
+    relationship: "MLE for a categorical model minimizes cross-entropy loss. The log-likelihood ℓ(θ) = Σ log f(xᵢ; θ) is (up to sign and an empirical-distribution constant) the negative cross-entropy between the empirical distribution and the model."
+  - topic: "logistic-regression"
+    site: "formalml"
+    relationship: "Logistic regression is MLE for a Bernoulli GLM with logit link. The log-likelihood has no closed-form MLE; Newton-Raphson (IRLS) computes it iteratively."
+  - topic: "regularization"
+    site: "formalml"
+    relationship: "MAP estimation adds a prior log-density to the log-likelihood: log L(θ) + log π(θ). Gaussian prior → L² penalty; Laplace prior → L¹ penalty. Regularized MLE is the Bayesian bridge."
+  - topic: "expectation-maximization"
+    site: "formalml"
+    relationship: "EM iteratively maximizes a lower bound on the log-likelihood for latent-variable models (mixtures, HMMs). Each M-step is an MLE of the complete-data log-likelihood."
+connections:
+  - topic: "point-estimation"
+    relationship: "Topic 13 defined the estimator-evaluation framework — bias, MSE, consistency, asymptotic normality, score, Fisher information, CRLB, efficiency. Topic 14 applies this entire framework to the MLE, proving that it is consistent, asymptotically normal, and asymptotically efficient."
+  - topic: "exponential-families"
+    relationship: "Topic 7 §7.8 developed MLE for exponential families: the MLE of η satisfies ∇A(η̂) = T̄. Topic 14 cites this as the cleanest case and develops the general theory beyond exponential families."
+  - topic: "law-of-large-numbers"
+    relationship: "The consistency proof applies the SLLN to the log-likelihood: (1/n)Σ log f(Xᵢ; θ) → E[log f(X; θ)] a.s., which is uniquely maximized at θ₀ by the KL-divergence argument."
+  - topic: "central-limit-theorem"
+    relationship: "The asymptotic-normality proof applies the CLT to the score: (1/√n) Σ s(θ₀; Xᵢ) →ᵈ N(0, I(θ₀)). A Taylor expansion and Slutsky's theorem complete the argument."
+  - topic: "method-of-moments"
+    relationship: "Topic 15 compares MoM estimators to the MLE benchmark. The MLE is asymptotically efficient; MoM generally is not, so the asymptotic relative efficiency ARE(MoM, MLE) < 1 for most parametric families."
+  - topic: "sufficient-statistics"
+    relationship: "Topic 16 connects sufficiency, completeness, and the MLE. The MLE is a function of the sufficient statistic when one exists, and completeness + unbiased MLE gives the UMVUE."
+references:
+  - type: "book"
+    title: "Statistical Inference"
+    author: "George Casella & Roger L. Berger"
+    year: 2002
+    edition: "2nd"
+    publisher: "Duxbury"
+    isbn: "978-0-534-24312-8"
+    url: "https://www.cengage.com/c/statistical-inference-2e-casella/"
+    note: "Chapter 7.2 is the primary reference for the MLE definition, invariance, and computation. Chapter 10.1 covers asymptotic efficiency."
+  - type: "book"
+    title: "Theory of Point Estimation"
+    author: "Erich L. Lehmann & George Casella"
+    year: 1998
+    edition: "2nd"
+    publisher: "Springer"
+    isbn: "978-0-387-98502-2"
+    url: "https://link.springer.com/book/10.1007/b98854"
+    note: "Chapter 6 is the definitive graduate-level treatment of MLE. Sections 6.2–6.3 cover consistency and asymptotic normality with full proofs."
+  - type: "book"
+    title: "Asymptotic Statistics"
+    author: "A. W. van der Vaart"
+    year: 1998
+    publisher: "Cambridge University Press"
+    isbn: "978-0-521-78450-4"
+    url: "https://www.cambridge.org/core/books/asymptotic-statistics/A3C7DAD3F7E66A1FA60E9C8FE132EE1D"
+    note: "Chapter 5 (M-Estimators and Maximum Likelihood) gives the modern treatment of MLE asymptotics. Theorem 5.39 is the asymptotic-normality result we follow."
+  - type: "book"
+    title: "All of Statistics"
+    author: "Larry Wasserman"
+    year: 2004
+    publisher: "Springer"
+    isbn: "978-0-387-40272-7"
+    url: "https://link.springer.com/book/10.1007/978-0-387-21736-9"
+    note: "Chapter 9.4 is a concise treatment accessible to the ML-oriented reader."
+  - type: "book"
+    title: "Mathematical Statistics: Basic Ideas and Selected Topics"
+    author: "Peter J. Bickel & Kjell A. Doksum"
+    year: 2015
+    edition: "2nd"
+    publisher: "CRC Press"
+    isbn: "978-1-498-72380-0"
+    url: "https://www.routledge.com/Mathematical-Statistics-Basic-Ideas-and-Selected-Topics-Volume-I/Bickel-Doksum/p/book/9781498723800"
+    note: "Chapter 5 covers MLE with particular attention to information inequalities and the role of the observed information."
+  - type: "book"
+    title: "Pattern Recognition and Machine Learning"
+    author: "Christopher M. Bishop"
+    year: 2006
+    publisher: "Springer"
+    isbn: "978-0-387-31073-2"
+    url: "https://www.microsoft.com/en-us/research/people/cmbishop/prml-book/"
+    note: "Chapters 1.2.4 and 4.3.2 connect MLE to cross-entropy loss and logistic regression — the ML practitioner's view of maximum likelihood."
+  - type: "book"
+    title: "Numerical Optimization"
+    author: "Jorge Nocedal & Stephen J. Wright"
+    year: 2006
+    edition: "2nd"
+    publisher: "Springer"
+    isbn: "978-0-387-30303-1"
+    url: "https://link.springer.com/book/10.1007/978-0-387-40065-5"
+    note: "Chapter 2 covers Newton's method and quadratic convergence theory; Chapter 11 treats Fisher scoring and related maximum-likelihood iterations."
+---
+
+import DefinitionBlock from '../../components/ui/DefinitionBlock.astro';
+import TheoremBlock from '../../components/ui/TheoremBlock.astro';
+import ProofBlock from '../../components/ui/ProofBlock.astro';
+import ExampleBlock from '../../components/ui/ExampleBlock.astro';
+import RemarkBlock from '../../components/ui/RemarkBlock.astro';
+import ExternalLink from '../../components/ui/ExternalLink.astro';
+
+## 14.1 The Likelihood Function
+
+Topic 13 built the machinery for evaluating estimators — bias, variance, MSE, consistency, asymptotic normality, Fisher information, the Cramér–Rao bound. It did not tell us where estimators *come from*. For specific families we pulled the sample mean and sample variance out of the air and verified their properties. What we need now is a principle — a recipe that takes a parametric model and spits out an estimator with good properties whenever the regularity conditions hold. The **likelihood principle** is that recipe, and the maximum-likelihood estimator is the estimator it produces.
+
+The idea is disarmingly simple. Suppose we have a parametric family $\{f(x; \theta) : \theta \in \Theta\}$ and an iid sample $X_1, \ldots, X_n$. For any candidate value $\theta$, the joint density evaluated at the data — $\prod_{i=1}^n f(X_i; \theta)$ — measures how "plausible" that $\theta$ is as a generator of the data we actually observed. Among all candidates, the maximum-likelihood estimator picks the one that makes the data most probable. It is the peak of a landscape indexed by $\theta$, and everything else in this topic is about that landscape: its shape, its curvature, the rate at which it sharpens as data accumulates, and how to climb it when no closed form is available.
+
+<img src="/images/topics/maximum-likelihood/likelihood-log-likelihood.png"
+     alt="Two panels side by side. Left: the likelihood L(θ) for a Bernoulli(p) sample, a sharply peaked curve on (0, 1) with its maximum at p̂. Right: the log-likelihood ℓ(θ) of the same sample, a concave curve with its maximum at the same p̂ — the logarithm flattens the peak without moving it."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<DefinitionBlock number={1} title="Likelihood Function">
+Let $\{f(x; \theta) : \theta \in \Theta\}$ be a parametric family of densities (continuous case) or PMFs (discrete case), and let $\mathbf{x} = (x_1, \ldots, x_n)$ be an observed sample. The **likelihood function** is the joint density or PMF evaluated at the observed sample, viewed as a function of the parameter $\theta$ with the data held fixed:
+
+$$
+L(\theta; \mathbf{x}) \;=\; \prod_{i=1}^n f(x_i; \theta).
+$$
+
+When the data are understood we write $L(\theta)$ for short.
+</DefinitionBlock>
+
+The likelihood has the same algebraic form as the joint density, but its *role* is inverted. The joint density is a function of the data with the parameter fixed — what probability do we assign to different samples under this $\theta$? The likelihood is a function of the parameter with the data fixed — how plausible is each $\theta$ in light of the data we observed? The two objects are numerically equal after evaluation, but we read one "across samples" and the other "across parameters." This inversion is the entire conceptual move of likelihood-based inference.
+
+Two warnings. First, $L(\theta)$ is **not** a probability density over $\theta$. It is not normalized, and the parameter $\theta$ is not random in the frequentist setup — it is a fixed (unknown) constant. Calling $L(\theta)$ a "probability of $\theta$" is a category error that will mislead you in every Bayesian calculation that follows later. Second, we can always rescale: $L(\theta)$ and $c \cdot L(\theta)$ for any $c > 0$ identify the same maximizer. What matters about the likelihood is its *shape*, not its height.
+
+<DefinitionBlock number={2} title="Log-Likelihood Function">
+The **log-likelihood** is
+
+$$
+\ell(\theta) \;=\; \log L(\theta) \;=\; \sum_{i=1}^n \log f(x_i; \theta).
+$$
+
+It is the sum (not the product) of per-observation log-densities, and it has the same maximizer as $L(\theta)$ because $\log$ is strictly increasing.
+</DefinitionBlock>
+
+We will essentially never work with $L(\theta)$ directly. The log-likelihood $\ell(\theta)$ is better behaved in every way that matters: products become sums, the derivative is the score function, the second derivative is the (negative) observed Fisher information, and for exponential families the whole object is concave in the natural parameter. All of the asymptotic theory — consistency, asymptotic normality, efficiency — lives on the log-likelihood, not on the likelihood.
+
+<RemarkBlock number={1} title="Why the logarithm: three reasons in one">
+The switch from $L$ to $\ell$ is not cosmetic. Three things happen simultaneously, and each is load-bearing.
+
+**(1) Products become sums.** For iid data $L(\theta) = \prod_i f(X_i; \theta)$ is a product of $n$ terms; $\ell(\theta) = \sum_i \log f(X_i; \theta)$ is a sum. Sums are what every limit theorem in probability speaks to — the law of large numbers for sample averages, the central limit theorem for standardized sums. The transition $L \to \ell$ is what lets consistency and asymptotic normality inherit directly from the LLN and CLT applied to $\log f(X; \theta)$.
+
+**(2) Concavity (often).** For exponential families in the natural parameter, $\ell(\theta)$ is strictly concave: it has a unique maximizer, and any local maximum is the global one. The likelihood $L(\theta) = e^{\ell(\theta)}$ is not concave, just log-concave — a strictly weaker property. Working in log-space is what makes uniqueness and Newton-Raphson convergence arguments tractable.
+
+**(3) Numerical stability.** Products of many small probabilities underflow to zero in floating point. A sample of $n = 1000$ Normal observations produces an $L$ that is effectively zero — but $\ell$ is a perfectly ordinary number on the order of $-n$. Anyone who has fit a model to more than a few hundred data points has implicitly used $\ell$ for this reason alone.
+</RemarkBlock>
+
+<ExampleBlock number={1} title="Likelihood and log-likelihood for Normal(μ, σ²) with σ² known">
+Let $X_1, \ldots, X_n$ be iid $\mathcal{N}(\mu, \sigma^2)$ with $\sigma^2$ known. The per-observation density is $f(x; \mu) = (2\pi\sigma^2)^{-1/2} \exp\!\left(-\frac{(x-\mu)^2}{2\sigma^2}\right)$. Taking the product over $i$ and then the logarithm:
+
+$$
+\ell(\mu) \;=\; -\frac{n}{2}\log(2\pi\sigma^2) \;-\; \frac{1}{2\sigma^2}\sum_{i=1}^n (X_i - \mu)^2.
+$$
+
+The first term does not depend on $\mu$, so we can drop it when maximizing; what remains is the negative sum of squared residuals. Maximizing $\ell(\mu)$ is therefore the same as *minimizing* $\sum_i (X_i - \mu)^2$. Least squares and maximum likelihood, for Normal-error models, are the same procedure seen from two angles — one statistical, one geometric.
+</ExampleBlock>
+
+<ExampleBlock number={2} title="Likelihood for Bernoulli(p)">
+Let $X_1, \ldots, X_n$ be iid $\operatorname{Bernoulli}(p)$. The PMF is $f(x; p) = p^x (1-p)^{1-x}$ for $x \in \{0, 1\}$. Writing $k = \sum_i X_i$ for the number of successes,
+
+$$
+L(p) \;=\; p^k (1-p)^{n-k}, \qquad \ell(p) \;=\; k \log p + (n-k) \log(1-p).
+$$
+
+The likelihood is a polynomial in $p$ of degree $n$; the log-likelihood is linear in $\log p$ and $\log(1-p)$. The shape of $\ell(p)$ — a single peak somewhere between $0$ and $1$, concave — is already visible in the formula without any calculus.
+</ExampleBlock>
+
+<ExampleBlock number={3} title="Likelihood for Exponential(λ)">
+Let $X_1, \ldots, X_n$ be iid $\operatorname{Exponential}(\lambda)$ with density $f(x; \lambda) = \lambda e^{-\lambda x}$ for $x > 0$. Then
+
+$$
+L(\lambda) \;=\; \lambda^n \exp\!\left(-\lambda \sum_{i=1}^n X_i\right), \qquad \ell(\lambda) \;=\; n \log \lambda - \lambda n \bar{X}_n.
+$$
+
+Again a clean closed-form log-likelihood, linear in $\lambda$ apart from the $n \log \lambda$ growth term. For any sample with $\bar{X}_n > 0$, $\ell$ is strictly concave in $\lambda$ (its second derivative is $-n/\lambda^2 < 0$), so the maximizer is unique.
+</ExampleBlock>
+
+## 14.2 The Maximum Likelihood Estimator
+
+With the log-likelihood in hand, the estimator defines itself.
+
+<DefinitionBlock number={3} title="Maximum Likelihood Estimator">
+The **maximum-likelihood estimator** of $\theta$ is any value $\hat{\theta}_n \in \Theta$ that maximizes $L(\theta)$ — equivalently, that maximizes $\ell(\theta)$:
+
+$$
+\hat{\theta}_n \;\in\; \arg\max_{\theta \in \Theta} \ell(\theta).
+$$
+
+When the maximizer is unique, we write $\hat{\theta}_n = \arg\max_\theta \ell(\theta)$. When multiple maxima exist — e.g., on the boundary of $\Theta$, or at non-smooth points — we pick any of them; the finite-sample behavior can differ, but the asymptotic theory is unaffected.
+</DefinitionBlock>
+
+Two things to notice. The MLE is defined as a *maximizer*, not a root of the score equation: boundary solutions and points where the score is undefined are still MLEs when the global maximum lives there. For the well-behaved cases that dominate practice — compact or open parameter space, smooth $\ell$, unique interior maximum — the MLE is the unique root of the score equation, which is what Theorem 1 below captures. We will mostly work in this setting and flag boundary complications when they arise.
+
+<img src="/images/topics/maximum-likelihood/mle-score-equation.png"
+     alt="Two panels side by side. Left: the log-likelihood ℓ(θ) for a Bernoulli sample as a concave curve; a dashed vertical line marks its peak at p̂. Right: the score function S(θ) = ℓ'(θ) crossing zero at the same p̂, with positive values to the left and negative values to the right — the geometric content of 'zero-score = maximum-likelihood'."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<TheoremBlock number={1} title="Score equation characterizes the interior MLE">
+Suppose $\Theta \subseteq \mathbb{R}$ is an open interval, $\ell(\theta)$ is differentiable on $\Theta$, and the global maximizer $\hat{\theta}_n$ lies in the interior of $\Theta$. Then $\hat{\theta}_n$ satisfies the **score equation**
+
+$$
+S_n(\hat{\theta}_n) \;=\; \sum_{i=1}^n s(\hat{\theta}_n; X_i) \;=\; 0,
+$$
+
+where $s(\theta; x) = \partial_\theta \log f(x; \theta)$ is the per-observation score.
+</TheoremBlock>
+
+This is calculus: at an interior maximum of a differentiable function, the derivative is zero. Definition 10 in [Point Estimation](/topics/point-estimation) defined $s$ and $S_n$; the novelty in Topic 14 is that we now *solve* the score equation for $\theta$ instead of studying its expectation at a fixed $\theta$. The reader should treat Theorem 1 as a practical recipe: to compute an MLE, write down $\ell(\theta)$, differentiate with respect to $\theta$, set the result to zero, and solve.
+
+The next four examples run this recipe for the four simplest families. They are the workhorses of every applied statistics course, and they are worth deriving cleanly because Topic 14 will invoke them repeatedly.
+
+<ExampleBlock number={4} title="MLE of the Normal mean: θ̂ = X̄">
+From Example 1, $\ell(\mu) = -\frac{n}{2}\log(2\pi\sigma^2) - \frac{1}{2\sigma^2}\sum_i (X_i - \mu)^2$. Differentiating,
+
+$$
+\frac{d\ell}{d\mu} \;=\; \frac{1}{\sigma^2} \sum_{i=1}^n (X_i - \mu).
+$$
+
+Setting the derivative to zero and dividing by $n$ gives $\sum_i X_i = n\mu$, so
+
+$$
+\hat{\mu}_{\text{MLE}} \;=\; \bar{X}_n.
+$$
+
+The second derivative $-n/\sigma^2 < 0$ confirms this is a maximum, not a minimum. The MLE of the Normal mean is the sample mean. Every other Topic 13 property of $\bar{X}_n$ — unbiasedness, variance $\sigma^2/n$, asymptotic normality with rate $\sqrt{n}$, efficiency — is now a property of the MLE.
+</ExampleBlock>
+
+<ExampleBlock number={5} title="MLE of the Bernoulli proportion: p̂ = k/n">
+From Example 2, $\ell(p) = k \log p + (n-k) \log(1-p)$ with $k = \sum_i X_i$. Differentiating,
+
+$$
+\frac{d\ell}{dp} \;=\; \frac{k}{p} - \frac{n-k}{1-p}.
+$$
+
+Setting this to zero: $k(1-p) = (n-k)p$, so $k - kp = np - kp$, and therefore $k = np$, giving
+
+$$
+\hat{p}_{\text{MLE}} \;=\; \frac{k}{n} \;=\; \bar{X}_n.
+$$
+
+The sample proportion is the MLE — unsurprising in hindsight, and intuitive. The second derivative is $-k/p^2 - (n-k)/(1-p)^2 < 0$ for $p \in (0, 1)$, confirming a maximum. At the boundary $k = 0$ or $k = n$ the MLE is $0$ or $1$, at the edge of the parameter space — a clean example of a boundary solution.
+</ExampleBlock>
+
+<ExampleBlock number={6} title="MLE of the Exponential rate: λ̂ = 1/X̄">
+From Example 3, $\ell(\lambda) = n \log \lambda - \lambda n \bar{X}_n$. Differentiating,
+
+$$
+\frac{d\ell}{d\lambda} \;=\; \frac{n}{\lambda} - n\bar{X}_n.
+$$
+
+Setting this to zero gives $\lambda = 1/\bar{X}_n$:
+
+$$
+\hat{\lambda}_{\text{MLE}} \;=\; \frac{1}{\bar{X}_n}.
+$$
+
+Note that the MLE is a *nonlinear* function of $\bar{X}_n$. Because $1/x$ is convex, Jensen's inequality implies $\mathbb{E}[1/\bar{X}_n] > 1/\mathbb{E}[\bar{X}_n] = \lambda$, so the MLE is **biased** for finite $n$. We will recover bias-free behavior asymptotically, but this is a useful reminder that MLEs are not generally unbiased; they are consistent and asymptotically efficient, not unbiased in finite samples.
+</ExampleBlock>
+
+<ExampleBlock number={7} title="MLE of the Poisson rate: λ̂ = X̄">
+For iid $\operatorname{Poisson}(\lambda)$ data with PMF $f(x; \lambda) = \lambda^x e^{-\lambda}/x!$,
+
+$$
+\ell(\lambda) \;=\; \Big(\sum_{i=1}^n X_i\Big) \log \lambda - n\lambda - \sum_{i=1}^n \log(X_i!).
+$$
+
+The final $\log(X_i!)$ term does not depend on $\lambda$. Differentiating the rest,
+
+$$
+\frac{d\ell}{d\lambda} \;=\; \frac{\sum_i X_i}{\lambda} - n,
+$$
+
+and setting this to zero gives $\hat{\lambda}_{\text{MLE}} = \bar{X}_n$. The Poisson MLE is the sample mean — the same estimator as for the Normal mean and the Bernoulli proportion. This is not a coincidence: in each case the natural sufficient statistic is $\sum_i X_i$, and the MLE is its normalized version. Exponential families make this pattern universal ([Exponential Families](/topics/exponential-families), §7.8).
+</ExampleBlock>
+
+<RemarkBlock number={2} title="When no closed-form MLE exists">
+The four examples above all give the MLE as a clean function of the sample mean. That is a feature of their exponential-family structure, not a general property of MLE. For most parametric families — Gamma shape, beta shape, Weibull, Cauchy location, logistic regression, hidden Markov models, neural networks — the score equation has no closed-form solution, and the MLE must be computed numerically. Section 14.7 develops Newton-Raphson for exactly this situation: write down the score and the observed Fisher information, pick a starting value, iterate $\theta^{(t+1)} = \theta^{(t)} + S(\theta^{(t)}) / J(\theta^{(t)})$, and stop when the steps become small. Every optimization method in modern machine learning — SGD, Adam, L-BFGS — is a variation on this theme applied to the log-likelihood or a regularized variant.
+</RemarkBlock>
+
+## 14.3 Functional Invariance
+
+The next property is the one the reader is most likely to have used without ever proving — or even articulating as a theorem.
+
+<TheoremBlock number={2} title="Functional invariance of the MLE">
+Let $\hat{\theta}_n$ be the MLE of $\theta$, and let $g : \Theta \to \mathcal{G}$ be any function (not necessarily one-to-one). Then the MLE of $\phi = g(\theta)$ is
+
+$$
+\hat{\phi}_n \;=\; g(\hat{\theta}_n).
+$$
+</TheoremBlock>
+
+Invariance is what lets you say "the MLE of the standard deviation is the square root of the MLE of the variance" without a separate derivation. It is what lets a neural-network practitioner say "the MLE of the sigmoid-output probability is $\sigma(x^\top \hat\beta)$ once we have the MLE of $\hat\beta$." It is the glue between the MLE in its natural parameterization and the MLE in whatever parameterization the application requires.
+
+The proof for one-to-one $g$ is a change-of-variables argument. Let $\phi = g(\theta)$, so $\theta = g^{-1}(\phi)$. The likelihood in the new parameterization is $L^*(\phi) = L(g^{-1}(\phi))$, and its maximizer is $\phi$ such that $g^{-1}(\phi) = \hat{\theta}_n$, i.e., $\phi = g(\hat{\theta}_n)$. For non-one-to-one $g$, the standard device is the **profile likelihood**: for each $\phi$, maximize $L(\theta)$ over $\{\theta : g(\theta) = \phi\}$, then maximize the result over $\phi$. Under this definition the invariance property extends without change. Casella & Berger (2002) §7.2.2 gives the detailed argument; the one-to-one case is enough for everything in this topic.
+
+<img src="/images/topics/maximum-likelihood/mle-invariance.png"
+     alt="Two panels stacked vertically. Top: log-likelihood ℓ(σ²) as a function of the Normal variance σ², peaking at σ̂². Bottom: log-likelihood ℓ*(σ) for the same data after reparameterizing by σ = √(σ²), peaking at σ̂ = √(σ̂²). The two maximizers are connected by a dashed line showing that invariance transports one maximum directly to the other."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<ExampleBlock number={8} title="Invariance: σ² → σ (standard deviation from variance)">
+If $\hat{\sigma}^2_{\text{MLE}} = \frac{1}{n}\sum_i (X_i - \bar{X}_n)^2$ is the MLE of the Normal variance $\sigma^2$ (as derived from the two-parameter Normal log-likelihood by zeroing the score in $\sigma^2$), then by invariance the MLE of the standard deviation $\sigma = \sqrt{\sigma^2}$ is
+
+$$
+\hat{\sigma}_{\text{MLE}} \;=\; \sqrt{\hat{\sigma}^2_{\text{MLE}}} \;=\; \sqrt{\tfrac{1}{n}\sum_i (X_i - \bar{X}_n)^2}.
+$$
+
+No separate maximization is needed. Notice that $\hat{\sigma}_{\text{MLE}}$ is biased even though $\hat{\sigma}^2_{\text{MLE}}$ would be unbiased if we used $n-1$ instead of $n$; invariance preserves the MLE but does not preserve unbiasedness under nonlinear transformations. The two properties simply track different things.
+</ExampleBlock>
+
+<ExampleBlock number={9} title="Invariance: p → odds p/(1−p)">
+In Bernoulli data, the MLE of $p$ is $\hat{p} = \bar{X}_n$. The **odds** are $\phi(p) = p/(1-p)$, a strictly increasing transformation on $(0, 1)$ (so the one-to-one case applies). By invariance, the MLE of the odds is
+
+$$
+\hat{\phi}_{\text{MLE}} \;=\; \frac{\hat{p}}{1 - \hat{p}} \;=\; \frac{\bar{X}_n}{1 - \bar{X}_n}.
+$$
+
+The odds are the natural parameter of the Bernoulli family: $\eta = \log\!\frac{p}{1-p}$ is the logit link that logistic regression uses. Invariance is what makes "logistic regression on $\eta$" equivalent to "MLE of $p$ then take the log-odds" — the two routes agree at the estimate.
+</ExampleBlock>
+
+<RemarkBlock number={3} title="Invariance is about the MLE, not its distribution">
+Invariance transports the *point estimate* under $g$, but it does **not** transport the sampling distribution. If $\sqrt{n}(\hat{\theta}_n - \theta_0) \overset{d}{\to} \mathcal{N}(0, 1/I(\theta_0))$, what happens to $\sqrt{n}(g(\hat{\theta}_n) - g(\theta_0))$? Theorem 7 in Topic 13 (delta method) gives the answer:
+
+$$
+\sqrt{n}\,(g(\hat{\theta}_n) - g(\theta_0)) \;\overset{d}{\to}\; \mathcal{N}\!\left(0, \frac{[g'(\theta_0)]^2}{I(\theta_0)}\right).
+$$
+
+So the asymptotic variance scales by $[g'(\theta_0)]^2$. A consequence: the Fisher information transforms tensorially, and efficient estimators in one parameterization remain efficient under smooth reparameterization. Invariance is about the point; the delta method is about the spread.
+</RemarkBlock>
+
+## 14.4 Consistency
+
+The first asymptotic property is the most basic. As the sample size grows, does the MLE settle on the true parameter?
+
+<img src="/images/topics/maximum-likelihood/mle-consistency.png"
+     alt="Four overlaid log-likelihood curves ℓ(θ) normalized to their own maxima, for n = 10, 50, 200, 1000 samples from the same model. As n grows, the curve sharpens dramatically around the true parameter θ₀ (marked with a vertical line). The maximizers θ̂ₙ cluster ever more tightly around θ₀ as n increases — consistency visualized."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+Before we can even state consistency, we need a condition that rules out a pathology: two different parameter values giving the same distribution. If $f(x; \theta_0) = f(x; \theta_1)$ for $\theta_0 \neq \theta_1$, no amount of data can tell the parameters apart, and no estimator can be consistent.
+
+<DefinitionBlock number={4} title="KL-identifiability">
+The family $\{f(x; \theta) : \theta \in \Theta\}$ is **Kullback–Leibler identifiable** at $\theta_0$ if for every $\theta \neq \theta_0$ in $\Theta$,
+
+$$
+D_{\text{KL}}(f_{\theta_0} \,\|\, f_\theta) \;=\; \mathbb{E}_{\theta_0}\!\left[\log \frac{f(X; \theta_0)}{f(X; \theta)}\right] \;>\; 0.
+$$
+
+Equivalently: $\theta = \theta_0$ is the unique maximizer of $\theta \mapsto \mathbb{E}_{\theta_0}[\log f(X; \theta)]$.
+</DefinitionBlock>
+
+The KL divergence is zero only when the two distributions agree almost surely, so KL-identifiability is the minimal non-degeneracy we need. Every standard parametric family — Normal, Bernoulli, Exponential, Poisson, Gamma, Beta, exponential families in general — is KL-identifiable on its natural parameter space. Non-identifiability shows up in mixture models (label-switching), overparameterized neural networks (many weight configurations realize the same function), and non-identified latent-variable models — all genuine problems that the MLE machinery as stated below does not handle.
+
+<TheoremBlock number={3} title="Consistency of the MLE">
+Let $X_1, X_2, \ldots$ be iid from $f(x; \theta_0)$ where $\theta_0 \in \Theta \subseteq \mathbb{R}$. Assume (i) $\Theta$ is compact, (ii) the family is KL-identifiable at $\theta_0$, and (iii) $\theta \mapsto \log f(x; \theta)$ is continuous in $\theta$ for every $x$ and dominated by an integrable function. Then the MLE $\hat{\theta}_n$ is weakly consistent:
+
+$$
+\hat{\theta}_n \;\overset{P}{\to}\; \theta_0.
+$$
+</TheoremBlock>
+
+<ProofBlock>
+Define the population log-likelihood
+
+$$
+M(\theta) \;=\; \mathbb{E}_{\theta_0}[\log f(X; \theta)],
+$$
+
+the thing the sample log-likelihood $M_n(\theta) = \frac{1}{n}\ell(\theta) = \frac{1}{n}\sum_i \log f(X_i; \theta)$ is trying to estimate. By KL-identifiability, $\theta_0$ is the unique maximizer of $M$: for any $\theta \neq \theta_0$,
+
+$$
+M(\theta_0) - M(\theta) \;=\; \mathbb{E}_{\theta_0}\!\left[\log \frac{f(X; \theta_0)}{f(X; \theta)}\right] \;=\; D_{\text{KL}}(f_{\theta_0} \,\|\, f_\theta) \;>\; 0.
+$$
+
+This is the Gibbs inequality: the true density maximizes the expected log-likelihood among all densities. By the strong law of large numbers from [Topic 10](/topics/law-of-large-numbers), applied pointwise to the iid sequence $\{\log f(X_i; \theta)\}_{i=1}^\infty$ at every fixed $\theta$,
+
+$$
+M_n(\theta) \;=\; \frac{1}{n}\sum_{i=1}^n \log f(X_i; \theta) \;\overset{a.s.}{\to}\; M(\theta).
+$$
+
+The next step is the argument that pointwise convergence plus compactness plus continuity upgrades to **uniform** convergence on $\Theta$:
+
+$$
+\sup_{\theta \in \Theta} \lvert M_n(\theta) - M(\theta) \rvert \;\overset{P}{\to}\; 0.
+$$
+
+This is a standard Glivenko–Cantelli-type argument: partition $\Theta$ into finitely many small neighborhoods, use pointwise LLN on the centers, and bound oscillations within neighborhoods by the dominating function. Van der Vaart (1998) Theorem 5.7 gives the detailed execution; the only ingredients are the three assumptions above.
+
+Now let $\varepsilon > 0$ and consider the open neighborhood $U_\varepsilon = \{\theta : |\theta - \theta_0| < \varepsilon\}$. The complement $\Theta \setminus U_\varepsilon$ is compact, so $M$ attains its maximum there at some $\theta^* \neq \theta_0$; by identifiability,
+
+$$
+\delta \;:=\; M(\theta_0) - \sup_{\theta \in \Theta \setminus U_\varepsilon} M(\theta) \;>\; 0.
+$$
+
+On the event $\{\sup_\theta |M_n - M| < \delta/2\}$ — which has probability tending to one by uniform convergence — any maximizer $\hat{\theta}_n$ of $M_n$ must lie in $U_\varepsilon$: if it lay outside, then
+
+$$
+M_n(\hat{\theta}_n) \;\leq\; M(\hat{\theta}_n) + \delta/2 \;\leq\; M(\theta_0) - \delta/2 \;<\; M(\theta_0) - \delta/2 + \delta/2 \;=\; M(\theta_0) \;\leq\; M_n(\theta_0) + \delta/2,
+$$
+
+contradicting the maximality of $\hat{\theta}_n$ relative to $\theta_0$ (for large enough $n$, $M_n(\hat\theta_n) \geq M_n(\theta_0)$). Therefore $P(\hat\theta_n \in U_\varepsilon) \to 1$, i.e., $\hat\theta_n \overset{P}{\to} \theta_0$. $\quad\blacksquare$
+</ProofBlock>
+
+The two ingredients are worth abstracting. **The Gibbs inequality** — $\mathbb{E}_{\theta_0}[\log f(X; \theta_0)] \geq \mathbb{E}_{\theta_0}[\log f(X; \theta)]$, with equality only at $\theta = \theta_0$ — says that the true parameter is the unique maximizer of the population log-likelihood. **The LLN** says the sample log-likelihood converges to the population log-likelihood. Consistency is just "the argmax of a uniform limit is the argmax of the limit." Every modern MLE consistency proof is this argument, with different amounts of care invested in the uniform-convergence step for complex parameter spaces.
+
+<RemarkBlock number={4} title="Regularity conditions: what they buy you">
+The three conditions in Theorem 3 — compact $\Theta$, KL-identifiability, continuity with domination — are called **regularity conditions**. They are standard in most parametric problems, and they can be relaxed in a number of directions:
+
+- **Compactness of $\Theta$:** Usually replaced by "the MLE eventually lies in a compact subset of $\Theta$ with probability one," which holds under consistency of a coarser preliminary estimator. For open $\Theta$ (e.g., $\Theta = \mathbb{R}$ for the Normal mean), this is almost always true, but the proof becomes messier.
+- **Identifiability:** Non-negotiable. Label-switching in mixture models, equivalent parameterizations in neural networks, and unobservable components in latent-variable models all violate identifiability in different ways. The MLE in these settings is consistent only for the identified quotient — e.g., the set of mixture distributions, not the parameter vector of component labels.
+- **Continuity and domination:** Continuity of $\log f$ in $\theta$ is almost always immediate. Domination by an integrable function (so expectations are finite and uniform LLN applies) can fail for heavy-tailed families, which is why the MLE story becomes more delicate for Cauchy and similar distributions.
+
+When the conditions *hold*, they buy you consistency for free — no explicit convergence rate, no finite-sample guarantees, but the estimator does eventually home in on the truth. Rates and finite-sample behavior are the job of asymptotic normality (§14.5) and large-deviations-type bounds ([Topic 12](/topics/large-deviations)).
+</RemarkBlock>
+
+## 14.5 Asymptotic Normality
+
+Consistency says $\hat\theta_n$ converges to $\theta_0$. Asymptotic normality says *how fast* and *with what shape*. Under regularity, the answer is canonical — the sampling distribution, standardized by $\sqrt{n}$, is Gaussian with a variance we can write down exactly.
+
+<img src="/images/topics/maximum-likelihood/mle-asymptotic-normality.png"
+     alt="Three-panel figure. Left: histograms of MLE draws at n = 10, 100, 1000 sample sizes — increasingly concentrated around θ₀ and increasingly Gaussian. Middle: the same MLEs standardized by √n, overlaid with a N(0, 1/I(θ₀)) density; the standardized histograms collapse onto the limiting density. Right: a QQ-plot of standardized MLEs against Normal quantiles, essentially linear for n ≥ 100."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<TheoremBlock number={4} title="Asymptotic normality of the MLE">
+Let $X_1, X_2, \ldots$ be iid from $f(x; \theta_0)$ on an open interval $\Theta$, with $\hat\theta_n$ the MLE. Assume the conditions of Theorem 3 for consistency, plus (iv) $\theta \mapsto \log f(x; \theta)$ is twice continuously differentiable in a neighborhood of $\theta_0$ with dominated second derivative, and (v) the Fisher information $I(\theta_0) \in (0, \infty)$. Then
+
+$$
+\sqrt{n}\,(\hat\theta_n - \theta_0) \;\overset{d}{\to}\; \mathcal{N}\!\left(0, \frac{1}{I(\theta_0)}\right).
+$$
+</TheoremBlock>
+
+<ProofBlock>
+Write $\ell_n(\theta)$ for the sample log-likelihood and $S_n(\theta) = \ell_n'(\theta)$ for the total score. Because $\hat\theta_n$ maximizes $\ell_n$ in the interior of $\Theta$ (which happens with probability tending to one by consistency) and $\ell_n$ is twice differentiable, $S_n(\hat\theta_n) = 0$. Taylor-expand $S_n$ around $\theta_0$ to second order, for some $\tilde\theta_n$ between $\hat\theta_n$ and $\theta_0$:
+
+$$
+0 \;=\; S_n(\hat\theta_n) \;=\; S_n(\theta_0) + (\hat\theta_n - \theta_0)\, S_n'(\tilde\theta_n).
+$$
+
+Solve for $\hat\theta_n - \theta_0$:
+
+$$
+\hat\theta_n - \theta_0 \;=\; -\, \frac{S_n(\theta_0)}{S_n'(\tilde\theta_n)}.
+$$
+
+Multiply both sides by $\sqrt{n}$ and reorganize:
+
+$$
+\sqrt{n}\,(\hat\theta_n - \theta_0) \;=\; \frac{(1/\sqrt{n})\, S_n(\theta_0)}{-(1/n)\, S_n'(\tilde\theta_n)}.
+$$
+
+The numerator is a standardized sum of iid scores. By Theorem 8 in [Point Estimation](/topics/point-estimation), the score has mean zero and variance $I(\theta_0)$ under $\theta_0$, so the [central limit theorem](/topics/central-limit-theorem) gives
+
+$$
+\frac{1}{\sqrt{n}} S_n(\theta_0) \;=\; \frac{1}{\sqrt{n}} \sum_{i=1}^n s(\theta_0; X_i) \;\overset{d}{\to}\; \mathcal{N}\!\big(0, I(\theta_0)\big).
+$$
+
+The denominator is the negative of the sample average of second derivatives of the log-density. By consistency $\tilde\theta_n \overset{P}{\to} \theta_0$; by the LLN applied to the iid sequence $\{\ell_1''(\theta_0; X_i)\}$ and the dominated continuity of the second derivative,
+
+$$
+-\frac{1}{n}\, S_n'(\tilde\theta_n) \;=\; -\frac{1}{n}\sum_{i=1}^n \partial_\theta^2 \log f(X_i; \tilde\theta_n) \;\overset{P}{\to}\; -\,\mathbb{E}_{\theta_0}\!\big[\partial_\theta^2 \log f(X; \theta_0)\big] \;=\; I(\theta_0).
+$$
+
+The last equality is the "information equals negative expected Hessian" identity (Theorem 8 of Topic 13), which in turn relies on the regularity conditions permitting differentiation under the integral sign.
+
+Put the two pieces together with [Slutsky's theorem](/topics/modes-of-convergence): a sequence converging in distribution divided by a sequence converging in probability to a positive constant converges in distribution to the ratio of the limits. Thus
+
+$$
+\sqrt{n}\,(\hat\theta_n - \theta_0) \;\overset{d}{\to}\; \frac{\mathcal{N}(0, I(\theta_0))}{I(\theta_0)} \;=\; \mathcal{N}\!\left(0, \frac{I(\theta_0)}{I(\theta_0)^2}\right) \;=\; \mathcal{N}\!\left(0, \frac{1}{I(\theta_0)}\right). \quad\blacksquare
+$$
+</ProofBlock>
+
+The proof shows the MLE as a ratio of two averages — the score and the observed Hessian — each of which has a limit theorem. The CLT handles the numerator; the LLN handles the denominator; Slutsky combines them. This is the template for every M-estimator asymptotic-normality proof: identify the estimating equation, Taylor-expand, apply CLT to the leading term, LLN to the curvature term, and Slutsky to combine. The MLE is the estimating equation $S_n(\theta) = 0$, but the same scaffolding works for robust M-estimators, GMM, quasi-likelihood, and many estimators in modern econometrics.
+
+<ExampleBlock number={10} title="Asymptotic distribution of the Normal MLE">
+For Normal$(\mu, \sigma^2)$ with $\sigma^2$ known and $\hat\mu_n = \bar{X}_n$, $I(\mu) = 1/\sigma^2$ (Example 10 of Topic 13). Theorem 4 gives
+
+$$
+\sqrt{n}\,(\bar{X}_n - \mu) \;\overset{d}{\to}\; \mathcal{N}(0, \sigma^2).
+$$
+
+This is the classical CLT for the sample mean, now recovered as a special case of the general MLE asymptotic-normality theorem. For Normal data, the "asymptotic" normality is actually *exact* at every finite $n$: $\bar{X}_n \sim \mathcal{N}(\mu, \sigma^2/n)$ for any $n \geq 1$, not just in the limit. The MLE framework gives one unified result; for this particular family the result happens to hold non-asymptotically.
+</ExampleBlock>
+
+<ExampleBlock number={11} title="Asymptotic distribution of the Bernoulli MLE">
+For Bernoulli$(p)$ with $\hat p_n = \bar{X}_n$, the Fisher information is $I(p) = 1/(p(1-p))$, so $1/I(p) = p(1-p)$. Theorem 4 gives
+
+$$
+\sqrt{n}\,(\bar{X}_n - p) \;\overset{d}{\to}\; \mathcal{N}\!\big(0, p(1-p)\big).
+$$
+
+This is the two-sided de Moivre–Laplace theorem in disguise. For a 95% Wald confidence interval we replace $p$ by $\hat p$ in the asymptotic variance:
+
+$$
+\hat p_n \,\pm\, 1.96\,\sqrt{\frac{\hat p_n (1 - \hat p_n)}{n}}.
+$$
+
+This is the formula every introductory statistics class derives ad hoc — it is the MLE Wald interval applied to the Bernoulli family. The interval has known coverage issues near $p = 0$ or $p = 1$; the Wilson score interval and the Agresti–Coull interval are alternatives. What the MLE machinery gives us is the *default* construction; better intervals require more careful analysis of finite-sample behavior.
+</ExampleBlock>
+
+<RemarkBlock number={5} title="Finite-sample caution: asymptotics can mislead">
+The arrow $\overset{d}{\to}$ is deceptively clean. In finite samples, three things can go wrong:
+
+**(1) Slow convergence near boundaries.** For Bernoulli with true $p$ near $0$ or $1$, the sampling distribution of $\hat p$ is very skewed and discrete; the Wald interval undercovers dramatically. The convergence rate is still $\sqrt n$, but the hidden constants are huge near boundary points.
+
+**(2) Bias at second order.** The MLE is consistent but generally not unbiased; the bias shrinks at rate $1/n$, so it is negligible asymptotically but can matter at moderate sample sizes. The classical "Bartlett correction" adjusts likelihood-ratio tests for this second-order bias.
+
+**(3) Asymptotic efficiency ≠ finite-sample optimality.** At fixed $n$, a biased estimator with smaller variance (e.g., James–Stein in $d \geq 3$, or a shrinkage estimator) can dominate the MLE in MSE. Asymptotic efficiency says the MLE is optimal as $n \to \infty$; for small $n$ you may well want to look elsewhere. Topic 13 §13.8 developed this point carefully.
+
+A healthy reading of Theorem 4 is: "for large enough $n$, with well-behaved parameters, you will not be led astray by the Gaussian approximation." The phrases "large enough" and "well-behaved" are load-bearing and should be checked by simulation whenever $n$ is less than a few hundred or the parameter is near a boundary.
+</RemarkBlock>
+
+### Multivariate extension (sidebar)
+
+When $\theta \in \mathbb{R}^d$ is a parameter vector, the same argument runs with the score becoming a gradient $\nabla \ell_n(\theta) \in \mathbb{R}^d$ and the Hessian becoming a $d \times d$ matrix. The Fisher information is the $d \times d$ positive semi-definite matrix
+
+$$
+\mathbf{I}(\theta) \;=\; \mathbb{E}_\theta\!\left[\nabla \log f(X; \theta)\, \nabla \log f(X; \theta)^\top\right] \;=\; -\mathbb{E}_\theta\!\left[\nabla^2 \log f(X; \theta)\right],
+$$
+
+and the asymptotic-normality statement becomes
+
+$$
+\sqrt{n}\,(\hat\theta_n - \theta_0) \;\overset{d}{\to}\; \mathcal{N}_d\!\left(\mathbf{0}, \mathbf{I}(\theta_0)^{-1}\right).
+$$
+
+The component-wise Wald CI for the $j$-th parameter is $\hat\theta_{n,j} \pm z_{\alpha/2} \sqrt{[\mathbf{I}(\hat\theta_n)^{-1}/n]_{jj}}$, using the $j$-th diagonal of the inverse Fisher information matrix evaluated at the MLE. The proof is notationally heavier — vector Taylor expansion, matrix Slutsky, continuous-mapping of the matrix inverse — but conceptually identical to the scalar case.
+
+The full multivariate machinery, including the role of the Cramér–Rao matrix inequality and the block structure of information matrices for multi-parameter GLMs, is developed in Topics 20 (Linear Regression) and 21 (Generalized Linear Models).
+
+## 14.6 Asymptotic Efficiency
+
+Consistency and asymptotic normality locate the MLE within the space of well-behaved estimators. Efficiency ranks it.
+
+<img src="/images/topics/maximum-likelihood/mle-efficiency.png"
+     alt="Two superimposed densities on the same axis — a narrow Gaussian centered at θ₀ (the MLE's asymptotic distribution) and a wider Gaussian also centered at θ₀ (a less efficient competitor, e.g., the sample median on Normal data). A vertical dotted line at θ₀; an annotation shows the ratio of asymptotic variances equal to the inverse Fisher information divided by the competitor's asymptotic variance, here about 0.64 — the sample median extracts ~64% of the information the mean extracts."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<TheoremBlock number={5} title="Asymptotic efficiency of the MLE">
+Under the conditions of Theorem 4, the MLE achieves the Cramér–Rao asymptotic variance: its asymptotic variance $1/I(\theta_0)$ equals the Cramér–Rao lower bound for the class of regular estimators. In particular, for any other regular asymptotically-normal estimator $\tilde\theta_n$ with $\sqrt{n}(\tilde\theta_n - \theta_0) \overset{d}{\to} \mathcal{N}(0, v(\theta_0))$,
+
+$$
+v(\theta_0) \;\geq\; \frac{1}{I(\theta_0)}.
+$$
+</TheoremBlock>
+
+<ProofBlock>
+Theorem 9 in [Point Estimation](/topics/point-estimation) — the Cramér–Rao lower bound — proved that any unbiased estimator $\tilde\theta_n$ of $\theta_0$ satisfies $\operatorname{Var}(\tilde\theta_n) \geq 1/(n I(\theta_0))$, which in asymptotic-variance language means $v(\theta_0) \geq 1/I(\theta_0)$ for its limiting Gaussian spread. The MLE, by Theorem 4 above, has asymptotic variance exactly $1/I(\theta_0)$, which is the CRLB. No regular estimator can do strictly better than the MLE asymptotically. $\quad\blacksquare$
+</ProofBlock>
+
+Efficiency is the statement that no one can beat the MLE asymptotically. In the ML literature, this result is sometimes called the "Cramér–Rao bound saturates at the MLE": the information inequality turns into an equality for the maximum-likelihood estimator. Every other regular estimator wastes information — extracts less precision from the data than the data actually contains — and the MLE is the unique one (within the regular class, at the first asymptotic order) that does not.
+
+<ExampleBlock number={12} title="Efficiency of Normal, Bernoulli, Exponential MLEs — all achieve the CRLB">
+Line up the three workhorse examples:
+
+| Family | MLE $\hat\theta$ | $I(\theta)$ | CRLB $= 1/(nI(\theta))$ | $\operatorname{AsymVar}(\hat\theta) = 1/(nI(\theta))$ | Efficient? |
+|---|---|---|---|---|---|
+| Normal$(\mu, \sigma^2)$, $\sigma^2$ known | $\bar{X}_n$ | $1/\sigma^2$ | $\sigma^2/n$ | $\sigma^2/n$ | Yes (exact at every $n$) |
+| Bernoulli$(p)$ | $\bar{X}_n$ | $1/(p(1-p))$ | $p(1-p)/n$ | $p(1-p)/n$ | Yes (asymptotically) |
+| Exponential$(\lambda)$ | $1/\bar{X}_n$ | $1/\lambda^2$ | $\lambda^2/n$ | $\lambda^2/n$ | Yes (asymptotically) |
+
+All three MLEs achieve the CRLB in the limit; the Normal mean achieves it exactly at every finite $n$. Efficiency is not specific to exponential families — it is specific to the MLE — but exponential families make the arithmetic particularly clean because the score is linear in the sufficient statistic.
+</ExampleBlock>
+
+<RemarkBlock number={6} title="Hodges' superefficiency: an asymptotic pathology">
+Theorem 5 says no regular estimator can beat the MLE asymptotically. The catch is the word *regular*. Joseph Hodges in 1951 constructed the following superefficient estimator: shrink $\bar{X}_n$ all the way to $0$ whenever $|\bar{X}_n| < n^{-1/4}$, and use $\bar{X}_n$ otherwise. At $\theta_0 = 0$ the estimator has zero asymptotic variance; at every other $\theta_0$ it behaves like $\bar{X}_n$.
+
+This does not violate Theorem 5 because the Hodges estimator is irregular at $\theta_0 = 0$ — the sampling distribution does not converge uniformly in $\theta_0$ near zero. More fundamentally, the maximum risk over a shrinking neighborhood of $\theta_0 = 0$ *diverges*: the estimator pays for its superefficiency at one point with enormous variance at nearby points. Le Cam's convolution theorem makes this precise: any estimator that is asymptotically better than the MLE at one point is asymptotically worse at nearby points, in a specific technical sense.
+
+For practical purposes, the lesson is that superefficiency is a local, fragile phenomenon. The MLE is the default for good reason, and the escape routes — shrinkage, empirical Bayes, Stein-type estimators — deliver their gains through bias, regularization, or prior information, not through asymptotic efficiency.
+</RemarkBlock>
+
+## 14.7 Computing the MLE: Newton-Raphson
+
+For the Normal, Bernoulli, Exponential, and Poisson families of §14.2, the score equation has a closed-form solution. For most other families — Gamma shape, logistic regression, mixture models, neural networks — it does not, and the MLE must be computed by a root-finder applied to $S_n(\theta) = 0$. Newton-Raphson is the canonical choice. It is the default in `glm()` in R, `statsmodels` in Python, and essentially every optimization engine under the hood of modern ML toolkits; understanding its rate of convergence is understanding why maximum-likelihood fits run as fast as they do.
+
+<img src="/images/topics/maximum-likelihood/newton-raphson-iterations.png"
+     alt="Two panels side by side. Left: the log-likelihood ℓ(α) for the Gamma(3, 2) shape parameter with n = 50 data points. Four tangent-line steps are shown originating from α⁽⁰⁾ = 1, then α⁽¹⁾, α⁽²⁾, α⁽³⁾; each tangent crosses the α-axis at the next iterate; the sequence converges visibly to the MLE near α = 3. Right: a log-scale convergence plot of |α⁽ᵗ⁾ − α̂| against iteration t — nearly straight with slope approximately 2 on the log-log axes, illustrating quadratic convergence."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<DefinitionBlock number={5} title="Newton-Raphson update rule">
+Given an iterate $\theta^{(t)}$, the **Newton-Raphson update** linearizes the score equation around $\theta^{(t)}$ and solves the linear equation:
+
+$$
+\theta^{(t+1)} \;=\; \theta^{(t)} \;-\; \frac{S_n(\theta^{(t)})}{S_n'(\theta^{(t)})} \;=\; \theta^{(t)} \;+\; \frac{S_n(\theta^{(t)})}{J(\theta^{(t)})},
+$$
+
+where $J(\theta) = -\ell_n''(\theta) = -S_n'(\theta)$ is the **observed Fisher information**. The update is applied until $|\theta^{(t+1)} - \theta^{(t)}|$ falls below a tolerance.
+</DefinitionBlock>
+
+Geometrically, at each step we replace $\ell_n$ with its local quadratic approximation and jump to the maximum of that parabola. Where the log-likelihood is close to quadratic — and near the MLE it always is, by Taylor — the jump lands close to the true maximum and the next iterate does even better. This is the source of the algorithm's speed: each iteration roughly *squares* the error, so $10$-digit precision is reached in a handful of steps.
+
+**Fisher scoring** is a popular variant: replace the random $J(\theta^{(t)})$ with its expectation $nI(\theta^{(t)})$, so the update becomes
+
+$$
+\theta^{(t+1)} \;=\; \theta^{(t)} \;+\; \frac{S_n(\theta^{(t)})}{nI(\theta^{(t)})}.
+$$
+
+For exponential families in the natural parameter, $J$ and $nI$ coincide and Newton and Fisher scoring are identical. For other families, Fisher scoring often has better stability — the expected information is usually positive everywhere, while the observed information can become non-positive away from the MLE, causing Newton to take a step *away* from the solution.
+
+<TheoremBlock number={6} title="Quadratic convergence of Newton-Raphson">
+Suppose $\ell_n$ is three times continuously differentiable in a neighborhood of the MLE $\hat\theta$, and $J(\hat\theta) > 0$. Then for any starting value $\theta^{(0)}$ sufficiently close to $\hat\theta$, the Newton-Raphson iterates satisfy
+
+$$
+|\theta^{(t+1)} - \hat\theta| \;\leq\; C \cdot |\theta^{(t)} - \hat\theta|^2
+$$
+
+for some constant $C > 0$ depending on $\hat\theta$ and the third derivative of $\ell_n$. Equivalently, the number of correct digits roughly doubles per iteration.
+</TheoremBlock>
+
+<ProofBlock>
+Let $e_t = \theta^{(t)} - \hat\theta$ denote the error at step $t$. Taylor-expand $S_n$ around $\hat\theta$:
+
+$$
+S_n(\theta^{(t)}) \;=\; S_n(\hat\theta) \;+\; e_t\, S_n'(\hat\theta) \;+\; \frac{e_t^2}{2}\, S_n''(\xi_t)
+$$
+
+for some $\xi_t$ between $\theta^{(t)}$ and $\hat\theta$. Since $\hat\theta$ is the MLE, $S_n(\hat\theta) = 0$, so
+
+$$
+S_n(\theta^{(t)}) \;=\; e_t\, S_n'(\hat\theta) \;+\; \frac{e_t^2}{2}\, S_n''(\xi_t).
+$$
+
+Also Taylor-expand the denominator $S_n'(\theta^{(t)}) = S_n'(\hat\theta) + e_t\, S_n''(\eta_t)$ for some $\eta_t$ between the two points. Substitute both expansions into the Newton update $\theta^{(t+1)} = \theta^{(t)} - S_n(\theta^{(t)})/S_n'(\theta^{(t)})$ and subtract $\hat\theta$:
+
+$$
+e_{t+1} \;=\; e_t \;-\; \frac{e_t\, S_n'(\hat\theta) + \tfrac{1}{2} e_t^2\, S_n''(\xi_t)}{S_n'(\hat\theta) + e_t\, S_n''(\eta_t)}.
+$$
+
+Combining the two numerator terms over the common denominator and expanding,
+
+$$
+e_{t+1} \;=\; \frac{e_t\, [S_n'(\hat\theta) + e_t\, S_n''(\eta_t)] - [e_t\, S_n'(\hat\theta) + \tfrac{1}{2} e_t^2\, S_n''(\xi_t)]}{S_n'(\hat\theta) + e_t\, S_n''(\eta_t)}
+\;=\; \frac{e_t^2\, [S_n''(\eta_t) - \tfrac{1}{2} S_n''(\xi_t)]}{S_n'(\hat\theta) + e_t\, S_n''(\eta_t)}.
+$$
+
+As $\theta^{(t)} \to \hat\theta$, both $\xi_t$ and $\eta_t$ converge to $\hat\theta$, so the bracketed expression in the numerator approaches $\tfrac{1}{2} S_n''(\hat\theta)$, and the denominator approaches $S_n'(\hat\theta) = -J(\hat\theta) < 0$. Thus, for $|e_t|$ small enough,
+
+$$
+|e_{t+1}| \;\leq\; \left|\frac{S_n''(\hat\theta)}{2\, S_n'(\hat\theta)}\right| \cdot |e_t|^2 \cdot (1 + o(1)) \;\leq\; C \cdot |e_t|^2,
+$$
+
+which is the quadratic-convergence claim. $\quad\blacksquare$
+</ProofBlock>
+
+Quadratic convergence is a very strong statement. Starting from an error of $10^{-2}$, one Newton step drops it to roughly $C \cdot 10^{-4}$, the next to $C^3 \cdot 10^{-8}$, the next to below machine precision. In practice $5$–$10$ iterations are enough for any likelihood that looks remotely parabolic near its maximum. This is why the "default solver" for smooth low-dimensional MLE problems is always some flavor of Newton.
+
+<ExampleBlock number={13} title="Newton-Raphson for the Gamma shape parameter">
+For iid Gamma$(\alpha, \beta)$ data with $\beta$ known, the log-likelihood is
+
+$$
+\ell(\alpha) \;=\; n\alpha \log \beta \;-\; n \log \Gamma(\alpha) \;+\; (\alpha - 1)\sum_{i=1}^n \log X_i \;-\; \beta \sum_{i=1}^n X_i.
+$$
+
+Differentiate once to get the score and once more to get the Hessian:
+
+$$
+S_n(\alpha) \;=\; n \log \beta - n\psi(\alpha) + \sum_{i=1}^n \log X_i, \qquad S_n'(\alpha) \;=\; -n\psi'(\alpha),
+$$
+
+where $\psi(\alpha) = \Gamma'(\alpha)/\Gamma(\alpha)$ is the digamma function and $\psi'(\alpha)$ is the trigamma function. The observed information is $J(\alpha) = n\psi'(\alpha) > 0$, so Newton-Raphson is
+
+$$
+\alpha^{(t+1)} \;=\; \alpha^{(t)} \;+\; \frac{n \log \beta - n\psi(\alpha^{(t)}) + \sum_i \log X_i}{n\psi'(\alpha^{(t)})}.
+$$
+
+A standard initial guess is the method-of-moments estimate $\alpha^{(0)} = \beta \bar{X}_n$, since $\mathbb{E}[X] = \alpha/\beta$. From this start, convergence typically takes $4$–$6$ iterations to machine precision. No closed-form solution exists because $\psi^{-1}$ has no closed form — but we do not need one; Newton-Raphson handles it numerically.
+</ExampleBlock>
+
+<ExampleBlock number={14} title="Logistic regression log-likelihood (preview)">
+Logistic regression is a binary classification model parameterized by regression coefficients $\beta = (\beta_0, \beta_1) \in \mathbb{R}^2$ on a single predictor $x$:
+
+$$
+p_i \;=\; \sigma(\beta_0 + \beta_1 x_i), \qquad \sigma(\eta) \;=\; \frac{1}{1 + e^{-\eta}}, \qquad Y_i \;\sim\; \operatorname{Bernoulli}(p_i).
+$$
+
+Write $\eta_i = \beta_0 + \beta_1 x_i$. The Bernoulli log-likelihood, summed over $n$ iid observations,
+
+$$
+\ell(\beta) \;=\; \sum_{i=1}^n \big[y_i \eta_i - \log(1 + e^{\eta_i})\big],
+$$
+
+has no closed-form maximizer — the score equations
+
+$$
+\frac{\partial \ell}{\partial \beta_0} \;=\; \sum_{i=1}^n (y_i - p_i), \qquad \frac{\partial \ell}{\partial \beta_1} \;=\; \sum_{i=1}^n x_i (y_i - p_i)
+$$
+
+are *not* linear in $\beta$, since $p_i = \sigma(\eta_i)$ involves the sigmoid. Newton-Raphson here is the **iteratively reweighted least squares** (IRLS) algorithm: at each step, linearize around the current $\beta^{(t)}$ and solve a weighted linear regression with weights $p_i(1 - p_i)$. In exponential-family language, IRLS is Fisher scoring; in optimization language, it is Newton-Raphson with the observed Hessian approximated by its expectation. The full GLM theory — link functions, canonical parameterizations, deviance — is developed in Topic 21.
+
+Two practical warnings: if the two classes are *perfectly separable* by a hyperplane (a condition called **quasi-complete separation**), the log-likelihood is unbounded and Newton-Raphson iterates escape to infinity — the MLE does not exist. Regularization (a ridge penalty, or a prior on $\beta$) restores finiteness. And for neural-network-scale problems ($d$ in the thousands to millions), computing and inverting the Hessian is infeasible; stochastic-gradient methods replace Newton-Raphson but retain its quadratic-approximation spirit when they use second-order information.
+</ExampleBlock>
+
+<RemarkBlock number={7} title="Initialization matters: multiple modes and saddle points">
+Theorem 6 guarantees quadratic convergence *once you are close enough* to the MLE. Far from the MLE, three things can go wrong:
+
+**(1) Multiple local maxima.** Mixture-model likelihoods have label-switching symmetries and often have multiple local maxima. Newton converges to whichever one is closest; standard practice is to run EM or Newton from many random starting points and keep the best.
+
+**(2) Saddle points.** In higher dimensions, the Hessian can have mixed signs away from the MLE. Newton-Raphson at a saddle point takes a "step" that increases in some directions and decreases in others — the iteration can stall or oscillate. Fisher scoring, by using the expected (positive-definite) information, avoids this pathology.
+
+**(3) Diverging iterates.** If the starting point is in a region where the log-likelihood is flat or inverted in curvature, the Newton step can overshoot wildly. Line search (backtracking until $\ell$ actually increases) is the standard safeguard — guaranteed convergence at the cost of sometimes making small steps.
+
+For the low-dimensional, smooth, exponential-family MLEs that dominate classical statistics, none of this is a concern: start anywhere reasonable, and Newton finds the MLE in $5$–$10$ steps. The pathologies become important precisely at the frontier between classical statistics and modern ML — which is where non-convex likelihoods, high dimensions, and exotic parameterizations live.
+</RemarkBlock>
+
+## 14.8 Observed and Expected Fisher Information
+
+The asymptotic-normality theorem uses the expected Fisher information $I(\theta_0)$ — a deterministic function of the unknown parameter. In practice, we estimate the asymptotic variance from data, which forces a choice: plug in $\hat\theta$ into the expected information, or use the observed (data-dependent) information? Both are consistent; both appear in textbooks and software; but they are not identical, and the choice matters.
+
+<img src="/images/topics/maximum-likelihood/observed-vs-expected.png"
+     alt="Four panels arranged in a 2×2 grid, each showing a scatter plot of (Î_obs, nI(θ̂)) pairs across 200 MC replications. Upper-left: Normal mean — scatter collapses to a single point at (n/σ², n/σ²), because observed = expected is non-random. Upper-right: Exponential rate — points lie exactly on the identity line (observed = expected at MLE) but spread along it because λ̂ varies sample-to-sample. Lower-left and lower-right: Bernoulli and Poisson, both on-diagonal scatter like Exp. In all four, as n grows, the cloud shrinks toward the theoretical value at θ₀."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<DefinitionBlock number={6} title="Observed Fisher Information">
+The **observed Fisher information** at $\theta$ is the negative Hessian of the log-likelihood:
+
+$$
+J(\theta) \;=\; -\ell_n''(\theta) \;=\; -\sum_{i=1}^n \partial_\theta^2 \log f(X_i; \theta).
+$$
+
+It is a random variable (depends on the sample) and is typically evaluated at the MLE: $J(\hat\theta)$.
+</DefinitionBlock>
+
+The distinction from the expected information is purely one of averaging. The expected information $I(\theta) = -\mathbb{E}_\theta[\partial_\theta^2 \log f(X; \theta)]$ is a deterministic function of $\theta$; it is what you would compute if you could *integrate* against the true density. The observed information $J(\theta)$ is what you get when you *sum* over the actual data you have — the sample analog. By the LLN, $J(\theta)/n \to I(\theta)$, so they agree in the limit; at any finite $n$ they differ by $O(n^{1/2})$.
+
+<TheoremBlock number={7} title="Observed information converges to expected information">
+Under the conditions of Theorem 4,
+
+$$
+\frac{J(\theta_0)}{n} \;\overset{P}{\to}\; I(\theta_0), \qquad \frac{J(\hat\theta_n)}{n} \;\overset{P}{\to}\; I(\theta_0).
+$$
+</TheoremBlock>
+
+The first statement is the LLN applied to the iid sequence $\{-\partial_\theta^2 \log f(X_i; \theta_0)\}$. The second extends this by continuous mapping plus the consistency of $\hat\theta_n$ from Theorem 3. Both information quantities, evaluated at the MLE, are consistent estimators of $I(\theta_0)$ — so either can be used to construct a Wald confidence interval
+
+$$
+\hat\theta_n \pm z_{\alpha/2}\,\frac{1}{\sqrt{J(\hat\theta_n)}} \qquad \text{or} \qquad \hat\theta_n \pm z_{\alpha/2}\,\frac{1}{\sqrt{n I(\hat\theta_n)}}.
+$$
+
+Both are asymptotically valid. The practical question is: which one produces better coverage at finite $n$?
+
+<ExampleBlock number={15} title="Observed equals expected exactly: Normal mean">
+For Normal$(\mu, \sigma^2)$ data with $\sigma^2$ known, $\partial_\mu^2 \log f(x; \mu) = -1/\sigma^2$, independent of $x$. Therefore
+
+$$
+J(\mu) \;=\; \frac{n}{\sigma^2} \;=\; n I(\mu).
+$$
+
+The observed information equals $n$ times the expected information exactly at every $\mu$ and for every sample — there is no randomness in $J(\mu)$. This is the "no-surprises" case and makes the Normal-mean Wald interval unambiguous: the two constructions agree at every sample.
+</ExampleBlock>
+
+<ExampleBlock number={16} title="Observed and expected information at the MLE: Exponential rate">
+For Exponential$(\lambda)$, $\partial_\lambda^2 \log f(x; \lambda) = -1/\lambda^2$, again independent of $x$, so
+
+$$
+J(\lambda) \;=\; \frac{n}{\lambda^2} \;=\; n I(\lambda).
+$$
+
+Evaluated at the MLE $\hat\lambda_n = 1/\bar{X}_n$,
+
+$$
+J(\hat\lambda_n) \;=\; n\bar{X}_n^2 \;=\; n I(\hat\lambda_n).
+$$
+
+So observed and expected information, evaluated at the MLE, coincide identically — but both are now random, varying sample-to-sample through $\hat\lambda_n$. The same is true of Bernoulli and Poisson at the MLE: in each exponential-family case, the score equation makes the Hessian lose its data-dependence at the MLE, so observed and expected information become equal there. This is a property of exponential families in the natural parameter, not a universal one; for Cauchy location, say, observed and expected information at the MLE *differ* in finite samples. The $\texttt{ObservedVsExpectedExplorer}$ below visualizes the sample-to-sample variation of $J(\hat\lambda_n)$ around the deterministic anchor $nI(\lambda_0)$.
+</ExampleBlock>
+
+<RemarkBlock number={8} title="Efron & Hinkley (1978): prefer the observed information">
+In a classic paper, [Bradley Efron and David Hinkley](https://www.jstor.org/stable/2335893) argued that the observed information $J(\hat\theta_n)$ is generally preferable to the expected information $nI(\hat\theta_n)$ for constructing confidence intervals — even when the MLE sits at a point where the two agree identically. The reason is that $J(\hat\theta_n)$ *conditions on the sample*, capturing the sample-specific curvature of the log-likelihood at the observed data. When the sample happens to be highly informative (curvature steep), $J$ reflects that and gives a narrower interval; when the sample is less informative (curvature shallow), $J$ gives a wider one — both calibrated to what the data actually tell you.
+
+For exponential families the two quantities agree at the MLE (Example 16), so there is no practical distinction. For non-exponential families, the Efron–Hinkley result says "use $J$." This is the default in most modern software: $\texttt{glm}$ in R reports standard errors based on the observed information, not the expected information, unless you explicitly ask otherwise.
+
+The broader lesson is that all consistency-level statements (Theorem 7) let you swap $J$ for $nI$ asymptotically, but finite-sample calibration can favor one or the other. In Bayesian language, this parallels the difference between posterior variance and prior-predictive variance — both are "variance", but they answer different questions.
+</RemarkBlock>
+
+## 14.9 Connections to Machine Learning
+
+Every ML practitioner uses maximum likelihood daily, often without calling it that. The three most important translations are cross-entropy, MAP/regularization, and the exponential-family MLE recipe — and they are all re-readings of §§14.1–14.8 in ML notation.
+
+<img src="/images/topics/maximum-likelihood/ml-connections.png"
+     alt="Conceptual diagram with three interconnected boxes. Center: 'MLE = maximize Σ log f(xᵢ; θ)'. Left branch: 'Minimize cross-entropy loss' with examples (binary cross-entropy → Bernoulli MLE, categorical cross-entropy → Multinomial MLE, MSE → Normal MLE). Right branch: 'MAP = MLE + log prior' with examples (Gaussian prior → L² / ridge, Laplace prior → L¹ / lasso). Bottom: 'Exponential-family GLM: ∇A(η̂) = T̄' with examples (logistic regression, Poisson regression, linear regression)."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<ExampleBlock number={17} title="MLE as cross-entropy minimization for categorical data">
+Suppose $Y_i \in \{1, \ldots, K\}$ is a categorical outcome with class probabilities $p_k(x_i; \theta)$ depending on a parameter $\theta$ (e.g., via a softmax layer in a neural network). The log-likelihood for one observation is $\log p_{Y_i}(x_i; \theta)$, and summed over the training set,
+
+$$
+\ell(\theta) \;=\; \sum_{i=1}^n \log p_{Y_i}(x_i; \theta) \;=\; -\sum_{i=1}^n \sum_{k=1}^K \mathbf{1}\{Y_i = k\}\, [-\log p_k(x_i; \theta)].
+$$
+
+The inner sum over $k$ is the **cross-entropy** between the one-hot empirical distribution at observation $i$ and the model distribution $p(\cdot \,|\, x_i; \theta)$. Summing over $i$ and dividing by $n$ gives the mean cross-entropy. So "minimize cross-entropy loss" and "maximize Bernoulli/categorical log-likelihood" are literally the same objective up to a sign and a $1/n$ constant.
+
+When the model is a neural network with a softmax output, the score equation $\nabla_\theta \ell = 0$ is the vanishing-gradient condition backpropagation computes. Every gradient descent step in a classification training loop is a (stochastic, approximate) step toward the MLE of a categorical likelihood. Every well-trained classifier is an approximate MLE.
+</ExampleBlock>
+
+<ExampleBlock number={18} title="Exponential-family MLE as moment matching (cite §7.8)">
+For any exponential family written in canonical form $f(x \mid \eta) = h(x) \exp(\eta \cdot T(x) - A(\eta))$, [Topic 7 §7.8](/topics/exponential-families) derived the universal MLE recipe:
+
+$$
+\nabla A(\hat\eta_n) \;=\; \bar{T}_n \;=\; \frac{1}{n}\sum_{i=1}^n T(X_i).
+$$
+
+In words: the MLE of the natural parameter $\eta$ is the value at which the expected sufficient statistic under the model equals the sample average of the sufficient statistic. This is the most compact statement of MLE for a single parametric family — it covers all nine of the classical exponential-family examples (Normal, Bernoulli, Poisson, Gamma, Beta, and their relatives) in one formula.
+
+For a single-predictor logistic regression, the natural parameter is $\eta = \beta_0 + \beta_1 x$, the sufficient statistic is $T(y) = y$, and $\nabla A(\eta) = \sigma(\eta)$. The MLE equation becomes $\sigma(\hat\eta) = \bar{y}$ at each $x$-value — the fitted probabilities match the empirical fractions. For a Poisson regression with log-link, $A(\eta) = e^\eta$ and $\nabla A(\eta) = e^\eta$; the MLE equation becomes $e^{\hat\eta} = \bar{y}$ per covariate level. The entire "exponential-family GLM" pipeline — logistic, Poisson, linear, gamma, and beyond — is moment matching on the sufficient statistics.
+</ExampleBlock>
+
+<RemarkBlock number={9} title="MAP as regularized MLE: the Bayesian bridge">
+Every Bayesian posterior has the form $\pi(\theta \mid \mathbf{x}) \propto L(\theta; \mathbf{x}) \cdot \pi(\theta)$, where $\pi(\theta)$ is the prior. Taking logs,
+
+$$
+\log \pi(\theta \mid \mathbf{x}) \;=\; \ell(\theta) + \log \pi(\theta) + \text{const}.
+$$
+
+The **maximum-a-posteriori (MAP) estimate** is the maximizer of this log-posterior — equivalently, the maximizer of $\ell(\theta) + \log \pi(\theta)$. Compared to the MLE, MAP adds the log-prior as a penalty term. Two canonical examples light up immediately:
+
+Gaussian prior: $\pi(\theta) = \mathcal{N}(0, \tau^2)$ gives
+
+$$
+\log \pi(\theta) \;=\; -\frac{1}{2\tau^2}\,\theta^2 + \text{const},
+$$
+
+which is the $L^2$ / ridge / weight-decay penalty. Laplace prior: $\pi(\theta) = \operatorname{Laplace}(0, b)$ gives
+
+$$
+\log \pi(\theta) \;=\; -\frac{1}{b}|\theta| + \text{const},
+$$
+
+which is the $L^1$ / lasso / sparsity penalty.
+
+Ridge regression is MAP estimation with a Gaussian prior on the coefficients; lasso is MAP estimation with a Laplace prior. Weight decay in a neural network is MAP with a Gaussian prior on the weights. The regularization parameter — $\tau^2$ in the Gaussian case, $b$ in the Laplace case — is a prior hyperparameter, which can in turn be learned by empirical Bayes or set by cross-validation. The Bernstein–von Mises theorem (Topic 22, coming soon) says that under regularity, the MAP estimate converges to the MLE at rate $1/n$: priors stop mattering once there is enough data. The "Bayesian bridge" is exactly this: regularization is a prior, and the prior is informative only until the data overwhelm it.
+
+This is why every modern ML optimizer — Adam, AdamW, L-BFGS with L² regularization — can be read as a MAP procedure. The loss is the negative log-likelihood; the weight-decay term is the negative log-prior; the minimum is the MAP estimate. When someone asks "is neural-network training frequentist or Bayesian?" the honest answer is: it is MAP, which is both at once, and the amount of regularization decides which side dominates.
+</RemarkBlock>
+
+## 14.10 Summary
+
+The maximum-likelihood estimator ties together everything in Topics 1–13 — likelihoods come from the densities of Topics 5–6; the score and Fisher information come from Topic 13; consistency comes from Topic 10's law of large numbers; asymptotic normality comes from Topic 11's central limit theorem together with Topic 9's Slutsky theorem; efficiency comes from Topic 13's Cramér-Rao lower bound. The result is a single procedure that is consistent, asymptotically normal, and asymptotically efficient under regularity — no other estimator in the regular class beats it in the limit.
+
+| Property | Statement | Ingredients |
+|---|---|---|
+| Existence (interior MLE) | Score equation $S_n(\hat\theta) = 0$ has a solution | $\Theta$ open, $\ell$ differentiable |
+| Invariance | $\widehat{g(\theta)} = g(\hat\theta)$ | Change of variables or profile likelihood |
+| Consistency | $\hat\theta_n \overset{P}{\to} \theta_0$ | Compact $\Theta$, KL-identifiable, LLN + Gibbs inequality |
+| Asymptotic normality | $\sqrt{n}(\hat\theta_n - \theta_0) \overset{d}{\to} \mathcal{N}(0, 1/I(\theta_0))$ | Taylor + CLT + LLN + Slutsky |
+| Asymptotic efficiency | $\operatorname{AsymVar}(\hat\theta_n) = 1/(nI(\theta_0)) = $ CRLB | Theorem 4 + Theorem 9 of Topic 13 |
+| Computation | Newton-Raphson: $\theta^{(t+1)} = \theta^{(t)} + S_n/J$ | Quadratic convergence near MLE |
+
+**Cheat sheet for the four workhorse families:**
+
+| Family | Parameter | MLE | Fisher info $I(\theta)$ | CRLB | Wald 95% CI |
+|---|---|---|---|---|---|
+| Normal$(\mu, \sigma^2)$ | $\mu$ (σ² known) | $\bar{X}_n$ | $1/\sigma^2$ | $\sigma^2/n$ | $\bar{X}_n \pm 1.96\,\sigma/\sqrt n$ |
+| Bernoulli$(p)$ | $p$ | $\bar{X}_n$ | $1/(p(1-p))$ | $p(1-p)/n$ | $\hat p \pm 1.96\sqrt{\hat p(1-\hat p)/n}$ |
+| Exponential$(\lambda)$ | $\lambda$ | $1/\bar{X}_n$ | $1/\lambda^2$ | $\lambda^2/n$ | $\hat\lambda \pm 1.96\,\hat\lambda/\sqrt n$ |
+| Poisson$(\lambda)$ | $\lambda$ | $\bar{X}_n$ | $1/\lambda$ | $\lambda/n$ | $\hat\lambda \pm 1.96\,\sqrt{\hat\lambda/n}$ |
+
+**Where this leads.** **Method of Moments** (coming soon) applies the Topic 13 framework to moment-matching estimators, comparing their efficiency to the MLE benchmark developed here — asymptotic relative efficiency ARE(MoM, MLE) is typically $< 1$ for families outside the natural exponential representation. **Sufficient Statistics** (coming soon) uses Fisher information and the CRLB to prove Rao–Blackwell and Lehmann–Scheffé, showing that the MLE is always a function of the sufficient statistic when one exists. **Likelihood-Ratio Tests** (coming soon) builds statistical tests on the same log-likelihood by forming $-2(\ell(\theta_0) - \ell(\hat\theta))$ and using its $\chi^2$ asymptotic distribution — a direct corollary of asymptotic normality. **Confidence Intervals** (coming soon) constructs Wald, score, and profile intervals all from the $\ell(\theta)$ landscape. **Generalized Linear Models** (coming soon) lifts logistic regression to its full glory: MLE for exponential-family outcomes with link functions, solved by iteratively-reweighted least squares — which is Newton-Raphson/Fisher scoring from §14.7. And **Bayesian Foundations** (coming soon) formalizes the MAP/regularized-MLE correspondence of Remark 9, giving a principled framework for the informative priors that regularization has been quietly deploying.
+
+Across [formalML](https://formalml.com), maximum likelihood organizes almost everything: the training objective of a classifier is a Bernoulli/categorical log-likelihood; the training objective of a regressor is a Gaussian log-likelihood; the training of a variational autoencoder is an ELBO — a lower bound on a likelihood — optimized by gradient ascent. The reader who has understood this topic has understood the statistical backbone of modern machine learning. Every optimizer, every loss function, every regularization penalty is a paragraph of §§14.1–14.9 written in a different notation.
+
+---
+
+## Appendix: The EM Algorithm
+
+<RemarkBlock number={10} title="Preview: EM for Gaussian mixture models">
+Some log-likelihoods are intractable not because $\Theta$ is big but because the model has **latent variables**. The canonical example is a Gaussian mixture: each observation $X_i$ comes from one of $K$ Gaussians, but we do not observe which. Write $Z_i \in \{1, \ldots, K\}$ for the unobserved mixture component and $\theta = (\pi_1, \ldots, \pi_K, \mu_1, \ldots, \mu_K, \sigma_1, \ldots, \sigma_K)$ for the parameters. The marginal density of $X_i$ is
+
+$$
+f(x_i; \theta) \;=\; \sum_{k=1}^K \pi_k\, \varphi(x_i; \mu_k, \sigma_k^2),
+$$
+
+where $\varphi$ is the Normal density. The log-likelihood $\ell(\theta) = \sum_i \log f(X_i; \theta)$ has the logarithm of a sum, which does not simplify and has no closed-form maximizer.
+
+The **expectation-maximization** (EM) algorithm side-steps this by alternating between two simpler problems. At the current parameter estimate $\theta^{(t)}$:
+
+- **E-step.** Compute the posterior probabilities $\gamma_{ik} = \Pr(Z_i = k \mid X_i, \theta^{(t)})$ — the "responsibility" of component $k$ for observation $i$.
+- **M-step.** Maximize the expected complete-data log-likelihood: $\theta^{(t+1)} = \arg\max_\theta \sum_i \sum_k \gamma_{ik} \log[\pi_k \varphi(X_i; \mu_k, \sigma_k^2)]$. This decouples into a weighted Normal MLE for each component, which is just weighted sample means and weighted sample variances — closed-form.
+
+Each EM iteration increases the log-likelihood: $\ell(\theta^{(t+1)}) \geq \ell(\theta^{(t)})$, with equality only at a stationary point. The EM algorithm converges to a local maximum of $\ell$; the global maximum in a mixture model usually requires multiple random restarts, since the likelihood surface is highly multimodal. The full theory — Jensen's inequality applied to the log, the ELBO lower bound, convergence rates and monotonicity — is developed in Topic 22 (Bayesian Foundations) and Topic 24 (Variational Methods). For this topic, EM is the right tool when the MLE is defined but hard to compute directly, and $f$ factors cleanly once the latent variable is conditioned on.
+</RemarkBlock>
+
+---
+
+### References
+
+1. Casella, G., & Berger, R. L. (2002). [*Statistical Inference*](https://www.cengage.com/c/statistical-inference-2e-casella/) (2nd ed.). Duxbury.
+2. Lehmann, E. L., & Casella, G. (1998). [*Theory of Point Estimation*](https://link.springer.com/book/10.1007/b98854) (2nd ed.). Springer.
+3. van der Vaart, A. W. (1998). [*Asymptotic Statistics*](https://www.cambridge.org/core/books/asymptotic-statistics/A3C7DAD3F7E66A1FA60E9C8FE132EE1D). Cambridge University Press.
+4. Wasserman, L. (2004). [*All of Statistics*](https://link.springer.com/book/10.1007/978-0-387-21736-9). Springer.
+5. Bickel, P. J., & Doksum, K. A. (2015). [*Mathematical Statistics: Basic Ideas and Selected Topics*](https://www.routledge.com/Mathematical-Statistics-Basic-Ideas-and-Selected-Topics-Volume-I/Bickel-Doksum/p/book/9781498723800) (2nd ed.). CRC Press.
+6. Bishop, C. M. (2006). [*Pattern Recognition and Machine Learning*](https://www.microsoft.com/en-us/research/people/cmbishop/prml-book/). Springer.
+7. Nocedal, J., & Wright, S. J. (2006). [*Numerical Optimization*](https://link.springer.com/book/10.1007/978-0-387-40065-5) (2nd ed.). Springer.
