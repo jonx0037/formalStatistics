@@ -47,6 +47,10 @@ notebooks/              # Research notebooks (Jupyter, not tracked in git)
 public/images/          # Static images organized by topic
 ```
 
+## Commits
+
+ALWAYS create a new branch before making any commits or PRs. The branch should use a simple, descriptive naming convention for the topic being developed or the task you are assigned. Be as consistent as possible in the naming convention across topics/tasks.
+
 ## Content Conventions
 
 ### Mathematical exposition style
