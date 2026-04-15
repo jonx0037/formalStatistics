@@ -46,12 +46,16 @@ function makeSampler(preset: DistributionPreset): (n: number) => number[] {
   }
 }
 
-/** True target for each consistency-preset estimator on a given distribution. */
+/** True target for each consistency-preset estimator on a given distribution.
+ *  The constant estimator θ̂ = 7 is *judged against* the distribution's mean —
+ *  so the dashed truth line sits at μ and the flat trajectory at 7 makes the
+ *  gap visible. (If we returned 7 here, the estimator would look "consistent"
+ *  because its trajectory would coincide with the truth line.) */
 function trueTarget(id: EstimatorId, preset: DistributionPreset): number {
   if (id === 'mean') return preset.trueParam.mean;
   if (id === 'variance') return preset.trueParam.variance;
-  if (id === 'first') return preset.trueParam.mean; // the mean the estimator "tries" to hit
-  return 7; // constant preset
+  if (id === 'first') return preset.trueParam.mean;
+  return preset.trueParam.mean; // constant preset: judged against the actual μ
 }
 
 /** Trajectory generator per estimator (length n). */
@@ -157,24 +161,29 @@ export default function ConsistencyExplorer() {
       .style('fill', 'currentColor')
       .text('sample size n (log scale)');
 
-    // Envelope: shaded band around θ. Chebyshev: σ/√n bound scaled by √(1/ε²). We use ε = SD/√n with a fixed factor.
-    const gridXs = d3.range(50).map((i) => Math.pow(10, Math.log10(1) + (Math.log10(Math.max(n, 10)) * i) / 49));
-    const envelope = gridXs.map((nn) => {
-      if (envelopeMode === 'clt') {
-        const width = 1.96 * Math.sqrt(popSigma2 / nn);
+    // Envelope: shaded band around θ. Only meaningful for the sample mean —
+    // the widths below use Var(θ̂) = σ²/n, which is the CLT-scale variance of
+    // X̄ specifically. For variance, first, or constant estimators the formula
+    // doesn't apply and the band would mislead; skip it.
+    if (estId === 'mean') {
+      const gridXs = d3.range(50).map((i) => Math.pow(10, Math.log10(1) + (Math.log10(Math.max(n, 10)) * i) / 49));
+      const envelope = gridXs.map((nn) => {
+        if (envelopeMode === 'clt') {
+          const width = 1.96 * Math.sqrt(popSigma2 / nn);
+          return { n: nn, hi: theta + width, lo: theta - width };
+        }
+        // Chebyshev: P(|θ̂ - θ| ≥ ε) ≤ σ²/(nε²). At confidence 0.95, ε = σ/√(n·0.05).
+        const width = Math.sqrt(popSigma2 / (nn * 0.05));
         return { n: nn, hi: theta + width, lo: theta - width };
-      }
-      // Chebyshev: P(|θ̂ - θ| ≥ ε) ≤ σ²/(nε²). At confidence 0.95, ε = σ/√(n·0.05).
-      const width = Math.sqrt(popSigma2 / (nn * 0.05));
-      return { n: nn, hi: theta + width, lo: theta - width };
-    });
+      });
 
-    const area = d3
-      .area<{ n: number; hi: number; lo: number }>()
-      .x((d) => x(d.n))
-      .y0((d) => y(d.lo))
-      .y1((d) => y(d.hi));
-    g.append('path').datum(envelope).attr('fill', '#bfdbfe').attr('opacity', 0.45).attr('d', area);
+      const area = d3
+        .area<{ n: number; hi: number; lo: number }>()
+        .x((d) => x(d.n))
+        .y0((d) => y(d.lo))
+        .y1((d) => y(d.hi));
+      g.append('path').datum(envelope).attr('fill', '#bfdbfe').attr('opacity', 0.45).attr('d', area);
+    }
 
     // Dashed horizontal at θ
     g.append('line')
@@ -210,14 +219,16 @@ export default function ConsistencyExplorer() {
       .style('font-size', '10px')
       .style('fill', '#111827')
       .text(`θ = ${theta.toFixed(3)} (dashed)`);
-    g.append('text')
-      .attr('x', innerW - 4)
-      .attr('y', 26)
-      .attr('text-anchor', 'end')
-      .style('font-size', '10px')
-      .style('fill', '#1e40af')
-      .text(envelopeMode === 'clt' ? '±1.96σ/√n envelope' : 'Chebyshev 95% envelope');
-  }, [paths, w, theta, n, envelopeMode, popSigma2]);
+    if (estId === 'mean') {
+      g.append('text')
+        .attr('x', innerW - 4)
+        .attr('y', 26)
+        .attr('text-anchor', 'end')
+        .style('font-size', '10px')
+        .style('fill', '#1e40af')
+        .text(envelopeMode === 'clt' ? '±1.96σ/√n envelope' : 'Chebyshev 95% envelope');
+    }
+  }, [paths, w, theta, n, envelopeMode, popSigma2, estId]);
 
   // Right panel: histogram of final values
   useEffect(() => {
@@ -230,10 +241,13 @@ export default function ConsistencyExplorer() {
     const innerH = H - MARGIN.top - MARGIN.bottom;
     const g = svg.append('g').attr('transform', `translate(${MARGIN.left},${MARGIN.top})`);
 
-    const vExtent = d3.extent(finalValues) as [number, number];
-    const span = Math.max((vExtent[1] ?? 0) - (vExtent[0] ?? 0), 0.1);
-    const xMin = Math.min(vExtent[0], theta) - span * 0.2;
-    const xMax = Math.max(vExtent[1], theta) + span * 0.2;
+    // d3.extent returns [undefined, undefined] on an empty input. Fall back to
+    // θ so the scale domain is always finite even when no paths have been
+    // generated yet (first render or extreme slider state).
+    const vExtent = d3.extent(finalValues);
+    const span = Math.max((vExtent[1] ?? theta) - (vExtent[0] ?? theta), 0.1);
+    const xMin = Math.min(vExtent[0] ?? theta, theta) - span * 0.2;
+    const xMax = Math.max(vExtent[1] ?? theta, theta) + span * 0.2;
     const x = d3.scaleLinear().domain([xMin, xMax]).range([0, innerW]).nice();
 
     const bins = d3

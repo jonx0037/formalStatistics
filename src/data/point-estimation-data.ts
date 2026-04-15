@@ -112,13 +112,18 @@ export const estimatorPresets: EstimatorPreset[] = [
   {
     name: 'Sample Median',
     id: 'median',
-    isUnbiased: true,
+    // Unbiased for the population median only under symmetry; biased for the
+    // population mean on skewed families (e.g. Exponential). The EstimatorSamplingExplorer
+    // targets the population median, so this flag reflects general-case behaviour.
+    isUnbiased: false,
     description: 'Middle order statistic — robust to outliers, less efficient',
   },
   {
     name: 'Trimmed Mean (10%)',
     id: 'trimmed',
-    isUnbiased: true,
+    // Unbiased for μ only under symmetry; biased for skewed populations where
+    // the trimmed expectation differs from E[X].
+    isUnbiased: false,
     description: 'Remove 10% from each tail — compromise between mean and median',
   },
   {
@@ -215,7 +220,7 @@ export const fisherInfoPresets: FisherInfoPreset[] = [
     family: 'Exponential',
     paramName: 'lambda',
     formula: 'I(λ) = 1/λ²',
-    description: 'More info for larger rates',
+    description: 'Info decreases as λ increases',
   },
   {
     name: 'Poisson(λ)',

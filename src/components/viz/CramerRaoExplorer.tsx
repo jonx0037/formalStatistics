@@ -61,7 +61,7 @@ const FAMILY_SPECS: Record<Family, CREFamilySpec> = {
     trueVariance: 1,
     fAtMedian: Math.exp(-Math.log(2)), // λ·e^{-λ·median} with λ=1, median=log2
     supportsJamesStein: false,
-    note: 'Sample mean estimates 1/λ (not λ). Media estimates log(2)/λ — different target.',
+    note: 'Sample mean estimates 1/λ (not λ). Median estimates log(2)/λ — different target.',
   },
   Poisson: {
     name: 'Poisson(λ=3)',

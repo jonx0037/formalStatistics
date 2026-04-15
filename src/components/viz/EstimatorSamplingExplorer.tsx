@@ -126,13 +126,25 @@ function theoretical(
         fAtMedian = 1 / (preset.params.b - preset.params.a);
       }
       const asymptVar = 1 / (4 * n * fAtMedian * fAtMedian);
-      // Bias w.r.t. the population median target is 0 for the sample median.
-      return { bias: 0, variance: asymptVar, mse: asymptVar };
+      // The sample median is finite-sample unbiased only for symmetric
+      // populations (Normal, Uniform). On skewed families (Exponential,
+      // Bernoulli) E[median] ≠ population median at finite n, so report NaN
+      // rather than overstating the guarantee. The MC estimate still reveals
+      // the empirical bias directly.
+      const symmetric = preset.family === 'Normal' || preset.family === 'Uniform';
+      const bias = symmetric ? 0 : NaN;
+      const mse = isFinite(bias) && isFinite(asymptVar) ? bias * bias + asymptVar : NaN;
+      return { bias, variance: asymptVar, mse };
     }
     case 'trimmed': {
       // Rough approximation: trimmed mean efficiency ≈ 0.95 of the mean for Normal.
+      // As with the median, the trimmed mean is only unbiased for μ under
+      // symmetry; on skewed families the trimmed expectation differs from E[X].
       const approx = preset.family === 'Normal' ? (sigma2 / n) * 1.05 : NaN;
-      return { bias: 0, variance: approx, mse: approx };
+      const symmetric = preset.family === 'Normal' || preset.family === 'Uniform';
+      const bias = symmetric ? 0 : NaN;
+      const mse = isFinite(bias) && isFinite(approx) ? bias * bias + approx : NaN;
+      return { bias, variance: approx, mse };
     }
   }
 }

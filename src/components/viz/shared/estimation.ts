@@ -262,10 +262,14 @@ export function asymptVarMedian(f_at_median: number, n: number): number {
   return 1 / (4 * n * f_at_median * f_at_median);
 }
 
-/** Asymptotic relative efficiency: Var(θ̂₁) / Var(θ̂₂). */
-export function are(var1: number, var2: number): number {
-  if (var2 <= 0) return Infinity;
-  return var1 / var2;
+/**
+ * Asymptotic relative efficiency under the Topic 13 convention:
+ * ARE(θ̂₁; θ̂₂) = Var(θ̂₂) / Var(θ̂₁). Values > 1 mean θ̂₁ is more efficient
+ * than θ̂₂. See §13.6 Remark 6.
+ */
+export function are(varEstimator1: number, varEstimator2: number): number {
+  if (varEstimator1 <= 0) return Infinity;
+  return varEstimator2 / varEstimator1;
 }
 
 // ── Sampling-Distribution Simulation ─────────────────────────────────────────
