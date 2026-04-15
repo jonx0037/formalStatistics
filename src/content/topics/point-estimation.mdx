@@ -148,6 +148,12 @@ import ExampleBlock from '../../components/ui/ExampleBlock.astro';
 import RemarkBlock from '../../components/ui/RemarkBlock.astro';
 import ExternalLink from '../../components/ui/ExternalLink.astro';
 
+import EstimatorSamplingExplorer from '../../components/viz/EstimatorSamplingExplorer.tsx';
+import BiasVarianceMSEExplorer from '../../components/viz/BiasVarianceMSEExplorer.tsx';
+import ConsistencyExplorer from '../../components/viz/ConsistencyExplorer.tsx';
+import FisherInformationExplorer from '../../components/viz/FisherInformationExplorer.tsx';
+import CramerRaoExplorer from '../../components/viz/CramerRaoExplorer.tsx';
+
 ## 13.1 Estimators as Random Variables
 
 Every inferential procedure you have ever run — a sample mean, a regression coefficient, a p-value, a posterior mode — was computed from data. Before the data arrived, that computation was a function waiting for input. After the data arrives, it returns a number. That number feels concrete, but the *procedure* that produced it is the object of interest, and the procedure is a **random variable**: its value depends on which sample $X_1, \ldots, X_n$ happened to land in your hands. Different samples, different value. An estimator is not a single number; it is a distribution, summarized in the long run by a single number plus some scatter.
@@ -186,6 +192,8 @@ In an introductory statistics class, you compute the sample mean of a dataset an
 
 This is also why we write $\hat{\theta}_n$ with a hat: the hat signals "random variable, function of the data," distinguishing it from the unknown-but-fixed true parameter $\theta$. Reading a formula, always ask: *which symbols are random? which are fixed?* The answer changes everything.
 </RemarkBlock>
+
+<EstimatorSamplingExplorer client:visible />
 
 ## 13.2 Bias
 
@@ -474,6 +482,8 @@ Theorem 3 makes the bias-variance tradeoff precise: MSE has two components, and 
 In an ML context, this is the polynomial-fitting story: a degree-1 line is highly biased but low-variance; a degree-15 polynomial is nearly unbiased but enormously variable. Regularization, cross-validation, and model selection all exist to find the sweet spot. Section 13.9 develops the ML connection in detail.
 </RemarkBlock>
 
+<BiasVarianceMSEExplorer client:visible />
+
 ## 13.5 Consistency
 
 The properties so far — bias, variance, MSE — are **finite-sample** statements: they hold for every $n$. The next two sections zoom out and ask: what happens as $n \to \infty$? Does the estimator settle down to the truth? Does its sampling distribution take a recognizable shape? Consistency answers the first question, and we already have all the machinery we need — the [law of large numbers](/topics/law-of-large-numbers) does almost all of the work.
@@ -571,6 +581,8 @@ Examples 7 and 8 make the point: consistency and unbiasedness are logically inde
 
 For practical purposes, consistency is the more important of the two: we typically want an estimator that *eventually* gets the right answer, and we tolerate small-sample bias as long as it washes out. Unbiasedness is sometimes useful as a finite-sample property (e.g. for building exact confidence intervals under Normal assumptions), but **asymptotic unbiasedness** — $\operatorname{Bias}(\hat{\theta}_n) \to 0$ — is what modern statistics actually requires most of the time.
 </RemarkBlock>
+
+<ConsistencyExplorer client:visible />
 
 ## 13.6 Asymptotic Normality
 
@@ -830,6 +842,8 @@ The Cramér–Rao proof requires **regularity conditions** that allow interchang
 When regularity holds, the CRLB is the ceiling: no unbiased estimator can beat $1/(nI(\theta))$. When regularity fails, different tools — the $L_1$ theory, order-statistics asymptotics, the Hájek-Le Cam framework — take over. For standard statistical modeling, regularity holds and the CRLB is the right benchmark.
 </RemarkBlock>
 
+<FisherInformationExplorer client:visible />
+
 ## 13.8 Comparing Estimators: Admissibility and Minimax
 
 So far we have compared estimators by MSE at a single value of $\theta$. But $\theta$ is unknown, and a procedure that is great at one value and terrible at others is not a good procedure. Decision theory — the framework that organizes this comparison — asks: is $\hat{\theta}_1$ uniformly at least as good as $\hat{\theta}_2$? When no estimator is uniformly best, how do we choose among incomparable ones? This section introduces the key concepts (admissibility, minimax) and then presents the famous result — Stein's paradox — that the "natural" estimator is sometimes provably dominated by something stranger.
@@ -915,6 +929,8 @@ Every modern ML method that works well in high dimensions is exploiting some ver
 
 The broader lesson: **admissibility is fragile**, **unbiasedness is not sacred**, and **high-dimensional estimation rewards pooled information** over independent per-parameter estimation. This is the bridge from the 1950s-era CRLB and Stein results to twenty-first-century deep learning.
 </RemarkBlock>
+
+<CramerRaoExplorer client:visible />
 
 ## 13.9 Connections to ML
 
