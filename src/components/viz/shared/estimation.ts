@@ -369,6 +369,430 @@ export function logLikelihoodCurve(
   return { thetas: thetaGrid, logLiks };
 }
 
+// ── Maximum Likelihood Estimators (closed form) ──────────────────────────────
+
+/** MLE of Normal(μ, σ²) mean: θ̂ = X̄. */
+export function mleNormalMu(data: number[]): number {
+  return sampleMean(data);
+}
+
+/**
+ * MLE of Normal(μ, σ²) variance: θ̂ = (1/n) Σ (xᵢ − X̄)².
+ * This is the biased (1/n) version — not the unbiased (1/(n−1)) sample variance.
+ */
+export function mleNormalSigma2(data: number[]): number {
+  return sampleVariance(data, 0);
+}
+
+/** MLE of Bernoulli(p): p̂ = X̄ = k/n. */
+export function mleBernoulli(data: number[]): number {
+  return sampleMean(data);
+}
+
+/** MLE of Exponential(λ): λ̂ = 1/X̄. Returns Infinity when the sample mean is zero. */
+export function mleExponential(data: number[]): number {
+  const mean = sampleMean(data);
+  if (mean <= 0) return Infinity;
+  return 1 / mean;
+}
+
+/** MLE of Poisson(λ): λ̂ = X̄. */
+export function mlePoisson(data: number[]): number {
+  return sampleMean(data);
+}
+
+// ── Special functions used by the Gamma-shape MLE ────────────────────────────
+
+/**
+ * Digamma ψ(x) = Γ'(x)/Γ(x). Recurrence ψ(x) = ψ(x+1) − 1/x shifts x ≥ 7,
+ * then the asymptotic expansion
+ *     ψ(x) ≈ log x − 1/(2x) − 1/(12x²) + 1/(120x⁴) − 1/(252x⁶)
+ * gives ~1e-10 accuracy for x > 0.
+ */
+function digamma(x: number): number {
+  if (x <= 0) return NaN;
+  let result = 0;
+  let y = x;
+  while (y < 7) {
+    result -= 1 / y;
+    y += 1;
+  }
+  const inv = 1 / y;
+  const inv2 = inv * inv;
+  result += Math.log(y) - 0.5 * inv;
+  result -= inv2 * (1 / 12 - inv2 * (1 / 120 - inv2 / 252));
+  return result;
+}
+
+/**
+ * Trigamma ψ'(x). Recurrence ψ'(x) = ψ'(x+1) + 1/x² shifts x ≥ 7, then
+ *     ψ'(x) ≈ 1/x + 1/(2x²) + 1/(6x³) − 1/(30x⁵) + 1/(42x⁷).
+ */
+function trigamma(x: number): number {
+  if (x <= 0) return NaN;
+  let result = 0;
+  let y = x;
+  while (y < 7) {
+    result += 1 / (y * y);
+    y += 1;
+  }
+  const inv = 1 / y;
+  const inv2 = inv * inv;
+  result += inv + 0.5 * inv2;
+  result += inv * inv2 * (1 / 6 - inv2 * (1 / 30 - inv2 / 42));
+  return result;
+}
+
+/** Lanczos log-Γ, accurate to ~1e-10 on (0, ∞). Internal helper for Gamma log-lik. */
+function logGamma(x: number): number {
+  if (x <= 0) return NaN;
+  const g = 7;
+  const c = [
+    0.99999999999980993,
+    676.5203681218851,
+    -1259.1392167224028,
+    771.32342877765313,
+    -176.61502916214059,
+    12.507343278686905,
+    -0.13857109526572012,
+    9.9843695780195716e-6,
+    1.5056327351493116e-7,
+  ];
+  if (x < 0.5) return Math.log(Math.PI / Math.sin(Math.PI * x)) - logGamma(1 - x);
+  let xx = x - 1;
+  let a = c[0];
+  const t = xx + g + 0.5;
+  for (let i = 1; i < c.length; i++) a += c[i] / (xx + i);
+  return 0.5 * Math.log(2 * Math.PI) + (xx + 0.5) * Math.log(t) - t + Math.log(a);
+}
+
+// ── Newton-Raphson and Fisher scoring ────────────────────────────────────────
+
+/**
+ * One Newton-Raphson step on the log-likelihood, given per-observation score
+ * and Hessian functions. Update rule:
+ *   θ^{(t+1)} = θ^{(t)} − ℓ'(θ^{(t)}) / ℓ''(θ^{(t)}) = θ^{(t)} + S(θ^{(t)}) / J(θ^{(t)})
+ * where J(θ) = −ℓ''(θ) is the observed information (positive at a maximum).
+ */
+export function newtonRaphsonStep(
+  theta: number,
+  data: number[],
+  scoreFn: (x: number, theta: number) => number,
+  hessianFn: (x: number, theta: number) => number,
+): { nextTheta: number; score: number; observedInfo: number; stepSize: number } {
+  let score = 0;
+  let hess = 0;
+  for (let i = 0; i < data.length; i++) {
+    score += scoreFn(data[i], theta);
+    hess += hessianFn(data[i], theta);
+  }
+  const observedInfo = -hess;
+  const stepSize = observedInfo === 0 ? 0 : score / observedInfo;
+  return { nextTheta: theta + stepSize, score, observedInfo, stepSize };
+}
+
+/**
+ * Run Newton-Raphson to convergence (or `maxIter`). Returns the full iterate
+ * path so callers can replay the trajectory for visualization.
+ */
+export function newtonRaphson(
+  init: number,
+  data: number[],
+  scoreFn: (x: number, theta: number) => number,
+  hessianFn: (x: number, theta: number) => number,
+  options: { maxIter?: number; tol?: number } = {},
+): { mle: number; iterations: number; path: number[]; converged: boolean } {
+  const maxIter = options.maxIter ?? 50;
+  const tol = options.tol ?? 1e-8;
+  const path: number[] = [init];
+  let theta = init;
+  let iterations = 0;
+  let converged = false;
+  for (let k = 0; k < maxIter; k++) {
+    const step = newtonRaphsonStep(theta, data, scoreFn, hessianFn);
+    if (!Number.isFinite(step.nextTheta)) break;
+    theta = step.nextTheta;
+    path.push(theta);
+    iterations = k + 1;
+    if (Math.abs(step.stepSize) < tol) {
+      converged = true;
+      break;
+    }
+  }
+  return { mle: theta, iterations, path, converged };
+}
+
+/**
+ * One Fisher-scoring step: Newton-Raphson with the observed Hessian replaced
+ * by the expected Fisher information n·I(θ). For exponential families in the
+ * natural parameterization the two coincide; elsewhere Fisher scoring is
+ * often numerically more stable.
+ */
+export function fisherScoringStep(
+  theta: number,
+  data: number[],
+  scoreFn: (x: number, theta: number) => number,
+  fisherInfoFn: (theta: number) => number,
+): { nextTheta: number; score: number; expectedInfo: number; stepSize: number } {
+  let score = 0;
+  for (let i = 0; i < data.length; i++) score += scoreFn(data[i], theta);
+  const expectedInfo = data.length * fisherInfoFn(theta);
+  const stepSize = expectedInfo === 0 ? 0 : score / expectedInfo;
+  return { nextTheta: theta + stepSize, score, expectedInfo, stepSize };
+}
+
+// ── Gamma-shape MLE (Newton-Raphson on the score equation) ──────────────────
+
+/**
+ * MLE of the Gamma(α, β) shape α given known rate β.
+ * Score:   S(α) = n log β − n ψ(α) + Σᵢ log xᵢ
+ * Hessian: H(α) = −n ψ'(α)  →  observed info J(α) = n ψ'(α) > 0.
+ * Default initial guess is the method-of-moments estimate α₀ = β·X̄.
+ */
+export function mleGammaShape(
+  data: number[],
+  beta: number,
+  options: { maxIter?: number; tol?: number; init?: number } = {},
+): { mle: number; iterations: number; path: number[]; converged: boolean } {
+  const n = data.length;
+  if (n === 0) return { mle: NaN, iterations: 0, path: [], converged: false };
+  let sumLog = 0;
+  for (let i = 0; i < n; i++) sumLog += Math.log(Math.max(data[i], 1e-300));
+  const xbar = sampleMean(data);
+  const init = options.init ?? Math.max(0.5, beta * xbar);
+  const tol = options.tol ?? 1e-8;
+  const maxIter = options.maxIter ?? 50;
+  const path: number[] = [init];
+  let alpha = init;
+  let iterations = 0;
+  let converged = false;
+  for (let k = 0; k < maxIter; k++) {
+    const score = n * Math.log(beta) - n * digamma(alpha) + sumLog;
+    const info = n * trigamma(alpha);
+    if (!Number.isFinite(info) || info <= 0) break;
+    const step = score / info;
+    const next = Math.max(alpha + step, 1e-6); // keep iterates positive
+    path.push(next);
+    iterations = k + 1;
+    alpha = next;
+    if (Math.abs(step) < tol) {
+      converged = true;
+      break;
+    }
+  }
+  return { mle: alpha, iterations, path, converged };
+}
+
+// ── MLE dispatcher ───────────────────────────────────────────────────────────
+
+/**
+ * Compute the MLE for a supported family/parameter combination.
+ * Uses closed-form formulas where available, Newton-Raphson for Gamma shape.
+ */
+export function computeMLE(
+  data: number[],
+  family: string,
+  paramName: string,
+  otherParams?: Record<string, number>,
+  options?: { maxIter?: number; tol?: number; init?: number },
+): { mle: number; logLik: number; iterations?: number; path?: number[] } {
+  if (family === 'Normal' && paramName === 'mu') {
+    const mle = mleNormalMu(data);
+    const sigma2 = otherParams?.sigma2 ?? 1;
+    const logLik = logLikelihood(
+      data,
+      (x, mu) => {
+        const z = x - mu;
+        return -0.5 * Math.log(2 * Math.PI * sigma2) - (z * z) / (2 * sigma2);
+      },
+      mle,
+    );
+    return { mle, logLik };
+  }
+  if (family === 'Normal' && paramName === 'sigma2') {
+    const mle = mleNormalSigma2(data);
+    const mu = otherParams?.mu ?? sampleMean(data);
+    const logLik = logLikelihood(
+      data,
+      (x, s2) => {
+        const z = x - mu;
+        return -0.5 * Math.log(2 * Math.PI * s2) - (z * z) / (2 * s2);
+      },
+      mle,
+    );
+    return { mle, logLik };
+  }
+  if (family === 'Bernoulli' && paramName === 'p') {
+    const mle = mleBernoulli(data);
+    const logLik = logLikelihood(
+      data,
+      (x, p) => {
+        if (p <= 0 || p >= 1) return -Infinity;
+        return x * Math.log(p) + (1 - x) * Math.log(1 - p);
+      },
+      mle,
+    );
+    return { mle, logLik };
+  }
+  if (family === 'Exponential' && paramName === 'lambda') {
+    const mle = mleExponential(data);
+    const logLik = logLikelihood(
+      data,
+      (x, lam) => {
+        if (lam <= 0) return -Infinity;
+        return Math.log(lam) - lam * x;
+      },
+      mle,
+    );
+    return { mle, logLik };
+  }
+  if (family === 'Poisson' && paramName === 'lambda') {
+    const mle = mlePoisson(data);
+    const logLik = logLikelihood(
+      data,
+      (x, lam) => {
+        if (lam <= 0) return -Infinity;
+        let logFact = 0;
+        for (let j = 2; j <= x; j++) logFact += Math.log(j);
+        return x * Math.log(lam) - lam - logFact;
+      },
+      mle,
+    );
+    return { mle, logLik };
+  }
+  if (family === 'Gamma' && paramName === 'alpha') {
+    const beta = otherParams?.beta ?? 1;
+    const { mle, iterations, path } = mleGammaShape(data, beta, options);
+    const logLik = logLikelihood(
+      data,
+      (x, alpha) => {
+        if (alpha <= 0 || x <= 0) return -Infinity;
+        return alpha * Math.log(beta) - logGamma(alpha) + (alpha - 1) * Math.log(x) - beta * x;
+      },
+      mle,
+    );
+    return { mle, logLik, iterations, path };
+  }
+  throw new Error(`computeMLE: unsupported family/param (${family}/${paramName})`);
+}
+
+// ── Observed Fisher information ──────────────────────────────────────────────
+
+/** J(μ) for Normal(μ, σ²): n/σ². Non-random (doesn't depend on data values). */
+export function observedInfoNormalMu(n: number, sigma2: number): number {
+  if (sigma2 <= 0 || n <= 0) return Infinity;
+  return n / sigma2;
+}
+
+/**
+ * J(λ) for Exponential(λ): n/λ². The Hessian of log f(x;λ)=log λ−λx is −1/λ²
+ * for every x, so the observed information is n/λ² regardless of the sample.
+ * The `data` argument is carried for interface uniformity with data-dependent
+ * families.
+ */
+export function observedInfoExponential(data: number[], lambda: number): number {
+  if (lambda <= 0) return Infinity;
+  return data.length / (lambda * lambda);
+}
+
+/**
+ * Observed Fisher information dispatcher. Returns a closure that, given a
+ * parameter value θ and a sample, produces J(θ) = −Σᵢ ∂²/∂θ² log f(xᵢ; θ).
+ */
+export function observedInformation(
+  family: string,
+  paramName: string,
+): (theta: number, data: number[], otherParams?: Record<string, number>) => number {
+  if (family === 'Normal' && paramName === 'mu') {
+    return (_theta, data, otherParams) =>
+      observedInfoNormalMu(data.length, otherParams?.sigma2 ?? 1);
+  }
+  if (family === 'Exponential' && paramName === 'lambda') {
+    return (lambda, data) => observedInfoExponential(data, lambda);
+  }
+  if (family === 'Bernoulli' && paramName === 'p') {
+    // J(p) = k/p² + (n−k)/(1−p)²
+    return (p, data) => {
+      if (p <= 0 || p >= 1) return Infinity;
+      let k = 0;
+      for (let i = 0; i < data.length; i++) k += data[i];
+      return k / (p * p) + (data.length - k) / ((1 - p) * (1 - p));
+    };
+  }
+  if (family === 'Poisson' && paramName === 'lambda') {
+    // J(λ) = Σ xᵢ / λ² = nX̄/λ²
+    return (lambda, data) => {
+      if (lambda <= 0) return Infinity;
+      let s = 0;
+      for (let i = 0; i < data.length; i++) s += data[i];
+      return s / (lambda * lambda);
+    };
+  }
+  throw new Error(`observedInformation: unsupported family/param (${family}/${paramName})`);
+}
+
+// ── Invariance helper ────────────────────────────────────────────────────────
+
+/**
+ * Given a log-likelihood ℓ(θ) and a reparameterization θ = g⁻¹(φ), return the
+ * induced log-likelihood ℓ*(φ) = ℓ(g⁻¹(φ)). Functional invariance (Thm 14.2)
+ * implies that if θ̂ maximises ℓ, then g(θ̂) maximises ℓ*.
+ */
+export function reparameterizedLogLik(
+  logLikFn: (theta: number) => number,
+  gInverse: (phi: number) => number,
+): (phi: number) => number {
+  return (phi) => logLikFn(gInverse(phi));
+}
+
+// ── Logistic regression log-likelihood (one predictor, for Topic 14 preview) ─
+
+/**
+ * Logistic log-likelihood for one predictor x and binary response y ∈ {0,1}:
+ *   ℓ(β₀, β₁) = Σᵢ yᵢ ηᵢ − log(1 + e^{ηᵢ}),   ηᵢ = β₀ + β₁ xᵢ.
+ * Uses the branchless softplus so positive and negative η are equally stable.
+ */
+export function logisticLogLik(
+  x: number[],
+  y: number[],
+  beta0: number,
+  beta1: number,
+): number {
+  const n = Math.min(x.length, y.length);
+  let s = 0;
+  for (let i = 0; i < n; i++) {
+    const eta = beta0 + beta1 * x[i];
+    const softplus = eta > 0 ? eta + Math.log1p(Math.exp(-eta)) : Math.log1p(Math.exp(eta));
+    s += y[i] * eta - softplus;
+  }
+  return s;
+}
+
+/**
+ * Gradient of the logistic log-likelihood with respect to (β₀, β₁):
+ *   ∂ℓ/∂β₀ = Σᵢ (yᵢ − pᵢ),   ∂ℓ/∂β₁ = Σᵢ xᵢ (yᵢ − pᵢ),   pᵢ = σ(β₀ + β₁ xᵢ).
+ * Topic 21 develops the full IRLS / Fisher-scoring algorithm; Topic 14 uses
+ * this score for a single Newton step in the preview example.
+ */
+export function logisticScore(
+  x: number[],
+  y: number[],
+  beta0: number,
+  beta1: number,
+): [number, number] {
+  const n = Math.min(x.length, y.length);
+  let g0 = 0;
+  let g1 = 0;
+  for (let i = 0; i < n; i++) {
+    const eta = beta0 + beta1 * x[i];
+    const p = 1 / (1 + Math.exp(-eta));
+    const r = y[i] - p;
+    g0 += r;
+    g1 += x[i] * r;
+  }
+  return [g0, g1];
+}
+
 // ── Dev tests (browser-side only, runs once per page load in dev) ────────────
 
 if (import.meta.env.DEV && typeof window !== 'undefined') {
@@ -440,6 +864,75 @@ if (import.meta.env.DEV && typeof window !== 'undefined') {
     const normIn = Math.sqrt(9 + 1 + 4);
     const normOut = Math.sqrt(js[0] ** 2 + js[1] ** 2 + js[2] ** 2);
     results.push(normOut < normIn && normOut > 0);
+  }
+
+  // ── Topic 14 additions ────────────────────────────────────────────────────
+
+  // 11. mleNormalMu([1..5]) === 3
+  results.push(near(mleNormalMu([1, 2, 3, 4, 5]), 3));
+
+  // 12. mleNormalSigma2([1..5]) === 2 (biased, 1/n)
+  results.push(near(mleNormalSigma2([1, 2, 3, 4, 5]), 2));
+
+  // 13. mleBernoulli with 4 ones out of 7 → 4/7
+  results.push(near(mleBernoulli([1, 1, 0, 1, 0, 0, 1]), 4 / 7, 1e-12));
+
+  // 14. mleExponential matches 1/mean on a fixed sample
+  {
+    const data = [0.5, 1.2, 0.8, 2.1, 0.3];
+    results.push(near(mleExponential(data), 1 / sampleMean(data)));
+  }
+
+  // 15. mlePoisson([2, 3, 1, 4, 0]) === 2
+  results.push(near(mlePoisson([2, 3, 1, 4, 0]), 2));
+
+  // 16. Newton-Raphson on Normal(μ, σ²=4): one step converges (quadratic log-lik)
+  {
+    const sigma2 = 4;
+    const data = [3, 5, 7]; // X̄ = 5
+    const score = (x: number, mu: number) => (x - mu) / sigma2;
+    const hess = (_x: number, _mu: number) => -1 / sigma2;
+    const out = newtonRaphson(0, data, score, hess, { tol: 1e-12 });
+    results.push(out.iterations <= 1 && near(out.mle, 5, 1e-9));
+  }
+
+  // 17. mleGammaShape on Gamma(α=3, β=2) data, n = 100 → α̂ ≈ 3 within ~15 iters
+  {
+    let seed = 1729;
+    const rng = () => {
+      seed = (seed * 1664525 + 1013904223) >>> 0;
+      return seed / 0x1_0000_0000;
+    };
+    const data: number[] = [];
+    // Gamma(3, 2) = sum of three Exp(2): X = −log(U₁ U₂ U₃) / 2
+    for (let i = 0; i < 100; i++) {
+      const u1 = Math.max(rng(), 1e-12);
+      const u2 = Math.max(rng(), 1e-12);
+      const u3 = Math.max(rng(), 1e-12);
+      data.push(-Math.log(u1 * u2 * u3) / 2);
+    }
+    const { mle, iterations, converged } = mleGammaShape(data, 2, { maxIter: 30, tol: 1e-8 });
+    results.push(converged && iterations <= 15 && Math.abs(mle - 3) < 0.7);
+  }
+
+  // 18. observedInfoNormalMu(100, 4) === 25
+  results.push(near(observedInfoNormalMu(100, 4), 25));
+
+  // 19. reparameterizedLogLik: ℓ(σ²) with max at σ²=4 → ℓ*(σ) with max at σ=2
+  {
+    const logLikSigma2 = (s2: number) => -0.5 * (s2 - 4) * (s2 - 4);
+    const logLikSigma = reparameterizedLogLik(logLikSigma2, (sigma) => sigma * sigma);
+    results.push(logLikSigma(2) >= logLikSigma(1.9) && logLikSigma(2) >= logLikSigma(2.1));
+  }
+
+  // 20. logisticLogLik: with all y = 1 and positive x, ℓ is strictly increasing in β₁
+  {
+    const x = [0.5, 1, 1.5, 2, 2.5];
+    const y = [1, 1, 1, 1, 1];
+    const a = logisticLogLik(x, y, 0, 0);
+    const b = logisticLogLik(x, y, 0, 1);
+    const c = logisticLogLik(x, y, 0, 5);
+    results.push(a < b && b < c);
   }
 
   const passed = results.filter(Boolean).length;
