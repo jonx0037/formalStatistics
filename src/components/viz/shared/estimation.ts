@@ -409,7 +409,7 @@ export function mlePoisson(data: number[]): number {
  *     ψ(x) ≈ log x − 1/(2x) − 1/(12x²) + 1/(120x⁴) − 1/(252x⁶)
  * gives ~1e-10 accuracy for x > 0.
  */
-function digamma(x: number): number {
+export function digamma(x: number): number {
   if (x <= 0) return NaN;
   let result = 0;
   let y = x;
@@ -428,7 +428,7 @@ function digamma(x: number): number {
  * Trigamma ψ'(x). Recurrence ψ'(x) = ψ'(x+1) + 1/x² shifts x ≥ 7, then
  *     ψ'(x) ≈ 1/x + 1/(2x²) + 1/(6x³) − 1/(30x⁵) + 1/(42x⁷).
  */
-function trigamma(x: number): number {
+export function trigamma(x: number): number {
   if (x <= 0) return NaN;
   let result = 0;
   let y = x;
@@ -443,8 +443,8 @@ function trigamma(x: number): number {
   return result;
 }
 
-/** Lanczos log-Γ, accurate to ~1e-10 on (0, ∞). Internal helper for Gamma log-lik. */
-function logGamma(x: number): number {
+/** Lanczos log-Γ, accurate to ~1e-10 on (0, ∞). Exported so callers can build Gamma log-likelihoods. */
+export function logGamma(x: number): number {
   if (x <= 0) return NaN;
   const g = 7;
   const c = [
@@ -886,14 +886,16 @@ if (import.meta.env.DEV && typeof window !== 'undefined') {
   // 15. mlePoisson([2, 3, 1, 4, 0]) === 2
   results.push(near(mlePoisson([2, 3, 1, 4, 0]), 2));
 
-  // 16. Newton-Raphson on Normal(μ, σ²=4): one step converges (quadratic log-lik)
+  // 16. Newton-Raphson on Normal(μ, σ²=4): one productive step plus a vacuous
+  //     verification step. The productive step lands at the MLE; the second
+  //     call sees step size 0 and sets converged. Expect iterations ≤ 2.
   {
     const sigma2 = 4;
     const data = [3, 5, 7]; // X̄ = 5
     const score = (x: number, mu: number) => (x - mu) / sigma2;
     const hess = (_x: number, _mu: number) => -1 / sigma2;
     const out = newtonRaphson(0, data, score, hess, { tol: 1e-12 });
-    results.push(out.iterations <= 1 && near(out.mle, 5, 1e-9));
+    results.push(out.iterations <= 2 && out.converged && near(out.mle, 5, 1e-9));
   }
 
   // 17. mleGammaShape on Gamma(α=3, β=2) data, n = 100 → α̂ ≈ 3 within ~15 iters

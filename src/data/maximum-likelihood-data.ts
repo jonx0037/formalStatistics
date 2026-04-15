@@ -10,7 +10,7 @@
 // ── Types ────────────────────────────────────────────────────────────────────
 
 export type MLEFamily = 'Normal' | 'Bernoulli' | 'Exponential' | 'Poisson' | 'Gamma';
-export type MLEParamName = 'mu' | 'p' | 'lambda' | 'alpha';
+export type MLEParamName = 'mu' | 'sigma2' | 'p' | 'lambda' | 'alpha';
 
 export interface MLEDistributionPreset {
   name: string;
@@ -141,7 +141,7 @@ export const invariancePresets: InvariancePreset[] = [
   {
     name: 'σ² → σ  (standard deviation)',
     baseFamily: 'Normal',
-    baseParam: 'mu', // the reparameterized Normal variance MLE — see note below
+    baseParam: 'sigma2',
     trueParam: 4,
     otherParams: { mu: 0 },
     transformLabel: '√(·)',

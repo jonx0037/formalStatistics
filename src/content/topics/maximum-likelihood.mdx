@@ -136,6 +136,9 @@ import ExternalLink from '../../components/ui/ExternalLink.astro';
 
 import LikelihoodSurfaceExplorer from '../../components/viz/LikelihoodSurfaceExplorer.tsx';
 import MLESamplingExplorer from '../../components/viz/MLESamplingExplorer.tsx';
+import NewtonRaphsonExplorer from '../../components/viz/NewtonRaphsonExplorer.tsx';
+import MLEInvarianceExplorer from '../../components/viz/MLEInvarianceExplorer.tsx';
+import ObservedVsExpectedExplorer from '../../components/viz/ObservedVsExpectedExplorer.tsx';
 
 ## 14.1 The Likelihood Function
 
@@ -361,6 +364,10 @@ $$
 
 The odds are the natural parameter of the Bernoulli family: $\eta = \log\!\frac{p}{1-p}$ is the logit link that logistic regression uses. Invariance is what makes "logistic regression on $\eta$" equivalent to "MLE of $p$ then take the log-odds" — the two routes agree at the estimate.
 </ExampleBlock>
+
+The explorer below shows invariance live: choose a transformation $g$, and watch the MLE on the base scale (left) transport to the MLE on the transformed scale (right). The two panels are two views of the same likelihood, not two separate maximizations.
+
+<MLEInvarianceExplorer client:visible />
 
 <RemarkBlock number={3} title="Invariance is about the MLE, not its distribution">
 Invariance transports the *point estimate* under $g$, but it does **not** transport the sampling distribution. If $\sqrt{n}(\hat{\theta}_n - \theta_0) \overset{d}{\to} \mathcal{N}(0, 1/I(\theta_0))$, what happens to $\sqrt{n}(g(\hat{\theta}_n) - g(\theta_0))$? Theorem 7 in Topic 13 (delta method) gives the answer:
@@ -741,6 +748,10 @@ are *not* linear in $\beta$, since $p_i = \sigma(\eta_i)$ involves the sigmoid. 
 Two practical warnings: if the two classes are *perfectly separable* by a hyperplane (a condition called **quasi-complete separation**), the log-likelihood is unbounded and Newton-Raphson iterates escape to infinity — the MLE does not exist. Regularization (a ridge penalty, or a prior on $\beta$) restores finiteness. And for neural-network-scale problems ($d$ in the thousands to millions), computing and inverting the Hessian is infeasible; stochastic-gradient methods replace Newton-Raphson but retain its quadratic-approximation spirit when they use second-order information.
 </ExampleBlock>
 
+The explorer below steps through Newton-Raphson iterates on the log-likelihood. Pick a starting value with the slider, then click Step (one iteration) or Run (until convergence); the green dashed tangent at each iterate shows the slope of the score, and the next iterate is where that tangent meets zero-slope. Toggle Fisher scoring to replace $J(\theta^{(t)})$ with $nI(\theta^{(t)})$ — for the Gamma-shape preset, both are $n\psi'(\alpha^{(t)})$ and the paths coincide; for families with non-deterministic observed information they diverge.
+
+<NewtonRaphsonExplorer client:visible />
+
 <RemarkBlock number={7} title="Initialization matters: multiple modes and saddle points">
 Theorem 6 guarantees quadratic convergence *once you are close enough* to the MLE. Far from the MLE, three things can go wrong:
 
@@ -815,6 +826,10 @@ $$
 
 So observed and expected information, evaluated at the MLE, coincide identically — but both are now random, varying sample-to-sample through $\hat\lambda_n$. The same is true of Bernoulli and Poisson at the MLE: in each exponential-family case, the score equation makes the Hessian lose its data-dependence at the MLE, so observed and expected information become equal there. This is a property of exponential families in the natural parameter, not a universal one; for Cauchy location, say, observed and expected information at the MLE *differ* in finite samples. The $\texttt{ObservedVsExpectedExplorer}$ below visualizes the sample-to-sample variation of $J(\hat\lambda_n)$ around the deterministic anchor $nI(\lambda_0)$.
 </ExampleBlock>
+
+The Monte-Carlo explorer below realizes both $J(\hat\theta_n)$ and $nI(\hat\theta_n)$ across 200 replicates. Notice the qualitative difference between the Normal-mean preset — where the scatter collapses to a single point at $(n/\sigma^2, n/\sigma^2)$ — and the Exponential / Poisson / Bernoulli presets, where the scatter is on the identity line but spreads along it as $\hat\theta_n$ varies. As $n$ grows, the cloud contracts toward the deterministic anchor $nI(\theta_0)$, visualized as an open black circle.
+
+<ObservedVsExpectedExplorer client:visible />
 
 <RemarkBlock number={8} title="Efron & Hinkley (1978): prefer the observed information">
 In a classic paper, [Bradley Efron and David Hinkley](https://www.jstor.org/stable/2335893) argued that the observed information $J(\hat\theta_n)$ is generally preferable to the expected information $nI(\hat\theta_n)$ for constructing confidence intervals — even when the MLE sits at a point where the two agree identically. The reason is that $J(\hat\theta_n)$ *conditions on the sample*, capturing the sample-specific curvature of the log-likelihood at the observed data. When the sample happens to be highly informative (curvature steep), $J$ reflects that and gives a narrower interval; when the sample is less informative (curvature shallow), $J$ gives a wider one — both calibrated to what the data actually tell you.
