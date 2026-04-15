@@ -1,0 +1,1033 @@
+---
+title: "Point Estimation & Bias-Variance"
+subtitle: "Estimators as random variables, bias, variance, MSE decomposition — the framework for evaluating any estimator."
+status: "published"
+difficulty: "intermediate"
+prerequisites:
+  - "expectation-moments"
+  - "random-variables"
+tags:
+  - "statistics"
+  - "estimation"
+  - "estimator"
+  - "bias"
+  - "variance"
+  - "mse"
+  - "bias-variance-tradeoff"
+  - "consistency"
+  - "asymptotic-normality"
+  - "efficiency"
+  - "fisher-information"
+  - "cramer-rao"
+  - "score-function"
+  - "admissibility"
+domain: "statistical-estimation"
+videoId: null
+notebookPath: "notebooks/point-estimation/13_point_estimation.ipynb"
+githubUrl: "https://github.com/jonx0037/formalStatistics/blob/main/src/content/topics/point-estimation.mdx"
+datePublished: 2026-04-14
+estimatedReadTime: 45
+abstract: "An estimator is a function of the data — and therefore a random variable. Its sampling distribution has a mean (whose deviation from the true parameter is bias), a variance (whose square root is the standard error), and higher moments. The mean squared error decomposes as MSE = Bias² + Variance, making the bias-variance tradeoff not a metaphor but a theorem. Consistency asks whether the estimator converges to the truth as data accumulates — the answer is yes whenever a suitable law of large numbers applies. Asymptotic normality, inherited from the CLT, says that well-behaved estimators are approximately Gaussian for large n, with variance that cannot fall below the Cramér-Rao lower bound 1/I(θ), where I(θ) is the Fisher information — the expected curvature of the log-likelihood. Estimators that achieve this bound are efficient: they extract the maximum precision from the data. This topic builds the complete evaluation framework for estimators — bias, variance, MSE, consistency, asymptotic normality, and efficiency — that Topics 14–16 will apply to maximum likelihood, method of moments, and sufficient statistics."
+formalcalculusPrereqs:
+  - topic: "sequences-limits"
+    site: "formalcalculus"
+    relationship: "Consistency is a convergence statement — θ̂ₙ →ᵖ θ or θ̂ₙ →ᵃ·ˢ· θ — which requires the formal ε-δ definition of limits and the convergence modes defined in Topic 9."
+  - topic: "differentiation"
+    site: "formalcalculus"
+    relationship: "The score function is the derivative ∂/∂θ log f(X; θ), and Fisher information is E[(∂/∂θ log f)²]. The Cramér-Rao proof requires interchange of differentiation and integration under regularity conditions."
+  - topic: "integration"
+    site: "formalcalculus"
+    relationship: "The regularity conditions for the Cramér-Rao bound require ∂/∂θ ∫ f(x;θ) dx = ∫ (∂/∂θ) f(x;θ) dx — interchange of derivative and integral, justified by dominated convergence."
+formalmlConnections:
+  - topic: "bias-variance-tradeoff"
+    site: "formalml"
+    relationship: "The MSE decomposition Bias² + Variance is the formal version of the ML bias-variance tradeoff. Regularization, model selection, and ensemble methods all navigate this tradeoff."
+  - topic: "regularization"
+    site: "formalml"
+    relationship: "L2 regularization (ridge regression) deliberately introduces bias to reduce variance — a James-Stein-type shrinkage. The optimal regularization parameter minimizes MSE, not bias alone."
+  - topic: "stochastic-gradient-descent"
+    site: "formalml"
+    relationship: "The mini-batch gradient is a biased estimator of the full gradient (if the batch is a strict subset). Its variance is σ²/B, where B is the batch size. The learning rate schedule navigates the bias-variance tradeoff in optimization."
+  - topic: "ensemble-methods"
+    site: "formalml"
+    relationship: "Bagging reduces variance (averaging independent estimators) without increasing bias. Boosting reduces bias by sequentially fitting residuals. Both strategies are applications of the MSE decomposition."
+connections:
+  - topic: "expectation-moments"
+    relationship: "Topic 4 developed E[X], Var(X), Eve's law, and the variance decomposition. Topic 13 applies these directly: bias is an expectation, MSE is a second moment, and the MSE decomposition is the variance decomposition applied to (θ̂ − θ)."
+  - topic: "random-variables"
+    relationship: "Topic 3 defined random variables as measurable functions and developed their distributions. An estimator is a random variable — a function of the sample —, so the entire framework (PMF/PDF, CDF, transformations) applies."
+  - topic: "law-of-large-numbers"
+    relationship: "Topic 10 proved that sample means converge to population means (WLLN, SLLN). Topic 13 formalizes consistency as the estimator-level consequence: θ̂ₙ is consistent when it satisfies a suitable LLN."
+  - topic: "central-limit-theorem"
+    relationship: "Topic 11 proved that √n(X̄ₙ − μ) →ᵈ N(0, σ²). Topic 13 lifts this to asymptotic normality of general estimators via the delta method, and uses the asymptotic variance to define efficiency."
+  - topic: "large-deviations"
+    relationship: "Topic 12 developed finite-sample tail bounds (Hoeffding, Chernoff). These complement the asymptotic efficiency framework: CRLB gives the best asymptotic variance, while concentration inequalities give finite-sample guarantees."
+  - topic: "maximum-likelihood"
+    relationship: "Topic 14 applies the full framework developed here to the MLE: consistency via the LLN on the log-likelihood, asymptotic normality via the CLT, and efficiency via the CRLB."
+  - topic: "method-of-moments"
+    relationship: "Topic 15 applies bias, consistency, and asymptotic normality to method-of-moments estimators, often comparing their efficiency to the MLE benchmark established in Topic 14."
+  - topic: "sufficient-statistics"
+    relationship: "Topic 16 uses Fisher information and the CRLB to prove the Rao-Blackwell theorem: conditioning on a sufficient statistic cannot increase MSE. CRLB + completeness → UMVUE."
+references:
+  - type: "book"
+    title: "Statistical Inference"
+    author: "George Casella & Roger L. Berger"
+    year: 2002
+    edition: "2nd"
+    publisher: "Duxbury"
+    isbn: "978-0-534-24312-8"
+    url: "https://www.cengage.com/c/statistical-inference-2e-casella/"
+    note: "Chapters 7 (Point Estimation) and 7.3 (Evaluating Estimators) are the canonical reference for bias, MSE, CRLB, and efficiency. The exposition here follows Casella & Berger's structure closely."
+  - type: "book"
+    title: "Probability and Measure"
+    author: "Patrick Billingsley"
+    year: 2012
+    edition: "Anniversary Edition"
+    publisher: "Wiley"
+    isbn: "978-1-118-12237-2"
+    url: "https://www.wiley.com/en-us/Probability+and+Measure%2C+Anniversary+Edition-p-9781118122372"
+    note: "The probability foundations underlying estimator properties — convergence in probability, almost sure convergence, and the LLN/CLT that power consistency and asymptotic normality."
+  - type: "book"
+    title: "All of Statistics"
+    author: "Larry Wasserman"
+    year: 2004
+    publisher: "Springer"
+    isbn: "978-0-387-40272-7"
+    url: "https://link.springer.com/book/10.1007/978-0-387-21736-9"
+    note: "Chapters 9 (Point Estimation) and 9.3 (The Cramér-Rao Lower Bound) provide a concise treatment pitched at the ML-oriented reader."
+  - type: "book"
+    title: "Theory of Point Estimation"
+    author: "Erich L. Lehmann & George Casella"
+    year: 1998
+    edition: "2nd"
+    publisher: "Springer"
+    isbn: "978-0-387-98502-2"
+    url: "https://link.springer.com/book/10.1007/b98854"
+    note: "The definitive graduate-level reference on point estimation. Chapter 1 (Preparations) and Chapter 2 (Unbiasedness) are the authoritative treatment of bias, MSE, and the CRLB."
+  - type: "book"
+    title: "Mathematical Statistics: Basic Ideas and Selected Topics"
+    author: "Peter J. Bickel & Kjell A. Doksum"
+    year: 2015
+    edition: "2nd"
+    publisher: "CRC Press"
+    isbn: "978-1-498-72380-0"
+    url: "https://www.routledge.com/Mathematical-Statistics-Basic-Ideas-and-Selected-Topics-Volume-I/Bickel-Doksum/p/book/9781498723800"
+    note: "Chapter 3 covers Fisher information, the score function, and the CRLB with careful attention to regularity conditions."
+  - type: "book"
+    title: "The Elements of Statistical Learning"
+    author: "Trevor Hastie, Robert Tibshirani & Jerome Friedman"
+    year: 2009
+    edition: "2nd"
+    publisher: "Springer"
+    isbn: "978-0-387-84857-0"
+    url: "https://hastie.su.domains/ElemStatLearn/"
+    note: "Chapter 7.3 derives the bias-variance decomposition for prediction error — the ML version of the MSE decomposition."
+  - type: "article"
+    title: "Inadmissibility of the Usual Estimator for the Mean of a Multivariate Normal Distribution"
+    author: "Charles Stein"
+    year: 1956
+    journal: "Proceedings of the Third Berkeley Symposium on Mathematical Statistics and Probability"
+    volume: "1"
+    pages: "197–206"
+    url: "https://projecteuclid.org/euclid.bsmsp/1200501656"
+    note: "The original paper proving that the sample mean is inadmissible in dimension d ≥ 3. The James-Stein estimator dominates it, demonstrating that shrinkage can improve MSE."
+  - type: "book"
+    title: "Pattern Recognition and Machine Learning"
+    author: "Christopher M. Bishop"
+    year: 2006
+    publisher: "Springer"
+    isbn: "978-0-387-31073-2"
+    url: "https://www.microsoft.com/en-us/research/people/cmbishop/prml-book/"
+    note: "Chapter 1.2.5 covers the bias-variance decomposition for regression; Chapter 3.2 applies it to linear models. The ML reader's primary entry point to bias-variance."
+---
+
+import DefinitionBlock from '../../components/ui/DefinitionBlock.astro';
+import TheoremBlock from '../../components/ui/TheoremBlock.astro';
+import ProofBlock from '../../components/ui/ProofBlock.astro';
+import ExampleBlock from '../../components/ui/ExampleBlock.astro';
+import RemarkBlock from '../../components/ui/RemarkBlock.astro';
+import ExternalLink from '../../components/ui/ExternalLink.astro';
+
+import EstimatorSamplingExplorer from '../../components/viz/EstimatorSamplingExplorer.tsx';
+import BiasVarianceMSEExplorer from '../../components/viz/BiasVarianceMSEExplorer.tsx';
+import ConsistencyExplorer from '../../components/viz/ConsistencyExplorer.tsx';
+import FisherInformationExplorer from '../../components/viz/FisherInformationExplorer.tsx';
+import CramerRaoExplorer from '../../components/viz/CramerRaoExplorer.tsx';
+
+## 13.1 Estimators as Random Variables
+
+Every inferential procedure you have ever run — a sample mean, a regression coefficient, a p-value, a posterior mode — was computed from data. Before the data arrived, that computation was a function waiting for input. After the data arrives, it returns a number. That number feels concrete, but the *procedure* that produced it is the object of interest, and the procedure is a **random variable**: its value depends on which sample $X_1, \ldots, X_n$ happened to land in your hands. Different samples, different value. An estimator is not a single number; it is a distribution, summarized in the long run by a single number plus some scatter.
+
+This shift in viewpoint is the entire foundation of estimation theory. We stop asking "what number did I compute?" and start asking "what distribution does my computation have, and what does that distribution say about the parameter I care about?" The distribution of an estimator across repeated sampling is called its **sampling distribution**. Bias, variance, MSE, consistency, efficiency — every concept in this topic is a property of that sampling distribution.
+
+<img src="/images/topics/point-estimation/estimator-sampling-distribution.png"
+     alt="Three-panel view of an estimator's sampling distribution: (left) one sample of size n=25 from N(5, 4) with the sample mean and ±σ/√n band; (center) the histogram of X̄₂₅ over 5000 replications converging to a N(μ, σ²/n) density; (right) three estimators — mean, median, trimmed mean — superimposed, showing distinct sampling distributions"
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<DefinitionBlock number={1} title="Statistic">
+A **statistic** is any measurable function $T = g(X_1, \ldots, X_n)$ of the observed sample. Equivalently, $T$ is a random variable whose value is determined by the data, and whose distribution is induced by the joint distribution of the sample.
+</DefinitionBlock>
+
+"Measurable" is a technical requirement — it ensures probabilities of events like $\{T \leq t\}$ are well-defined — and is satisfied by every computation a human could plausibly write down. The key restriction is that $T$ must depend *only on the data*, not on unknown parameters. So $\bar{X}_n$ is a statistic; so is $\max_i X_i$ or $\sum_i (X_i - \bar{X}_n)^2$. But $\bar{X}_n - \mu$ is **not** a statistic when $\mu$ is the unknown parameter we are estimating: it involves the quantity we are trying to learn.
+
+<DefinitionBlock number={2} title="Point Estimator">
+A **point estimator** of a parameter $\theta$ is a statistic $\hat{\theta}_n = g(X_1, \ldots, X_n)$ whose value is used as a guess for $\theta$. The estimator is a random variable; its value $\hat{\theta}_n(\omega)$ for a particular sample realization is a **point estimate**.
+</DefinitionBlock>
+
+The distinction between *estimator* and *estimate* is the same as that between the function and its value. "The sample mean" is an estimator — a recipe applicable to any sample. "The sample mean of our data, which equals $4.72$" is an estimate — the recipe evaluated on a specific sample. Almost every confusion in introductory statistics traces back to conflating these. When we ask "is this estimator unbiased?" we are asking about the *recipe* across all possible samples, not about any particular number.
+
+<ExampleBlock number={1} title="Three estimators of the population mean">
+Suppose $X_1, \ldots, X_n$ are iid with unknown mean $\mu$ and finite variance. Three candidate estimators of $\mu$:
+
+1. **Sample mean:** $\hat{\mu}_1 = \bar{X}_n = \frac{1}{n}\sum_{i=1}^n X_i$.
+2. **Sample median:** $\hat{\mu}_2 = \operatorname{median}(X_1, \ldots, X_n)$, the middle order statistic.
+3. **Trimmed mean:** $\hat{\mu}_3$ = mean of the sample after discarding the top $10\%$ and bottom $10\%$ of observations.
+
+All three are statistics (they depend only on the data), all three target the same $\mu$, and all three are reasonable candidates. They produce different values on the same sample, and their sampling distributions are different shapes. Which one is "best" depends on the underlying distribution and on what we mean by "best" — the rest of this topic builds the vocabulary to answer that question precisely.
+</ExampleBlock>
+
+<RemarkBlock number={1} title="The conceptual shift: estimators as random variables">
+In an introductory statistics class, you compute the sample mean of a dataset and report it as "the" estimate. In estimation theory, we take one step back and ask: if we could repeatedly draw fresh samples of size $n$ from the population and compute the sample mean each time, what distribution of values would we see? That distribution — not any single computed value — is the object we analyze. Its center is where our estimates cluster on average (bias tells us whether that center is $\mu$). Its spread tells us how precise any single estimate is (variance). Its shape tells us how the estimator behaves in the tails, and for large $n$, what confidence intervals look like (asymptotic normality). Every theorem in this topic is a statement about that distribution.
+
+This is also why we write $\hat{\theta}_n$ with a hat: the hat signals "random variable, function of the data," distinguishing it from the unknown-but-fixed true parameter $\theta$. Reading a formula, always ask: *which symbols are random? which are fixed?* The answer changes everything.
+</RemarkBlock>
+
+<EstimatorSamplingExplorer client:visible />
+
+## 13.2 Bias
+
+The first criterion for a "good" estimator is simple: on average, across repeated sampling, does it hit the target? An estimator whose expected value equals the true parameter is called **unbiased**. Unbiasedness sounds like a bedrock virtue, but as we will see in §13.4, it is surprisingly easy to do better by being deliberately biased. First, the definitions.
+
+<DefinitionBlock number={3} title="Bias of an Estimator">
+Let $\hat{\theta}_n$ be an estimator of $\theta$. Its **bias** is the difference between its expected value and the true parameter:
+
+$$
+\operatorname{Bias}(\hat{\theta}_n) \;=\; \mathbb{E}[\hat{\theta}_n] - \theta.
+$$
+
+The expectation is taken over the sampling distribution of $\hat{\theta}_n$, treating $\theta$ as fixed.
+</DefinitionBlock>
+
+Bias measures a *systematic* error: if bias is positive, the estimator overestimates on average; if negative, it underestimates. Random error — the deviation of any particular estimate from $\mathbb{E}[\hat{\theta}_n]$ — is captured by variance, which §13.3 develops.
+
+<DefinitionBlock number={4} title="Unbiased Estimator">
+The estimator $\hat{\theta}_n$ is **unbiased** for $\theta$ if $\operatorname{Bias}(\hat{\theta}_n) = 0$, equivalently $\mathbb{E}[\hat{\theta}_n] = \theta$, for every value of $\theta$ in the parameter space.
+</DefinitionBlock>
+
+<img src="/images/topics/point-estimation/bias-visualization.png"
+     alt="Three-panel bias visualization: (left) a dart-board analogy contrasting high-bias/low-variance, low-bias/high-variance, and low-bias/low-variance clusters; (center) Bessel's correction — E[S²] with 1/n (biased) vs 1/(n−1) (unbiased) as n grows; (right) MSE comparison of the two sample-variance estimators"
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+The universal quantifier — *for every value of $\theta$* — matters. A procedure that happens to return the right answer for $\theta = 0$ but systematically misses for other values is not unbiased in this technical sense. Unbiasedness is a property of the estimator's behavior uniformly across the parameter space, not at any single point.
+
+<TheoremBlock number={1} title="The sample mean is unbiased for the population mean">
+If $X_1, \ldots, X_n$ are iid with $\mathbb{E}[X_i] = \mu$ (assumed finite), then the sample mean $\bar{X}_n = \frac{1}{n}\sum_{i=1}^n X_i$ is unbiased for $\mu$:
+
+$$
+\mathbb{E}[\bar{X}_n] \;=\; \mu.
+$$
+</TheoremBlock>
+
+<ProofBlock>
+Start from the definition of the sample mean:
+
+$$
+\mathbb{E}[\bar{X}_n] \;=\; \mathbb{E}\!\left[\frac{1}{n}\sum_{i=1}^n X_i\right].
+$$
+
+By [linearity of expectation](/topics/expectation-moments) — which does not require independence — we can pull the constant $1/n$ outside and distribute the expectation across the sum:
+
+$$
+\mathbb{E}[\bar{X}_n] \;=\; \frac{1}{n}\sum_{i=1}^n \mathbb{E}[X_i].
+$$
+
+Because the $X_i$ are iid, each $\mathbb{E}[X_i] = \mu$, and there are $n$ copies:
+
+$$
+\mathbb{E}[\bar{X}_n] \;=\; \frac{1}{n} \cdot n\mu \;=\; \mu. \quad\blacksquare
+$$
+</ProofBlock>
+
+The proof is two lines, but the two ingredients — linearity of expectation and identical means — are the template for essentially every unbiasedness calculation you will ever do.
+
+<ExampleBlock number={2} title="Unbiasedness under non-identical distributions">
+The iid assumption in Theorem 1 is stronger than needed: we only used that $\mathbb{E}[X_i] = \mu$ for every $i$. So the sample mean is unbiased whenever the summands share a common mean, even if their variances differ or their distributions are different. For example, if $X_1 \sim \operatorname{Exponential}(1)$ and $X_2 \sim \operatorname{Gamma}(2, 2)$ both have mean $1$, then $\bar{X}_2 = (X_1 + X_2)/2$ is still unbiased for $1$. Unbiasedness of linear statistics is astonishingly robust.
+
+Contrast this with the sample median, which is *not* generally unbiased for $\mu$ unless the distribution is symmetric around $\mu$. For Exponential$(1)$, the population mean is $1$ but the population median is $\log 2 \approx 0.693$; the sample median is unbiased for the median, not the mean.
+</ExampleBlock>
+
+<ExampleBlock number={3} title="Bessel's correction: why we divide by n − 1">
+The natural candidate for estimating the population variance $\sigma^2$ is the average squared deviation from the sample mean:
+
+$$
+S_n^2 \;=\; \frac{1}{n}\sum_{i=1}^n (X_i - \bar{X}_n)^2.
+$$
+
+This is the maximum-likelihood estimate of $\sigma^2$ when the underlying distribution is Normal, and it is the "natural" variance of the empirical distribution. But it is **biased**. A direct calculation — expanding the squared deviation, using $\operatorname{Var}(\bar{X}_n) = \sigma^2/n$ (Theorem 2 below), and collecting terms — shows
+
+$$
+\mathbb{E}[S_n^2] \;=\; \frac{n-1}{n}\,\sigma^2.
+$$
+
+So $S_n^2$ underestimates $\sigma^2$ by a factor of $(n-1)/n$. The fix is to divide by $n-1$ instead of $n$:
+
+$$
+S^2 \;=\; \frac{1}{n-1}\sum_{i=1}^n (X_i - \bar{X}_n)^2.
+$$
+
+This is the **unbiased sample variance**, and the $(n-1)$ denominator is called **Bessel's correction**. The correction is intuitive: in computing $\bar{X}_n$ from the data we have "used up" one degree of freedom, so only $n - 1$ independent residuals remain. The unbiasedness of $S^2$ follows immediately: $\mathbb{E}[S^2] = \frac{n}{n-1}\cdot \mathbb{E}[S_n^2] = \sigma^2$.
+
+Which divisor should you use in practice? That turns out to be a more subtle question than it first appears — see Example 5 in §13.4.
+</ExampleBlock>
+
+<RemarkBlock number={2} title="Unbiasedness alone is a weak criterion">
+Unbiasedness feels like a bedrock virtue, but consider the estimator $\tilde{\mu} = X_1$ — the first observation, ignoring everything else. It is unbiased for $\mu$: $\mathbb{E}[X_1] = \mu$. It is also a terrible estimator: its variance is $\sigma^2$, compared with $\sigma^2/n$ for the sample mean, so after any real amount of data it is $n$ times worse. Unbiasedness is satisfied; precision is not.
+
+More dramatically, some parameters admit *no* unbiased estimator at all (e.g., the reciprocal of a Poisson mean), while others admit only pathological ones. And, as we will see, biased estimators can systematically outperform unbiased ones in mean squared error — shrinkage estimators, ridge regression, and James–Stein all exploit this. Unbiasedness is one input into evaluation, not the whole story. The right criterion combines bias and variance, which is what MSE does.
+</RemarkBlock>
+
+## 13.3 Variance and Standard Error
+
+The second criterion for a "good" estimator is precision: how spread out is the sampling distribution? If two estimators are both unbiased but one has half the variance, it gives estimates that are closer to the truth on average — by a lot. The standard measure of spread for an estimator is its standard deviation, which in this context has a special name.
+
+<DefinitionBlock number={5} title="Standard Error">
+The **standard error** of an estimator $\hat{\theta}_n$ is the standard deviation of its sampling distribution:
+
+$$
+\operatorname{SE}(\hat{\theta}_n) \;=\; \sqrt{\operatorname{Var}(\hat{\theta}_n)}.
+$$
+
+When the estimator's variance depends on unknown population parameters, the **estimated standard error** $\widehat{\operatorname{SE}}(\hat{\theta}_n)$ plugs in sample-based substitutes.
+</DefinitionBlock>
+
+The word "standard error" exists because we needed a term distinct from "standard deviation of the population." Standard *deviation* describes the spread of the underlying random variable $X$. Standard *error* describes the spread of an estimator computed from many $X_i$'s — which is almost always much smaller, thanks to averaging.
+
+<TheoremBlock number={2} title="Variance of the sample mean">
+If $X_1, \ldots, X_n$ are iid with $\operatorname{Var}(X_i) = \sigma^2$ (assumed finite), then the sample mean has variance
+
+$$
+\operatorname{Var}(\bar{X}_n) \;=\; \frac{\sigma^2}{n},
+$$
+
+and therefore standard error $\operatorname{SE}(\bar{X}_n) = \sigma/\sqrt{n}$.
+</TheoremBlock>
+
+<ProofBlock>
+Expand the sample mean as a scaled sum:
+
+$$
+\operatorname{Var}(\bar{X}_n) \;=\; \operatorname{Var}\!\left(\frac{1}{n}\sum_{i=1}^n X_i\right) \;=\; \frac{1}{n^2}\operatorname{Var}\!\left(\sum_{i=1}^n X_i\right).
+$$
+
+By [independence](/topics/expectation-moments), variance distributes over a sum:
+
+$$
+\operatorname{Var}\!\left(\sum_{i=1}^n X_i\right) \;=\; \sum_{i=1}^n \operatorname{Var}(X_i) \;=\; n\sigma^2.
+$$
+
+Substituting:
+
+$$
+\operatorname{Var}(\bar{X}_n) \;=\; \frac{1}{n^2} \cdot n\sigma^2 \;=\; \frac{\sigma^2}{n}. \quad\blacksquare
+$$
+</ProofBlock>
+
+The factor of $1/n$ is the entire content of the sample mean's appeal. It says that doubling the sample size halves the variance — precision improves linearly in $n$. And the factor of $\sqrt{n}$ in the standard error is the rate at which confidence intervals narrow, the rate that appears in the CLT, and the rate that organizes almost all of classical statistics.
+
+<ExampleBlock number={4} title="Standard error of the sample mean for a Normal population">
+If $X_1, \ldots, X_n$ are iid $\mathcal{N}(\mu, \sigma^2)$, the sample mean satisfies $\bar{X}_n \sim \mathcal{N}(\mu, \sigma^2/n)$ exactly — no approximation, no CLT needed. Its standard error is $\sigma/\sqrt{n}$. For $\sigma = 2$ and $n = 25$, that is $2/5 = 0.4$: a single sample mean will typically land within $\pm 0.4$ of $\mu$ (about one SE), and almost always within $\pm 0.8$ (two SEs).
+
+When $\sigma$ is unknown — the usual case — we plug in the sample standard deviation $S = \sqrt{S^2}$ (from Example 3) to get the **estimated** standard error $\widehat{\operatorname{SE}}(\bar{X}_n) = S/\sqrt{n}$. The distinction matters: confidence intervals built from $S$ use the Student's $t$ distribution, not the standard Normal, because $S$ introduces additional uncertainty. That $t$-correction is Topic 11's Example 7, and the machinery of confidence intervals (coming soon) will develop it systematically.
+</ExampleBlock>
+
+<RemarkBlock number={3} title="Standard error vs. standard deviation: precision about precision">
+It is easy to conflate "standard deviation" and "standard error." The difference is crucial:
+
+- The **standard deviation** $\sigma$ describes the spread of the *population*. It does not shrink as you collect more data.
+- The **standard error** $\sigma/\sqrt{n}$ describes the spread of the *estimator*. It shrinks like $1/\sqrt{n}$.
+
+When you report a sample mean as "$\bar{X}_n = 4.72 \pm 0.40$," the $\pm 0.40$ is the standard error — how uncertain you are about the *mean*. When you report that your data has standard deviation $2.0$, that is the standard deviation — how spread out the individual observations are. SE says how precisely you know the average; SD says how dispersed the raw data are. SE is *precision about precision* — a derived uncertainty.
+</RemarkBlock>
+
+## 13.4 Mean Squared Error and the Bias-Variance Decomposition
+
+Bias and variance are both measures of estimator quality, and they are in tension: biased estimators can have lower variance, and vice versa. We need a single scalar that combines both. The natural choice — and the one whose properties organize the entire remainder of this topic — is the mean squared error.
+
+<DefinitionBlock number={6} title="Mean Squared Error (MSE)">
+The **mean squared error** of an estimator $\hat{\theta}_n$ of $\theta$ is the expected squared deviation from the truth:
+
+$$
+\operatorname{MSE}(\hat{\theta}_n) \;=\; \mathbb{E}\!\left[(\hat{\theta}_n - \theta)^2\right].
+$$
+
+The expectation is taken over the sampling distribution of $\hat{\theta}_n$, treating $\theta$ as fixed.
+</DefinitionBlock>
+
+MSE is the squared analog of bias — instead of asking "how far off is the estimator on average?" it asks "how far off *squared* is the estimator on average?" Squaring turns the signed error into a positive quantity and penalizes large deviations more severely, which makes MSE a natural loss function. Crucially, MSE decomposes into a systematic part (bias squared) and a random part (variance), making the tradeoff between the two explicit.
+
+<img src="/images/topics/point-estimation/mse-decomposition.png"
+     alt="Three-panel MSE decomposition: (left) stacked bar chart of Bias² + Var = MSE for four estimators (mean, median, midrange, shrunk mean); (center) MSE, Bias², and Var curves as a function of shrinkage factor c in θ̂ = cX̄, with optimal c* annotated; (right) stacked area decomposition of the same sweep"
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<TheoremBlock number={3} title="MSE decomposition">
+For any estimator $\hat{\theta}_n$ of $\theta$ with finite second moment,
+
+$$
+\operatorname{MSE}(\hat{\theta}_n) \;=\; \operatorname{Bias}(\hat{\theta}_n)^2 \;+\; \operatorname{Var}(\hat{\theta}_n).
+$$
+
+Equivalently, $\mathbb{E}[(\hat{\theta}_n - \theta)^2]$ splits cleanly into a mean-offset term and a dispersion term.
+</TheoremBlock>
+
+<ProofBlock>
+The trick is to add and subtract the mean $\mathbb{E}[\hat{\theta}_n]$ inside $(\hat{\theta}_n - \theta)$:
+
+$$
+\hat{\theta}_n - \theta \;=\; \big(\hat{\theta}_n - \mathbb{E}[\hat{\theta}_n]\big) \;+\; \big(\mathbb{E}[\hat{\theta}_n] - \theta\big).
+$$
+
+The first parenthesis is the *random* deviation of $\hat{\theta}_n$ from its mean — its variance comes from here. The second parenthesis is the *systematic* deviation of the mean from the truth — the bias. Square both sides:
+
+$$
+(\hat{\theta}_n - \theta)^2 \;=\; \big(\hat{\theta}_n - \mathbb{E}[\hat{\theta}_n]\big)^2 \;+\; 2\,\big(\hat{\theta}_n - \mathbb{E}[\hat{\theta}_n]\big)\big(\mathbb{E}[\hat{\theta}_n] - \theta\big) \;+\; \big(\mathbb{E}[\hat{\theta}_n] - \theta\big)^2.
+$$
+
+Now take expectations. The first term becomes $\operatorname{Var}(\hat{\theta}_n)$ by definition:
+
+$$
+\mathbb{E}\!\left[\big(\hat{\theta}_n - \mathbb{E}[\hat{\theta}_n]\big)^2\right] \;=\; \operatorname{Var}(\hat{\theta}_n).
+$$
+
+The middle term vanishes. To see this, pull out $\big(\mathbb{E}[\hat{\theta}_n] - \theta\big)$, which is a constant with respect to the expectation, leaving $\mathbb{E}[\hat{\theta}_n - \mathbb{E}[\hat{\theta}_n]] = 0$:
+
+$$
+\mathbb{E}\!\left[2\,\big(\hat{\theta}_n - \mathbb{E}[\hat{\theta}_n]\big)\big(\mathbb{E}[\hat{\theta}_n] - \theta\big)\right] \;=\; 2\,\big(\mathbb{E}[\hat{\theta}_n] - \theta\big) \cdot \mathbb{E}\!\left[\hat{\theta}_n - \mathbb{E}[\hat{\theta}_n]\right] \;=\; 0.
+$$
+
+The third term is already deterministic — it is the square of the bias:
+
+$$
+\mathbb{E}\!\left[\big(\mathbb{E}[\hat{\theta}_n] - \theta\big)^2\right] \;=\; \operatorname{Bias}(\hat{\theta}_n)^2.
+$$
+
+Collecting:
+
+$$
+\operatorname{MSE}(\hat{\theta}_n) \;=\; \operatorname{Var}(\hat{\theta}_n) \;+\; \operatorname{Bias}(\hat{\theta}_n)^2. \quad\blacksquare
+$$
+</ProofBlock>
+
+The proof is the same "add and subtract the mean" maneuver that powered the variance decomposition in Topic 4 (Eve's law), and it gives the central identity of estimation theory. An unbiased estimator pays all of its MSE as variance. A highly precise but biased estimator pays most of its MSE as bias squared. Minimizing MSE means navigating the tradeoff between the two — which is what the rest of this topic is about.
+
+<img src="/images/topics/point-estimation/bias-variance-tradeoff.png"
+     alt="Three-panel bias-variance tradeoff for polynomial regression: degree 1 (underfitting, high bias), degree 5 (good fit), degree 15 (overfitting, high variance). Each panel shows 50 training-set fits overlaid, the average fit E[f̂(x)] in bold, and the Bias²/Var/MSE values"
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<ExampleBlock number={5} title="MSE comparison: biased vs. unbiased sample variance">
+From Example 3, the two candidates for estimating $\sigma^2$ are:
+
+- $S^2 = \frac{1}{n-1}\sum(X_i - \bar{X}_n)^2$, unbiased.
+- $S_n^2 = \frac{1}{n}\sum(X_i - \bar{X}_n)^2 = \frac{n-1}{n}S^2$, biased with $\mathbb{E}[S_n^2] = \frac{n-1}{n}\sigma^2$.
+
+For iid Normal data, it can be shown that $\operatorname{Var}(S^2) = \frac{2\sigma^4}{n-1}$ and $\operatorname{Var}(S_n^2) = \frac{2(n-1)\sigma^4}{n^2}$. Plugging into the MSE decomposition:
+
+$$
+\operatorname{MSE}(S^2) \;=\; 0 \;+\; \frac{2\sigma^4}{n-1} \;=\; \frac{2\sigma^4}{n-1},
+$$
+
+$$
+\operatorname{MSE}(S_n^2) \;=\; \left(\frac{\sigma^2}{n}\right)^2 \;+\; \frac{2(n-1)\sigma^4}{n^2} \;=\; \frac{(2n-1)\sigma^4}{n^2}.
+$$
+
+For $n = 10$: $\operatorname{MSE}(S^2) = 2\sigma^4/9 \approx 0.222\sigma^4$ vs. $\operatorname{MSE}(S_n^2) = 19\sigma^4/100 = 0.190\sigma^4$. The **biased** estimator has lower MSE. This is not a trick: Bessel's correction removes bias at the cost of increased variance, and the tradeoff does not always favor unbiasedness. It turns out that $\hat{\sigma}^2_{\text{opt}} = \frac{1}{n+1}\sum(X_i - \bar{X}_n)^2$ — shrinking even more aggressively than the MLE — has smaller MSE still for Normal data. Minimum-MSE and unbiasedness are genuinely different objectives.
+</ExampleBlock>
+
+<ExampleBlock number={6} title="Shrinkage preview — a biased estimator with smaller MSE">
+Consider estimating $\mu \in \mathbb{R}$ from iid $\mathcal{N}(\mu, \sigma^2)$ data with the family of *shrinkage* estimators
+
+$$
+\hat{\mu}_c \;=\; c \cdot \bar{X}_n, \qquad c \in [0, 1].
+$$
+
+At $c = 1$ we recover the sample mean (unbiased, MSE $= \sigma^2/n$). At $c = 0$ we get the trivial estimator that always returns zero (biased by $-\mu$, variance zero, MSE $= \mu^2$). In between, bias and variance trade off:
+
+$$
+\operatorname{Bias}(\hat{\mu}_c) \;=\; (c - 1)\mu, \qquad \operatorname{Var}(\hat{\mu}_c) \;=\; c^2 \frac{\sigma^2}{n},
+$$
+
+$$
+\operatorname{MSE}(\hat{\mu}_c) \;=\; (c-1)^2 \mu^2 \;+\; c^2 \frac{\sigma^2}{n}.
+$$
+
+Differentiating with respect to $c$ and setting to zero gives the MSE-optimal shrinkage
+
+$$
+c^* \;=\; \frac{\mu^2}{\mu^2 + \sigma^2/n}.
+$$
+
+Note that $c^* < 1$ strictly whenever $\sigma^2/n > 0$ — which it always is. So the sample mean is **never** MSE-optimal in this family; there always exists a shrunk version that strictly dominates it. The catch: $c^*$ depends on $\mu$ itself, so we cannot use it as a standalone estimator. But this example is the seed of every shrinkage, regularization, and empirical-Bayes method: allowing bias opens a strictly better option in terms of MSE.
+</ExampleBlock>
+
+<RemarkBlock number={4} title="The bias-variance tradeoff as the fundamental tension in estimation">
+Theorem 3 makes the bias-variance tradeoff precise: MSE has two components, and reducing one often increases the other. This is not a metaphor — it is an algebraic identity. Every strategy for minimizing MSE must navigate this tension:
+
+- **More data** ($n \uparrow$): variance shrinks like $\sigma^2/n$, bias typically unaffected. So MSE is dominated by bias at large $n$ — unbiased consistent estimators eventually win.
+- **Simpler models / more shrinkage**: bias increases, variance decreases. Good for small $n$ when variance dominates.
+- **More flexible models / less shrinkage**: bias decreases, variance increases. Good for large $n$ when bias dominates.
+
+In an ML context, this is the polynomial-fitting story: a degree-1 line is highly biased but low-variance; a degree-15 polynomial is nearly unbiased but enormously variable. Regularization, cross-validation, and model selection all exist to find the sweet spot. Section 13.9 develops the ML connection in detail.
+</RemarkBlock>
+
+<BiasVarianceMSEExplorer client:visible />
+
+## 13.5 Consistency
+
+The properties so far — bias, variance, MSE — are **finite-sample** statements: they hold for every $n$. The next two sections zoom out and ask: what happens as $n \to \infty$? Does the estimator settle down to the truth? Does its sampling distribution take a recognizable shape? Consistency answers the first question, and we already have all the machinery we need — the [law of large numbers](/topics/law-of-large-numbers) does almost all of the work.
+
+<DefinitionBlock number={7} title="Consistency (in probability)">
+An estimator $\hat{\theta}_n$ is **consistent** for $\theta$ if, as $n \to \infty$, it converges to $\theta$ in probability: for every $\varepsilon > 0$,
+
+$$
+\lim_{n \to \infty} P\!\left(\left|\hat{\theta}_n - \theta\right| > \varepsilon\right) \;=\; 0.
+$$
+
+Equivalently, $\hat{\theta}_n \overset{P}{\to} \theta$.
+</DefinitionBlock>
+
+Consistency is the *minimal* requirement for an estimator to be useful at large sample sizes. If $\hat{\theta}_n$ is inconsistent, then even infinite data will not push it to the right answer; no amount of precision can compensate for a procedure that is aimed at the wrong target asymptotically. Unbiasedness and consistency are logically independent (Remark 5), so we need both words.
+
+<DefinitionBlock number={8} title="Strong Consistency (almost sure)">
+An estimator $\hat{\theta}_n$ is **strongly consistent** for $\theta$ if $\hat{\theta}_n \overset{a.s.}{\to} \theta$: the set of sample sequences on which the running estimates fail to converge to $\theta$ has probability zero.
+</DefinitionBlock>
+
+Strong consistency implies consistency (convergence almost sure implies convergence in probability, per Topic 9), so whenever the strong law of large numbers applies we get strong consistency "for free." The distinction matters most when we track a single infinite sequence of data, as a streaming algorithm would — strong consistency guarantees the stream's running estimate eventually stays close to the truth, not just that any given sample-size-$n$ snapshot is likely to be close.
+
+<TheoremBlock number={4} title="MSE → 0 implies consistency">
+If $\operatorname{MSE}(\hat{\theta}_n) \to 0$ as $n \to \infty$, then $\hat{\theta}_n$ is consistent for $\theta$.
+</TheoremBlock>
+
+<ProofBlock>
+By [Chebyshev's inequality](/topics/expectation-moments) applied to the random variable $\hat{\theta}_n - \theta$, for any $\varepsilon > 0$:
+
+$$
+P\!\left(\left|\hat{\theta}_n - \theta\right| > \varepsilon\right) \;\leq\; \frac{\mathbb{E}[(\hat{\theta}_n - \theta)^2]}{\varepsilon^2} \;=\; \frac{\operatorname{MSE}(\hat{\theta}_n)}{\varepsilon^2}.
+$$
+
+By hypothesis $\operatorname{MSE}(\hat{\theta}_n) \to 0$, so the right-hand side tends to $0$ for every fixed $\varepsilon > 0$. Therefore
+
+$$
+\lim_{n \to \infty} P\!\left(\left|\hat{\theta}_n - \theta\right| > \varepsilon\right) \;=\; 0,
+$$
+
+which is the definition of consistency. $\quad\blacksquare$
+</ProofBlock>
+
+Because MSE decomposes as bias² + variance, Theorem 4 gives a two-part recipe: if $\operatorname{Bias}(\hat{\theta}_n) \to 0$ **and** $\operatorname{Var}(\hat{\theta}_n) \to 0$, then $\hat{\theta}_n$ is consistent. This is the most common way to prove consistency in practice — check that bias vanishes and variance shrinks. For the sample mean, bias is zero for all $n$ and variance is $\sigma^2/n \to 0$, so consistency is immediate — but the theorem gives us a cleaner route via the LLN.
+
+<TheoremBlock number={5} title="Consistency of the sample mean (via LLN)">
+If $X_1, X_2, \ldots$ are iid with $\mathbb{E}[|X_1|] < \infty$ and $\mu = \mathbb{E}[X_1]$, then the sample mean is strongly consistent for $\mu$:
+
+$$
+\bar{X}_n \overset{a.s.}{\to} \mu.
+$$
+
+If only $\mathbb{E}[X_1^2] < \infty$ is known, the weaker statement $\bar{X}_n \overset{P}{\to} \mu$ follows from Chebyshev (Theorem 4 above) or from the weak law of large numbers.
+</TheoremBlock>
+
+This is the strong law of large numbers from [Topic 10](/topics/law-of-large-numbers), restated in estimator language. The sample mean is the prototypical consistent estimator, and the LLN is the engine: consistency of the sample mean is *literally* the LLN under a different name. Every estimator that can be written as (or derived from) a sample mean inherits consistency from the LLN — this is the template that Topic 14 will use to prove the MLE is consistent, and Topic 15 to handle method-of-moments estimators.
+
+<img src="/images/topics/point-estimation/consistency-trajectories.png"
+     alt="Three-panel consistency trajectories at log-scale n: (left) 15 paths of X̄ₙ converging to μ (consistent); (center) 15 paths of S²ₙ converging to σ² (consistent); (right) 15 flat paths of θ̂ = X₁, which ignores all but the first observation and does not converge"
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<ExampleBlock number={7} title="The sample variance is consistent">
+Let $X_1, \ldots, X_n$ be iid with $\mathbb{E}[X_1^4] < \infty$ (a fourth-moment condition, stronger than what Theorem 5 required). The unbiased sample variance $S^2 = \frac{1}{n-1}\sum(X_i - \bar{X}_n)^2$ is consistent for $\sigma^2 = \operatorname{Var}(X_1)$.
+
+**Sketch.** Expand
+
+$$
+S^2 \;=\; \frac{n}{n-1}\!\left(\frac{1}{n}\sum_{i=1}^n X_i^2 \;-\; \bar{X}_n^2\right).
+$$
+
+By the LLN applied to $\{X_i^2\}$, the first average converges almost surely to $\mathbb{E}[X_1^2]$. By the LLN applied to $\{X_i\}$ and continuous-mapping, $\bar{X}_n^2 \overset{a.s.}{\to} \mu^2$. The factor $n/(n-1) \to 1$. Combining:
+
+$$
+S^2 \overset{a.s.}{\to} \mathbb{E}[X_1^2] - \mu^2 \;=\; \sigma^2.
+$$
+
+Consistency of the biased version $S_n^2 = \frac{n-1}{n}S^2$ follows immediately by the same argument (multiplying by $(n-1)/n \to 1$). Both divisors yield consistent estimators of $\sigma^2$; they differ only in finite-sample MSE.
+</ExampleBlock>
+
+<ExampleBlock number={8} title="An inconsistent estimator: keep only the first observation">
+Consider the estimator $\tilde{\mu} = X_1$ of the population mean $\mu$. It is unbiased ($\mathbb{E}[X_1] = \mu$), but it ignores all but the first observation — no matter how many data points you collect, the estimate never updates after $n = 1$.
+
+Formally: $\tilde{\mu}$ does not depend on $n$ at all, so $P(|\tilde{\mu} - \mu| > \varepsilon) = P(|X_1 - \mu| > \varepsilon)$ — a fixed, positive number for any $\varepsilon < \sigma$ and any non-degenerate distribution. The probability does not shrink with $n$. Therefore $\tilde{\mu}$ is **inconsistent**, despite being unbiased.
+
+This is the cleanest demonstration that unbiasedness and consistency are independent properties. $\tilde{\mu}$ has $\operatorname{MSE} = \operatorname{Var}(X_1) = \sigma^2$ for every $n$, which does not shrink, so Theorem 4 does not kick in.
+</ExampleBlock>
+
+<RemarkBlock number={5} title="Consistency vs. unbiasedness: independent criteria">
+Examples 7 and 8 make the point: consistency and unbiasedness are logically independent. Exhaustive possibilities:
+
+- **Both:** sample mean, unbiased sample variance. The ideal case.
+- **Unbiased, inconsistent:** $\tilde{\mu} = X_1$. Unbiased but fails to improve with more data.
+- **Biased, consistent:** biased sample variance $S_n^2$. Its bias shrinks as $n \to \infty$ ($\frac{n-1}{n}\sigma^2 \to \sigma^2$), so it is asymptotically unbiased; with vanishing variance, it is consistent.
+- **Neither:** the constant estimator $\tilde{\theta} = 7$ (or any fixed value unrelated to $\theta$). Ignores the data, biased except by coincidence, not consistent.
+
+For practical purposes, consistency is the more important of the two: we typically want an estimator that *eventually* gets the right answer, and we tolerate small-sample bias as long as it washes out. Unbiasedness is sometimes useful as a finite-sample property (e.g. for building exact confidence intervals under Normal assumptions), but **asymptotic unbiasedness** — $\operatorname{Bias}(\hat{\theta}_n) \to 0$ — is what modern statistics actually requires most of the time.
+</RemarkBlock>
+
+<ConsistencyExplorer client:visible />
+
+## 13.6 Asymptotic Normality
+
+Consistency tells us $\hat{\theta}_n$ eventually lands near $\theta$. Asymptotic normality tells us what its *shape* is near $\theta$: for large $n$, the sampling distribution is approximately Gaussian, with a known variance. This is what powers confidence intervals, z-tests, and t-tests. The [central limit theorem](/topics/central-limit-theorem) is the engine here, and — as with consistency and the LLN — most of the work is already done.
+
+<DefinitionBlock number={9} title="Asymptotically Normal Estimator">
+The estimator $\hat{\theta}_n$ is **asymptotically normal** with asymptotic variance $v(\theta)$ if
+
+$$
+\sqrt{n}\,(\hat{\theta}_n - \theta) \overset{d}{\to} \mathcal{N}\!\left(0, v(\theta)\right),
+$$
+
+where $\overset{d}{\to}$ denotes convergence in distribution. Informally, for large $n$, $\hat{\theta}_n \approx \mathcal{N}(\theta, v(\theta)/n)$.
+</DefinitionBlock>
+
+The $\sqrt{n}$ factor is essential. Without it, $\hat{\theta}_n - \theta \to 0$ (by consistency) and the limit distribution would be a point mass at zero — degenerate and useless. The $\sqrt{n}$ scales the fluctuations up at the right rate so the limit is non-degenerate. The asymptotic variance $v(\theta)$ is the "per-sample" variance at the $1/\sqrt{n}$ scale — what the histogram of $\sqrt{n}(\hat{\theta}_n - \theta)$ converges to.
+
+<TheoremBlock number={6} title="Asymptotic normality of the sample mean">
+If $X_1, X_2, \ldots$ are iid with $\operatorname{Var}(X_1) = \sigma^2 \in (0, \infty)$, then the sample mean is asymptotically normal with asymptotic variance $\sigma^2$:
+
+$$
+\sqrt{n}\,(\bar{X}_n - \mu) \overset{d}{\to} \mathcal{N}(0, \sigma^2).
+$$
+</TheoremBlock>
+
+This is the classical CLT of [Topic 11](/topics/central-limit-theorem), restated as an estimator result. The only change is language: instead of "sums and averages converge to a Gaussian," we say "the sample mean is an asymptotically normal estimator of $\mu$ with asymptotic variance $\sigma^2$." The quantities are identical; the framing is new.
+
+<img src="/images/topics/point-estimation/asymptotic-normality.png"
+     alt="Three-panel asymptotic normality: histograms of √n(X̄ₙ − μ)/σ for Exp(1) at n=10, 50, 500, with N(0,1) overlay and Kolmogorov–Smirnov statistic annotations showing convergence to standard Normal"
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<TheoremBlock number={7} title="Delta method for smooth transformations">
+Let $\hat{\theta}_n$ be asymptotically normal: $\sqrt{n}(\hat{\theta}_n - \theta) \overset{d}{\to} \mathcal{N}(0, v(\theta))$. Let $g : \mathbb{R} \to \mathbb{R}$ be differentiable at $\theta$ with $g'(\theta) \neq 0$. Then $g(\hat{\theta}_n)$ is asymptotically normal for $g(\theta)$:
+
+$$
+\sqrt{n}\,\big(g(\hat{\theta}_n) - g(\theta)\big) \overset{d}{\to} \mathcal{N}\!\left(0, \; g'(\theta)^2 \cdot v(\theta)\right).
+$$
+</TheoremBlock>
+
+The delta method is the workhorse for deriving asymptotic distributions of *non-linear* functions of estimators. It says that smooth transformations inherit asymptotic normality, with variance rescaled by the squared derivative of the transformation — a first-order Taylor expansion at the asymptotic regime. The proof is in [Topic 11](/topics/central-limit-theorem) (Theorem 11.8); we will apply it repeatedly in Topics 14 and 15 to handle things like $1/\bar{X}_n$ (when estimating a rate) and $\bar{X}_n^2$ (when estimating a squared quantity).
+
+<ExampleBlock number={9} title="Asymptotic distribution of the sample variance via the delta method">
+We want the limit distribution of $S_n^2 = \frac{1}{n}\sum(X_i - \bar{X}_n)^2$ for iid data with finite fourth moment. Write the sample variance as a function of two sample means: $S_n^2 = \overline{X^2}_n - \bar{X}_n^2$ where $\overline{X^2}_n = \frac{1}{n}\sum X_i^2$.
+
+By the multivariate CLT applied to the random vector $(X_i, X_i^2)$, the vector $\big(\bar{X}_n, \overline{X^2}_n\big)$ is jointly asymptotically Normal around $(\mu, \mathbb{E}[X_1^2])$ with a covariance matrix determined by the first four moments of $X_1$. Applying the delta method to $g(a, b) = b - a^2$:
+
+$$
+\sqrt{n}\,(S_n^2 - \sigma^2) \overset{d}{\to} \mathcal{N}\!\left(0, \; \mu_4 - \sigma^4\right),
+$$
+
+where $\mu_4 = \mathbb{E}[(X_1 - \mu)^4]$ is the central fourth moment. For Normal data, $\mu_4 = 3\sigma^4$, so the asymptotic variance simplifies to $2\sigma^4$ — which matches the exact (small-sample) variance formula from Example 5 after the $1/n$ rescaling. For non-Normal data, the formula picks up the excess kurtosis: heavier tails mean the sample variance has larger asymptotic variance, because extreme observations dominate the squared residuals.
+</ExampleBlock>
+
+<RemarkBlock number={6} title="Asymptotic efficiency and relative efficiency (ARE)">
+Asymptotic normality gives us an apples-to-apples way to compare estimators: look at their asymptotic variances. For two asymptotically normal estimators $\hat{\theta}_{1,n}$ and $\hat{\theta}_{2,n}$ of the same parameter, the **asymptotic relative efficiency** is
+
+$$
+\operatorname{ARE}(\hat{\theta}_1 ; \hat{\theta}_2) \;=\; \frac{v_2(\theta)}{v_1(\theta)},
+$$
+
+the ratio of their asymptotic variances (in the order that makes values above $1$ mean "$\hat{\theta}_1$ wins"). For Normal data, the sample median has ARE $2/\pi \approx 0.637$ relative to the sample mean — meaning 1,000 observations for the median give about the same precision as $\pi/2 \times 1{,}000 \approx 1{,}570$ for the mean. For Cauchy data (where the sample mean has no well-defined asymptotic variance), the ARE comparison flips: the median is the efficient choice and the mean is catastrophic. Asymptotic efficiency is distribution-dependent; efficient-for-Normal and efficient-for-Cauchy are different estimators.
+
+The next section, on the Cramér–Rao bound, quantifies the ceiling on achievable asymptotic variance — and therefore the ceiling on asymptotic efficiency.
+</RemarkBlock>
+
+## 13.7 Efficiency and the Cramér-Rao Lower Bound
+
+We have seen that bias and variance trade off, and that asymptotic variance gives us a clean way to compare estimators. The natural next question: how *small* can the variance of an unbiased estimator possibly be? Is there a fundamental floor, or can clever procedures improve without limit? The answer is the **Cramér–Rao lower bound** — the most important non-trivial inequality in estimation theory. It says that the variance of any unbiased estimator is bounded below by a quantity depending only on the model (the distribution family) and the parameter — the **Fisher information**.
+
+<DefinitionBlock number={10} title="Score Function">
+Let $\{f(x; \theta) : \theta \in \Theta\}$ be a parametric family of densities (or PMFs) with $\Theta \subseteq \mathbb{R}$. The **score function** is the partial derivative of the log-likelihood with respect to the parameter:
+
+$$
+s(\theta; x) \;=\; \frac{\partial}{\partial \theta} \log f(x; \theta).
+$$
+
+For an iid sample, the total score is the sum of per-observation scores: $S(\theta) = \sum_{i=1}^n s(\theta; X_i)$.
+</DefinitionBlock>
+
+The score is the "sensitivity of the log-likelihood to the parameter, at a given data point." It is a random variable (depends on $X$); for a well-specified model, its expected value at the true parameter is zero. The maximum-likelihood estimator — Topic 14 — is defined as the $\theta$ that makes the total score zero. Score-based methods (score tests, score matching, efficient-score GLMs) pervade modern statistics.
+
+<DefinitionBlock number={11} title="Fisher Information">
+The **Fisher information** at $\theta$ is the variance of the score:
+
+$$
+I(\theta) \;=\; \operatorname{Var}\!\big(s(\theta; X)\big) \;=\; \mathbb{E}\!\left[\left(\frac{\partial}{\partial \theta}\log f(X; \theta)\right)^2\right].
+$$
+
+Under regularity conditions, an equivalent form is the negative expected second derivative of the log-likelihood:
+
+$$
+I(\theta) \;=\; -\mathbb{E}\!\left[\frac{\partial^2}{\partial \theta^2}\log f(X; \theta)\right].
+$$
+</DefinitionBlock>
+
+Fisher information measures how much information one observation carries about $\theta$ — equivalently, how *curved* the log-likelihood is near the true parameter. Sharp curvature (high $I(\theta)$) means the log-likelihood is a steep parabola near its peak: small changes in $\theta$ produce large changes in log-likelihood, so the data is highly informative about $\theta$. Flat curvature (low $I(\theta)$) means the log-likelihood is nearly level: data poorly discriminates among candidate $\theta$'s. Fisher information is additive for iid samples: $n$ observations carry $nI(\theta)$ total information.
+
+<img src="/images/topics/point-estimation/fisher-information.png"
+     alt="Three-panel Fisher information: (left) score function curves s(μ; x) = (x − μ)/σ² for N(μ, 1) at several x values; (center) horizontal bar chart of I(μ) = 1/σ² for different σ, showing constant information in μ; (right) log-likelihood curvature for Bernoulli with quadratic Fisher-info approximation overlay"
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<TheoremBlock number={8} title="The score has mean zero and variance equal to Fisher information">
+Under regularity conditions that allow interchange of differentiation and integration,
+
+$$
+\mathbb{E}[s(\theta; X)] \;=\; 0, \qquad \operatorname{Var}(s(\theta; X)) \;=\; I(\theta).
+$$
+</TheoremBlock>
+
+<ProofBlock>
+Start from the fact that $f(\cdot; \theta)$ is a density for every $\theta$, so it integrates to $1$:
+
+$$
+\int f(x; \theta)\, dx \;=\; 1.
+$$
+
+Differentiate both sides in $\theta$. The regularity conditions are exactly what justify swapping the derivative and the integral:
+
+$$
+\frac{\partial}{\partial \theta}\!\int f(x; \theta)\, dx \;=\; \int \frac{\partial}{\partial \theta} f(x; \theta)\, dx \;=\; 0.
+$$
+
+Rewrite $\partial f/\partial \theta = f \cdot \partial \log f / \partial \theta = f \cdot s(\theta; x)$:
+
+$$
+\int s(\theta; x)\, f(x; \theta)\, dx \;=\; \mathbb{E}[s(\theta; X)] \;=\; 0,
+$$
+
+which is the first claim. For the second, differentiate again:
+
+$$
+\int \left(\frac{\partial s}{\partial \theta} \cdot f \;+\; s \cdot \frac{\partial f}{\partial \theta}\right) dx \;=\; 0.
+$$
+
+Substitute $\partial f / \partial \theta = s \cdot f$ into the second term:
+
+$$
+\int \frac{\partial s}{\partial \theta}\, f \, dx \;+\; \int s^2 f \, dx \;=\; 0,
+$$
+
+which says
+
+$$
+\mathbb{E}\!\left[\frac{\partial s}{\partial \theta}\right] \;+\; \mathbb{E}[s^2] \;=\; 0.
+$$
+
+The second term is $\mathbb{E}[s^2] = \operatorname{Var}(s) + 0^2 = \operatorname{Var}(s)$ by the first claim. So
+
+$$
+\operatorname{Var}(s) \;=\; -\mathbb{E}\!\left[\frac{\partial s}{\partial \theta}\right] \;=\; -\mathbb{E}\!\left[\frac{\partial^2}{\partial \theta^2}\log f(X; \theta)\right] \;=\; I(\theta). \quad\blacksquare
+$$
+</ProofBlock>
+
+Theorem 8 gives the two definitions of $I(\theta)$ — as the variance of the score, or as the negative expected curvature — and shows they are equal. This is what makes Fisher information computable in practice: for many distributions, the second derivative of the log-likelihood is easier to evaluate than the squared first derivative.
+
+<DefinitionBlock number={12} title="Efficient Estimator">
+An unbiased estimator $\hat{\theta}_n$ whose variance attains the Cramér–Rao lower bound (Theorem 9) for every $\theta$ is called **efficient**. An asymptotically normal estimator whose asymptotic variance attains the asymptotic Cramér–Rao bound $1/I(\theta)$ is called **asymptotically efficient**.
+</DefinitionBlock>
+
+<TheoremBlock number={9} title="Cramér–Rao lower bound">
+Let $\hat{\theta}_n$ be an unbiased estimator of $\theta$ based on an iid sample of size $n$ from a parametric family satisfying the regularity conditions. Then
+
+$$
+\operatorname{Var}(\hat{\theta}_n) \;\geq\; \frac{1}{n\,I(\theta)}.
+$$
+</TheoremBlock>
+
+<ProofBlock>
+The proof applies the Cauchy–Schwarz inequality to the covariance of $\hat{\theta}_n$ with the total score $S(\theta) = \sum_{i=1}^n s(\theta; X_i)$.
+
+*Step 1.* Unbiasedness says $\mathbb{E}[\hat{\theta}_n] = \theta$ for every $\theta$, i.e. $\int \hat{\theta}_n(x)\, f(x; \theta)\, dx = \theta$, where $x = (x_1, \ldots, x_n)$ and $f(x; \theta) = \prod_i f(x_i; \theta)$. Differentiate in $\theta$, swapping differentiation and integration by the regularity conditions:
+
+$$
+1 \;=\; \int \hat{\theta}_n(x) \cdot \frac{\partial}{\partial \theta}\log f(x;\theta) \cdot f(x;\theta)\, dx \;=\; \mathbb{E}\!\left[\hat{\theta}_n \cdot S(\theta)\right].
+$$
+
+*Step 2.* Because $\mathbb{E}[S(\theta)] = 0$ (Theorem 8 applied to each term and summed), the product $\mathbb{E}[\hat{\theta}_n S(\theta)]$ equals the covariance:
+
+$$
+\operatorname{Cov}(\hat{\theta}_n, S(\theta)) \;=\; \mathbb{E}[\hat{\theta}_n S(\theta)] - \mathbb{E}[\hat{\theta}_n]\,\mathbb{E}[S(\theta)] \;=\; 1 - \theta \cdot 0 \;=\; 1.
+$$
+
+*Step 3.* Apply the [Cauchy–Schwarz inequality](/topics/expectation-moments) to the covariance:
+
+$$
+\operatorname{Cov}(\hat{\theta}_n, S(\theta))^2 \;\leq\; \operatorname{Var}(\hat{\theta}_n)\cdot \operatorname{Var}(S(\theta)).
+$$
+
+By independence of the $X_i$, $\operatorname{Var}(S(\theta)) = \sum_i \operatorname{Var}(s(\theta; X_i)) = n\,I(\theta)$. Substituting from Step 2:
+
+$$
+1 \;\leq\; \operatorname{Var}(\hat{\theta}_n) \cdot n\,I(\theta).
+$$
+
+*Step 4.* Rearranging,
+
+$$
+\operatorname{Var}(\hat{\theta}_n) \;\geq\; \frac{1}{n\,I(\theta)}. \quad\blacksquare
+$$
+</ProofBlock>
+
+The Cramér–Rao proof is a masterclass in statistical reasoning: an identity ($\operatorname{Cov}(\hat{\theta}_n, S) = 1$ for unbiased estimators) plus an inner-product inequality (Cauchy–Schwarz) plus independence-additivity of variance yield the floor on estimator precision. The bound is achieved — the inequality becomes equality — when $\hat{\theta}_n - \theta$ is proportional to $S(\theta)$, which happens for sample means of distributions in exponential families. This is the link between the Cramér–Rao bound, efficient estimation, and exponential families that Topic 16 will develop in full.
+
+<img src="/images/topics/point-estimation/cramer-rao-bound.png"
+     alt="Three-panel CRLB visualization: (left) CRLB curve σ²/n with mean, median, and trimmed-mean variances as scatter points — only the mean hits the bound; (center) asymptotic relative efficiency bar chart for Normal/Cauchy/Exponential/Uniform; (right) total Fisher information nI(θ) accumulating linearly for three distribution families"
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<ExampleBlock number={10} title="Fisher information for Normal, Bernoulli, and Exponential">
+Three canonical computations using $I(\theta) = -\mathbb{E}[\partial^2 \log f / \partial \theta^2]$:
+
+**Normal $\mathcal{N}(\mu, \sigma^2)$ with respect to $\mu$** (known $\sigma^2$):
+$\log f(x; \mu) = -\tfrac{1}{2}\log(2\pi\sigma^2) - (x-\mu)^2/(2\sigma^2)$. Two derivatives: $\partial^2 \log f / \partial \mu^2 = -1/\sigma^2$. Taking the negative expectation (which is constant):
+
+$$
+I(\mu) \;=\; \frac{1}{\sigma^2}.
+$$
+
+The Fisher information does not depend on $\mu$, only on $\sigma^2$: narrow distributions carry more information per sample about their location.
+
+**Bernoulli$(p)$:** $\log f(x; p) = x \log p + (1-x) \log(1-p)$. Second derivative $\partial^2 \log f / \partial p^2 = -x/p^2 - (1-x)/(1-p)^2$. Expectation: $-p/p^2 - (1-p)/(1-p)^2 = -1/p - 1/(1-p) = -1/(p(1-p))$. Negating:
+
+$$
+I(p) \;=\; \frac{1}{p(1-p)}.
+$$
+
+Fisher information is maximized at $p = 1/2$ (where variance is highest and $x$ is least predictable) and diverges as $p \to 0$ or $p \to 1$ — near the boundary, each observation is enormously informative about whether $p$ is exactly $0$ or exactly $1$.
+
+**Exponential$(\lambda)$:** $\log f(x; \lambda) = \log \lambda - \lambda x$ for $x > 0$. Second derivative $-1/\lambda^2$. Negating:
+
+$$
+I(\lambda) \;=\; \frac{1}{\lambda^2}.
+$$
+
+Larger rate $\lambda$ means faster decay, which means observations cluster near zero and carry more information about $\lambda$.
+</ExampleBlock>
+
+<ExampleBlock number={11} title="The sample mean achieves the CRLB for the Normal mean">
+For iid $\mathcal{N}(\mu, \sigma^2)$ with known $\sigma^2$, the sample mean is unbiased and has variance $\sigma^2/n$ (Theorem 2). From Example 10, $I(\mu) = 1/\sigma^2$. The Cramér–Rao lower bound is
+
+$$
+\frac{1}{n\,I(\mu)} \;=\; \frac{\sigma^2}{n} \;=\; \operatorname{Var}(\bar{X}_n).
+$$
+
+Equality. The sample mean is the **efficient** estimator of the Normal mean — no unbiased estimator based on $n$ iid Normal observations can do better. This is the canonical result that motivates the CRLB in the first place, and the reason the sample mean is *the* point estimator you reach for whenever Normality is plausible. For non-Normal data the sample mean is still unbiased and consistent, but it may no longer be efficient — the median beats it for Cauchy, and trimmed means dominate for heavy-tailed distributions.
+</ExampleBlock>
+
+<RemarkBlock number={7} title="Regularity conditions and when the CRLB fails">
+The Cramér–Rao proof requires **regularity conditions** that allow interchange of differentiation and integration. Informally: the support of $f(x; \theta)$ must not depend on $\theta$, and $\partial \log f / \partial \theta$ must be well-behaved enough to differentiate under the integral. These conditions hold for essentially every standard family — Normal, Poisson, Bernoulli, Exponential, Gamma, Beta — but fail in a few important cases:
+
+- **Uniform$(0, \theta)$:** the support is $[0, \theta]$, which depends on $\theta$. The MLE $\hat{\theta} = \max_i X_i$ has variance $\sim \theta^2/n^2$, faster than the $1/n$ rate the CRLB would predict. The CRLB does not apply.
+- **Shifted exponentials:** $f(x; \theta) = e^{-(x-\theta)}$ for $x \geq \theta$. Same issue — boundary of the support moves with $\theta$.
+- **Heavy-tailed distributions** with infinite Fisher information (Cauchy w.r.t. scale, for instance): the bound is $1/\infty = 0$, which is trivially satisfied but uninformative.
+
+When regularity holds, the CRLB is the ceiling: no unbiased estimator can beat $1/(nI(\theta))$. When regularity fails, different tools — the $L_1$ theory, order-statistics asymptotics, the Hájek-Le Cam framework — take over. For standard statistical modeling, regularity holds and the CRLB is the right benchmark.
+</RemarkBlock>
+
+<FisherInformationExplorer client:visible />
+
+## 13.8 Comparing Estimators: Admissibility and Minimax
+
+So far we have compared estimators by MSE at a single value of $\theta$. But $\theta$ is unknown, and a procedure that is great at one value and terrible at others is not a good procedure. Decision theory — the framework that organizes this comparison — asks: is $\hat{\theta}_1$ uniformly at least as good as $\hat{\theta}_2$? When no estimator is uniformly best, how do we choose among incomparable ones? This section introduces the key concepts (admissibility, minimax) and then presents the famous result — Stein's paradox — that the "natural" estimator is sometimes provably dominated by something stranger.
+
+<DefinitionBlock number={13} title="Admissibility">
+An estimator $\hat{\theta}_1$ is **dominated** by $\hat{\theta}_2$ if $\operatorname{MSE}(\hat{\theta}_2; \theta) \leq \operatorname{MSE}(\hat{\theta}_1; \theta)$ for all $\theta \in \Theta$, with strict inequality for at least one $\theta$. An estimator that is not dominated by any other is **admissible**.
+</DefinitionBlock>
+
+Admissibility is a weak criterion — it only says that no estimator is uniformly better. An admissible estimator can still be terrible (the constant estimator $\hat{\theta} \equiv 7$ is admissible in every problem: no other estimator can dominate it, because $\theta = 7$ is a point where "always guess 7" has zero MSE). Conversely, inadmissibility is a serious charge: if there exists a uniform improvement, any rational statistician should use it.
+
+<DefinitionBlock number={14} title="Minimax Estimator">
+An estimator $\hat{\theta}$ is **minimax** if it minimizes the maximum risk:
+
+$$
+\hat{\theta}_{\min\!\max} \;=\; \arg\min_{\hat{\theta}} \sup_{\theta \in \Theta}\, \operatorname{MSE}(\hat{\theta}; \theta).
+$$
+
+Minimax estimators are conservative: they trade off finite-sample performance at typical parameter values for worst-case robustness.
+</DefinitionBlock>
+
+Minimax is a pessimistic criterion — minimize the damage in the worst case — and it frequently produces estimators that are **not** the best on average. Bayesian estimators are often preferable when some prior on $\theta$ is available. In most applied work, MSE at a point estimate of $\theta$ is the right loss and minimax is overcautious.
+
+<img src="/images/topics/point-estimation/estimator-comparison.png"
+     alt="Three-panel estimator comparison: (left) risk functions R(θ, X̄) vs R(θ, JS) for d=3 with the improvement region shaded; (center) shrinkage arrows from X̄ to the James–Stein estimate across 8 components; (right) total MSE of X̄ vs JS as a function of dimension d, with d=3 threshold marked"
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<TheoremBlock number={10} title="Stein (1956): the sample mean is inadmissible in dimension d ≥ 3">
+Let $X \sim \mathcal{N}(\theta, \sigma^2 I_d)$ with unknown mean vector $\theta \in \mathbb{R}^d$ and known scale $\sigma^2$. For $d \geq 3$, the James–Stein estimator
+
+$$
+\hat{\theta}_{JS} \;=\; \left(1 - \frac{(d-2)\sigma^2}{\|X\|^2}\right)_{+} X
+$$
+
+has strictly smaller total MSE than the sample mean $X$ for every value of $\theta$:
+
+$$
+\mathbb{E}\!\left[\|\hat{\theta}_{JS} - \theta\|^2\right] \;<\; \mathbb{E}\!\left[\|X - \theta\|^2\right] \;=\; d\sigma^2, \qquad \text{for every } \theta \in \mathbb{R}^d.
+$$
+
+Therefore the sample mean is **inadmissible** in dimension $d \geq 3$.
+</TheoremBlock>
+
+<ProofBlock>
+*Proof sketch.* The full proof uses Stein's lemma — integration by parts for Normal expectations — to compute $\mathbb{E}[\|\hat{\theta}_{JS} - \theta\|^2]$ in closed form. Here we give the statement and the geometric intuition.
+
+**Statement.** An explicit (slightly idealized) risk formula for the non-positive-part James–Stein estimator is
+
+$$
+R(\hat{\theta}_{JS}, \theta) \;=\; d\sigma^2 \;-\; \frac{(d-2)^2 \sigma^4}{\|\theta\|^2 + (d-2)\sigma^2},
+$$
+
+which is strictly less than $d\sigma^2$ (the risk of the MLE) for every $\theta$, provided $d \geq 3$. The positive-part version is uniformly at least as good.
+
+**Geometric intuition.** The sample mean $X$ estimates each component $\theta_i$ independently. In $d \geq 3$ dimensions, the "noise ball" around $\theta$ concentrates in a thin annulus at radius $\approx \sigma\sqrt{d}$ — by the CLT applied to $\|X - \theta\|^2$. Shrinking $X$ toward the origin (or any fixed point) reduces total squared error on average, because the shrinkage moves most of the noise away from the part of the annulus farthest from the origin, more than it moves signal away from the target. The $(d-2)$ factor is the smallest shrinkage strength that wins against noise in all directions simultaneously — it is exactly the threshold where the bound integrates to give a net improvement.
+
+**Pointer.** The full proof uses Stein's identity: for $Z \sim \mathcal{N}(0, 1)$ and smooth $g$, $\mathbb{E}[Z\, g(Z)] = \mathbb{E}[g'(Z)]$. Applied coordinate-wise to the squared error of $\hat{\theta}_{JS}$, it reduces the MSE calculation to an integral involving $(d-2)/\|X\|^2$. See Lehmann & Casella (1998), Chapter 5, for the detailed argument. $\quad\blacksquare$
+</ProofBlock>
+
+Stein's result is one of the most surprising theorems in statistics. The sample mean — the estimator taught in every introductory course, guaranteed by the CLT to be efficient for a single parameter — is *not* the best estimator when you are simultaneously estimating three or more unrelated quantities. Shrinking all the estimates toward zero (or toward any fixed point) uniformly reduces total error. The intuition is that in high dimensions, noise concentrates, and pulling estimates inward exploits the geometry. This is the mathematical seed of regularization, hierarchical Bayes, and every modern shrinkage method.
+
+<ExampleBlock number={12} title="Ridge regression as a James–Stein-type shrinkage">
+Consider linear regression with design matrix $X \in \mathbb{R}^{n \times d}$, target $y \in \mathbb{R}^n$, and noise $\varepsilon \sim \mathcal{N}(0, \sigma^2 I_n)$. The OLS estimator is $\hat{\beta}_{OLS} = (X^\top X)^{-1} X^\top y$, unbiased with covariance $\sigma^2 (X^\top X)^{-1}$. The ridge estimator
+
+$$
+\hat{\beta}_{\text{ridge}}(\lambda) \;=\; (X^\top X + \lambda I_d)^{-1} X^\top y
+$$
+
+is biased for $\lambda > 0$, but adding $\lambda I$ shrinks the coefficients toward zero. For every $\lambda > 0$ there exist settings of $\beta^*$ (roughly, when $\|\beta^*\|$ is not too large relative to noise) where $\operatorname{MSE}(\hat{\beta}_{\text{ridge}}(\lambda)) < \operatorname{MSE}(\hat{\beta}_{OLS})$. In the orthonormal-design case $X^\top X = I_d$, ridge reduces to componentwise shrinkage $\hat{\beta}_{\text{ridge},i} = \frac{1}{1+\lambda}\hat{\beta}_{OLS,i}$, which is a scalar special case of James–Stein. In that setting, Stein's theorem implies ridge (at appropriate $\lambda$) dominates OLS in total MSE when $d \geq 3$.
+
+Ridge, lasso, elastic net, early stopping, dropout — every ML regularizer is a cousin of James–Stein, trading bias for variance under the assumption that the parameter vector is not arbitrarily large.
+</ExampleBlock>
+
+<RemarkBlock number={8} title="Stein's paradox and what it means for ML">
+Stein's paradox is usually dismissed as a curiosity about Normal means in high dimensions. It is not. It is a deep fact about multi-parameter estimation: when the number of parameters is large and the data per parameter is limited, *pooling information across parameters* — even when they are a priori independent — improves estimation. The James–Stein estimator pools information between the components of $\theta$ implicitly via the $\|X\|^2$ denominator; an empirical Bayes estimator does the same thing explicitly via a common prior; a hierarchical Bayesian model does it via a shared hyperparameter.
+
+Every modern ML method that works well in high dimensions is exploiting some version of this phenomenon:
+
+- **Regularization** (L1, L2, entropy penalty, etc.) is explicit shrinkage toward a chosen point (zero, a sparse solution, a high-entropy distribution).
+- **Transfer learning / pretraining** shrinks the target-task estimator toward a source-task estimator, which plays the role of the "fixed shrinkage point" in James–Stein.
+- **Hierarchical models** borrow strength across groups via a shared prior — the Bayesian analog of James–Stein.
+- **Ensemble averaging** (bagging, model soups) averages independent estimators, reducing variance by the CLT while preserving bias — the additive inverse of James–Stein (increase one dimension's signal by combining independent high-variance estimators, rather than reduce many dimensions' variance by shrinking toward a common point).
+
+The broader lesson: **admissibility is fragile**, **unbiasedness is not sacred**, and **high-dimensional estimation rewards pooled information** over independent per-parameter estimation. This is the bridge from the 1950s-era CRLB and Stein results to twenty-first-century deep learning.
+</RemarkBlock>
+
+<CramerRaoExplorer client:visible />
+
+## 13.9 Connections to ML
+
+We have developed the bias-variance decomposition for a scalar parameter $\theta$. The ML reader's natural question is: how does this extend to prediction problems, where the goal is to learn a function $f : \mathcal{X} \to \mathcal{Y}$ rather than a single number? The answer is a slight generalization — MSE decomposes the same way, but the bias and variance now live in function space, and they depend on the joint distribution over training sets and test points. This section develops three canonical ML applications of the decomposition: polynomial regression (the fitting-complexity tradeoff), regularization (deliberate bias to reduce variance), and stochastic gradient descent (the mini-batch variance–compute tradeoff).
+
+<img src="/images/topics/point-estimation/ml-bias-variance.png"
+     alt="Three-panel ML bias-variance: (left) Bias²/Var/MSE vs polynomial degree with an irreducible-noise floor; (center) ridge regression Bias²/Var/MSE vs λ with optimal λ* marked; (right) SGD gradient variance σ²/B vs batch size B with compute-cost dual axis"
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<ExampleBlock number={13} title="Bias-variance for polynomial regression">
+Fix a covariate point $x_0$ and consider the prediction problem where the true response satisfies $y = f(x) + \varepsilon$ with $\varepsilon \sim \mathcal{N}(0, \sigma^2)$ independent of $x$, and the training set $\mathcal{D} = \{(x_i, y_i)\}_{i=1}^n$ is an iid sample. Let $\hat{f}_{\mathcal{D}}$ denote the regressor fit on $\mathcal{D}$. The prediction MSE at $x_0$, averaged over training sets, is
+
+$$
+\mathbb{E}_{\mathcal{D}, \varepsilon}\!\left[(y - \hat{f}_{\mathcal{D}}(x_0))^2\right] \;=\; \underbrace{\big(f(x_0) - \mathbb{E}_{\mathcal{D}}[\hat{f}_{\mathcal{D}}(x_0)]\big)^2}_{\text{Bias}^2} \;+\; \underbrace{\mathbb{E}_{\mathcal{D}}\!\left[(\hat{f}_{\mathcal{D}}(x_0) - \mathbb{E}_{\mathcal{D}}[\hat{f}_{\mathcal{D}}(x_0)])^2\right]}_{\text{Variance}} \;+\; \underbrace{\sigma^2}_{\text{Irreducible noise}}.
+$$
+
+The derivation is the same add-and-subtract trick from Theorem 3, applied to $\hat{f}_{\mathcal{D}}(x_0)$ instead of $\hat{\theta}_n$, with one extra term for the noise $\varepsilon$ at the new test point. For a polynomial of degree $d$ fit by least squares:
+
+- **Small $d$:** $\hat{f}$ is too inflexible to track $f$; bias is large; variance is small.
+- **Large $d$:** $\hat{f}$ overfits to the training sample; bias is small; variance is large.
+- **Optimal $d$:** minimizes the sum Bias² + Variance. The irreducible noise $\sigma^2$ is a floor you cannot beat without changing the problem.
+
+This is the bias-variance picture that appears in every ML textbook — Hastie, Tibshirani & Friedman (Elements of Statistical Learning, Chapter 2.9) is the canonical reference — and it is an exact application of Theorem 3. The only difference from the scalar case is that $\hat{f}_{\mathcal{D}}(x_0)$ is the "estimator" and $f(x_0)$ is the "parameter" — everything else is the same decomposition.
+</ExampleBlock>
+
+<ExampleBlock number={14} title="Regularization as deliberate bias introduction">
+Ridge regression (Example 12) adds $\lambda \|\beta\|^2$ to the least-squares objective, producing an estimator that is biased toward zero but has smaller variance. The MSE of the ridge predictor at a test point $x_0$ decomposes as before, with the $\lambda$-dependent tradeoff:
+
+$$
+\operatorname{MSE}(\hat{f}_{\text{ridge}}(x_0); \lambda) \;=\; \operatorname{Bias}^2(\lambda) \;+\; \operatorname{Var}(\lambda) \;+\; \sigma^2.
+$$
+
+Bias² is monotonically **increasing** in $\lambda$ (more shrinkage, more distortion of the target). Variance is monotonically **decreasing** in $\lambda$ (more shrinkage, less sensitivity to the training set). The sum has a minimum at some $\lambda^* > 0$ that depends on $\|\beta^*\|$ and $\sigma^2$; cross-validation estimates $\lambda^*$ without knowing either.
+
+The reason this works is Stein's theorem in disguise. Shrinking OLS toward zero is a James–Stein-type operation — each coefficient gets pulled a little closer to the origin — and when the true signal is concentrated or sparse, the bias introduced is small compared with the variance reduction. In high dimensions ($d \geq 3$ but effectively $d \gg 3$ for any real ML problem), the effect is pronounced: deep neural nets with L2 weight decay are the modern industrial version of this phenomenon.
+</ExampleBlock>
+
+<ExampleBlock number={15} title="SGD mini-batch variance and the batch-size tradeoff">
+Stochastic gradient descent replaces the full-batch gradient $\nabla_\theta \mathcal{L}(\theta) = \frac{1}{N}\sum_{i=1}^N \nabla_\theta \ell_i(\theta)$ with a mini-batch estimate
+
+$$
+\hat{g}_B(\theta) \;=\; \frac{1}{B}\sum_{i \in \mathcal{B}} \nabla_\theta \ell_i(\theta),
+$$
+
+where $\mathcal{B}$ is a random subset of size $B$. The mini-batch gradient is **unbiased** ($\mathbb{E}[\hat{g}_B] = \nabla_\theta \mathcal{L}$ when the batch is a uniformly random sample) but has variance that scales as $\sigma_g^2 / B$, where $\sigma_g^2$ is the per-example gradient variance. This is Theorem 2 restated for the gradient estimator.
+
+The bias-variance tradeoff in SGD is between **per-step noise** (small $B$, high variance, small per-step compute) and **per-step efficiency** (large $B$, low variance, large per-step compute, diminishing returns per step). Typical ML lore:
+
+- For a fixed compute budget, the optimal batch size balances the two — larger is not always better.
+- The learning rate $\eta$ should roughly scale linearly with $B$: $\eta_{\text{effective}} = \eta \cdot B$ determines the per-step signal-to-noise ratio, and noise scales as $1/B$ while step size scales as $\eta$.
+- Very small batches ($B = 1$, pure SGD) have high variance but frequent updates — stochasticity can even help escape saddle points, a benefit absent from full-batch gradient descent.
+
+All of this is rigorous point estimation. The "estimator" is $\hat{g}_B$; the "parameter" is $\nabla_\theta \mathcal{L}$; the MSE decomposes as $0 + \sigma_g^2 / B$; and the compute cost scales linearly with $B$. The modern deep-learning zoo of optimizers — Adam, AdamW, LAMB, Lion — are all attempts to control this MSE more cleverly, by rescaling, momentum, or variance-adaptive step sizes.
+</ExampleBlock>
+
+## 13.10 Summary
+
+An estimator is a random variable. Its sampling distribution is the object to analyze. We have built the complete evaluation framework:
+
+- **Bias** is the mean offset $\mathbb{E}[\hat{\theta}_n] - \theta$. Zero bias is called unbiased.
+- **Variance** (equivalently, standard error squared) is the spread of the sampling distribution.
+- **MSE** combines them: $\operatorname{MSE} = \operatorname{Bias}^2 + \operatorname{Var}$ (Theorem 3, the central identity).
+- **Consistency** is the guarantee that $\hat{\theta}_n \to \theta$ as $n \to \infty$ — a consequence of the LLN.
+- **Asymptotic normality** is the guarantee that $\sqrt{n}(\hat{\theta}_n - \theta) \to \mathcal{N}(0, v(\theta))$ — a consequence of the CLT.
+- **Fisher information** $I(\theta)$ is the expected curvature of the log-likelihood — how much information one observation carries about $\theta$.
+- **Cramér–Rao bound:** $\operatorname{Var}(\hat{\theta}_n) \geq 1/(n I(\theta))$ for every unbiased estimator. Estimators achieving the bound are **efficient**.
+- **Admissibility and minimax** give global criteria for estimator comparison. The James–Stein theorem shows the sample mean is inadmissible in $d \geq 3$ dimensions — shrinkage strictly improves total MSE.
+
+The **cheat sheet** for every downstream topic:
+
+| Property | Formula | Analog for ML |
+|---|---|---|
+| Bias | $\mathbb{E}[\hat{\theta}_n] - \theta$ | Model mis-specification / underfitting |
+| Variance | $\operatorname{Var}(\hat{\theta}_n)$ | Sensitivity to training set / overfitting |
+| MSE | Bias² + Variance | Prediction error at a fixed point |
+| Consistency | $\hat{\theta}_n \overset{P}{\to} \theta$ | Convergence of training procedure |
+| Asymptotic variance | $\lim n\,\operatorname{Var}(\hat{\theta}_n)$ | Rate of convergence, confidence interval width |
+| Fisher information | $-\mathbb{E}[\partial^2 \log f / \partial \theta^2]$ | Curvature of the loss — optimization landscape |
+| CRLB | $1/(nI(\theta))$ | Information-theoretic lower bound on MSE |
+| Efficiency | Var / CRLB | Fraction of information the estimator extracts |
+
+The arc of Track 4 is to apply this framework to specific estimation methods. **Maximum Likelihood Estimation** (coming soon) defines $\hat{\theta}_{\text{MLE}}$ as the root of the score equation $S(\theta) = 0$; consistency, asymptotic normality, and asymptotic efficiency of the MLE are consequences of the LLN, CLT, and CRLB framework developed here. **Method of Moments** (coming soon) applies bias, MSE, and consistency to moment-matching estimators, comparing their efficiency to the MLE benchmark. **Sufficient Statistics** (coming soon) uses Fisher information and the CRLB to prove Rao–Blackwell and Lehmann–Scheffé, giving the theory of UMVUE.
+
+Beyond Track 4, every downstream topic in formalStatistics uses this vocabulary. **Hypothesis Testing** (coming soon) builds test statistics that are estimators; their null and alternative distributions are the consistency and asymptotic-normality statements we have just proved. **Confidence Intervals** (coming soon) invert asymptotic-normality: a $1 - \alpha$ CI is an interval of the form $\hat{\theta}_n \pm z_{\alpha/2}\cdot \widehat{\operatorname{SE}}$. **Linear Regression** (coming soon) applies Gauss–Markov efficiency to OLS, which is the CRLB for Normal-error linear models; regularization and shrinkage apply Stein's phenomenon. **The Bootstrap** (coming soon) gives empirical analogs of the sampling distribution when closed-form asymptotics are unavailable. Across [formalML](https://formalml.com), the bias-variance tradeoff organizes regularization, ensembling, transfer learning, and hyperparameter tuning — the daily tools of every machine-learning practitioner.
+
+The reader who has made it to here has the complete point-estimation toolkit: what an estimator is (§13.1), how to measure its error (§13.2–13.4), what happens as data accumulates (§13.5–13.6), how good an estimator can possibly be (§13.7), and when the "natural" choice can be uniformly beaten (§13.8). This is the foundation on which all of classical and modern statistical inference is built.
+
+---
+
+### References
+
+1. Casella, G., & Berger, R. L. (2002). [*Statistical Inference*](https://www.cengage.com/c/statistical-inference-2e-casella/) (2nd ed.). Duxbury.
+2. Billingsley, P. (2012). [*Probability and Measure*](https://www.wiley.com/en-us/Probability+and+Measure%2C+Anniversary+Edition-p-9781118122372) (Anniversary ed.). Wiley.
+3. Wasserman, L. (2004). [*All of Statistics*](https://link.springer.com/book/10.1007/978-0-387-21736-9). Springer.
+4. Lehmann, E. L., & Casella, G. (1998). [*Theory of Point Estimation*](https://link.springer.com/book/10.1007/b98854) (2nd ed.). Springer.
+5. Bickel, P. J., & Doksum, K. A. (2015). [*Mathematical Statistics: Basic Ideas and Selected Topics*](https://www.routledge.com/Mathematical-Statistics-Basic-Ideas-and-Selected-Topics-Volume-I/Bickel-Doksum/p/book/9781498723800) (2nd ed.). CRC Press.
+6. Hastie, T., Tibshirani, R., & Friedman, J. (2009). [*The Elements of Statistical Learning*](https://hastie.su.domains/ElemStatLearn/) (2nd ed.). Springer.
+7. Stein, C. (1956). [*Inadmissibility of the Usual Estimator for the Mean of a Multivariate Normal Distribution*](https://projecteuclid.org/euclid.bsmsp/1200501656). *Proceedings of the Third Berkeley Symposium on Mathematical Statistics and Probability*, 1, 197–206.
+8. Bishop, C. M. (2006). [*Pattern Recognition and Machine Learning*](https://www.microsoft.com/en-us/research/people/cmbishop/prml-book/). Springer.

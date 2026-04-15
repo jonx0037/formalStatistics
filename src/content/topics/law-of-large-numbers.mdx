@@ -202,7 +202,7 @@ Every consistent estimator is, at its core, a law-of-large-numbers statement. Th
 
 Conversely, an estimator's *inconsistency* is typically diagnosed by showing the LLN fails to apply — either because the estimator is not a sample mean (or a sufficiently well-behaved function of sample means), or because the underlying variables lack the required moment conditions.
 
-Point estimation theory (coming in the Statistical Inference track) will formalize this connection: an estimator $\hat{\theta}_n$ is consistent if and only if it satisfies a suitable LLN — and the strength of the LLN (weak or strong) determines the strength of the consistency (convergence in probability or almost sure).
+[Point Estimation & Bias-Variance](/topics/point-estimation) formalizes this connection: an estimator $\hat{\theta}_n$ is consistent if and only if it satisfies a suitable LLN — and the strength of the LLN (weak or strong) determines the strength of the consistency (convergence in probability or almost sure).
 </RemarkBlock>
 
 Before proceeding, it is worth noting the quantitative content of Theorem 10.1. The Chebyshev bound $P(|\bar{X}_n - \mu| > \varepsilon) \leq \sigma^2/(n\varepsilon^2)$ is not just an existence statement — it gives an explicit bound on how close $\bar{X}_n$ is to $\mu$ for each $n$. For example, if $X_i \sim N(5, 4)$ (so $\mu = 5$, $\sigma^2 = 4$) and we want $P(|\bar{X}_n - 5| > 0.5) \leq 0.01$, we need $4/(n \cdot 0.25) \leq 0.01$, giving $n \geq 1600$. This is a conservative bound — we will see in Section 10.8 that Hoeffding's inequality gives much tighter sample-size requirements for bounded variables — but it has the virtue of requiring only the mean and variance, not the full distributional form.
