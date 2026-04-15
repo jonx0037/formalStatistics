@@ -64,7 +64,7 @@ Where formalCalculus covers the calculus and analysis that probability *assumes*
 
 | Topic | Level | Description |
 |-------|-------|-------------|
-| Point Estimation & Bias-Variance | Foundational | Estimators as random variables, bias, variance, MSE decomposition — the framework for evaluating any estimator |
+| Point Estimation & Bias-Variance | Intermediate | Estimators as random variables, bias, variance, MSE decomposition — the framework for evaluating any estimator |
 | Maximum Likelihood Estimation | Intermediate | Likelihood function, score, Fisher information, asymptotic normality — the workhorse of parametric inference |
 | Method of Moments & M-Estimation | Intermediate | Moment equations, generalized method of moments, Z-estimators — robust alternatives to MLE |
 | Sufficient Statistics & the Rao-Blackwell Theorem | Intermediate | Information compression, UMVUE, completeness — why sufficient statistics are optimal |
