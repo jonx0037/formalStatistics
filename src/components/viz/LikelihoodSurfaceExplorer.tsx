@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import * as d3 from 'd3';
 import { useResizeObserver } from './shared/useResizeObserver';
-import { computeMLE, fisherInformation, logLikelihoodCurve } from './shared/estimation';
+import { computeMLE, fisherInformation, logLikelihoodCurve, logGamma } from './shared/estimation';
 import {
   normalSample,
   exponentialSample,
@@ -43,9 +43,7 @@ function logPdfFor(preset: PlottablePreset): (x: number, theta: number) => numbe
     case 'Poisson':
       return (x, lam) => {
         if (lam <= 0) return -Infinity;
-        let logFact = 0;
-        for (let j = 2; j <= x; j++) logFact += Math.log(j);
-        return x * Math.log(lam) - lam - logFact;
+        return x * Math.log(lam) - lam - logGamma(x + 1);
       };
     default:
       return () => 0; // Gamma omitted — LikelihoodSurfaceExplorer uses 4 closed-form families
@@ -101,11 +99,15 @@ export default function LikelihoodSurfaceExplorer() {
 
   const preset = presets[presetIndex];
   const logPdf = useMemo(() => logPdfFor(preset), [preset]);
-  const rng = useMemo(() => makeLCG(seed * 7919 + n), [seed, n]);
-  const sampler = useMemo(() => makeSampler(preset, rng), [preset, rng]);
 
-  // Redraw sample when preset / n / seed changes (rng is re-derived).
-  const data = useMemo(() => sampler(n), [sampler, n]);
+  // Stable seed: does NOT include n, so a sample of size n is a prefix of
+  // size n+1. This makes the likelihood "sharpen" smoothly as n grows
+  // rather than jumping randomly with each slider tick.
+  const data = useMemo(() => {
+    const rng = makeLCG(seed * 7919);
+    const sampler = makeSampler(preset, rng);
+    return sampler(n);
+  }, [preset, seed, n]);
 
   const mleResult = useMemo(
     () => computeMLE(data, preset.family, preset.paramName, preset.otherParams),
@@ -172,9 +174,15 @@ export default function LikelihoodSurfaceExplorer() {
       .range([0, innerW])
       .nice();
 
-    // Y-range: show the top portion of ℓ (from ℓ̂ down ~10 units).
-    const yMax = mleResult.logLik + 2;
-    const yMin = mleResult.logLik - 10;
+    // Y-range: show the top portion of ℓ (from ℓ̂ down ~10 units). Fall
+    // back to the maximum of the curve when the MLE log-lik is not finite
+    // (e.g., a boundary Bernoulli MLE at p̂=0 with some observations still
+    // contributing non-zero support on the other side).
+    const finiteCurveLogLiks = curve.logLiks.filter((v) => Number.isFinite(v));
+    const curveMax = finiteCurveLogLiks.length > 0 ? Math.max(...finiteCurveLogLiks) : 0;
+    const anchor = Number.isFinite(mleResult.logLik) ? mleResult.logLik : curveMax;
+    const yMax = anchor + 2;
+    const yMin = anchor - 10;
     const y = d3.scaleLinear().domain([yMin, yMax]).range([innerH, 0]);
 
     g.append('g')
@@ -277,8 +285,11 @@ export default function LikelihoodSurfaceExplorer() {
     const xHi = mleResult.mle + zoomHalf;
 
     const x = d3.scaleLinear().domain([xLo, xHi]).range([0, innerW]);
-    const yMin = mleResult.logLik - 4;
-    const yMax = mleResult.logLik + 1;
+    // Anchor y on the finite log-lik at the MLE; fall back to 0 if the
+    // MLE sits at a boundary where log-lik is not representable.
+    const anchorR = Number.isFinite(mleResult.logLik) ? mleResult.logLik : 0;
+    const yMin = anchorR - 4;
+    const yMax = anchorR + 1;
     const y = d3.scaleLinear().domain([yMin, yMax]).range([innerH, 0]);
 
     g.append('g')

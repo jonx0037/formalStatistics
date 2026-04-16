@@ -59,10 +59,12 @@ export interface ObservedVsExpectedPreset {
   trueParam: number;
   otherParams?: Record<string, number>;
   /**
-   * True when the observed information J(θ̂) and the expected information
-   * nI(θ̂) are identically equal at the MLE for this family (a property of
-   * the natural parameterization of exponential families at the MLE). The
-   * explorer uses this to show observed-info variability vs a fixed point.
+   * Descriptive metadata flag for whether the observed information J(θ̂)
+   * and the expected information nI(θ̂) are identically equal at the MLE
+   * for this family (a property of the natural parameterization of some
+   * exponential families). This flag is retained for preset annotation
+   * and documentation — the explorer derives visible behaviour directly
+   * from the MC-computed values, not from this flag.
    */
   observedEqualsExpected: boolean;
   description: string;
