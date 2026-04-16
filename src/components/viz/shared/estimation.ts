@@ -968,6 +968,59 @@ if (import.meta.env.DEV && typeof window !== 'undefined') {
     results.push(a < b && b < c);
   }
 
+  // 21. computeMLE Normal σ² on a constant sample: σ̂² = 0 is a boundary
+  //     where the log-likelihood diverges. We signal this with -Infinity
+  //     (the sentinel checked by the explorer's y-scale fallback).
+  {
+    const { mle, logLik } = computeMLE([3, 3, 3, 3], 'Normal', 'sigma2', { mu: 3 });
+    results.push(near(mle, 0) && logLik === -Infinity);
+  }
+
+  // 22. Bernoulli log-likelihood at boundary MLEs: all-zeros → logLik = 0
+  //     (under 0·log 0 = 0); all-ones → logLik = 0; a mixed sample gives
+  //     p̂ ∈ (0, 1) with a finite, strictly-negative log-lik.
+  {
+    const allZeros = computeMLE([0, 0, 0, 0, 0], 'Bernoulli', 'p');
+    const allOnes = computeMLE([1, 1, 1, 1, 1], 'Bernoulli', 'p');
+    const mixed = computeMLE([1, 0, 1, 0, 1], 'Bernoulli', 'p');
+    results.push(
+      near(allZeros.mle, 0) &&
+        near(allZeros.logLik, 0) &&
+        near(allOnes.mle, 1) &&
+        near(allOnes.logLik, 0) &&
+        mixed.mle > 0 &&
+        mixed.mle < 1 &&
+        Number.isFinite(mixed.logLik) &&
+        mixed.logLik < 0,
+    );
+  }
+
+  // 23. observedInfoNormalMu edge cases:
+  //     n = 0 → 0 (no observations, zero information).
+  //     n < 0 → NaN (invalid sample size).
+  //     σ² ≤ 0 → Infinity (degenerate variance).
+  results.push(
+    observedInfoNormalMu(0, 4) === 0 &&
+      Number.isNaN(observedInfoNormalMu(-1, 4)) &&
+      observedInfoNormalMu(10, 0) === Infinity &&
+      observedInfoNormalMu(10, -1) === Infinity,
+  );
+
+  // 24. logisticScore under extreme η (|β₁·x| = 1000): the stable sigmoid
+  //     must keep both gradient components finite — no NaN from overflow.
+  {
+    const x = [-1, 0, 1];
+    const y = [0, 1, 1];
+    const [g0, g1] = logisticScore(x, y, 0, 1000);
+    const [g0n, g1n] = logisticScore(x, y, 0, -1000);
+    results.push(
+      Number.isFinite(g0) &&
+        Number.isFinite(g1) &&
+        Number.isFinite(g0n) &&
+        Number.isFinite(g1n),
+    );
+  }
+
   const passed = results.filter(Boolean).length;
   if (passed === results.length) {
     // eslint-disable-next-line no-console

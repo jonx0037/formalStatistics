@@ -137,10 +137,16 @@ export default function LikelihoodSurfaceExplorer() {
   }, [data, logPdf, preset.thetaRange]);
 
   // Quadratic approximation around θ̂: ℓ(θ) ≈ ℓ(θ̂) − (n I(θ̂) / 2)(θ − θ̂)².
+  // When the MLE log-lik is non-finite (e.g., degenerate Normal σ² with a
+  // constant sample), anchor the parabola on the finite maximum of the
+  // plotted curve so the overlay doesn't collapse to the plot floor.
   const quadraticCurve = useMemo(() => {
     const nInfo = n * fisherAtMLE;
-    return curve.thetas.map((t) => mleResult.logLik - 0.5 * nInfo * (t - mleResult.mle) ** 2);
-  }, [curve.thetas, mleResult, n, fisherAtMLE]);
+    const finiteLogLiks = curve.logLiks.filter((v) => Number.isFinite(v));
+    const fallback = finiteLogLiks.length > 0 ? Math.max(...finiteLogLiks) : 0;
+    const anchor = Number.isFinite(mleResult.logLik) ? mleResult.logLik : fallback;
+    return curve.thetas.map((t) => anchor - 0.5 * nInfo * (t - mleResult.mle) ** 2);
+  }, [curve.thetas, curve.logLiks, mleResult, n, fisherAtMLE]);
 
   // Animation: cycle n through N_STEPS.
   useEffect(() => {
@@ -175,9 +181,11 @@ export default function LikelihoodSurfaceExplorer() {
       .nice();
 
     // Y-range: show the top portion of ℓ (from ℓ̂ down ~10 units). Fall
-    // back to the maximum of the curve when the MLE log-lik is not finite
-    // (e.g., a boundary Bernoulli MLE at p̂=0 with some observations still
-    // contributing non-zero support on the other side).
+    // back to the finite maximum of the plotted curve when the MLE log-lik
+    // is not representable as a finite number — the clearest case is a
+    // degenerate Normal σ² MLE on a constant sample where σ̂² = 0 and the
+    // log-likelihood diverges. (Bernoulli boundary MLEs p̂∈{0,1} are
+    // finite under our 0·log 0 = 0 convention, so they hit the fast path.)
     const finiteCurveLogLiks = curve.logLiks.filter((v) => Number.isFinite(v));
     const curveMax = finiteCurveLogLiks.length > 0 ? Math.max(...finiteCurveLogLiks) : 0;
     const anchor = Number.isFinite(mleResult.logLik) ? mleResult.logLik : curveMax;
@@ -279,15 +287,34 @@ export default function LikelihoodSurfaceExplorer() {
     const innerH = H - MARGIN.top - MARGIN.bottom;
     const g = svg.append('g').attr('transform', `translate(${MARGIN.left},${MARGIN.top})`);
 
-    // Zoom window: ±4 standard errors around θ̂.
+    // Zoom window: ±4 standard errors around θ̂, clamped to the preset's
+    // valid parameter range so the zoom never crosses outside (for
+    // Bernoulli p this means [0.02, 0.98] — otherwise a boundary MLE
+    // p̂ ∈ {0, 1} would push xLo < 0 / xHi > 1 where logPdf returns −∞
+    // and the zoom curve shows an artificial plunge at θ̂).
     const zoomHalf = Math.max(4 * waldSE, (preset.thetaRange[1] - preset.thetaRange[0]) / 50);
-    const xLo = mleResult.mle - zoomHalf;
-    const xHi = mleResult.mle + zoomHalf;
+    const xLo = Math.max(preset.thetaRange[0], mleResult.mle - zoomHalf);
+    const xHi = Math.min(preset.thetaRange[1], mleResult.mle + zoomHalf);
 
     const x = d3.scaleLinear().domain([xLo, xHi]).range([0, innerW]);
-    // Anchor y on the finite log-lik at the MLE; fall back to 0 if the
-    // MLE sits at a boundary where log-lik is not representable.
-    const anchorR = Number.isFinite(mleResult.logLik) ? mleResult.logLik : 0;
+
+    // Fine grid for the zoom
+    const G = 101;
+    const zoomGrid: number[] = [];
+    for (let i = 0; i < G; i++) zoomGrid.push(xLo + ((xHi - xLo) * i) / (G - 1));
+    const zoomLogLik = zoomGrid.map((t) => {
+      let s = 0;
+      for (let i = 0; i < data.length; i++) s += logPdf(data[i], t);
+      return s;
+    });
+
+    // Anchor y on the finite log-lik at the MLE. When the MLE log-lik is
+    // not finite (e.g., degenerate Normal σ² MLE), fall back to the max
+    // finite value observed on the zoom curve itself — that keeps the
+    // local shape visible rather than clamping it to a fixed floor of 0.
+    const finiteZoomLogLiks = zoomLogLik.filter((v) => Number.isFinite(v));
+    const zoomMax = finiteZoomLogLiks.length > 0 ? Math.max(...finiteZoomLogLiks) : 0;
+    const anchorR = Number.isFinite(mleResult.logLik) ? mleResult.logLik : zoomMax;
     const yMin = anchorR - 4;
     const yMax = anchorR + 1;
     const y = d3.scaleLinear().domain([yMin, yMax]).range([innerH, 0]);
@@ -307,17 +334,8 @@ export default function LikelihoodSurfaceExplorer() {
       .style('fill', 'currentColor')
       .text('zoom around θ̂');
 
-    // Fine grid for the zoom
-    const G = 101;
-    const zoomGrid: number[] = [];
-    for (let i = 0; i < G; i++) zoomGrid.push(xLo + ((xHi - xLo) * i) / (G - 1));
-    const zoomLogLik = zoomGrid.map((t) => {
-      let s = 0;
-      for (let i = 0; i < data.length; i++) s += logPdf(data[i], t);
-      return s;
-    });
     const zoomQuad = zoomGrid.map(
-      (t) => mleResult.logLik - 0.5 * n * fisherAtMLE * (t - mleResult.mle) ** 2,
+      (t) => anchorR - 0.5 * n * fisherAtMLE * (t - mleResult.mle) ** 2,
     );
 
     const line = d3
