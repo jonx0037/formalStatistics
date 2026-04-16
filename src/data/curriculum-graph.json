@@ -16,7 +16,7 @@
     { "id": "large-deviations", "label": "Large Deviations & Tail Bounds", "domain": "convergence-limit-theorems", "status": "published", "url": "/topics/large-deviations" },
 
     { "id": "point-estimation", "label": "Point Estimation & Bias-Variance", "domain": "statistical-estimation", "status": "published", "url": "/topics/point-estimation" },
-    { "id": "maximum-likelihood", "label": "Maximum Likelihood Estimation", "domain": "statistical-estimation", "status": "planned", "url": "/topics/maximum-likelihood" },
+    { "id": "maximum-likelihood", "label": "Maximum Likelihood Estimation", "domain": "statistical-estimation", "status": "published", "url": "/topics/maximum-likelihood" },
     { "id": "method-of-moments", "label": "Method of Moments & M-Estimation", "domain": "statistical-estimation", "status": "planned", "url": "/topics/method-of-moments" },
     { "id": "sufficient-statistics", "label": "Sufficient Statistics & Rao-Blackwell", "domain": "statistical-estimation", "status": "planned", "url": "/topics/sufficient-statistics" },
 
