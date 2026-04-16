@@ -70,9 +70,7 @@ const PRESETS: Preset[] = [
     sample: (n, rng) => sampleSequence(() => poissonSample(3, rng), n),
     logPdf: (x, lambda) => {
       if (lambda <= 0) return -Infinity;
-      let lf = 0;
-      for (let j = 2; j <= x; j++) lf += Math.log(j);
-      return x * Math.log(lambda) - lambda - lf;
+      return x * Math.log(lambda) - lambda - logGamma(x + 1);
     },
     score: (x, lambda) => x / lambda - 1,
     hessian: (x, lambda) => -x / (lambda * lambda),

@@ -615,6 +615,11 @@ export function computeMLE(
     const logLik = logLikelihood(
       data,
       (x, s2) => {
+        // Guard against degenerate σ² ≤ 0 (e.g., constant sample →
+        // MLE is exactly 0). Returning −∞ signals the boundary /
+        // non-existent MLE case without producing NaN / Infinity that
+        // pollutes downstream plot scales.
+        if (s2 <= 0) return -Infinity;
         const z = x - mu;
         return -0.5 * Math.log(2 * Math.PI * s2) - (z * z) / (2 * s2);
       },
@@ -627,8 +632,15 @@ export function computeMLE(
     const logLik = logLikelihood(
       data,
       (x, p) => {
-        if (p <= 0 || p >= 1) return -Infinity;
-        return x * Math.log(p) + (1 - x) * Math.log(1 - p);
+        // Boundary MLEs: when all data are 0, p̂ = 0 — the log-likelihood
+        // is 0 because every observation contributes (1 − 0)·log 1 = 0,
+        // using the convention 0·log 0 = 0. Symmetrically for p̂ = 1.
+        // Treat values strictly outside (0, 1) as −∞ (invalid), but handle
+        // the exact boundary x/p = 0/0 and (1−x)/(1−p) = 0/0 as 0.
+        if (p < 0 || p > 1) return -Infinity;
+        const left = x === 0 ? 0 : p === 0 ? -Infinity : x * Math.log(p);
+        const right = x === 1 ? 0 : p === 1 ? -Infinity : (1 - x) * Math.log(1 - p);
+        return left + right;
       },
       mle,
     );
@@ -652,9 +664,7 @@ export function computeMLE(
       data,
       (x, lam) => {
         if (lam <= 0) return -Infinity;
-        let logFact = 0;
-        for (let j = 2; j <= x; j++) logFact += Math.log(j);
-        return x * Math.log(lam) - lam - logFact;
+        return x * Math.log(lam) - lam - logGamma(x + 1);
       },
       mle,
     );
@@ -678,9 +688,15 @@ export function computeMLE(
 
 // ── Observed Fisher information ──────────────────────────────────────────────
 
-/** J(μ) for Normal(μ, σ²): n/σ². Non-random (doesn't depend on data values). */
+/**
+ * J(μ) for Normal(μ, σ²): n/σ². Non-random (doesn't depend on data values).
+ * Edge cases: returns 0 for n = 0 (no observations → zero information),
+ * NaN for negative n, Infinity for σ² ≤ 0 (degenerate / invalid variance).
+ */
 export function observedInfoNormalMu(n: number, sigma2: number): number {
-  if (sigma2 <= 0 || n <= 0) return Infinity;
+  if (sigma2 <= 0) return Infinity;
+  if (n < 0) return NaN;
+  if (n === 0) return 0;
   return n / sigma2;
 }
 
@@ -769,10 +785,25 @@ export function logisticLogLik(
 }
 
 /**
+ * Numerically stable sigmoid σ(η) = 1 / (1 + e^{−η}). Branches on the sign
+ * of η so that neither e^{−η} (positive η) nor e^{+η} (negative η) ever
+ * overflows, keeping p ∈ [0, 1] for all finite η including large |η|.
+ */
+function stableSigmoid(eta: number): number {
+  if (eta >= 0) {
+    const z = Math.exp(-eta);
+    return 1 / (1 + z);
+  }
+  const z = Math.exp(eta);
+  return z / (1 + z);
+}
+
+/**
  * Gradient of the logistic log-likelihood with respect to (β₀, β₁):
  *   ∂ℓ/∂β₀ = Σᵢ (yᵢ − pᵢ),   ∂ℓ/∂β₁ = Σᵢ xᵢ (yᵢ − pᵢ),   pᵢ = σ(β₀ + β₁ xᵢ).
- * Topic 21 develops the full IRLS / Fisher-scoring algorithm; Topic 14 uses
- * this score for a single Newton step in the preview example.
+ * Uses `stableSigmoid` so large |β₀ + β₁ xᵢ| (e.g., under separation) do
+ * not overflow to 0/1/NaN. Topic 21 develops the full IRLS / Fisher-scoring
+ * algorithm; Topic 14 uses this score for a single Newton step in the preview.
  */
 export function logisticScore(
   x: number[],
@@ -785,7 +816,7 @@ export function logisticScore(
   let g1 = 0;
   for (let i = 0; i < n; i++) {
     const eta = beta0 + beta1 * x[i];
-    const p = 1 / (1 + Math.exp(-eta));
+    const p = stableSigmoid(eta);
     const r = y[i] - p;
     g0 += r;
     g1 += x[i] * r;
@@ -935,6 +966,59 @@ if (import.meta.env.DEV && typeof window !== 'undefined') {
     const b = logisticLogLik(x, y, 0, 1);
     const c = logisticLogLik(x, y, 0, 5);
     results.push(a < b && b < c);
+  }
+
+  // 21. computeMLE Normal σ² on a constant sample: σ̂² = 0 is a boundary
+  //     where the log-likelihood diverges. We signal this with -Infinity
+  //     (the sentinel checked by the explorer's y-scale fallback).
+  {
+    const { mle, logLik } = computeMLE([3, 3, 3, 3], 'Normal', 'sigma2', { mu: 3 });
+    results.push(near(mle, 0) && logLik === -Infinity);
+  }
+
+  // 22. Bernoulli log-likelihood at boundary MLEs: all-zeros → logLik = 0
+  //     (under 0·log 0 = 0); all-ones → logLik = 0; a mixed sample gives
+  //     p̂ ∈ (0, 1) with a finite, strictly-negative log-lik.
+  {
+    const allZeros = computeMLE([0, 0, 0, 0, 0], 'Bernoulli', 'p');
+    const allOnes = computeMLE([1, 1, 1, 1, 1], 'Bernoulli', 'p');
+    const mixed = computeMLE([1, 0, 1, 0, 1], 'Bernoulli', 'p');
+    results.push(
+      near(allZeros.mle, 0) &&
+        near(allZeros.logLik, 0) &&
+        near(allOnes.mle, 1) &&
+        near(allOnes.logLik, 0) &&
+        mixed.mle > 0 &&
+        mixed.mle < 1 &&
+        Number.isFinite(mixed.logLik) &&
+        mixed.logLik < 0,
+    );
+  }
+
+  // 23. observedInfoNormalMu edge cases:
+  //     n = 0 → 0 (no observations, zero information).
+  //     n < 0 → NaN (invalid sample size).
+  //     σ² ≤ 0 → Infinity (degenerate variance).
+  results.push(
+    observedInfoNormalMu(0, 4) === 0 &&
+      Number.isNaN(observedInfoNormalMu(-1, 4)) &&
+      observedInfoNormalMu(10, 0) === Infinity &&
+      observedInfoNormalMu(10, -1) === Infinity,
+  );
+
+  // 24. logisticScore under extreme η (|β₁·x| = 1000): the stable sigmoid
+  //     must keep both gradient components finite — no NaN from overflow.
+  {
+    const x = [-1, 0, 1];
+    const y = [0, 1, 1];
+    const [g0, g1] = logisticScore(x, y, 0, 1000);
+    const [g0n, g1n] = logisticScore(x, y, 0, -1000);
+    results.push(
+      Number.isFinite(g0) &&
+        Number.isFinite(g1) &&
+        Number.isFinite(g0n) &&
+        Number.isFinite(g1n),
+    );
   }
 
   const passed = results.filter(Boolean).length;
