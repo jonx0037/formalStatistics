@@ -538,7 +538,7 @@ $$
 If only $\mathbb{E}[X_1^2] < \infty$ is known, the weaker statement $\bar{X}_n \overset{P}{\to} \mu$ follows from Chebyshev (Theorem 4 above) or from the weak law of large numbers.
 </TheoremBlock>
 
-This is the strong law of large numbers from [Topic 10](/topics/law-of-large-numbers), restated in estimator language. The sample mean is the prototypical consistent estimator, and the LLN is the engine: consistency of the sample mean is *literally* the LLN under a different name. Every estimator that can be written as (or derived from) a sample mean inherits consistency from the LLN — this is the template that [Maximum Likelihood Estimation](/topics/maximum-likelihood) uses to prove the MLE is consistent, and Topic 15 to handle method-of-moments estimators.
+This is the strong law of large numbers from [Topic 10](/topics/law-of-large-numbers), restated in estimator language. The sample mean is the prototypical consistent estimator, and the LLN is the engine: consistency of the sample mean is *literally* the LLN under a different name. Every estimator that can be written as (or derived from) a sample mean inherits consistency from the LLN — this is the template that Topic 14 will use to prove the MLE is consistent, and Topic 15 to handle method-of-moments estimators.
 
 <img src="/images/topics/point-estimation/consistency-trajectories.png"
      alt="Three-panel consistency trajectories at log-scale n: (left) 15 paths of X̄ₙ converging to μ (consistent); (center) 15 paths of S²ₙ converging to σ² (consistent); (right) 15 flat paths of θ̂ = X₁, which ignores all but the first observation and does not converge"
@@ -663,7 +663,7 @@ $$
 For an iid sample, the total score is the sum of per-observation scores: $S(\theta) = \sum_{i=1}^n s(\theta; X_i)$.
 </DefinitionBlock>
 
-The score is the "sensitivity of the log-likelihood to the parameter, at a given data point." It is a random variable (depends on $X$); for a well-specified model, its expected value at the true parameter is zero. The [maximum-likelihood estimator](/topics/maximum-likelihood) is defined as the $\theta$ that makes the total score zero. Score-based methods (score tests, score matching, efficient-score GLMs) pervade modern statistics.
+The score is the "sensitivity of the log-likelihood to the parameter, at a given data point." It is a random variable (depends on $X$); for a well-specified model, its expected value at the true parameter is zero. The maximum-likelihood estimator — Topic 14 — is defined as the $\theta$ that makes the total score zero. Score-based methods (score tests, score matching, efficient-score GLMs) pervade modern statistics.
 
 <DefinitionBlock number={11} title="Fisher Information">
 The **Fisher information** at $\theta$ is the variance of the score:
@@ -1013,7 +1013,7 @@ The **cheat sheet** for every downstream topic:
 | CRLB | $1/(nI(\theta))$ | Information-theoretic lower bound on MSE |
 | Efficiency | Var / CRLB | Fraction of information the estimator extracts |
 
-The arc of Track 4 is to apply this framework to specific estimation methods. [**Maximum Likelihood Estimation**](/topics/maximum-likelihood) defines $\hat{\theta}_{\text{MLE}}$ as the root of the score equation $S(\theta) = 0$; consistency, asymptotic normality, and asymptotic efficiency of the MLE are consequences of the LLN, CLT, and CRLB framework developed here. **Method of Moments** (coming soon) applies bias, MSE, and consistency to moment-matching estimators, comparing their efficiency to the MLE benchmark. **Sufficient Statistics** (coming soon) uses Fisher information and the CRLB to prove Rao–Blackwell and Lehmann–Scheffé, giving the theory of UMVUE.
+The arc of Track 4 is to apply this framework to specific estimation methods. **Maximum Likelihood Estimation** (coming soon) defines $\hat{\theta}_{\text{MLE}}$ as the root of the score equation $S(\theta) = 0$; consistency, asymptotic normality, and asymptotic efficiency of the MLE are consequences of the LLN, CLT, and CRLB framework developed here. **Method of Moments** (coming soon) applies bias, MSE, and consistency to moment-matching estimators, comparing their efficiency to the MLE benchmark. **Sufficient Statistics** (coming soon) uses Fisher information and the CRLB to prove Rao–Blackwell and Lehmann–Scheffé, giving the theory of UMVUE.
 
 Beyond Track 4, every downstream topic in formalStatistics uses this vocabulary. **Hypothesis Testing** (coming soon) builds test statistics that are estimators; their null and alternative distributions are the consistency and asymptotic-normality statements we have just proved. **Confidence Intervals** (coming soon) invert asymptotic-normality: a $1 - \alpha$ CI is an interval of the form $\hat{\theta}_n \pm z_{\alpha/2}\cdot \widehat{\operatorname{SE}}$. **Linear Regression** (coming soon) applies Gauss–Markov efficiency to OLS, which is the CRLB for Normal-error linear models; regularization and shrinkage apply Stein's phenomenon. **The Bootstrap** (coming soon) gives empirical analogs of the sampling distribution when closed-form asymptotics are unavailable. Across [formalML](https://formalml.com), the bias-variance tradeoff organizes regularization, ensembling, transfer learning, and hyperparameter tuning — the daily tools of every machine-learning practitioner.
 
