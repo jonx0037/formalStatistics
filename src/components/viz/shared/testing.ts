@@ -590,22 +590,34 @@ export function tTestPower(
   );
 }
 
-/** Closed-form power for the two-sample proportion z-test (pooled-variance
- *  rejection rule, unpooled variance at the alternative). */
+/**
+ * Closed-form power for the two-sample proportion z-test.
+ *
+ * The test statistic is the pooled-SE z: Z = (p̂₁ − p̂₂)/SE_pool. The rejection
+ * rule uses pooled variance under H₀, but the alternative distribution's
+ * variance is unpooled (which is why both appear in the formula).
+ *
+ * The parameters are ordered `p1, p2` matching the statistic's sign:
+ * `delta = p1 − p2`. Callers that frame things as an A/B "lift" should pass
+ * the treatment rate as `p1` and the control rate as `p2` — e.g.,
+ * `twoProportionPower(p_B, p_A, n_B, n_A, α, 'right')` for a one-sided test
+ * of "B beats A". This was ambiguous in the original `pA, pB` signature;
+ * renamed after Copilot review #3103512401.
+ */
 export function twoProportionPower(
-  pA: number,
-  pB: number,
-  nA: number,
-  nB: number,
+  p1: number,
+  p2: number,
+  n1: number,
+  n2: number,
   alpha: number,
   side: TestSide,
 ): number {
-  const pPool = (nA * pA + nB * pB) / (nA + nB);
-  const se0 = Math.sqrt(pPool * (1 - pPool) * (1 / nA + 1 / nB));
+  const pPool = (n1 * p1 + n2 * p2) / (n1 + n2);
+  const se0 = Math.sqrt(pPool * (1 - pPool) * (1 / n1 + 1 / n2));
   const seA = Math.sqrt(
-    (pA * (1 - pA)) / nA + (pB * (1 - pB)) / nB,
+    (p1 * (1 - p1)) / n1 + (p2 * (1 - p2)) / n2,
   );
-  const delta = pA - pB;
+  const delta = p1 - p2;
   if (side === 'right') {
     const z = quantileStdNormal(1 - alpha);
     return 1 - cdfStdNormal((z * se0 - delta) / seA);
@@ -644,6 +656,10 @@ export function requiredSampleSize(
   side: TestSide,
 ): number {
   const { delta, sigma, alpha, power, baselineP } = params;
+  // Guard against zero effect size: any n gives power = α, so no n solves
+  // β ≥ power except when target power ≤ α. Return −1 ("no finite answer").
+  // Gemini review #3103520850.
+  if (delta === 0) return -1;
   const zA =
     side === 'two'
       ? quantileStdNormal(1 - alpha / 2)
@@ -661,13 +677,19 @@ export function requiredSampleSize(
     if (sigma === undefined) {
       throw new Error('t-one-sample requires sigma');
     }
-    // Monotone in n; iterate upward from the z-based lower bound.
-    const nLB = Math.max(4, Math.ceil(Math.pow(((zA + zB) * sigma) / delta, 2)));
-    for (let n = nLB; n <= 100000; n++) {
-      const p = tTestPower(delta, 0, sigma, n, alpha, side);
-      if (p >= power) return n;
+    // Power is monotone-nondecreasing in n, so bisect from the z-based lower
+    // bound. O(log n) vs. the previous O(n) linear scan — matters in the
+    // interactive sample-size calculator. Gemini review #3103520864.
+    let lo = Math.max(4, Math.ceil(Math.pow(((zA + zB) * sigma) / delta, 2)));
+    let hi = 100000;
+    if (tTestPower(delta, 0, sigma, lo, alpha, side) >= power) return lo;
+    if (tTestPower(delta, 0, sigma, hi, alpha, side) < power) return -1;
+    while (hi - lo > 1) {
+      const mid = (lo + hi) >>> 1;
+      if (tTestPower(delta, 0, sigma, mid, alpha, side) >= power) hi = mid;
+      else lo = mid;
     }
-    return -1;
+    return hi;
   }
 
   if (scenario === 'z-two-proportion') {
@@ -755,8 +777,18 @@ export function scoreStatistic(
     return (n * (mean - theta0) * (mean - theta0)) / (knownParam * knownParam);
   }
   if (family === 'normal-mean') {
-    const s2mle = sampleVarMLE(data);
-    return (n * (mean - theta0) * (mean - theta0)) / s2mle;
+    // Score test is evaluated at θ₀: variance estimator is the null-restricted
+    // MLE σ̂²₀ = n⁻¹ Σ(X_i − μ₀)², NOT the unrestricted MLE σ̂² = n⁻¹ Σ(X_i − x̄)².
+    // Using σ̂² would require first fitting the full model, which defeats the
+    // score test's practical advantage over Wald/LRT. Gemini review #3103520874.
+    let ss = 0;
+    for (let i = 0; i < n; i++) {
+      const d = data[i] - theta0;
+      ss += d * d;
+    }
+    const s2null = ss / n;
+    if (s2null <= 0) return (mean === theta0) ? 0 : Infinity;
+    return (n * (mean - theta0) * (mean - theta0)) / s2null;
   }
   if (family === 'poisson') {
     if (theta0 <= 0) return Infinity;
@@ -796,9 +828,18 @@ export function lrtStatistic(
 
 // ── Generic Monte Carlo p-value ─────────────────────────────────────────────
 
-/** Monte Carlo p-value for an arbitrary test statistic when its null
- *  distribution is not available in closed form. Not as accurate as the
- *  analytic p-value functions — mainly useful for non-standard statistics. */
+/**
+ * Monte Carlo p-value for an arbitrary test statistic when its null
+ * distribution is not available in closed form. Not as accurate as the
+ * analytic p-value functions — mainly useful for non-standard statistics.
+ *
+ * The two-sided branch uses the equal-tailed convention
+ *   p_two = min(1, 2 · min(P(T ≤ t_obs), P(T ≥ t_obs))),
+ * which is correct for BOTH symmetric and non-symmetric nulls (χ², Poisson,
+ * binomial). The previous `|t| ≥ |t_obs|` rule implicitly assumed a symmetric
+ * null and produced incorrect p-values for e.g. a chi-squared statistic.
+ * Gemini review #3103520877.
+ */
 export function monteCarloPValue(
   sampleUnderH0: () => number[],
   testStatistic: (x: number[]) => number,
@@ -806,12 +847,14 @@ export function monteCarloPValue(
   M: number,
   side: TestSide,
 ): number {
-  let count = 0;
+  let countLeft = 0;
+  let countRight = 0;
   for (let i = 0; i < M; i++) {
     const t = testStatistic(sampleUnderH0());
-    if (side === 'right' && t >= tObs) count++;
-    else if (side === 'left' && t <= tObs) count++;
-    else if (side === 'two' && Math.abs(t) >= Math.abs(tObs)) count++;
+    if (t <= tObs) countLeft++;
+    if (t >= tObs) countRight++;
   }
-  return count / M;
+  if (side === 'right') return countRight / M;
+  if (side === 'left') return countLeft / M;
+  return Math.min(1, (2 * Math.min(countLeft, countRight)) / M);
 }

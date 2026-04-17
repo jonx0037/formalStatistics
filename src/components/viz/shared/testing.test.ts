@@ -235,6 +235,23 @@ console.log('========================================\n');
   check(`18d. Max pairwise diff ≤ 0.04 (got ${fmt(maxDiff)})`, maxDiff <= 0.04, maxDiff, 0.04, 'relaxed from 0.02');
 }
 
+// ── 19a. Regression: score statistic for normal-mean (σ unknown) uses the
+//         null-restricted MLE variance σ̂²₀ = n⁻¹ Σ(X − μ₀)², NOT the
+//         unrestricted σ̂²_MLE = n⁻¹ Σ(X − x̄)². Data = [−1, 0, 1, 2, 3],
+//         μ₀ = 0  ⇒  x̄ = 1, Σ(X − μ₀)² = 15, σ̂²₀ = 3,
+//         S_n = n(x̄ − μ₀)² / σ̂²₀ = 5/3 ≈ 1.667. Gemini review #3103520874.
+{
+  const data = [-1, 0, 1, 2, 3];
+  const s = scoreStatistic('normal-mean', data, 0);
+  check(
+    `19a. scoreStatistic('normal-mean', [−1..3], μ₀=0) = 5/3`,
+    approx(s, 5 / 3, 1e-9),
+    s,
+    5 / 3,
+    'null-restricted MLE variance',
+  );
+}
+
 // ── 19. monteCarloPValue agrees with zTestPValue within 0.02 at M=5000 ────
 {
   const rng = seededRandom(42);

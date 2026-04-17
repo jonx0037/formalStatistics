@@ -44,15 +44,18 @@ function drawStatAndP(
     return { t, p: tTestPValue(t, n - 1, side) };
   }
   if (scenario.family === 'two-proportion') {
-    // trueTheta = lift; use baseline 0.1 for pA
+    // trueTheta = lift (p_B − p_A). `twoProportionZStatistic(s1, n1, s2, n2)`
+    // computes (p̂₁ − p̂₂)/SE, so we pass B first to make a positive lift
+    // produce a positive z — matching the UI's "lift" framing and the
+    // selected tail. Copilot review #3103512348.
     const pA = 0.1;
     const pB = pA + trueTheta;
     const a = Array.from({ length: n }, () => bernoulliSample(pA, rng));
     const b = Array.from({ length: n }, () => bernoulliSample(pB, rng));
     const sA = a.reduce((s, x) => s + x, 0);
     const sB = b.reduce((s, x) => s + x, 0);
-    const t = twoProportionZStatistic(sA, n, sB, n);
-    return { t, p: twoProportionPValue(sA, n, sB, n, side) };
+    const t = twoProportionZStatistic(sB, n, sA, n);
+    return { t, p: twoProportionPValue(sB, n, sA, n, side) };
   }
   // binomial-exact: trueTheta in [0,1] is the true p
   const n0 = (scenario.nullParams.n ?? 20);

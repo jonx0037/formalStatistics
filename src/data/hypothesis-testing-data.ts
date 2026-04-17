@@ -311,11 +311,11 @@ export const waldScoreLRTPresets: WaldScoreLRTPreset[] = [
     MDefault: 3000,
     formulas: {
       wald: 'W_n = n(x̄ − μ₀)² / S²',
-      score: 'S_n = n(x̄ − μ₀)² / σ̂_MLE²   (uses n⁻¹ Σ(X − x̄)²)',
+      score: 'S_n = n(x̄ − μ₀)² / σ̂₀²   (null-restricted MLE: n⁻¹ Σ(X − μ₀)²)',
       lrt: '−2 log Λ = n log(1 + (x̄ − μ₀)² / σ̂_MLE²)',
     },
     description:
-      'Here the three diverge mildly in finite samples; Wald uses S² (unbiased), score uses σ̂²_MLE, LRT uses a log form. Asymptotic agreement as n → ∞.',
+      'Here the three diverge mildly in finite samples; Wald uses S² (unbiased), score uses the null-restricted σ̂₀² (evaluated at μ₀), LRT uses the unrestricted σ̂²_MLE inside a log form. Asymptotic agreement as n → ∞.',
   },
   {
     id: 'poisson',
