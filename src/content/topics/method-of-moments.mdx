@@ -149,6 +149,12 @@ import ExampleBlock from '../../components/ui/ExampleBlock.astro';
 import RemarkBlock from '../../components/ui/RemarkBlock.astro';
 import ExternalLink from '../../components/ui/ExternalLink.astro';
 
+import MomGammaSolver from '../../components/viz/MomGammaSolver.tsx';
+import AREExplorer from '../../components/viz/AREExplorer.tsx';
+import CauchyPathologyExplorer from '../../components/viz/CauchyPathologyExplorer.tsx';
+import WarmStartExplorer from '../../components/viz/WarmStartExplorer.tsx';
+import MEstimatorGallery from '../../components/viz/MEstimatorGallery.tsx';
+
 ## 15.1 From Matching Moments to Estimating Equations
 
 [Topic 14](/topics/maximum-likelihood) gave us a recipe — write down the likelihood, find its peak — that produces an estimator with the best possible asymptotic variance under regularity. Before that recipe existed, statisticians had a different one. Karl Pearson, working in the 1890s on biometric data and trying to fit mixtures of two Normal distributions to crab measurements, observed that *the parameters of a model are functions of its moments*. So estimate the moments from the data, plug those estimates into the inverse function, and you have an estimator. The procedure is called the **method of moments**, abbreviated MoM, and it is the oldest estimation principle in modern statistics.
@@ -321,6 +327,8 @@ Example 4 hinted at it; the issue is general. The MoM estimate is the inverse mo
 
 The standard fix is to project onto the constraint set, but at that point we have abandoned pure MoM. Better diagnostic: when MoM gives an absurd answer, suspect the model.
 </RemarkBlock>
+
+<MomGammaSolver client:visible />
 
 ## 15.4 Multivariate MoM: The Two-Parameter Gamma
 
@@ -532,6 +540,8 @@ $$
 The Cramér–Rao lower bound for the Exponential rate (Example 13.10) is $\lambda_0^2/n$ — exactly what we just computed. So the Exponential MoM is *asymptotically efficient*, achieving the CRLB. This is the §15.7 statement that the MoM matches the MLE for natural exponential families, made concrete.
 </ExampleBlock>
 
+<AREExplorer client:visible />
+
 ## 15.6 When the Method of Moments Fails
 
 The conditions of Theorem 4 can fail in three structurally different ways. Each illuminates the moment-matching principle from the negative side.
@@ -590,6 +600,8 @@ The deeper issue surfaces when we try to estimate *more* parameters in the mixtu
 <RemarkBlock number={6} title="Absurd estimates in practice">
 The pattern in Examples 10–12 is general. When MoM fails, it fails *visibly*: an undefined limit, an estimate outside the parameter space, or a system that simply has no unique solution. This is, perversely, a strength — MoM tells you when it has failed, often more loudly than the MLE does. If $\hat{\sigma}^2_{\text{MoM}} < 0$ or $\hat{p}_{\text{MoM}} > 1$ on real data, the appropriate response is not to project the estimate onto the constraint set but to ask whether the model is right.
 </RemarkBlock>
+
+<CauchyPathologyExplorer client:visible />
 
 ## 15.7 Asymptotic Relative Efficiency: MoM vs MLE
 
@@ -702,6 +714,8 @@ This is not a textbook idea waiting to be implemented. It is the dominant patter
 
 The dominant alternative — searching for a starting point by random restart or by grid search — is much slower and rarely necessary when MoM is available. The exceptions are models where MoM is undefined (mixtures with non-identifiable components, latent-variable models) or pathological (Cauchy). For everything else, MoM is the warm-start.
 </RemarkBlock>
+
+<WarmStartExplorer client:visible />
 
 ## 15.9 M-Estimation: The Unifying Framework
 
@@ -1006,6 +1020,8 @@ The default $k = 1.345$ is not arbitrary. It is the value that makes the asympto
 
 Why 95% and not, say, 99%? The reasoning is empirical: pushing efficiency above 95% (with $k$ small) makes the estimator behave nearly identically to the mean in the central region, surrendering most of the robustness. Pushing efficiency below 95% (with $k$ small) gains additional outlier resistance but at noticeable efficiency loss on clean data. The 95% point is roughly the elbow of this trade-off curve.
 </RemarkBlock>
+
+<MEstimatorGallery client:visible />
 
 ## 15.12 Summary & Forward Look: GMM and Beyond
 
