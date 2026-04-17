@@ -874,3 +874,82 @@ export function sampleSizeRequirements(
   }
   return out;
 }
+
+// ════════════════════════════════════════════════════════════════════════════
+// Topic 15 — additional samplers for the MoM pathology and robust-stats demos
+// ════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Draw n iid Cauchy(location, scale) samples via the inverse CDF.
+ *   X = location + scale · tan(π(U − 0.5))
+ * E[X] does not exist (the Cauchy is the textbook MoM-failure case), but the
+ * median equals `location`. Used in `CauchyPathologyExplorer` to make the LLN
+ * failure visceral.
+ *
+ * Implementation note: the brief (gotcha #1) is explicit — do NOT attempt
+ * rejection sampling or a truncated Normal substitute. The heavy tails are the
+ * point; truncation would mask the very pathology we are trying to display.
+ */
+export function cauchySample(
+  n: number,
+  location: number,
+  scale: number,
+  rng: () => number = Math.random,
+): number[] {
+  const out = new Array<number>(n);
+  for (let i = 0; i < n; i++) {
+    // Guard u ∈ (ε, 1−ε) so tan(π(u − 0.5)) stays finite even for very small u.
+    const u = Math.min(Math.max(rng(), Number.EPSILON), 1 - Number.EPSILON);
+    out[i] = location + scale * Math.tan(Math.PI * (u - 0.5));
+  }
+  return out;
+}
+
+/**
+ * Draw n iid Weibull(k, λ) samples via inverse CDF: X = λ · (−ln U)^{1/k}.
+ * Used in the optional Weibull MoM example.
+ *
+ * @param k — shape parameter (> 0)
+ * @param lambda — scale parameter (> 0)
+ */
+export function weibullSample(
+  n: number,
+  k: number,
+  lambda: number,
+  rng: () => number = Math.random,
+): number[] {
+  const out = new Array<number>(n);
+  const invK = 1 / k;
+  for (let i = 0; i < n; i++) {
+    const u = Math.max(rng(), Number.EPSILON);
+    out[i] = lambda * Math.pow(-Math.log(u), invK);
+  }
+  return out;
+}
+
+/**
+ * Draw n iid Pareto(α, xₘ) samples via inverse CDF: X = xₘ / U^{1/α}.
+ *
+ * Distinct from the existing single-sample `paretoSample(alpha, rng)` which is
+ * fixed at xₘ = 1. This array variant supports the scale parameter and matches
+ * the n-samples-out signature expected by `CauchyPathologyExplorer`.
+ *
+ * For α ≤ 1, E[X] = ∞ (MoM mean fails); for α ≤ 2, Var(X) = ∞ (MoM variance fails).
+ *
+ * @param alpha — shape / tail index (> 0)
+ * @param xm — scale / minimum value (> 0)
+ */
+export function paretoSampleArray(
+  n: number,
+  alpha: number,
+  xm: number,
+  rng: () => number = Math.random,
+): number[] {
+  const out = new Array<number>(n);
+  const invA = 1 / alpha;
+  for (let i = 0; i < n; i++) {
+    const u = Math.max(rng(), Number.EPSILON);
+    out[i] = xm / Math.pow(u, invA);
+  }
+  return out;
+}

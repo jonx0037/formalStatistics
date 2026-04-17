@@ -824,6 +824,445 @@ export function logisticScore(
   return [g0, g1];
 }
 
+// ════════════════════════════════════════════════════════════════════════════
+// Topic 15 — Method of Moments & M-Estimation
+// ════════════════════════════════════════════════════════════════════════════
+
+// ── Method of Moments (closed-form) ─────────────────────────────────────────
+
+/**
+ * MoM for Normal(μ, σ²): μ̂ = X̄, σ̂² = (1/n)Σ(Xᵢ−X̄)² (biased; matches MLE).
+ */
+export function momNormal(data: number[]): { muHat: number; sigma2Hat: number } {
+  const muHat = sampleMean(data);
+  const sigma2Hat = sampleVariance(data, 0); // ddof=0 → MLE form
+  return { muHat, sigma2Hat };
+}
+
+/**
+ * MoM for Exponential rate: λ̂ = 1/X̄ (matches MLE — exponential family).
+ */
+export function momExponential(data: number[]): number {
+  const xbar = sampleMean(data);
+  return xbar > 0 ? 1 / xbar : NaN;
+}
+
+/**
+ * MoM for Poisson rate: λ̂ = X̄ (matches MLE — exponential family).
+ */
+export function momPoisson(data: number[]): number {
+  return sampleMean(data);
+}
+
+/**
+ * MoM for Bernoulli p: p̂ = X̄ (matches MLE — exponential family).
+ */
+export function momBernoulli(data: number[]): number {
+  return sampleMean(data);
+}
+
+/**
+ * MoM for Geometric p (failures-before-first-success convention, support {0,1,2,…}):
+ * E[X] = (1−p)/p ⇒ p̂ = 1/(1+X̄). For the {1,2,…}-support convention use 1/X̄.
+ */
+export function momGeometric(data: number[]): number {
+  const xbar = sampleMean(data);
+  return 1 / (1 + xbar);
+}
+
+/**
+ * MoM for Uniform(0, θ): θ̂ = 2X̄ (E[X] = θ/2). Instructive foil to MLE X_(n).
+ */
+export function momUniform(data: number[]): number {
+  return 2 * sampleMean(data);
+}
+
+/**
+ * MoM for Gamma(α, β) (rate parameterization): α̂ = X̄²/S², β̂ = X̄/S².
+ * Uses the biased S² = (1/n)Σ(Xᵢ−X̄)² for consistency with MLE conventions.
+ */
+export function momGamma(data: number[]): { alphaHat: number; betaHat: number } {
+  const xbar = sampleMean(data);
+  const s2 = sampleVariance(data, 0);
+  if (s2 <= 0) return { alphaHat: NaN, betaHat: NaN };
+  const alphaHat = (xbar * xbar) / s2;
+  const betaHat = xbar / s2;
+  return { alphaHat, betaHat };
+}
+
+/**
+ * MoM for Beta(α, β) on (0,1):
+ *   c = X̄(1−X̄)/S² − 1, α̂ = X̄·c, β̂ = (1−X̄)·c.
+ * Uses biased S² (1/n) for consistency. Returns NaN if c ≤ 0 (parameter-space violation).
+ */
+export function momBeta(data: number[]): { alphaHat: number; betaHat: number } {
+  const xbar = sampleMean(data);
+  const s2 = sampleVariance(data, 0);
+  if (s2 <= 0 || xbar <= 0 || xbar >= 1) {
+    return { alphaHat: NaN, betaHat: NaN };
+  }
+  const c = (xbar * (1 - xbar)) / s2 - 1;
+  if (c <= 0) return { alphaHat: NaN, betaHat: NaN };
+  return { alphaHat: xbar * c, betaHat: (1 - xbar) * c };
+}
+
+/**
+ * Generic moment-to-parameter solver: compute up to `momentOrder` raw sample
+ * moments [X̄, X̄², …] and pass them to `solver`, which returns the parameter(s).
+ */
+export function methodOfMoments<T>(
+  data: number[],
+  momentOrder: number,
+  solver: (moments: number[]) => T,
+): T {
+  const moments: number[] = new Array(momentOrder).fill(0);
+  const n = data.length;
+  for (let i = 0; i < n; i++) {
+    let pow = 1;
+    for (let k = 0; k < momentOrder; k++) {
+      pow *= data[i];
+      moments[k] += pow;
+    }
+  }
+  for (let k = 0; k < momentOrder; k++) moments[k] /= n;
+  return solver(moments);
+}
+
+// ── ARE (Asymptotic Relative Efficiency) ─────────────────────────────────────
+
+/**
+ * Theoretical ARE(MoM, MLE) for selected families.
+ *  - 'exponential-rate'  → 1 (exponential family in the natural parameter)
+ *  - 'normal-variance'   → 1 (MoM and MLE both use the biased 1/n form)
+ *  - 'gamma-shape'       → α / (α·ψ'(α) − 1) where ψ' is the trigamma function
+ *                          (β profiled out; matches Topic 15 §15.7 derivation)
+ *  - 'uniform-endpoint'  → 3/(n+2) → 0 as n→∞ (MLE X_(n) variance is O(1/n²))
+ */
+export function areTheoretical(
+  family: string,
+  params: Record<string, number>,
+): number {
+  switch (family) {
+    case 'exponential-rate':
+      return 1;
+    case 'normal-variance':
+      return 1;
+    case 'gamma-shape': {
+      const alpha = params.alpha;
+      if (!Number.isFinite(alpha) || alpha <= 0) return NaN;
+      // MLE asymp var of α (β profiled): α / (α·ψ'(α) − 1)
+      // MoM asymp var via matrix delta method on α̂ = X̄²/S²: 2α(α+1)
+      // ARE = MLE_var / MoM_var = 1 / [2(α+1)(α·ψ'(α) − 1)]
+      // Verified at α=3 → 0.68 (Casella & Berger §10.1 + notebook).
+      const denom = alpha * trigamma(alpha) - 1;
+      if (denom <= 0) return NaN;
+      return 1 / (2 * (alpha + 1) * denom);
+    }
+    case 'uniform-endpoint': {
+      const n = params.n;
+      if (!Number.isFinite(n) || n <= 0) return 0;
+      return 3 / (n + 2);
+    }
+    default:
+      return NaN;
+  }
+}
+
+/**
+ * Theoretical ARE curve over a grid of parameter values for the chosen family.
+ * For 'gamma-shape', sweeps α and returns ARE(α). Used in figure are-mom-vs-mle.png.
+ */
+export function areCurveTheoretical(
+  family: string,
+  paramName: string,
+  grid: number[],
+  fixedParams: Record<string, number> = {},
+): { grid: number[]; are: number[] } {
+  const are = grid.map((v) =>
+    areTheoretical(family, { ...fixedParams, [paramName]: v }),
+  );
+  return { grid, are };
+}
+
+// ── M-estimation: ψ-functions and ρ-functions ───────────────────────────────
+
+/**
+ * Huber's ψ-function with tuning constant k (default 1.345 for 95% Normal efficiency):
+ * ψ_H(u) = u if |u| ≤ k, else k·sign(u). Monotone, bounded.
+ */
+export function huberPsi(u: number, k: number): number {
+  if (u > k) return k;
+  if (u < -k) return -k;
+  return u;
+}
+
+/**
+ * Huber's ρ-loss with tuning constant k:
+ * ρ_H(u) = ½u² if |u| ≤ k, else k|u| − ½k². Quadratic core, linear tails.
+ */
+export function huberRho(u: number, k: number): number {
+  const a = Math.abs(u);
+  if (a <= k) return 0.5 * u * u;
+  return k * a - 0.5 * k * k;
+}
+
+/**
+ * Derivative of Huber's ψ (1 inside the linear region, 0 outside).
+ * Used in the sensitivity matrix A(θ).
+ */
+export function huberPsiPrime(u: number, k: number): number {
+  return Math.abs(u) <= k ? 1 : 0;
+}
+
+/**
+ * Tukey's biweight ψ-function with tuning constant c (default 4.685 for 95% Normal efficiency):
+ * ψ_T(u) = u·(1 − (u/c)²)² for |u| ≤ c, 0 otherwise. Redescending: zero beyond c.
+ */
+export function tukeyPsi(u: number, c: number): number {
+  if (Math.abs(u) > c) return 0;
+  const r = u / c;
+  const w = 1 - r * r;
+  return u * w * w;
+}
+
+/**
+ * Tukey's biweight ρ-loss with tuning constant c:
+ * ρ_T(u) = (c²/6) · [1 − (1 − (u/c)²)³] for |u| ≤ c, ρ_T(u) = c²/6 otherwise.
+ * Bounded loss — the defining property of redescending M-estimators.
+ */
+export function tukeyRho(u: number, c: number): number {
+  if (Math.abs(u) > c) return (c * c) / 6;
+  const r = u / c;
+  const w = 1 - r * r;
+  return ((c * c) / 6) * (1 - w * w * w);
+}
+
+/**
+ * Derivative of Tukey's ψ via the chain rule on u·(1 − (u/c)²)²:
+ *   ψ'(u) = (1 − (u/c)²)² + u · 2(1 − (u/c)²) · (−2u/c²)
+ *         = (1 − (u/c)²) · [(1 − (u/c)²) − 4u²/c²]
+ * Zero outside |u| > c.
+ */
+export function tukeyPsiPrime(u: number, c: number): number {
+  if (Math.abs(u) > c) return 0;
+  const r = u / c;
+  const w = 1 - r * r;
+  return w * (w - 4 * r * r);
+}
+
+// ── Robust scale: MAD ────────────────────────────────────────────────────────
+
+/**
+ * Median Absolute Deviation, normalized so MAD/Φ⁻¹(0.75) ≈ σ for Normal data.
+ * Used as the robust scale estimate inside `mEstimatorLocation`, and re-used
+ * by `MEstimatorGallery` for sandwich-variance scaling.
+ */
+export function medianAbsoluteDeviation(data: number[]): number {
+  if (data.length === 0) return 0;
+  const med = sampleMedian(data);
+  const dev = data.map((x) => Math.abs(x - med));
+  return sampleMedian(dev) / 0.6744897501960817; // Φ⁻¹(0.75)
+}
+
+// ── M-estimator (location) ───────────────────────────────────────────────────
+
+/**
+ * Location M-estimator via fixed-point iteration on Σ ψ((Xᵢ − θ̂)/σ̂) = 0.
+ * Uses MAD as the scale σ̂ unless `options.scale` is supplied.
+ *
+ * For monotone ψ (Huber): converges to a unique solution.
+ * For redescending ψ (Tukey): may have multiple roots — initialize near the
+ * sample median for a robust starting point.
+ */
+export function mEstimatorLocation(
+  data: number[],
+  psi: (u: number) => number,
+  options: { maxIter?: number; tol?: number; init?: number; scale?: number } = {},
+): { estimate: number; iterations: number; converged: boolean } {
+  const n = data.length;
+  if (n === 0) return { estimate: NaN, iterations: 0, converged: false };
+  const tol = options.tol ?? 1e-8;
+  const maxIter = options.maxIter ?? 200;
+  const scale = options.scale ?? Math.max(medianAbsoluteDeviation(data), 1e-12);
+  let theta = options.init ?? sampleMedian(data);
+  let iterations = 0;
+  let converged = false;
+  for (let k = 0; k < maxIter; k++) {
+    let num = 0;
+    let den = 0;
+    for (let i = 0; i < n; i++) {
+      const u = (data[i] - theta) / scale;
+      // Iteratively reweighted form: weight wᵢ = ψ(u)/u for u≠0, ψ'(0) for u=0.
+      const w = u === 0 ? 1 : psi(u) / u;
+      num += w * data[i];
+      den += w;
+    }
+    if (den === 0) break;
+    const next = num / den;
+    iterations = k + 1;
+    if (Math.abs(next - theta) < tol) {
+      theta = next;
+      converged = true;
+      break;
+    }
+    theta = next;
+  }
+  return { estimate: theta, iterations, converged };
+}
+
+// ── Sandwich variance ────────────────────────────────────────────────────────
+
+/**
+ * Sandwich variance V(θ̂) = A⁻¹ B A⁻¹ᵀ for a scalar-θ M-estimator.
+ *   A = (1/n) Σ ψ'(Xᵢ; θ̂) · (1/scale)   (sensitivity, with the standardization Jacobian)
+ *   B = (1/n) Σ ψ(Xᵢ; θ̂)²              (variability)
+ * For scalar θ this reduces to V = B / (n · A²).
+ *
+ * Caller supplies a robust scale (MAD) if working in standardized residuals.
+ * The transpose in the matrix form A⁻¹ B A⁻¹ᵀ matters for vector θ; for scalar
+ * θ it collapses to A⁻²·B identically.
+ */
+export function mEstimatorVariance(
+  data: number[],
+  theta: number,
+  psi: (u: number) => number,
+  psiPrime: (u: number) => number,
+  scale = 1,
+): number {
+  const n = data.length;
+  if (n === 0) return NaN;
+  let A = 0;
+  let B = 0;
+  for (let i = 0; i < n; i++) {
+    const u = (data[i] - theta) / scale;
+    A += psiPrime(u);
+    const p = psi(u);
+    B += p * p;
+  }
+  A /= n;
+  B /= n;
+  if (A === 0) return Infinity;
+  // Standardized form: variance of θ̂ on the original scale uses scale².
+  return (scale * scale * B) / (n * A * A);
+}
+
+// ── Breakdown point ──────────────────────────────────────────────────────────
+
+/**
+ * Asymptotic breakdown point ε* of common location estimators.
+ * - 'mean'         → 0          (a single outlier moves the mean arbitrarily)
+ * - 'median'       → 1/2        (the maximum possible)
+ * - 'huber'        → 1/2        (with a robust scale like MAD, per Rousseeuw–Leroy §1)
+ * - 'tukey'        → 1/2        (redescending: extreme outliers get weight 0)
+ * - 'trimmed-mean' → α           (the trimming proportion)
+ *
+ * Note: The Huber location estimator paired with a robust scale estimator
+ * (MAD, as used in `mEstimatorLocation`) achieves the maximum breakdown
+ * point of 1/2. The often-quoted figure 0.05 (or 5%) is the contamination
+ * level for which the default tuning constant k = 1.345 is *minimax-optimal*
+ * under Huber's gross-error model — it is not the breakdown point.
+ *
+ * Practical caveat: empirically, the Huber estimate begins to drift well
+ * before the asymptotic breakdown is reached, because at high contamination
+ * the MAD itself becomes corrupted. The drift is gradual rather than catastrophic.
+ */
+export function breakdownPoint(
+  estimator: 'mean' | 'median' | 'huber' | 'tukey' | 'trimmed-mean',
+  params: { k?: number; c?: number; alpha?: number } = {},
+): number {
+  switch (estimator) {
+    case 'mean':
+      return 0;
+    case 'median':
+      return 0.5;
+    case 'huber':
+      // Huber + robust scale (MAD) achieves the maximum breakdown 1/2.
+      // (Rousseeuw–Leroy 1987, §1.) The 0.05 figure refers to the
+      // contamination level for which k = 1.345 is minimax — distinct concept.
+      return 0.5;
+    case 'tukey':
+      // Redescending → asymptotically 1/2; the realised value depends on the
+      // tuning constant c. For c = 4.685 (default) the empirical breakdown is
+      // ≈0.45 in finite samples; we report the asymptotic 0.5.
+      return 0.5;
+    case 'trimmed-mean':
+      return Math.max(0, Math.min(0.5, params.alpha ?? 0.1));
+    default:
+      return NaN;
+  }
+}
+
+// ── Running median (running mean already lives in convergence.ts) ────────────
+
+/**
+ * Minimal binary-heap. Constructed with a `compare(a, b) → boolean` callback
+ * that returns true when `a` belongs above `b` in the heap order — so a
+ * max-heap passes `(a, b) => a > b` and a min-heap passes `(a, b) => a < b`.
+ */
+class Heap {
+  private data: number[] = [];
+  private readonly compare: (a: number, b: number) => boolean;
+  constructor(compare: (a: number, b: number) => boolean) {
+    this.compare = compare;
+  }
+  get size(): number { return this.data.length; }
+  peek(): number | undefined { return this.data[0]; }
+  push(value: number): void {
+    this.data.push(value);
+    let i = this.data.length - 1;
+    while (i > 0) {
+      const parent = (i - 1) >>> 1;
+      if (!this.compare(this.data[i], this.data[parent])) break;
+      [this.data[i], this.data[parent]] = [this.data[parent], this.data[i]];
+      i = parent;
+    }
+  }
+  pop(): number | undefined {
+    if (this.data.length === 0) return undefined;
+    const top = this.data[0];
+    const last = this.data.pop()!;
+    if (this.data.length > 0) {
+      this.data[0] = last;
+      let i = 0;
+      const n = this.data.length;
+      for (;;) {
+        let best = i;
+        const l = 2 * i + 1, r = l + 1;
+        if (l < n && this.compare(this.data[l], this.data[best])) best = l;
+        if (r < n && this.compare(this.data[r], this.data[best])) best = r;
+        if (best === i) break;
+        [this.data[i], this.data[best]] = [this.data[best], this.data[i]];
+        i = best;
+      }
+    }
+    return top;
+  }
+}
+
+/**
+ * Running median: out[i] = median(data[0..i]). True two-heap implementation —
+ * each insertion is O(log n), giving O(n log n) overall. Suitable for the
+ * n = 10,000 streaming use case in `CauchyPathologyExplorer` without UI stalls.
+ */
+export function runningMedian(data: number[]): number[] {
+  const n = data.length;
+  const out = new Array<number>(n);
+  const lower = new Heap((a, b) => a > b); // max-heap for the lower half
+  const upper = new Heap((a, b) => a < b); // min-heap for the upper half
+  for (let i = 0; i < n; i++) {
+    const x = data[i];
+    if (lower.size === 0 || x <= (lower.peek() as number)) lower.push(x);
+    else upper.push(x);
+    // Rebalance so |size(lower) − size(upper)| ≤ 1, with lower allowed to be larger.
+    if (lower.size > upper.size + 1) upper.push(lower.pop() as number);
+    else if (upper.size > lower.size) lower.push(upper.pop() as number);
+    out[i] = lower.size === upper.size
+      ? 0.5 * ((lower.peek() as number) + (upper.peek() as number))
+      : (lower.peek() as number);
+  }
+  return out;
+}
+
 // ── Dev tests (browser-side only, runs once per page load in dev) ────────────
 
 if (import.meta.env.DEV && typeof window !== 'undefined') {
@@ -1020,6 +1459,181 @@ if (import.meta.env.DEV && typeof window !== 'undefined') {
         Number.isFinite(g1n),
     );
   }
+
+  // ── Topic 15 additions ────────────────────────────────────────────────────
+
+  // 25. momNormal([1..5]) → muHat=3, sigma2Hat=2 (biased 1/n, matches MLE)
+  {
+    const r = momNormal([1, 2, 3, 4, 5]);
+    results.push(near(r.muHat, 3) && near(r.sigma2Hat, 2));
+  }
+
+  // 26. momExponential matches mleExponential on a fixed sample
+  {
+    const data = [0.5, 1.2, 0.8, 2.1, 0.3];
+    results.push(near(momExponential(data), mleExponential(data)));
+  }
+
+  // 27. momPoisson([2,3,1,4,0]) === 2 (matches mlePoisson)
+  results.push(near(momPoisson([2, 3, 1, 4, 0]), 2));
+
+  // 28. momBernoulli matches mleBernoulli on a fixed sample
+  results.push(near(momBernoulli([1, 1, 0, 1, 0, 0, 1]), 4 / 7, 1e-12));
+
+  // 29. momUniform: 2X̄ for [0.1, 0.3, 0.5, 0.7] → 2 · 0.4 = 0.8
+  results.push(near(momUniform([0.1, 0.3, 0.5, 0.7]), 0.8));
+
+  // 30. momGamma on Gamma(3, 2) data, n = 1000: α̂≈3, β̂≈2 within 10%
+  {
+    let seed = 2026;
+    const rng = () => {
+      seed = (seed * 1664525 + 1013904223) >>> 0;
+      return seed / 0x1_0000_0000;
+    };
+    // Gamma(3, 2) = sum of three Exp(2) = −log(U₁U₂U₃)/2
+    const data: number[] = [];
+    for (let i = 0; i < 1000; i++) {
+      const u1 = Math.max(rng(), 1e-12);
+      const u2 = Math.max(rng(), 1e-12);
+      const u3 = Math.max(rng(), 1e-12);
+      data.push(-Math.log(u1 * u2 * u3) / 2);
+    }
+    const { alphaHat, betaHat } = momGamma(data);
+    results.push(withinPct(alphaHat, 3, 0.1) && withinPct(betaHat, 2, 0.1));
+  }
+
+  // 31. momBeta on Beta(2, 5) data, n = 1000: α̂≈2, β̂≈5 within 15%
+  //     Beta(α, β) sampling via X = G_α / (G_α + G_β), G_k = sum of k Exp(1)'s.
+  {
+    let seed = 31415;
+    const rng = () => {
+      seed = (seed * 1664525 + 1013904223) >>> 0;
+      return seed / 0x1_0000_0000;
+    };
+    const data: number[] = [];
+    for (let i = 0; i < 1000; i++) {
+      // G_2 = −log(U₁U₂);  G_5 = −log(U₁U₂U₃U₄U₅).
+      let g2 = 0;
+      for (let j = 0; j < 2; j++) g2 -= Math.log(Math.max(rng(), 1e-12));
+      let g5 = 0;
+      for (let j = 0; j < 5; j++) g5 -= Math.log(Math.max(rng(), 1e-12));
+      data.push(g2 / (g2 + g5));
+    }
+    const { alphaHat, betaHat } = momBeta(data);
+    results.push(withinPct(alphaHat, 2, 0.15) && withinPct(betaHat, 5, 0.15));
+  }
+
+  // 32. areTheoretical('exponential-rate', {}) === 1 exactly
+  results.push(areTheoretical('exponential-rate', {}) === 1);
+
+  // 33. areTheoretical('gamma-shape', {alpha: 3}) ≈ 0.676.
+  //     Closed form: 1 / [2(α+1)(α·ψ'(α) − 1)]. At α=3:
+  //     trigamma(3) = π²/6 − 1 − 1/4 ≈ 0.394934
+  //     denom = 3·0.394934 − 1 = 0.184802
+  //     ARE = 1/(2·4·0.184802) = 0.676.
+  {
+    const are3 = areTheoretical('gamma-shape', { alpha: 3 });
+    results.push(Math.abs(are3 - 0.676) < 0.01);
+  }
+
+  // 34. huberPsi inside region returns u; outside region clipped to ±k.
+  results.push(
+    near(huberPsi(0.5, 1.345), 0.5) &&
+      near(huberPsi(2.0, 1.345), 1.345) &&
+      near(huberPsi(-2.0, 1.345), -1.345),
+  );
+
+  // 35. tukeyPsi: smooth at 0.5/c, exactly 0 beyond c.
+  {
+    const c = 4.685;
+    const expected = 0.5 * Math.pow(1 - (0.5 / c) ** 2, 2);
+    results.push(near(tukeyPsi(0.5, c), expected) && tukeyPsi(5.0, c) === 0);
+  }
+
+  // 36. tukeyPsiPrime via finite differences: derivative at u=1, c=4.685 should
+  //     match (tukeyPsi(1+h) − tukeyPsi(1−h))/(2h) within 1e-4.
+  {
+    const c = 4.685;
+    const h = 1e-5;
+    const fd = (tukeyPsi(1 + h, c) - tukeyPsi(1 - h, c)) / (2 * h);
+    results.push(Math.abs(tukeyPsiPrime(1, c) - fd) < 1e-4);
+  }
+
+  // 37. mEstimatorLocation on clean Normal(5, 1), n=200 with Huber:
+  //     should land within 0.15 of 5.
+  {
+    let seed = 7;
+    const rng = () => {
+      seed = (seed * 1664525 + 1013904223) >>> 0;
+      return seed / 0x1_0000_0000;
+    };
+    const data: number[] = [];
+    for (let i = 0; i < 200; i++) {
+      // Box–Muller pair, take first.
+      const u1 = Math.max(rng(), 1e-12);
+      const u2 = rng();
+      const z = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+      data.push(5 + z); // Normal(5, 1)
+    }
+    const k = 1.345;
+    const { estimate, converged } = mEstimatorLocation(data, (u) => huberPsi(u, k));
+    results.push(converged && Math.abs(estimate - 5) < 0.15);
+  }
+
+  // 38. mEstimatorLocation under contamination: 10% outliers at +20.
+  //     Sample mean drifts; Huber stays within 0.5 of true 5.
+  {
+    let seed = 11;
+    const rng = () => {
+      seed = (seed * 1664525 + 1013904223) >>> 0;
+      return seed / 0x1_0000_0000;
+    };
+    const data: number[] = [];
+    for (let i = 0; i < 200; i++) {
+      const u1 = Math.max(rng(), 1e-12);
+      const u2 = rng();
+      const z = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+      const contaminated = i < 20 ? 25 : 5 + z; // 10% outliers at 25
+      data.push(contaminated);
+    }
+    const k = 1.345;
+    const meanEst = sampleMean(data);
+    const { estimate } = mEstimatorLocation(data, (u) => huberPsi(u, k));
+    results.push(meanEst > 6 && Math.abs(estimate - 5) < 0.5);
+  }
+
+  // 39. mEstimatorVariance on clean Normal(0, 1) data with the score ψ(u) = u
+  //     (i.e., MLE form): should approximately match σ²/n = 1/n.
+  {
+    let seed = 23;
+    const rng = () => {
+      seed = (seed * 1664525 + 1013904223) >>> 0;
+      return seed / 0x1_0000_0000;
+    };
+    const n = 500;
+    const data: number[] = [];
+    for (let i = 0; i < n; i++) {
+      const u1 = Math.max(rng(), 1e-12);
+      const u2 = rng();
+      const z = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+      data.push(z);
+    }
+    const v = mEstimatorVariance(data, 0, (u) => u, () => 1, 1);
+    // Theoretical 1/n = 0.002; allow ±50% (Monte-Carlo noise dominates).
+    results.push(v > 0.001 && v < 0.004);
+  }
+
+  // 40. breakdownPoint values match Rousseeuw–Leroy table. Huber + robust
+  //     scale (MAD) achieves the maximum 1/2 — the 0.05 figure cited in some
+  //     references is the contamination level for which k = 1.345 is minimax,
+  //     a distinct concept from the breakdown point.
+  results.push(
+    breakdownPoint('mean') === 0 &&
+      breakdownPoint('median') === 0.5 &&
+      breakdownPoint('huber') === 0.5 &&
+      breakdownPoint('tukey') === 0.5 &&
+      Math.abs(breakdownPoint('trimmed-mean', { alpha: 0.1 }) - 0.1) < 1e-12,
+  );
 
   const passed = results.filter(Boolean).length;
   if (passed === results.length) {

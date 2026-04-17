@@ -1,0 +1,1079 @@
+---
+title: "Method of Moments & M-Estimation"
+subtitle: "Moment matching, the sandwich variance, and robust estimation — the framework that unifies MoM, MLE, and modern robust statistics."
+status: "published"
+difficulty: "intermediate"
+prerequisites:
+  - "point-estimation"
+  - "maximum-likelihood"
+  - "expectation-moments"
+tags:
+  - "statistics"
+  - "estimation"
+  - "method-of-moments"
+  - "m-estimation"
+  - "moment-matching"
+  - "asymptotic-relative-efficiency"
+  - "delta-method"
+  - "sandwich-variance"
+  - "robust-statistics"
+  - "huber-estimator"
+  - "tukey-biweight"
+  - "influence-function"
+  - "gmm"
+  - "cauchy-pathology"
+domain: "statistical-estimation"
+videoId: null
+notebookPath: "notebooks/method-of-moments/15_method_of_moments.ipynb"
+githubUrl: "https://github.com/jonx0037/formalStatistics/blob/main/src/content/topics/method-of-moments.mdx"
+datePublished: 2026-04-17
+estimatedReadTime: 50
+abstract: "The method of moments estimates parameters by matching sample moments to population moments and solving — a recipe older than maximum likelihood, often faster, and for the exponential family in its natural parameterization, identical to the MLE. Outside that boundary, MoM typically sacrifices asymptotic efficiency: the ARE(MoM, MLE) is less than one, and for the Gamma shape parameter, the gap is large enough to matter. But MoM's simplicity makes it the standard warm-start for iterative MLE solvers, and its closed-form structure makes it a precise pedagogical foil — the cleanest possible illustration of what efficiency means. Both MoM and MLE are instances of a more general framework: M-estimation, where the estimator is defined as the solution to an estimating equation Σ ψ(Xᵢ; θ) = 0 for some suitable ψ. A Taylor expansion of this equation, combined with the CLT and a law of large numbers, yields the sandwich-form asymptotic variance A⁻¹ B A⁻¹ᵀ — which collapses to the Fisher information inverse I(θ)⁻¹ when ψ is the score. Choosing ψ differently opens a universe: Huber's bounded score yields outlier-resistant estimators; Tukey's redescending biweight further ignores extreme observations entirely. The framework even breaks instructively — the Cauchy distribution has no mean, so MoM has nothing to match, yet its MLE is consistent. Method of moments is the first estimation recipe a statistician should try and the last one they should trust; M-estimation is the lens that explains why."
+formalcalculusPrereqs:
+  - topic: "differentiation"
+    site: "formalcalculus"
+    relationship: "The delta method uses the Jacobian of the moment-to-parameter map; the M-estimator sandwich formula uses partial derivatives of ψ(x; θ) with respect to θ."
+  - topic: "linear-algebra"
+    site: "formalcalculus"
+    relationship: "The sandwich variance A⁻¹BA⁻¹ᵀ is a matrix product; positive-definiteness of the covariance of sample moments is a quadratic-form argument."
+  - topic: "sequences-limits"
+    site: "formalcalculus"
+    relationship: "MoM consistency is convergence in probability inherited from the LLN; Slutsky's theorem appears in the asymptotic normality derivation."
+formalmlConnections:
+  - topic: "empirical-risk-minimization"
+    site: "formalml"
+    relationship: "M-estimation IS empirical risk minimization: θ̂ minimizes the empirical average of a loss ρ(X; θ), equivalently solves Σ ψ(X; θ) = 0 where ψ = ∇_θ ρ. Every ERM estimator with a smooth convex loss is an M-estimator."
+  - topic: "robust-statistics"
+    site: "formalml"
+    relationship: "Huber and Tukey M-estimators are the foundation of modern robust regression. The breakdown point and influence function quantify resistance to outliers. Huber loss is used routinely in ML for regression under heavy-tailed noise."
+  - topic: "quantile-regression"
+    site: "formalml"
+    relationship: "Quantile regression minimizes the check loss ρ_τ(u) = u(τ − 𝟙(u < 0)); its ψ is non-smooth but falls within the general M-estimation framework (modulo regularity)."
+  - topic: "generalized-method-of-moments"
+    site: "formalml"
+    relationship: "GMM (Hansen 1982) generalizes MoM to over-identified systems — more moment equations than parameters — solved by weighted least squares on the moment residuals. Previewed in §15.12 as the forward link."
+connections:
+  - topic: "point-estimation"
+    relationship: "Topic 13 defined bias, MSE, consistency, asymptotic normality, efficiency, and the CRLB. Topic 15 applies this framework to MoM estimators in §15.5 and to general M-estimators in §15.10, with ARE(MoM, MLE) as the central comparison in §15.7."
+  - topic: "maximum-likelihood"
+    relationship: "Topic 14 established the MLE as the efficiency benchmark. Topic 15 derives ARE(MoM, MLE) = 1 exactly for exponential families in their natural parameter (§15.7) and ARE < 1 for the Gamma shape parameter as the canonical gap. The M-estimator sandwich formula in §15.10 recovers Theorem 14.4 as the special case ψ = score."
+  - topic: "expectation-moments"
+    relationship: "Topic 4 defined population moments, sample moments, and LOTUS. The method of moments is literally the recipe 'replace E[Xᵏ] with the sample average and solve.'"
+  - topic: "exponential-families"
+    relationship: "Topic 7 §7.8 proved ∇A(η̂) = T̄ for the MLE. This is a one-line moment-matching: the MLE equates the model's expected sufficient statistics to the sample averages. §15.7 cites §7.8 as the proof that MoM ≡ MLE for natural exponential families."
+  - topic: "law-of-large-numbers"
+    relationship: "MoM consistency is the SLLN applied to each sample moment: X̄ᵏ → E[Xᵏ] a.s. Composition with the continuous moment-to-parameter map gives consistency of the MoM estimator (continuous-mapping theorem from Topic 11)."
+  - topic: "central-limit-theorem"
+    relationship: "MoM asymptotic normality follows from the multivariate CLT (Thm 11.8) applied to the vector of sample moments, followed by the delta method (Thm 11.9) to transform through the moment-to-parameter map."
+  - topic: "sufficient-statistics"
+    relationship: "Topic 16 will compare UMVUE to both MLE and MoM; when the MLE and MoM coincide (exponential families), they are both UMVUE when completeness holds."
+references:
+  - type: "book"
+    title: "Statistical Inference"
+    author: "George Casella & Roger L. Berger"
+    year: 2002
+    edition: "2nd"
+    publisher: "Duxbury"
+    isbn: "978-0-534-24312-8"
+    url: "https://www.cengage.com/c/statistical-inference-2e-casella/"
+    note: "Chapter 7.2.1 (Method of Moments) is the classical reference for MoM definition, examples, and its limitations relative to MLE."
+  - type: "book"
+    title: "Asymptotic Statistics"
+    author: "A. W. van der Vaart"
+    year: 1998
+    publisher: "Cambridge University Press"
+    isbn: "978-0-521-78450-4"
+    url: "https://www.cambridge.org/core/books/asymptotic-statistics/A3C7DAD3F7E66A1FA60E9C8FE132EE1D"
+    note: "Chapter 5 (M- and Z-Estimators) is the definitive modern treatment of M-estimation — Theorem 5.21 gives the sandwich variance we follow in §15.10. Chapter 3 (Delta Method) supports §15.4–15.5."
+  - type: "book"
+    title: "Robust Statistics: The Approach Based on Influence Functions"
+    author: "Frank R. Hampel, Elvezio M. Ronchetti, Peter J. Rousseeuw & Werner A. Stahel"
+    year: 1986
+    publisher: "Wiley"
+    isbn: "978-0-471-82921-8"
+    url: "https://www.wiley.com/en-us/Robust+Statistics%3A+The+Approach+Based+on+Influence+Functions-p-9780471828921"
+    note: "Chapter 2 develops the influence function perspective on M-estimators. Tukey biweight, breakdown point, and redescending ψ-functions — the foundation for §15.11."
+  - type: "book"
+    title: "Robust Regression and Outlier Detection"
+    author: "Peter J. Rousseeuw & Annick M. Leroy"
+    year: 1987
+    publisher: "Wiley"
+    isbn: "978-0-471-85233-9"
+    url: "https://onlinelibrary.wiley.com/doi/book/10.1002/0471725382"
+    note: "The canonical reference for Huber and Tukey M-estimators in regression. Chapter 1 defines the breakdown point used in §15.11."
+  - type: "book"
+    title: "Theory of Point Estimation"
+    author: "Erich L. Lehmann & George Casella"
+    year: 1998
+    edition: "2nd"
+    publisher: "Springer"
+    isbn: "978-0-387-98502-2"
+    url: "https://link.springer.com/book/10.1007/b98854"
+    note: "Section 6.1 treats M-estimators in the unifying Z-estimator framework; used throughout §15.9–15.10."
+  - type: "book"
+    title: "All of Statistics"
+    author: "Larry Wasserman"
+    year: 2004
+    publisher: "Springer"
+    isbn: "978-0-387-40272-7"
+    url: "https://link.springer.com/book/10.1007/978-0-387-21736-9"
+    note: "Chapter 9.3 (Method of Moments) provides the concise ML-oriented treatment; used as a reader-friendly companion to Casella & Berger."
+  - type: "article"
+    title: "Large Sample Properties of Generalized Method of Moments Estimators"
+    author: "Lars Peter Hansen"
+    year: 1982
+    journal: "Econometrica"
+    volume: 50
+    issue: 4
+    pages: "1029–1054"
+    doi: "10.2307/1912775"
+    url: "https://www.jstor.org/stable/1912775"
+    note: "The GMM paper. Cited in §15.12 as the forward link to the generalized method of moments."
+  - type: "article"
+    title: "Robust Estimation of a Location Parameter"
+    author: "Peter J. Huber"
+    year: 1964
+    journal: "Annals of Mathematical Statistics"
+    volume: 35
+    issue: 1
+    pages: "73–101"
+    doi: "10.1214/aoms/1177703732"
+    url: "https://projecteuclid.org/euclid.aoms/1177703732"
+    note: "The paper that founded M-estimation. Huber ψ-function, minimax property, and the original derivation of the sandwich variance. Primary reference for §15.9–§15.11."
+---
+
+import DefinitionBlock from '../../components/ui/DefinitionBlock.astro';
+import TheoremBlock from '../../components/ui/TheoremBlock.astro';
+import ProofBlock from '../../components/ui/ProofBlock.astro';
+import ExampleBlock from '../../components/ui/ExampleBlock.astro';
+import RemarkBlock from '../../components/ui/RemarkBlock.astro';
+import ExternalLink from '../../components/ui/ExternalLink.astro';
+
+import MomGammaSolver from '../../components/viz/MomGammaSolver.tsx';
+import AREExplorer from '../../components/viz/AREExplorer.tsx';
+import CauchyPathologyExplorer from '../../components/viz/CauchyPathologyExplorer.tsx';
+import WarmStartExplorer from '../../components/viz/WarmStartExplorer.tsx';
+import MEstimatorGallery from '../../components/viz/MEstimatorGallery.tsx';
+
+## 15.1 From Matching Moments to Estimating Equations
+
+[Topic 14](/topics/maximum-likelihood) gave us a recipe — write down the likelihood, find its peak — that produces an estimator with the best possible asymptotic variance under regularity. Before that recipe existed, statisticians had a different one. Karl Pearson, working in the 1890s on biometric data and trying to fit mixtures of two Normal distributions to crab measurements, observed that *the parameters of a model are functions of its moments*. So estimate the moments from the data, plug those estimates into the inverse function, and you have an estimator. The procedure is called the **method of moments**, abbreviated MoM, and it is the oldest estimation principle in modern statistics.
+
+<img src="/images/topics/method-of-moments/mom-vs-mle-motivation.png"
+     alt="Two-panel teaser. Left: a Gamma(3, 2) sample of size n=200 with the MoM and MLE fitted densities overlaid on the histogram — both near-identical to the true density at this n. Right: a small bar chart contrasting MoM and MLE on two attributes, 'closed-form' and 'asymptotically efficient' — MoM ticks the first, MLE ticks the second."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+The mechanics are disarmingly simple. If $X_1, \ldots, X_n$ are an iid sample from a distribution with parameter $\theta = (\theta_1, \ldots, \theta_k)$, and the population moments $\mu_j(\theta) = \mathbb{E}[X^j]$ are known functions of $\theta$ for $j = 1, \ldots, k$, then the **sample moments** $\overline{X^j} = (1/n)\sum_i X_i^j$ are estimators of $\mu_j(\theta)$ by the law of large numbers. Setting them equal and solving the resulting system
+
+$$
+\overline{X^j} \;=\; \mu_j(\hat{\theta}_{\text{MoM}}), \qquad j = 1, \ldots, k,
+$$
+
+gives the MoM estimator $\hat{\theta}_{\text{MoM}}$. There are no derivatives, no iterations, no convexity arguments — just the inverse of the moment map.
+
+<RemarkBlock number={1} title="Karl Pearson and the bimodal crab">
+The first systematic use of moment matching appears in Pearson's 1894 paper "Contributions to the Mathematical Theory of Evolution," where he fit a mixture of two Normals to the carapace-width measurements of 1000 crabs from the Bay of Naples. The mixture has five parameters — two means, two variances, and a mixing weight — so Pearson computed five sample moments and solved the resulting nonlinear system, by hand, to recover the underlying components. He used the method because *no other recipe existed*. The likelihood-maximization principle was still nearly thirty years away.
+</RemarkBlock>
+
+<RemarkBlock number={2} title="Why MoM came first">
+The reason MoM predates the MLE is operational. Until R. A. Fisher's 1922 paper "On the Mathematical Foundations of Theoretical Statistics," likelihood was viewed as one of several plausible criteria for fitting a distribution; there was no general argument for preferring it. What Fisher established — that the MLE is consistent, asymptotically Normal, and asymptotically efficient under regularity — required machinery (Fisher information, the Cramér–Rao bound, asymptotic theory) that did not exist in Pearson's era. So a calculation that *could be done* won out over one that *would have required theory not yet developed*. The lesson is durable: even today, when the MLE is intractable, MoM is the first thing to reach for.
+</RemarkBlock>
+
+The catch — and it is a real one — is that MoM is *almost never as good as the MLE* in the asymptotic sense. The next eleven sections develop both the recipe and the diagnostic comparison. We will see that for the natural exponential families (§7), MoM coincides exactly with the MLE; outside that boundary, MoM trades efficiency for simplicity, and the trade is sometimes severe (Gamma shape, where MoM extracts only ~68% of the available information at $\alpha = 3$) and sometimes catastrophic (Cauchy, where MoM has nothing to match because the population mean does not exist). The framework that unifies all of this — both MoM and MLE — is **M-estimation**, the topic of §15.9–§15.11.
+
+## 15.2 The Method-of-Moments Principle
+
+The construction is straightforward but worth stating with care, because the moment map can be invertible globally, locally, or not at all, and the difference matters.
+
+<DefinitionBlock number={1} title="Sample Moment">
+For an iid sample $X_1, \ldots, X_n$, the **$k$-th sample moment** is
+
+$$
+\overline{X^k} \;=\; \frac{1}{n}\sum_{i=1}^n X_i^k.
+$$
+
+The first sample moment $\overline{X^1} = \bar{X}_n$ is the sample mean (Definition 13.2). By the [strong law of large numbers](/topics/law-of-large-numbers), $\overline{X^k} \xrightarrow{a.s.} \mu_k = \mathbb{E}[X^k]$ whenever the population moment $\mu_k$ exists.
+</DefinitionBlock>
+
+<DefinitionBlock number={2} title="Method-of-Moments Estimator">
+Let $X_1, \ldots, X_n$ be iid from a parametric family with $\theta = (\theta_1, \ldots, \theta_k) \in \Theta \subseteq \mathbb{R}^k$, and write $\mu_j(\theta) = \mathbb{E}_\theta[X^j]$ for the $j$-th population moment as a function of $\theta$. Suppose the **moment map**
+
+$$
+g\colon \Theta \longrightarrow \mathbb{R}^k, \qquad g(\theta) \;=\; \bigl(\mu_1(\theta), \mu_2(\theta), \ldots, \mu_k(\theta)\bigr)
+$$
+
+is invertible on its image. The **method-of-moments estimator** $\hat{\theta}_{\text{MoM}}$ is the (unique) solution to the system of $k$ equations
+
+$$
+\overline{X^j} \;=\; \mu_j(\hat{\theta}_{\text{MoM}}), \qquad j = 1, \ldots, k.
+$$
+
+Equivalently, $\hat{\theta}_{\text{MoM}} = g^{-1}\bigl(\overline{X^1}, \ldots, \overline{X^k}\bigr)$.
+</DefinitionBlock>
+
+The moment map is the bridge between parameter space and observable space, and the MoM estimator is what we get when we cross the bridge in the opposite direction from how the model is usually specified. Forward: $\theta \mapsto $ moments. Backward: sample moments $\mapsto \hat{\theta}$.
+
+<img src="/images/topics/method-of-moments/moment-matching-diagram.png"
+     alt="A schematic. On the left, parameter space Θ depicted as a region in ℝ². Curved arrows leave Θ and arrive at moment space ℝ² on the right, illustrating the map g(θ) = (μ₁(θ), μ₂(θ)). A point representing the sample moments (X̄, X̄²) sits in the moment space; a dashed arrow returns from that point to the corresponding θ̂ ∈ Θ via g⁻¹."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<TheoremBlock number={1} title="Existence and uniqueness of MoM">
+If the moment map $g: \Theta \to \mathbb{R}^k$ is continuous and one-to-one on $\Theta$, and $(\overline{X^1}, \ldots, \overline{X^k})$ lies in the image $g(\Theta)$, then the MoM estimator exists and is unique. If $g$ is continuously differentiable with a non-singular Jacobian $\nabla g(\theta_0)$ at the true parameter $\theta_0$, then the inverse $g^{-1}$ is differentiable in a neighborhood of $g(\theta_0)$, and $\hat{\theta}_{\text{MoM}}$ is well-defined for sufficiently large $n$ with probability tending to one.
+</TheoremBlock>
+
+The two regularity conditions — invertibility of $g$ and non-singularity of its Jacobian — are exactly what we need for the asymptotic theory in §15.5 to go through. When they fail (mixtures with non-identifiable components; the Cauchy distribution, where $g$ is not even defined), MoM fails. We catalogue those failure modes in §15.6.
+
+<ExampleBlock number={1} title="Normal(μ, σ²): the simplest two-parameter case">
+For $X \sim \mathcal{N}(\mu, \sigma^2)$, the first two population moments are
+
+$$
+\mu_1(\mu, \sigma^2) \;=\; \mu, \qquad \mu_2(\mu, \sigma^2) \;=\; \mu^2 + \sigma^2.
+$$
+
+Setting $\overline{X^1} = \hat{\mu}$ and $\overline{X^2} = \hat{\mu}^2 + \hat{\sigma}^2$ and solving:
+
+$$
+\hat{\mu}_{\text{MoM}} \;=\; \bar{X}_n,
+$$
+
+and
+
+$$
+\hat{\sigma}^2_{\text{MoM}} \;=\; \overline{X^2} - \bar{X}_n^2 \;=\; \frac{1}{n}\sum_{i=1}^n (X_i - \bar{X}_n)^2 \;=\; S^2_n.
+$$
+
+The MoM variance estimator is the **biased** $1/n$ form (the same form the MLE uses, see Example 14.2), not the Bessel-corrected $1/(n-1)$ form. This is structural: MoM matches the population variance to the *raw* second-moment-minus-squared-first-moment, whose unbiased correction is a $(n-1)/n$ shift. We will see in §15.7 that for the Normal variance, $\text{ARE}(\hat{\sigma}^2_{\text{MoM}}, \hat{\sigma}^2_{\text{MLE}}) = 1$ — they are *the same estimator*, both dominated in MSE by the unbiased $S^2_{n-1}$.
+</ExampleBlock>
+
+<ExampleBlock number={2} title="Exponential(λ): MoM = MLE">
+For $X \sim \text{Exp}(\lambda)$, $\mathbb{E}[X] = 1/\lambda$. So $\bar{X}_n = 1/\hat{\lambda}_{\text{MoM}}$, giving
+
+$$
+\hat{\lambda}_{\text{MoM}} \;=\; \frac{1}{\bar{X}_n}.
+$$
+
+This is identical to the MLE (Example 14.7). The reason — to be made precise in Theorem 5 of §15.7 — is that the Exponential is an **exponential family in its natural parameter**, and for such families the MLE *is* a moment-matching estimator. The two recipes coincide.
+</ExampleBlock>
+
+<ExampleBlock number={3} title="Poisson(λ): MoM = MLE">
+For $X \sim \text{Poisson}(\lambda)$, $\mathbb{E}[X] = \lambda$. So
+
+$$
+\hat{\lambda}_{\text{MoM}} \;=\; \bar{X}_n,
+$$
+
+again identical to the MLE. The Poisson is also a natural exponential family. The pattern will become explicit in §15.7.
+</ExampleBlock>
+
+<RemarkBlock number={3} title="Scope: k equations for k parameters">
+The construction in Definition 2 uses *exactly* $k$ moment equations to identify $k$ parameters. If we attempted to use more — say, the first three sample moments to estimate two parameters — the system is over-determined and generally has no exact solution. Choosing which two equations to enforce, or how to weight all three, is the move that takes us from MoM to the **generalized method of moments** (GMM, Hansen 1982). We preview GMM in §15.12. For the rest of this topic, we hold to the exact-identification setting: $k$ moments for $k$ parameters.
+</RemarkBlock>
+
+## 15.3 Scalar Examples: Uniform, Bernoulli, Geometric
+
+Three scalar-parameter examples deepen the intuition. The Uniform case is the cautionary one: MoM is *much worse* than the MLE.
+
+<img src="/images/topics/method-of-moments/scalar-mom-examples.png"
+     alt="Four-panel grid. Top-left: Uniform(0, θ) with the MoM estimate 2X̄ and the MLE estimate X_(n) marked on a sample histogram, with the true θ shown as a vertical line — MLE visibly closer. Top-right: Exponential — MoM and MLE coincide on the density. Bottom-left: Poisson — same coincidence. Bottom-right: Geometric — MoM closed form, equals MLE."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<ExampleBlock number={4} title="Uniform(0, θ): MoM is dramatically worse than MLE">
+For $X \sim \text{Uniform}(0, \theta)$, $\mathbb{E}[X] = \theta/2$. So $\bar{X}_n = \hat{\theta}_{\text{MoM}}/2$, giving
+
+$$
+\hat{\theta}_{\text{MoM}} \;=\; 2\bar{X}_n.
+$$
+
+This is a perfectly reasonable estimator — consistent, with asymptotic variance $\theta^2/(3n)$ from the delta method. But it has *two pathologies* that the MLE does not. First, with positive probability $\hat{\theta}_{\text{MoM}} < X_{(n)}$, where $X_{(n)} = \max_i X_i$ is the largest observation. That is impossible — the parameter $\theta$ must be at least as large as every observed value, so $\hat{\theta} < X_{(n)}$ is *infeasible*. Second, the MLE for this problem is
+
+$$
+\hat{\theta}_{\text{MLE}} \;=\; X_{(n)},
+$$
+
+with asymptotic variance of order $\theta^2/n^2$ — a full order of magnitude better than MoM's $\theta^2/(3n)$. The ratio $\text{ARE}(\hat{\theta}_{\text{MoM}}, \hat{\theta}_{\text{MLE}}) = 3/(n+2) \to 0$ as $n \to \infty$.
+
+We do not call this a failure of MoM — MoM gives an answer, and the answer converges to $\theta$. We call it the most graphic illustration of *why efficiency matters*: when the MLE achieves a faster convergence rate (here $1/n$ vs. $1/\sqrt{n}$), the asymptotic ratio of variances is not a fixed number but a sequence going to zero.
+</ExampleBlock>
+
+<ExampleBlock number={5} title="Bernoulli(p): MoM = MLE">
+For $X \sim \text{Bernoulli}(p)$, $\mathbb{E}[X] = p$, so
+
+$$
+\hat{p}_{\text{MoM}} \;=\; \bar{X}_n.
+$$
+
+The Bernoulli is yet another natural exponential family, so MoM = MLE. Three for three so far in the exponential-family column.
+</ExampleBlock>
+
+<ExampleBlock number={6} title="Geometric(p): MoM closed form">
+The Geometric distribution comes in two conventions; we adopt the *failures-before-first-success* convention with $X \in \{0, 1, 2, \ldots\}$ and $\mathbb{P}(X = k) = (1-p)^k p$. Then $\mathbb{E}[X] = (1-p)/p$, and setting $\bar{X}_n = (1-\hat{p})/\hat{p}$ gives
+
+$$
+\hat{p}_{\text{MoM}} \;=\; \frac{1}{1 + \bar{X}_n}.
+$$
+
+If instead we use the trials-until-first-success convention with $X \in \{1, 2, \ldots\}$, then $\mathbb{E}[X] = 1/p$ and $\hat{p}_{\text{MoM}} = 1/\bar{X}_n$. Both are exponential families; both coincide with the MLE.
+</ExampleBlock>
+
+<RemarkBlock number={4} title="When MoM lies outside the parameter space">
+Example 4 hinted at it; the issue is general. The MoM estimate is the inverse moment map applied to *sample* moments, which can land anywhere in $\mathbb{R}^k$ — not just in $g(\Theta)$. A few realistic ways this bites:
+
+- **Negative variance.** For a Gamma$(\alpha, \beta)$ sample, $\hat{\alpha}_{\text{MoM}} = \bar{X}^2/S^2$ requires $S^2 > 0$. With probability one this holds for $n \geq 2$ and a non-degenerate sample, but a *near-constant* sample (small $S^2$) makes the estimate explode.
+- **Probability outside [0, 1].** For a Beta$(\alpha, \beta)$, the MoM solves $\hat{\alpha} = \bar{X} \cdot c$ where $c = \bar{X}(1-\bar{X})/S^2 - 1$; if $c \le 0$ the formal MoM gives $\hat{\alpha} \le 0$, outside the parameter space.
+- **Mixing weight outside [0, 1].** Pearson's two-Normal mixture famously yielded mixing weights below 0 and above 1 on certain datasets — Pearson reported this as a feature of the data ("the model is mis-specified") rather than a bug of MoM.
+
+The standard fix is to project onto the constraint set, but at that point we have abandoned pure MoM. Better diagnostic: when MoM gives an absurd answer, suspect the model.
+</RemarkBlock>
+
+<MomGammaSolver client:visible />
+
+## 15.4 Multivariate MoM: The Two-Parameter Gamma
+
+The Gamma distribution $\text{Gamma}(\alpha, \beta)$ with shape $\alpha > 0$ and rate $\beta > 0$ is the canonical example of a continuous family where MoM has a clean closed form *and* the MLE requires Newton-Raphson. Both estimators recover $(\alpha, \beta)$ consistently, but the MoM gets there in two lines of algebra. This contrast — algebraic simplicity for MoM, iterative computation for MLE — is the heart of why MoM remains useful.
+
+<DefinitionBlock number={3} title="Multivariate moment map">
+For a model with $k$ parameters $\theta = (\theta_1, \ldots, \theta_k) \in \Theta \subseteq \mathbb{R}^k$, the **moment map** $g: \Theta \to \mathbb{R}^k$ is the vector of population moments,
+
+$$
+g(\theta) \;=\; \bigl(\mu_1(\theta),\, \mu_2(\theta),\, \ldots,\, \mu_k(\theta)\bigr).
+$$
+
+Its **Jacobian** at $\theta$ is the $k \times k$ matrix
+
+$$
+\nabla g(\theta) \;=\; \left[\, \frac{\partial \mu_j(\theta)}{\partial \theta_i} \,\right]_{1 \le i, j \le k}.
+$$
+
+The MoM estimator is $\hat{\theta}_{\text{MoM}} = g^{-1}(\overline{X^1}, \ldots, \overline{X^k})$, well-defined when $\nabla g(\theta_0)$ is invertible at the true parameter.
+</DefinitionBlock>
+
+For the Gamma, the moments are well-known:
+
+$$
+\mu_1(\alpha, \beta) \;=\; \frac{\alpha}{\beta}, \qquad \mu_2(\alpha, \beta) \;=\; \frac{\alpha(\alpha+1)}{\beta^2}.
+$$
+
+It is more convenient to work with the variance $\sigma^2 = \mu_2 - \mu_1^2 = \alpha/\beta^2$ alongside the mean. Setting $\bar{X}_n = \hat{\alpha}/\hat{\beta}$ and $S^2_n = \hat{\alpha}/\hat{\beta}^2$ (with $S^2_n = \overline{X^2} - \bar{X}_n^2$ the biased sample variance from §15.2) and dividing the first by the second,
+
+$$
+\frac{\bar{X}_n}{S^2_n} \;=\; \hat{\beta},
+$$
+
+and then
+
+$$
+\hat{\alpha} \;=\; \hat{\beta} \cdot \bar{X}_n \;=\; \frac{\bar{X}_n^2}{S^2_n}.
+$$
+
+Closed form, two lines. The MLE for the Gamma shape, in contrast, has no closed form: the score equation $\log\beta - \psi(\alpha) + \overline{\log X} = 0$ involves the digamma function $\psi(\alpha)$, which has no algebraic inverse. Topic 14 §14.7 walked through the Newton-Raphson solution.
+
+<img src="/images/topics/method-of-moments/gamma-mom-derivation.png"
+     alt="Three panels. Left: scatter of (X̄, S²) over 1000 simulated Gamma(3, 2) samples at n=50, with the contour of the joint asymptotic Normal overlaid. Middle: the same samples mapped through the inverse moment map g⁻¹ to (α̂_MoM, β̂_MoM), with the limiting Normal contour from the matrix delta method overlaid. Right: a vector field on (m₁, m₂) space showing the Jacobian ∇g of the moment-to-parameter map at the true parameter."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<TheoremBlock number={2} title="Multivariate MoM consistency and asymptotic normality (Gamma case)">
+Let $X_1, \ldots, X_n$ be iid $\text{Gamma}(\alpha_0, \beta_0)$ with $\alpha_0, \beta_0 > 0$, and let $\hat{\alpha}_{\text{MoM}} = \bar{X}_n^2/S^2_n$, $\hat{\beta}_{\text{MoM}} = \bar{X}_n/S^2_n$. Then
+
+$$
+(\hat{\alpha}_{\text{MoM}}, \hat{\beta}_{\text{MoM}}) \xrightarrow{a.s.} (\alpha_0, \beta_0),
+$$
+
+and
+
+$$
+\sqrt{n}\,\bigl((\hat{\alpha}, \hat{\beta}) - (\alpha_0, \beta_0)\bigr) \xrightarrow{d} \mathcal{N}\bigl(\mathbf{0},\, \nabla g(\alpha_0, \beta_0)^{-1} \cdot \Sigma_{\text{moments}} \cdot \nabla g(\alpha_0, \beta_0)^{-\top}\bigr),
+$$
+
+where $\Sigma_{\text{moments}}$ is the limiting covariance of $\sqrt{n}\,(\bar{X}_n - \mu_1, \overline{X^2} - \mu_2)$ given by the multivariate CLT, and $\nabla g$ is the Jacobian of the moment map.
+</TheoremBlock>
+
+<ProofBlock>
+We apply the **matrix delta method** (Theorem 11.9, multivariate form) to the moment-to-parameter map.
+
+**Step 1 — joint asymptotic Normality of the sample moments.** The pair $(X_i, X_i^2)$ for each $i$ is iid with mean $(\mu_1, \mu_2)$ and covariance matrix $\Sigma$ where
+
+$$
+\Sigma_{11} \;=\; \operatorname{Var}(X) \;=\; \alpha_0/\beta_0^2,
+$$
+
+$$
+\Sigma_{12} \;=\; \operatorname{Cov}(X, X^2) \;=\; \mathbb{E}[X^3] - \mathbb{E}[X]\mathbb{E}[X^2] \;=\; \frac{2\alpha_0(\alpha_0 + 1)}{\beta_0^3},
+$$
+
+$$
+\Sigma_{22} \;=\; \operatorname{Var}(X^2) \;=\; \mathbb{E}[X^4] - (\mathbb{E}[X^2])^2 \;=\; \frac{2\alpha_0(\alpha_0 + 1)(2\alpha_0 + 3)}{\beta_0^4}.
+$$
+
+By the multivariate CLT (Topic 11 §11.8) applied to the iid pairs,
+
+$$
+\sqrt{n}\,\bigl((\bar{X}_n, \overline{X^2}) - (\mu_1, \mu_2)\bigr) \xrightarrow{d} \mathcal{N}(\mathbf{0}, \Sigma).
+$$
+
+**Step 2 — invertibility of the moment map.** The map $g(\alpha, \beta) = (\alpha/\beta, \alpha(\alpha+1)/\beta^2)$ has Jacobian
+
+$$
+\nabla g(\alpha, \beta) \;=\; \begin{pmatrix} 1/\beta & -\alpha/\beta^2 \\ (2\alpha + 1)/\beta^2 & -2\alpha(\alpha+1)/\beta^3 \end{pmatrix}.
+$$
+
+Its determinant evaluates to $\det \nabla g = -\alpha/\beta^4 \neq 0$ for $\alpha, \beta > 0$, so $g$ is locally invertible at every interior point. The inverse $g^{-1}$ is continuously differentiable in a neighborhood of $g(\alpha_0, \beta_0)$.
+
+**Step 3 — apply the delta method.** Writing $h = g^{-1}$ for the inverse map and $\nabla h(g(\alpha_0, \beta_0)) = \nabla g(\alpha_0, \beta_0)^{-1}$ for its Jacobian (by the inverse function theorem),
+
+$$
+\sqrt{n}\,\bigl(h(\bar{X}_n, \overline{X^2}) - h(\mu_1, \mu_2)\bigr) \xrightarrow{d} \mathcal{N}\bigl(\mathbf{0},\, \nabla h \cdot \Sigma \cdot \nabla h^\top\bigr).
+$$
+
+Since $h(\bar{X}_n, \overline{X^2}) = (\hat{\alpha}_{\text{MoM}}, \hat{\beta}_{\text{MoM}})$ and $h(\mu_1, \mu_2) = (\alpha_0, \beta_0)$, this is the asymptotic-normality claim with covariance $\nabla g^{-1} \Sigma \nabla g^{-\top}$.
+
+**Step 4 — consistency from the SLLN.** The sample moments converge a.s. to the population moments by the strong LLN (Topic 10 §10.5). Continuity of $h$ at $(\mu_1, \mu_2)$ together with the continuous-mapping theorem (Topic 11 §11.4) gives
+
+$$
+(\hat{\alpha}_{\text{MoM}}, \hat{\beta}_{\text{MoM}}) \;=\; h(\bar{X}_n, \overline{X^2}) \xrightarrow{a.s.} h(\mu_1, \mu_2) \;=\; (\alpha_0, \beta_0).
+$$
+
+This establishes both consistency and asymptotic normality.   ∎ — using the multivariate CLT (§11.8), the delta method (§11.9), and the continuous-mapping theorem.
+</ProofBlock>
+
+<ExampleBlock number={7} title="Gamma(α, β) MoM: closed form">
+Restating from the derivation above: for $X_1, \ldots, X_n$ iid $\text{Gamma}(\alpha, \beta)$,
+
+$$
+\hat{\alpha}_{\text{MoM}} \;=\; \frac{\bar{X}_n^2}{S^2_n}, \qquad \hat{\beta}_{\text{MoM}} \;=\; \frac{\bar{X}_n}{S^2_n},
+$$
+
+where $S^2_n = (1/n)\sum_i (X_i - \bar{X}_n)^2$ is the *biased* (1/$n$) sample variance — the same form used by the MLE for the Normal variance, and the form that makes the MoM and the maximum-likelihood approach align as cleanly as possible. With $n = 200$ samples from $\text{Gamma}(3, 2)$, the typical estimate sits within ±0.1 of $\alpha = 3$ on a single replicate. The MLE for $\alpha$ is more accurate by a factor of $1/\sqrt{0.68} \approx 1.21$ in standard error (the ARE = 0.68 of §15.7); whether that matters depends on the application.
+</ExampleBlock>
+
+<ExampleBlock number={8} title="Beta(α, β) MoM: dual-moment closed form">
+For $X \sim \text{Beta}(\alpha, \beta)$, the mean and variance are
+
+$$
+\mu_1 \;=\; \frac{\alpha}{\alpha + \beta}, \qquad \sigma^2 \;=\; \frac{\alpha\beta}{(\alpha+\beta)^2(\alpha+\beta+1)}.
+$$
+
+A short manipulation yields
+
+$$
+\hat{\alpha}_{\text{MoM}} \;=\; \bar{X}_n \cdot c, \qquad \hat{\beta}_{\text{MoM}} \;=\; (1 - \bar{X}_n) \cdot c, \qquad c \;=\; \frac{\bar{X}_n(1 - \bar{X}_n)}{S^2_n} - 1,
+$$
+
+with $S^2_n$ the same biased sample variance. The MLE for the Beta has *no* closed form — the score equations involve digamma functions — so the gap in computational cost is genuine. We will see in §15.8 that fitting a Beta in scipy or R uses the MoM estimate as the warm start for the MLE iteration.
+</ExampleBlock>
+
+## 15.5 Consistency and Asymptotic Normality of MoM
+
+Theorem 2 made the multivariate Gamma case rigorous. The *general* multivariate-MoM theorem is the same proof with the model-specific moments and Jacobian replaced by abstract symbols.
+
+<TheoremBlock number={3} title="MoM consistency (general)">
+Let $X_1, \ldots, X_n$ be iid from a model with parameter $\theta_0 \in \Theta \subseteq \mathbb{R}^k$. Suppose:
+
+1. The first $k$ population moments $\mu_1(\theta), \ldots, \mu_k(\theta)$ exist and are continuous in $\theta$.
+2. The moment map $g(\theta) = (\mu_1(\theta), \ldots, \mu_k(\theta))$ is one-to-one on $\Theta$, and $g^{-1}$ is continuous on a neighborhood of $g(\theta_0)$.
+
+Then $\hat{\theta}_{\text{MoM}} \xrightarrow{a.s.} \theta_0$ as $n \to \infty$.
+</TheoremBlock>
+
+The proof is one line: $(\overline{X^1}, \ldots, \overline{X^k}) \xrightarrow{a.s.} (\mu_1(\theta_0), \ldots, \mu_k(\theta_0))$ by the SLLN (componentwise), and $\hat{\theta}_{\text{MoM}} = g^{-1}(\overline{X^1}, \ldots, \overline{X^k})$ converges a.s. to $g^{-1}(g(\theta_0)) = \theta_0$ by continuity of $g^{-1}$ and the continuous-mapping theorem (Topic 11 §11.4).
+
+The asymptotic-normality theorem requires more.
+
+<img src="/images/topics/method-of-moments/mom-asymptotic-normality.png"
+     alt="Three histograms of √n(α̂_MoM − α₀) for the Gamma shape parameter, n = 20, 100, 500. The theoretical N(0, AsympVar) density is overlaid on each. As n grows, the histogram tightens and centers on zero, becoming visibly Normal."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<TheoremBlock number={4} title="MoM asymptotic normality (general)">
+Under the conditions of Theorem 3, additionally suppose:
+
+3. $\mathbb{E}_{\theta_0}[X^{2k}] < \infty$ (finite higher moments — needed for the CLT to apply to sample moments).
+4. The moment map $g$ is continuously differentiable in a neighborhood of $\theta_0$ with non-singular Jacobian $\nabla g(\theta_0)$.
+
+Then
+
+$$
+\sqrt{n}\,(\hat{\theta}_{\text{MoM}} - \theta_0) \xrightarrow{d} \mathcal{N}\bigl(\mathbf{0},\, \nabla g(\theta_0)^{-1} \Sigma(\theta_0) \nabla g(\theta_0)^{-\top}\bigr),
+$$
+
+where $\Sigma(\theta_0)$ is the $k \times k$ covariance matrix of $(X, X^2, \ldots, X^k)$ under $\theta_0$.
+</TheoremBlock>
+
+<ProofBlock>
+The proof generalizes Steps 1–3 of Proof 1 (Theorem 2) with the Gamma-specific computations replaced by abstract symbols.
+
+**Step 1 — joint asymptotic Normality of sample moments.** The vector $(X_i, X_i^2, \ldots, X_i^k)$ is iid across $i$ with mean $(\mu_1(\theta_0), \ldots, \mu_k(\theta_0))$ and covariance matrix $\Sigma(\theta_0)$ whose $(j, \ell)$ entry is $\operatorname{Cov}(X^j, X^\ell) = \mu_{j+\ell} - \mu_j \mu_\ell$. Finite $\mu_{2k}$ ensures $\Sigma$ has finite entries. The multivariate CLT (Topic 11 §11.8) then gives
+
+$$
+\sqrt{n}\,\bigl((\overline{X^1}, \ldots, \overline{X^k}) - (\mu_1(\theta_0), \ldots, \mu_k(\theta_0))\bigr) \xrightarrow{d} \mathcal{N}(\mathbf{0}, \Sigma(\theta_0)).
+$$
+
+**Step 2 — apply the delta method.** Let $h = g^{-1}$. By the inverse function theorem (formalcalculus: differentiation), $h$ is continuously differentiable in a neighborhood of $g(\theta_0)$ with Jacobian $\nabla h(g(\theta_0)) = \nabla g(\theta_0)^{-1}$. The multivariate delta method (Topic 11 §11.9) then transforms the asymptotic distribution of the sample moments through $h$:
+
+$$
+\sqrt{n}\,\bigl(h(\overline{X^1}, \ldots, \overline{X^k}) - h(\mu_1(\theta_0), \ldots, \mu_k(\theta_0))\bigr) \xrightarrow{d} \mathcal{N}\bigl(\mathbf{0},\, \nabla g^{-1} \Sigma \nabla g^{-\top}\bigr).
+$$
+
+Since $h$ applied to the sample moments is $\hat{\theta}_{\text{MoM}}$, and $h$ applied to the population moments is $\theta_0$, this is the claimed limit.    ∎ — using the multivariate CLT (§11.8), the delta method (§11.9), and the continuous-mapping theorem.
+</ProofBlock>
+
+<RemarkBlock number={5} title="Regularity conditions">
+The four assumptions of Theorem 4 are exactly the ingredients the proof needs. (1)–(2) are the *identification* assumptions: the moments exist and the moment map distinguishes parameters. (3) is the *Lyapunov*-style higher-moment assumption that lets the CLT apply componentwise to the iid moments $X_i^j$. (4) is the *smoothness* assumption that lets the delta method propagate the limit through $g^{-1}$. When any of these fails — most notably (1) for Cauchy and (3) for heavy-tailed Pareto — MoM does not just have a worse asymptotic variance; it has *no* asymptotic variance, because the underlying CLT does not apply. We see those failure modes in §15.6.
+</RemarkBlock>
+
+<ExampleBlock number={9} title="Asymptotic variance of Exponential MoM = CRLB">
+The Exponential$(\lambda)$ MoM is $\hat{\lambda}_{\text{MoM}} = 1/\bar{X}_n$. By Theorem 4 with $k = 1$ and the delta method on $h(m) = 1/m$,
+
+$$
+\sqrt{n}\,(\hat{\lambda} - \lambda_0) \xrightarrow{d} \mathcal{N}\bigl(0,\, h'(1/\lambda_0)^2 \cdot \operatorname{Var}(X)\bigr).
+$$
+
+Computing: $h'(m) = -1/m^2$, so $h'(1/\lambda_0) = -\lambda_0^2$; and $\operatorname{Var}(X) = 1/\lambda_0^2$. Hence
+
+$$
+\sqrt{n}\,(\hat{\lambda} - \lambda_0) \xrightarrow{d} \mathcal{N}(0, \lambda_0^4 \cdot 1/\lambda_0^2) \;=\; \mathcal{N}(0, \lambda_0^2).
+$$
+
+The Cramér–Rao lower bound for the Exponential rate (Example 13.10) is $\lambda_0^2/n$ — exactly what we just computed. So the Exponential MoM is *asymptotically efficient*, achieving the CRLB. This is the §15.7 statement that the MoM matches the MLE for natural exponential families, made concrete.
+</ExampleBlock>
+
+<AREExplorer client:visible />
+
+## 15.6 When the Method of Moments Fails
+
+The conditions of Theorem 4 can fail in three structurally different ways. Each illuminates the moment-matching principle from the negative side.
+
+<DefinitionBlock number={4} title="Moment non-existence">
+A distribution has **finite $k$-th moment** if $\mathbb{E}[|X|^k] < \infty$. When $\mathbb{E}[|X|^k] = \infty$, the $k$-th moment does not exist (in either the abstract or the practical sense), the SLLN does not apply to $\overline{X^k}$, and the MoM equation $\overline{X^k} = \mu_k(\hat{\theta})$ has no meaningful right-hand side. The MoM estimator is then *undefined*, not merely badly behaved.
+</DefinitionBlock>
+
+<img src="/images/topics/method-of-moments/mom-pathologies.png"
+     alt="Three panels. Left: running sample mean of a Cauchy sample on log-x axis, showing wild excursions to ±50 even at n = 10,000. Middle: running sample median of the same Cauchy sample, converging smoothly to 0. Right: histogram of the sample mean across 500 replications of Pareto(α=0.8) at n=1000, displaying severe right skew with the bulk near 5 and a long tail extending past 50."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<ExampleBlock number={10} title="Cauchy: no mean, MoM undefined; MLE consistent">
+The Cauchy distribution with location $\theta$ and scale 1 has density $f(x; \theta) = 1/[\pi(1 + (x - \theta)^2)]$. Its tails are $O(1/x^2)$, so
+
+$$
+\int_{-\infty}^\infty |x| \cdot \frac{1}{\pi(1 + x^2)}\, dx \;=\; \infty,
+$$
+
+i.e., $\mathbb{E}[|X|] = \infty$ and the population mean does not exist. The MoM equation $\hat{\theta} = \bar{X}_n$ has a left-hand side that does not converge as $n \to \infty$: the sample mean of Cauchy data exhibits **wild excursions** at every scale — large jumps appear with positive probability at every $n$, so the sequence $\bar{X}_n$ has no limit (almost surely it does not converge).
+
+The MLE, by contrast, *is* consistent. The log-likelihood
+
+$$
+\ell(\theta) \;=\; -\sum_i \log\bigl(1 + (X_i - \theta)^2\bigr) - n\log\pi
+$$
+
+is twice continuously differentiable, has a unique maximum (the MLE solves a polynomial equation in $\theta$ of degree $2n - 1$ when expanded), and the Fisher information $I(\theta) = 1/2$ is finite. The MLE is asymptotically Normal with variance $2/n$. Cauchy is the cleanest example of *MoM failing while MLE succeeds*: the population mean does not exist, but the population is fully identified by the location of its peak — and the likelihood sees the peak.
+</ExampleBlock>
+
+<ExampleBlock number={11} title="Pareto with α ≤ 1: infinite mean">
+The Pareto distribution with shape $\alpha$ and scale $x_m$ has density $f(x; \alpha, x_m) = \alpha x_m^\alpha / x^{\alpha+1}$ for $x \geq x_m$. Its first moment is
+
+$$
+\mathbb{E}[X] \;=\; \int_{x_m}^\infty x \cdot \frac{\alpha x_m^\alpha}{x^{\alpha+1}}\, dx \;=\; \alpha x_m^\alpha \int_{x_m}^\infty x^{-\alpha}\, dx,
+$$
+
+which converges only when $\alpha > 1$, in which case $\mathbb{E}[X] = \alpha x_m / (\alpha - 1)$. For $\alpha \leq 1$, $\mathbb{E}[X] = \infty$, and the MoM moment-matching equation $\bar{X}_n = \alpha x_m / (\alpha - 1)$ has no consistent population side. Empirically, $\bar{X}_n$ for Pareto$(0.8)$ data does not converge but instead grows roughly like $n^{1/\alpha - 1}$ — heavy-tailed extremes pull it up at every sample size.
+
+The MLE for the Pareto $\alpha$ is closed-form: $\hat{\alpha}_{\text{MLE}} = n / \sum_i \log(X_i / x_m)$, and is consistent with finite asymptotic variance, regardless of whether $\alpha > 1$. So once again — even more cleanly than Cauchy — the MoM fails because $\mathbb{E}[X]$ does not exist, while the MLE works because the log-transformed data has finite moments.
+</ExampleBlock>
+
+<ExampleBlock number={12} title="Non-identifiable mixture: equal means">
+Consider the mixture model $X \sim \tfrac{1}{2}\mathcal{N}(0, 1) + \tfrac{1}{2}\mathcal{N}(0, \sigma^2)$ — equal mixing weights, common mean zero, two variance components. The first three population moments are
+
+$$
+\mu_1 \;=\; 0, \qquad \mu_2 \;=\; \tfrac{1}{2}(1 + \sigma^2), \qquad \mu_3 \;=\; 0.
+$$
+
+Only the *second* moment depends on $\sigma^2$. The first moment is identically zero (by symmetry), and the third moment is identically zero (by symmetry of each Normal component). So the moment map $g(\sigma^2) = (\mu_1, \mu_2, \mu_3) = (0, (1 + \sigma^2)/2, 0)$ is invertible *only* if we use the second moment — and it has dimension 1 in moment space, embedded in 3-dimensional moment space. With three moments and one parameter, MoM is over-determined; with one moment and one parameter, MoM works trivially.
+
+The deeper issue surfaces when we try to estimate *more* parameters in the mixture — say, both variances and the mixing weight. With two distinct components having equal means, the moment system collapses: the same set of population moments is consistent with a continuum of parameter combinations. The moment map is not invertible. MoM fails because the model is *not identifiable from moments alone*. The MLE faces the same issue — but the MLE has access to the full likelihood, which uses the *shape* of each observation's contribution and can identify the components even when their moments coincide.
+</ExampleBlock>
+
+<RemarkBlock number={6} title="Absurd estimates in practice">
+The pattern in Examples 10–12 is general. When MoM fails, it fails *visibly*: an undefined limit, an estimate outside the parameter space, or a system that simply has no unique solution. This is, perversely, a strength — MoM tells you when it has failed, often more loudly than the MLE does. If $\hat{\sigma}^2_{\text{MoM}} < 0$ or $\hat{p}_{\text{MoM}} > 1$ on real data, the appropriate response is not to project the estimate onto the constraint set but to ask whether the model is right.
+</RemarkBlock>
+
+<CauchyPathologyExplorer client:visible />
+
+## 15.7 Asymptotic Relative Efficiency: MoM vs MLE
+
+The reason MoM coincides with the MLE for the Exponential (Example 2) and Poisson (Example 3) is *structural* — those families admit a representation in which the MLE *is* a moment-matching estimator. The reason MoM diverges from the MLE for the Gamma shape is *also* structural — the Gamma is an exponential family, but only the *rate* is in the natural parameter; the shape requires a different sufficient statistic. We make this rigorous now.
+
+<DefinitionBlock number={5} title="ARE — recalled from Topic 13">
+For two consistent, asymptotically Normal estimators $\hat{\theta}_1$ and $\hat{\theta}_2$ of the same parameter $\theta$, with asymptotic variances $\sigma^2_1(\theta)/n$ and $\sigma^2_2(\theta)/n$, the **asymptotic relative efficiency** of $\hat{\theta}_1$ relative to $\hat{\theta}_2$ is
+
+$$
+\operatorname{ARE}(\hat{\theta}_1, \hat{\theta}_2) \;=\; \frac{\sigma^2_2(\theta)}{\sigma^2_1(\theta)}.
+$$
+
+When this ratio is less than 1, $\hat{\theta}_1$ is asymptotically less efficient than $\hat{\theta}_2$. ARE = 1 means the two estimators are asymptotically equivalent. (Definition 13.13 of [Topic 13](/topics/point-estimation).)
+</DefinitionBlock>
+
+<TheoremBlock number={5} title="Exponential-family coincidence: MoM ≡ MLE in the natural parameter">
+Let $\{f(x; \eta) : \eta \in \mathcal{E}\}$ be a $k$-parameter exponential family in *natural* parameter form,
+
+$$
+f(x; \eta) \;=\; h(x) \exp\bigl(\eta^\top T(x) - A(\eta)\bigr),
+$$
+
+with sufficient statistic $T(x) = (T_1(x), \ldots, T_k(x))$ and log-partition function $A(\eta)$. The MLE $\hat{\eta}_{\text{MLE}}$ satisfies
+
+$$
+\nabla A(\hat{\eta}_{\text{MLE}}) \;=\; \overline{T(X)} \;=\; \frac{1}{n}\sum_{i=1}^n T(X_i).
+$$
+
+This is exactly the moment-matching equation: $\nabla A(\eta) = \mathbb{E}_\eta[T(X)]$ is the population mean of the sufficient statistic, so the MLE *equates the model's expected sufficient statistic to the sample average* — which is the MoM equation when the sufficient statistics are the moments. In particular, for distributions whose sufficient statistic is $T(x) = x$ (Exponential, Bernoulli, Poisson), the MLE *is* the moment-matching estimator $\hat{\theta}_{\text{MoM}} = \bar{X}_n$, so $\operatorname{ARE}(\text{MoM}, \text{MLE}) = 1$.
+</TheoremBlock>
+
+The proof is the one-line argument from Topic 7 §7.8: differentiating $\ell(\eta) = \eta^\top \overline{T} - A(\eta) + \text{const}$ with respect to $\eta$ and setting the result to zero gives $\overline{T} = \nabla A(\eta)$. By the well-known identity $\mathbb{E}_\eta[T(X)] = \nabla A(\eta)$ (a moment-generating-function calculation, also Topic 7 §7.8), this is moment matching.
+
+<img src="/images/topics/method-of-moments/are-mom-vs-mle.png"
+     alt="Two panels. Left: ARE(MoM, MLE) for the Gamma shape parameter α as a function of α — a curve that starts near 0.4 at α = 1, rises to about 0.68 at α = 3, and approaches 1 as α grows large. Right: empirical verification at n = 200 — sample variance ratio Var(α̂_MoM)/Var(α̂_MLE) over 1000 Monte Carlo replications, as scattered points lying close to the theoretical curve."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<TheoremBlock number={6} title="ARE(MoM, MLE) for the Gamma shape parameter">
+For $X_1, \ldots, X_n$ iid $\text{Gamma}(\alpha, \beta)$, with the MoM estimator $\hat{\alpha}_{\text{MoM}} = \bar{X}_n^2/S^2_n$ and the MLE $\hat{\alpha}_{\text{MLE}}$ from the score equation, the asymptotic variances are
+
+$$
+\operatorname{AsympVar}(\sqrt{n}\,\hat{\alpha}_{\text{MoM}}) \;=\; 2\alpha(\alpha + 1),
+$$
+
+and (from the inverse Fisher-information matrix at $(\alpha, \beta)$)
+
+$$
+\operatorname{AsympVar}(\sqrt{n}\,\hat{\alpha}_{\text{MLE}}) \;=\; \frac{\alpha}{\alpha\,\psi'(\alpha) - 1},
+$$
+
+where $\psi'(\alpha)$ is the trigamma function. Therefore
+
+$$
+\operatorname{ARE}(\hat{\alpha}_{\text{MoM}}, \hat{\alpha}_{\text{MLE}}) \;=\; \frac{1}{2(\alpha + 1)\bigl(\alpha\,\psi'(\alpha) - 1\bigr)}.
+$$
+</TheoremBlock>
+
+The MoM asymptotic variance comes from Theorem 4 with the Gamma-specific $\nabla g$ and $\Sigma$ from the proof of Theorem 2. The MLE asymptotic variance comes from inverting the $2 \times 2$ Fisher information matrix at $(\alpha, \beta)$ and reading off the $(1, 1)$ entry. The ratio is what we plot.
+
+<ExampleBlock number={13} title="Gamma shape ARE ≈ 0.68 at α = 3">
+At $\alpha = 3$: the trigamma function evaluates to $\psi'(3) = \pi^2/6 - 1 - 1/4 \approx 0.394934$, so $\alpha \psi'(\alpha) - 1 \approx 0.184802$. Then
+
+$$
+\operatorname{ARE} \;=\; \frac{1}{2 \cdot 4 \cdot 0.184802} \;\approx\; 0.676.
+$$
+
+The Monte Carlo verification at $n = 200$ over 1000 replications gives an empirical $\operatorname{Var}(\hat{\alpha}_{\text{MoM}}) / \operatorname{Var}(\hat{\alpha}_{\text{MLE}}) \approx 0.69$ — consistent with the theoretical 0.676 to within Monte-Carlo noise. So the MLE extracts about 1/0.68 ≈ 1.47 times as much information from each observation as MoM does — equivalently, MoM needs 47% more data to match MLE precision.
+</ExampleBlock>
+
+<ExampleBlock number={14} title="Exponential rate: ARE = 1 exactly">
+The Exponential family has $T(x) = x$, so by Theorem 5, the MLE $\hat{\lambda}_{\text{MLE}} = 1/\bar{X}_n$ coincides with the MoM. Asymptotic variance for both is $\lambda^2$ (per Example 9), and $\operatorname{ARE}(\hat{\lambda}_{\text{MoM}}, \hat{\lambda}_{\text{MLE}}) = 1$ exactly. This is not approximate equality — the two estimators are the *same function of the data*. They cannot have different asymptotic variances.
+</ExampleBlock>
+
+<RemarkBlock number={7} title="Why MoM is still taught and used">
+Three reasons, in increasing order of importance.
+
+**(1) Closed form.** When the moment map inverts in elementary functions — Gamma, Beta, Weibull (numerically), Pareto with $\alpha > 1$ — MoM gives an estimate in two lines of arithmetic. No iteration, no convergence diagnostics, no risk of missing a local maximum.
+
+**(2) Warm-start for MLE.** The next section makes this precise. When MLE requires Newton-Raphson, the MoM estimate is almost always a good starting point: it is consistent (so it converges to $\theta_0$ at the same rate as the MLE), it is computable, and it lies inside the parameter space whenever the data are not pathological. Newton from MoM converges in 3–5 iterations at typical $n$; Newton from an arbitrary start can take 8–12 or fail to converge at all.
+
+**(3) Diagnostic.** When MoM and MLE disagree wildly, *the model is suspect*. The two recipes use different summaries of the data — sample moments for MoM, the full likelihood for MLE — and a large discrepancy means the model is not capturing the moment structure consistently with the likelihood structure. This is a free goodness-of-fit signal, available without additional computation.
+</RemarkBlock>
+
+## 15.8 MoM as a Warm-Start for MLE
+
+Topic 14 §14.7 introduced Newton-Raphson for the Gamma shape MLE. It mentioned, briefly, that "a standard initial guess is the [method-of-moments](/topics/method-of-moments) estimate" — that's the warm-start pattern. Here we make it first-class.
+
+<RemarkBlock number={8} title="Conceptual: cheap first pass, expensive refinement">
+The MLE is asymptotically efficient. The MoM is consistent. The two estimates converge to the same true $\theta_0$ at the same $\sqrt{n}$ rate, and the *difference* between them is $O_p(1/\sqrt{n})$. So the MoM estimate places us, with high probability, within an $O(1/\sqrt{n})$ neighborhood of the MLE — close enough that one or two Newton steps land at the MLE to machine precision. This is the algorithmic reason MoM matters even when we have decided to fit by maximum likelihood.
+
+The conceptual analogue in optimization is **multi-resolution**: solve a cheap approximate problem to get a good initial point, then refine with the expensive exact procedure. MoM-warm-started MLE is exactly this pattern at the level of statistical estimation.
+</RemarkBlock>
+
+<img src="/images/topics/method-of-moments/mom-warmstart.png"
+     alt="Two panels. Left: the Gamma shape log-likelihood ℓ(α) on a horizontal axis with three Newton-Raphson trajectories marked. The MoM init starts inside the visible neighborhood of the maximum and arrives in 4 steps. The α₀ = 0.5 init starts in the left tail and takes 9 steps. The α₀ = 2 × MoM init starts in the right tail and takes 10 steps. Right: convergence plot |α_t − α̂_MLE| vs iteration t on a log-y scale, with the three trajectories overlaid showing the MoM path is always lowest."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<ExampleBlock number={15} title="Gamma shape MLE: MoM init takes 4 Newton steps">
+For a $\text{Gamma}(\alpha = 3, \beta = 2)$ sample of size $n = 100$, the MoM estimate of the shape is typically $\hat{\alpha}_{\text{MoM}} \approx 3.0 \pm 0.3$ on a single replicate. Starting Newton-Raphson on the score equation $\log\beta - \psi(\alpha) + \overline{\log X} = 0$ from this initial value, convergence to machine precision (step size $< 10^{-8}$) requires **4 iterations** in the typical case. Starting from $\alpha_0 = 0.5$ takes **9 iterations** — Newton has to traverse the steep left tail of the score function. Starting from $\alpha_0 = 2 \times \hat{\alpha}_{\text{MoM}} \approx 6$ takes **10 iterations**, with the first step often overshooting. The pattern holds across sample sizes from $n = 50$ to $n = 1000$: MoM-warm-started Newton converges in 3–5 steps; arbitrary-start Newton needs 8–12.
+</ExampleBlock>
+
+<RemarkBlock number={9} title="Pattern in modern software">
+This is not a textbook idea waiting to be implemented. It is the dominant pattern in the actual codebases that fit distributions to data.
+
+- **scipy.stats.fit:** when a parametric family is specified, scipy first computes a MoM estimate (it calls this "method of moments" internally), then refines via L-BFGS or a Nelder–Mead simplex on the negative log-likelihood. MoM is the explicit default initial point.
+- **R's MASS::fitdistr:** the same pattern. MoM init, then `optim()` for the MLE.
+- **Statsmodels (Python):** iteratively reweighted least squares for GLMs, with the OLS estimate (a MoM-like start) as the initial guess.
+
+The dominant alternative — searching for a starting point by random restart or by grid search — is much slower and rarely necessary when MoM is available. The exceptions are models where MoM is undefined (mixtures with non-identifiable components, latent-variable models) or pathological (Cauchy). For everything else, MoM is the warm-start.
+</RemarkBlock>
+
+<WarmStartExplorer client:visible />
+
+## 15.9 M-Estimation: The Unifying Framework
+
+Both MoM and MLE produce an estimator by setting an *empirical sum* to zero. For MLE, the sum is the score: $\sum_i s(\theta; X_i) = 0$, where $s(\theta; x) = \partial_\theta \log f(x; \theta)$. For MoM, the sum is a moment residual: $\sum_i \bigl(X_i^k - \mu_k(\theta)\bigr) = 0$. The shared structure is
+
+$$
+\Psi_n(\theta) \;=\; \sum_{i=1}^n \psi(X_i; \theta) \;=\; 0
+$$
+
+for some choice of *estimating function* $\psi$. The framework that takes this structure as primary is called **M-estimation**, and it gives a single asymptotic theory for all such estimators — including MoM, MLE, OLS, the Huber location estimator, the median, and quantile regression.
+
+<DefinitionBlock number={6} title="M-estimator">
+Let $X_1, \ldots, X_n$ be iid from a distribution $P$ with parameter $\theta \in \Theta$. Given an **estimating function** $\psi: \mathcal{X} \times \Theta \to \mathbb{R}^k$ satisfying the **moment condition** $\mathbb{E}_{\theta_0}[\psi(X; \theta_0)] = 0$ at the true parameter, the **M-estimator** $\hat{\theta}_n$ is any solution of the **estimating equation**
+
+$$
+\Psi_n(\hat{\theta}_n) \;=\; \sum_{i=1}^n \psi(X_i; \hat{\theta}_n) \;=\; 0.
+$$
+
+Existence and uniqueness require regularity on $\psi$ (e.g., monotonicity in $\theta$, or strict convexity of an associated loss); see van der Vaart Chapter 5 for the formal conditions.
+</DefinitionBlock>
+
+<DefinitionBlock number={7} title="Z-estimator and the loss-function form">
+When $\psi(x; \theta) = \nabla_\theta \rho(x; \theta)$ for some scalar **loss function** $\rho: \mathcal{X} \times \Theta \to \mathbb{R}$, the M-estimator is equivalently the minimizer of the empirical risk:
+
+$$
+\hat{\theta}_n \;=\; \arg\min_{\theta \in \Theta} \sum_{i=1}^n \rho(X_i; \theta).
+$$
+
+In this gradient form, the estimating equation $\nabla_\theta \sum_i \rho = 0$ is the first-order condition for the minimization. The label *Z-estimator* (for "zero" of the estimating equation) is sometimes reserved for the general form even when no underlying loss exists; *M-estimator* (for "minimum" of an empirical risk) emphasizes the loss-function origin.
+</DefinitionBlock>
+
+<img src="/images/topics/method-of-moments/m-estimator-framework.png"
+     alt="A unified diagram organized as a table. Rows enumerate canonical ψ-functions: (1) ψ(x; θ) = ∂ log f / ∂θ → MLE, (2) ψ_k(x; θ) = x^k − μ_k(θ) → MoM, (3) ψ_H(x; θ) = min(max(x − θ, −k), k) → Huber, (4) ψ(x, y; β) = x(y − xᵀβ) → OLS. The right column displays the shape of each ψ as a small graph."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<TheoremBlock number={7} title="MLE is an M-estimator with ψ = score">
+For an iid sample from a parametric family $\{f(x; \theta) : \theta \in \Theta\}$, the maximum-likelihood estimator $\hat{\theta}_{\text{MLE}}$ is the M-estimator with estimating function
+
+$$
+\psi(x; \theta) \;=\; s(\theta; x) \;=\; \frac{\partial}{\partial \theta} \log f(x; \theta).
+$$
+
+The moment condition $\mathbb{E}_{\theta_0}[\psi(X; \theta_0)] = 0$ holds because the population score has mean zero (Theorem 13.8). The associated loss is the negative log-density: $\rho(x; \theta) = -\log f(x; \theta)$, with $\hat{\theta}_{\text{MLE}}$ the minimizer of the negative log-likelihood.
+</TheoremBlock>
+
+<TheoremBlock number={8} title="MoM is an M-estimator with ψ = moment residual">
+For a $k$-parameter model with first $k$ population moments $\mu_j(\theta)$, the method-of-moments estimator $\hat{\theta}_{\text{MoM}}$ is the M-estimator with vector-valued estimating function
+
+$$
+\psi(x; \theta) \;=\; \bigl(x - \mu_1(\theta),\, x^2 - \mu_2(\theta),\, \ldots,\, x^k - \mu_k(\theta)\bigr).
+$$
+
+The moment condition $\mathbb{E}_{\theta_0}[\psi(X; \theta_0)] = (\mu_1 - \mu_1, \ldots, \mu_k - \mu_k) = \mathbf{0}$ holds at the true parameter by definition. There is no associated loss function in general — MoM is a Z-estimator, not an M-estimator in the strict loss-minimization sense.
+</TheoremBlock>
+
+<RemarkBlock number={10} title="OLS is an M-estimator">
+For a regression model $Y_i = X_i^\top \beta + \varepsilon_i$ with $\mathbb{E}[\varepsilon | X] = 0$, the ordinary least-squares estimator $\hat{\beta}_{\text{OLS}}$ is the M-estimator with
+
+$$
+\psi(x, y; \beta) \;=\; x \cdot (y - x^\top \beta).
+$$
+
+The moment condition $\mathbb{E}[X(Y - X^\top \beta_0)] = \mathbb{E}[X \varepsilon] = 0$ holds by the regression assumption. The loss is $\rho(x, y; \beta) = \tfrac{1}{2}(y - x^\top \beta)^2$. We develop OLS in detail in Linear Regression (coming soon); here it suffices to note that OLS, MLE for a Normal-error linear model, falls into the M-estimation framework.
+</RemarkBlock>
+
+The list extends. Quantile regression: $\psi(x, y; \theta) = \bigl(\tau - \mathbb{1}\{y \le x^\top\theta\}\bigr) \cdot x$. Generalized linear models: $\psi$ is the score of the GLM likelihood. Robust regression: $\psi$ is a Huber or Tukey choice. The unifying observation is that *the estimator is determined by the choice of $\psi$*, and the asymptotic theory is the same in every case — the sandwich variance of §15.10.
+
+## 15.10 Asymptotic Theory of M-Estimators: The Sandwich Variance
+
+The single theorem in this section is, structurally, the most consequential in the topic. It generalizes the asymptotic-normality result for the MLE (Theorem 14.4) to *every* M-estimator, and it produces an asymptotic variance — the **sandwich form** $A^{-1} B A^{-1\top}$ — that reduces to the Fisher-information inverse $I(\theta)^{-1}$ in the MLE case but differs from it whenever the model is misspecified.
+
+<DefinitionBlock number={8} title="Sensitivity matrix A and variability matrix B">
+For an M-estimator with smooth estimating function $\psi(x; \theta)$, define
+
+$$
+A(\theta) \;=\; -\mathbb{E}_\theta\bigl[\nabla_\theta \psi(X; \theta)\bigr],
+$$
+
+the **sensitivity matrix** — how strongly the population estimating function responds to changes in $\theta$. And define
+
+$$
+B(\theta) \;=\; \mathbb{E}_\theta\bigl[\psi(X; \theta) \psi(X; \theta)^\top\bigr],
+$$
+
+the **variability matrix** — the covariance of $\psi$ at $\theta_0$ (using the moment condition $\mathbb{E}[\psi] = 0$ to drop the mean). When $\theta$ is scalar, both $A$ and $B$ are scalars; for vector $\theta$, they are $k \times k$ matrices.
+
+Sign conventions vary across references. We adopt the convention that $A$ is *positive definite* in the regular case (so the negative sign appears explicitly). The alternative convention $A = \mathbb{E}[\nabla \psi]$ flips the sign and treats $A$ as negative definite.
+</DefinitionBlock>
+
+<TheoremBlock number={9} title="M-estimator consistency">
+Under suitable identifiability and regularity conditions on $\psi$ (e.g., $\theta \mapsto \mathbb{E}_{\theta_0}[\psi(X; \theta)]$ is uniquely zero at $\theta = \theta_0$ and continuous in a neighborhood, plus uniform convergence of $\Psi_n/n$ to its expectation), the M-estimator satisfies
+
+$$
+\hat{\theta}_n \xrightarrow{P} \theta_0 \qquad \text{as } n \to \infty.
+$$
+
+The argument parallels the MLE consistency proof (Theorem 14.3): uniform LLN on $\Psi_n/n$, plus the unique-zero hypothesis, plus a continuity argument.
+</TheoremBlock>
+
+<img src="/images/topics/method-of-moments/sandwich-variance.png"
+     alt="Two panels. Left: a decomposition diagram of the matrix product A⁻¹ B A⁻¹ᵀ shown as three boxed factors with annotations: 'A measures sensitivity of ψ to θ', 'B measures variability of ψ at θ₀', 'Sandwich = robust variance.' Right: the MLE special case shown as A = B = I(θ), with the sandwich collapsing to I⁻¹ — the ordinary Fisher-info variance recovered."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<TheoremBlock number={10} title="M-estimator asymptotic normality — the sandwich variance">
+Under the conditions of Theorem 9 plus continuous differentiability of $\psi$ in $\theta$ near $\theta_0$, finite second moments of $\psi$, and invertibility of $A(\theta_0)$,
+
+$$
+\sqrt{n}\,(\hat{\theta}_n - \theta_0) \xrightarrow{d} \mathcal{N}\bigl(\mathbf{0},\, V(\theta_0)\bigr),
+$$
+
+where the asymptotic variance is the **sandwich form**
+
+$$
+V(\theta_0) \;=\; A(\theta_0)^{-1}\, B(\theta_0)\, A(\theta_0)^{-\top}.
+$$
+
+For scalar $\theta$ this reduces to $V = B/A^2$.
+
+When $\psi$ is the score function of a correctly specified parametric model, $A = B = I(\theta_0)$ (information equality, Theorem 13.8), the sandwich collapses to $V = I(\theta_0)^{-1}$, recovering the MLE asymptotic variance of Theorem 14.4 as a corollary.
+</TheoremBlock>
+
+<ProofBlock>
+This is the core asymptotic theorem of M-estimation. The argument is a Taylor expansion of the estimating equation around $\theta_0$, followed by a one-step rearrangement and an application of the LLN, the CLT, and Slutsky's theorem.
+
+**Step 1 — Taylor expand the estimating equation.** By assumption $\hat{\theta}_n \xrightarrow{P} \theta_0$ (Theorem 9), so for large $n$, $\hat{\theta}_n$ lies in a neighborhood of $\theta_0$ where $\psi$ is differentiable. Taylor-expanding $\Psi_n$ around $\theta_0$:
+
+$$
+\mathbf{0} \;=\; \Psi_n(\hat{\theta}_n) \;=\; \Psi_n(\theta_0) + \nabla\Psi_n(\tilde{\theta}_n) \cdot (\hat{\theta}_n - \theta_0),
+$$
+
+for some $\tilde{\theta}_n$ on the line segment between $\hat{\theta}_n$ and $\theta_0$ (a multivariate mean-value form).
+
+**Step 2 — solve for the deviation.** Assuming $\nabla\Psi_n(\tilde{\theta}_n)$ is invertible for large $n$ (which it is, with probability tending to one, by the invertibility assumption on $A$ and the consistency $\tilde\theta_n \xrightarrow{P} \theta_0$),
+
+$$
+\hat{\theta}_n - \theta_0 \;=\; -\bigl[\nabla\Psi_n(\tilde{\theta}_n)\bigr]^{-1} \cdot \Psi_n(\theta_0).
+$$
+
+Multiplying both sides by $\sqrt{n}$:
+
+$$
+\sqrt{n}\,(\hat{\theta}_n - \theta_0) \;=\; -\bigl[\tfrac{1}{n}\nabla\Psi_n(\tilde{\theta}_n)\bigr]^{-1} \cdot \tfrac{1}{\sqrt{n}}\Psi_n(\theta_0).
+$$
+
+We will compute the limit of each factor separately.
+
+**Step 3 — the denominator.** By the LLN applied to the iid $\nabla\psi(X_i; \theta_0)$, plus uniform convergence in a neighborhood and the consistency $\tilde\theta_n \xrightarrow{P} \theta_0$,
+
+$$
+\tfrac{1}{n} \nabla\Psi_n(\tilde{\theta}_n) \;=\; \tfrac{1}{n} \sum_{i=1}^n \nabla_\theta \psi(X_i; \tilde{\theta}_n) \xrightarrow{P} \mathbb{E}_{\theta_0}[\nabla_\theta \psi(X; \theta_0)] \;=\; -A(\theta_0).
+$$
+
+**Step 4 — the numerator.** The iid random vectors $\psi(X_i; \theta_0)$ have mean zero (the moment condition) and finite covariance $B(\theta_0)$ (by the second-moment assumption). By the multivariate CLT (Topic 11 §11.8),
+
+$$
+\tfrac{1}{\sqrt{n}}\Psi_n(\theta_0) \;=\; \tfrac{1}{\sqrt{n}} \sum_{i=1}^n \psi(X_i; \theta_0) \xrightarrow{d} \mathcal{N}(\mathbf{0}, B(\theta_0)).
+$$
+
+**Step 5 — combine via Slutsky.** Slutsky's theorem (Topic 11 §11.4) lets us multiply the convergent-in-probability denominator by the convergent-in-distribution numerator:
+
+$$
+\sqrt{n}(\hat{\theta}_n - \theta_0) \xrightarrow{d} -\bigl(-A(\theta_0)\bigr)^{-1} \cdot \mathcal{N}(\mathbf{0}, B(\theta_0)) \;=\; A(\theta_0)^{-1} \cdot \mathcal{N}(\mathbf{0}, B(\theta_0)).
+$$
+
+A linear transformation of a Normal vector is Normal with covariance $A^{-1} B A^{-1\top}$:
+
+$$
+\sqrt{n}(\hat{\theta}_n - \theta_0) \xrightarrow{d} \mathcal{N}\bigl(\mathbf{0},\, A(\theta_0)^{-1} B(\theta_0) A(\theta_0)^{-\top}\bigr).
+$$
+
+**Step 6 — MLE collapse.** When $\psi(x; \theta) = s(\theta; x)$ is the score of a correctly specified model, the **information equality** (Theorem 13.8) states
+
+$$
+-\mathbb{E}_{\theta_0}[\nabla_\theta s(\theta_0; X)] \;=\; \mathbb{E}_{\theta_0}[s(\theta_0; X) s(\theta_0; X)^\top] \;=\; I(\theta_0),
+$$
+
+so $A(\theta_0) = B(\theta_0) = I(\theta_0)$, and the sandwich variance collapses:
+
+$$
+V(\theta_0) \;=\; I(\theta_0)^{-1} I(\theta_0) I(\theta_0)^{-1} \;=\; I(\theta_0)^{-1}.
+$$
+
+This is exactly the MLE asymptotic variance from Theorem 14.4. The MLE asymptotic-normality theorem is the *special case* $A = B$ of the M-estimator asymptotic-normality theorem.    ∎ — using the multivariate CLT (§11.8), the LLN (Topic 10), Slutsky (§11.4), and the information equality (Theorem 13.8).
+</ProofBlock>
+
+<ExampleBlock number={16} title="MLE recovery: A = B = I, sandwich = I⁻¹">
+For any correctly specified parametric family with score $s(\theta; x)$, the M-estimator with $\psi = s$ has $A(\theta_0) = B(\theta_0) = I(\theta_0)$ by the information equality. The sandwich variance is $V = I^{-1} I I^{-1} = I^{-1}$. Theorem 14.4 is recovered as a corollary of Theorem 10. The Fisher-information inverse is the *correct-model* asymptotic variance; the sandwich is the *general* one.
+</ExampleBlock>
+
+<ExampleBlock number={17} title="Exponential MoM as M-estimator: A, B, and the sandwich agree with Theorem 4">
+For Exponential$(\lambda)$ data, MoM uses $\psi(x; \lambda) = x - 1/\lambda$. Compute:
+
+$$
+A(\lambda) \;=\; -\mathbb{E}\bigl[\partial_\lambda \psi(X; \lambda)\bigr] \;=\; -\mathbb{E}[1/\lambda^2] \;=\; -1/\lambda^2.
+$$
+
+(With the sign convention from Definition 8 — note that $A < 0$ here is the convention warning we flagged.) And
+
+$$
+B(\lambda) \;=\; \mathbb{E}[\psi(X; \lambda)^2] \;=\; \operatorname{Var}(X) \;=\; 1/\lambda^2.
+$$
+
+Sandwich: $V = B/A^2 = (1/\lambda^2) / (1/\lambda^4) = \lambda^2$. This matches the asymptotic variance derived in Example 9 via the delta method. The two routes — applying Theorem 4 (delta method) and applying Theorem 10 (sandwich) — agree, as they must.
+
+A demonstration of the **misspecified** case is more striking. Suppose we generate data from $\text{Gamma}(3, 2)$ but fit it as an Exponential, treating $\psi(x; \lambda) = x - 1/\lambda$ as the estimating equation. The MoM estimate $\hat{\lambda} = 1/\bar{X}_n$ converges to $\lambda^* = 1/\mathbb{E}_{\text{Gamma}}[X] = 2/3$, not to any "true" Exponential rate (there is none). The model-based asymptotic variance would be $\lambda^{*2}/n = (4/9)/n \approx 0.00222$ at $n = 200$. But the empirical variance over Monte Carlo replicates is $\approx 0.00073$ — three times smaller than the model-based guess, because the Gamma distribution has lower variance than the Exponential at the same mean. The sandwich estimate, which uses the *empirical* $A$ and $B$ computed from the actual Gamma data, is $\approx 0.00074$, matching the empirical to three significant figures. This is the practical significance of $A \neq B$: it is the signature of model misspecification, and the sandwich formula corrects for it.
+</ExampleBlock>
+
+<RemarkBlock number={11} title="Misspecification signature: A ≠ B">
+The information equality $A = B = I$ is a *theorem* under correct specification — and *only* under correct specification. When the model is wrong, $A$ and $B$ generally differ, and the sandwich variance gives the asymptotic variance of the M-estimator under the *true* (mis-specified) data-generating distribution rather than under the *postulated* (mis-specified) model.
+
+This has a name in econometrics: **robust standard errors**, or White's heteroskedasticity-consistent standard errors for OLS — exactly the sandwich formula applied to OLS under heteroskedasticity. The model-based standard errors assume homoskedasticity (and hence $A = B$); the sandwich corrects for the violation. Linear Regression (coming soon) develops this fully. The M-estimation framework makes the correction transparent: it is not a separate "robust" trick; it is what happens when you take the asymptotic theory seriously.
+</RemarkBlock>
+
+## 15.11 Robust M-Estimation: Huber and Tukey
+
+The estimating-function $\psi$ in M-estimation is a *design* — choose it to balance efficiency under the postulated model against robustness to deviations from that model. The MLE choice ($\psi = $ score) is the one extreme: maximally efficient when the model is correct, but fragile under contamination. Two alternatives, both due to mid-20th-century work in robust statistics, give controlled trade-offs.
+
+<DefinitionBlock number={9} title="Huber's ψ-function">
+**Huber's ψ-function** with tuning constant $k > 0$ is
+
+$$
+\psi_H(u; k) \;=\; \begin{cases} u & \text{if } |u| \le k, \\ k \cdot \operatorname{sign}(u) & \text{if } |u| > k. \end{cases}
+$$
+
+The associated loss function is $\rho_H(u; k) = \tfrac{1}{2}u^2$ for $|u| \le k$, and $\rho_H(u; k) = k|u| - \tfrac{1}{2}k^2$ for $|u| > k$ — quadratic in the central region, linear in the tails. The Huber location estimator solves $\sum_i \psi_H((X_i - \hat{\theta})/\hat{\sigma}) = 0$ for a robust scale $\hat{\sigma}$ (typically the MAD, $\hat{\sigma} = \operatorname{med}(|X_i - \operatorname{med}(X)|) / 0.6745$).
+
+The default choice $k = 1.345$ gives 95% asymptotic efficiency under Normal data while bounding the influence of any single observation.
+</DefinitionBlock>
+
+<DefinitionBlock number={10} title="Tukey's biweight ψ-function">
+**Tukey's biweight ψ-function** (also called the bisquare) with tuning constant $c > 0$ is
+
+$$
+\psi_T(u; c) \;=\; \begin{cases} u\,\bigl(1 - (u/c)^2\bigr)^2 & \text{if } |u| \le c, \\ 0 & \text{if } |u| > c. \end{cases}
+$$
+
+The associated loss is bounded:
+
+$$
+\rho_T(u; c) \;=\; \begin{cases} \tfrac{c^2}{6}\bigl(1 - (1 - (u/c)^2)^3\bigr) & \text{if } |u| \le c, \\ c^2/6 & \text{if } |u| > c. \end{cases}
+$$
+
+Tukey's $\psi$ is **redescending** — it rises in the central region, peaks, and returns to zero outside $|u| > c$. Observations beyond $c$ standardized residuals get weight *exactly zero* and are entirely ignored. The default $c = 4.685$ gives 95% asymptotic efficiency under Normal data, with full rejection of outliers beyond $4.685\sigma$.
+</DefinitionBlock>
+
+<img src="/images/topics/method-of-moments/huber-vs-tukey.png"
+     alt="Three panels. Left: ψ_H(u; k = 1.345) — linear with slope 1 in [−1.345, 1.345], then flat at ±1.345 in the tails. Center: ψ_T(u; c = 4.685) — bell-shaped on [−4.685, 4.685], rising from 0 at u = 0, peaking near |u| = c/√3, then descending to 0 at u = ±c, and identically zero beyond. Right: estimator variance versus contamination fraction for the sample mean (rises sharply), the median (flat), Huber (flat through ~10%, then rising), and Tukey (flat well past 10%)."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<TheoremBlock number={11} title="Minimax property of Huber (Huber 1964)">
+Among all M-estimators of location with bounded influence function, the Huber estimator with tuning constant $k$ chosen to match a specified Normal-efficiency target is **minimax**: it minimizes the maximum asymptotic variance over the class of $\varepsilon$-contaminated Normal distributions
+
+$$
+\mathcal{F}_\varepsilon \;=\; \bigl\{(1 - \varepsilon)\,\mathcal{N}(0, 1) + \varepsilon \cdot G : G \text{ symmetric around 0}\bigr\}
+$$
+
+for a corresponding $\varepsilon$. The choice $k = 1.345$ corresponds to roughly $\varepsilon = 0.05$ contamination tolerance and 95% efficiency under pure Normal.
+</TheoremBlock>
+
+The proof, due to Huber (1964), is a saddle-point argument: the worst case in $\mathcal{F}_\varepsilon$ is a heavy-tailed Normal-like distribution, and the optimal estimator under that worst case turns out to be the Huber location with tuning $k$ depending on $\varepsilon$. This was the founding result of robust statistics — it gave a *principled* recipe for outlier-resistant estimators, replacing earlier ad-hoc procedures like trimmed means and Winsorization.
+
+<ExampleBlock number={18} title="Huber location for contaminated Normal">
+Generate $n = 200$ samples: 180 from $\mathcal{N}(5, 1)$ and 20 from $\mathcal{N}(25, 1)$ (that is, 10% contamination at $+20\sigma$). The sample mean is $\hat{\mu}_{\text{mean}} \approx 7.0$ — pulled away from the true location 5 by the outliers. The median is $\hat{\mu}_{\text{median}} \approx 5.0$ — unmoved. The Huber location with $k = 1.345$ and MAD scale gives $\hat{\mu}_{\text{Huber}} \approx 5.0$ as well — also unmoved, but with smaller variance than the median when the contamination is *not* present (when contamination is zero, the Huber matches the mean almost exactly because no observations are clipped).
+</ExampleBlock>
+
+<ExampleBlock number={19} title="Tukey biweight: extreme outliers get weight zero">
+Tukey's redescending $\psi$ goes one step further. Beyond $|u| > c = 4.685$, $\psi_T = 0$, so the corresponding observations make *no* contribution to the estimating equation — they are effectively discarded. On the same contaminated sample as Example 18, Tukey gives $\hat{\mu}_{\text{Tukey}} \approx 5.0$ with the variance of the median, but with somewhat better efficiency at the clean center because the central kernel is smoother.
+
+The cost of the redescending shape is a concavity issue: $\Psi_n(\theta) = \sum_i \psi_T((X_i - \theta)/\hat\sigma)$ is not monotone in $\theta$, so the iteratively-reweighted fixed-point iteration can converge to a *local* optimum. The standard fix is to start from the median (which is consistent and globally well-defined), then refine to the Tukey estimate.
+</ExampleBlock>
+
+<DefinitionBlock number={11} title="Breakdown point">
+The (asymptotic) **breakdown point** of an estimator is the largest fraction $\varepsilon^*$ of the sample that can be replaced by arbitrary outliers without making the estimate go to infinity. Formally,
+
+$$
+\varepsilon^*(\hat{\theta}, P) \;=\; \sup\Bigl\{\varepsilon : \sup_{Q \in \mathcal{F}_\varepsilon(P)} |\hat{\theta}(Q)| < \infty\Bigr\},
+$$
+
+where $\mathcal{F}_\varepsilon(P)$ is the set of distributions within $\varepsilon$-contamination of $P$. The maximum possible breakdown point is $1/2$ — any larger $\varepsilon$ allows the contaminated distribution to be the *majority*, in which case identifying the "true" parameter is impossible.
+</DefinitionBlock>
+
+<img src="/images/topics/method-of-moments/breakdown-point.png"
+     alt="Horizontal bar chart of breakdown points: sample mean (0%), Huber (~5%), 10% trimmed mean (10%), 25% trimmed mean (25%), Tukey biweight (~45%), median (50%). Each bar carries a short caption; a dotted vertical line marks the theoretical maximum at 0.5."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+The figure above uses the older convention of reporting Huber and Tukey's *minimax-contamination* tolerances rather than their asymptotic breakdown points. With a robust scale like the MAD, both Huber and Tukey achieve the maximum breakdown point of 1/2 (Rousseeuw–Leroy 1987) — the same as the median. The 5% bar for Huber should be read as: *under the minimax-optimal tuning, the estimator is designed to be near-efficient against an $\varepsilon = 0.05$ contamination class*. Empirical drift past ~10–20% in finite samples is a separate, gentler phenomenon driven by corruption of the MAD itself.
+
+<ExampleBlock number={20} title="Breakdown points: mean (0), median (1/2), Huber (1/2 with MAD), Tukey (1/2)">
+The breakdown points for common location estimators are:
+
+- **Sample mean.** $\varepsilon^* = 0$. A single outlier at $+\infty$ sends the mean to $+\infty$.
+- **Sample median.** $\varepsilon^* = 1/2$. Up to nearly half the sample can be arbitrarily corrupted before the median becomes undefined; the median is the optimum in this sense.
+- **Huber location** at $k = 1.345$, paired with a robust scale (MAD). $\varepsilon^* = 1/2$. Asymptotically, the Huber-with-MAD estimator achieves the maximum breakdown point — the same as the median (Rousseeuw–Leroy 1987, §1). The often-quoted figure $\varepsilon \approx 0.05$ is a *different* quantity: the contamination level for which the default $k = 1.345$ is *minimax-optimal* under Huber's gross-error model. In practice the estimator drifts gradually as $\varepsilon$ grows, well before the asymptotic 1/2 is reached, because at high contamination the MAD itself becomes corrupted.
+- **Tukey biweight** at $c = 4.685$. $\varepsilon^* = 1/2$ (asymptotic). Redescending — once outliers are far enough out, they have *zero* weight, so increasing the fraction further does not move the estimate (until the redescending region itself becomes the majority of the data, at which point the estimator can have multiple local optima).
+- **$\alpha$-trimmed mean.** $\varepsilon^* = \alpha$. Trim the top and bottom $\alpha n$ observations and average the rest; the breakdown is exactly the trimming proportion.
+</ExampleBlock>
+
+<RemarkBlock number={12} title="Huber at k = 1.345: 95% efficiency, bounded influence">
+The default $k = 1.345$ is not arbitrary. It is the value that makes the asymptotic variance of the Huber location, under pure $\mathcal{N}(0, 1)$ data, exactly $1/0.95 \approx 1.0526$ times the asymptotic variance of the sample mean (which is 1 under unit-variance data) — that is, 95% efficiency under the Normal model. Bounded influence: the maximum value $|\psi_H| \leq k = 1.345$ caps the impact of any single observation. The combination — 95% efficiency on a clean sample plus bounded influence on contaminated samples — is the dominant default in modern robust regression. Tukey's $c = 4.685$ is the analogous value for the biweight, giving the same 95% efficiency under Normal.
+
+Why 95% and not, say, 99%? The reasoning is empirical: pushing efficiency above 95% (with $k$ small) makes the estimator behave nearly identically to the mean in the central region, surrendering most of the robustness. Pushing efficiency below 95% (with $k$ small) gains additional outlier resistance but at noticeable efficiency loss on clean data. The 95% point is roughly the elbow of this trade-off curve.
+</RemarkBlock>
+
+<MEstimatorGallery client:visible />
+
+## 15.12 Summary & Forward Look: GMM and Beyond
+
+The method of moments matches sample moments to population moments and solves; the M-estimation framework generalizes by replacing the moment-matching equation with a more general estimating equation $\sum_i \psi(X_i; \theta) = 0$. The asymptotic theory is uniform across the framework: consistency from a uniform LLN, asymptotic normality from a Taylor expansion plus the CLT, and asymptotic variance in the sandwich form $A^{-1}BA^{-1\top}$ that collapses to the Fisher-information inverse when $\psi$ is the score under correct specification. Choosing $\psi$ differently — Huber, Tukey, the score, the moment residual — produces a universe of estimators with controllable trade-offs between efficiency under the postulated model and robustness against deviations from it.
+
+| Property | Method of Moments | Maximum Likelihood | General M-Estimator |
+|---|---|---|---|
+| **Estimating equation** | $\sum_i (X_i^k - \mu_k(\theta)) = 0$ | $\sum_i \nabla_\theta \log f(X_i; \theta) = 0$ | $\sum_i \psi(X_i; \theta) = 0$ |
+| **Closed form** | Often (Gamma, Beta, Pareto with $\alpha > 1$) | Rare (only for exponential families with closed-form inverse $\nabla A$) | Depends on $\psi$ |
+| **Consistency** | Yes if $g$ invertible, $\mu_k$ exist | Yes under standard regularity | Yes under Theorem 9 conditions |
+| **Asymptotic variance** | $\nabla g^{-1} \Sigma \nabla g^{-\top}$ | $I(\theta_0)^{-1}$ | $A^{-1} B A^{-\top}$ (sandwich) |
+| **Asymptotic efficiency** | $=$ MLE for natural exponential families; $<$ MLE in general | Yes (achieves CRLB) | Yes only under correct specification with $\psi = $ score |
+| **Robustness to outliers** | Poor (sample moments are non-robust) | Poor (likelihood is non-robust) | Tunable via $\psi$ (Huber, Tukey) |
+| **Computational cost** | Closed-form: $O(n)$. Iterative: $O(n \cdot \text{iter})$ | Newton-Raphson: $O(n \cdot \text{iter})$, typically iter = 4–10 | Depends on $\psi$ |
+
+<RemarkBlock number={13} title="GMM: the generalized method of moments (Hansen 1982, ~300-word preview)">
+The method of moments uses *exactly* $k$ moment equations to identify $k$ parameters. **Generalized method of moments** (GMM), introduced by Lars Peter Hansen in his 1982 *Econometrica* paper, lifts this restriction: it allows $m \geq k$ moment conditions on $k$ parameters, giving an *over-identified* system that is then solved by minimizing a weighted distance.
+
+Specifically, given moment conditions $g(X; \theta) \in \mathbb{R}^m$ with the population property $\mathbb{E}_{\theta_0}[g(X; \theta_0)] = 0$, define the empirical moment vector
+
+$$
+\hat{g}_n(\theta) \;=\; \frac{1}{n}\sum_{i=1}^n g(X_i; \theta).
+$$
+
+The GMM estimator with weighting matrix $W_n$ (an $m \times m$ positive-definite matrix that may depend on the data) is
+
+$$
+\hat{\theta}_{\text{GMM}} \;=\; \arg\min_\theta \hat{g}_n(\theta)^\top W_n \hat{g}_n(\theta).
+$$
+
+When $m = k$ and $W_n = I_m$, GMM reduces to ordinary MoM. When $m > k$, the estimator is over-identified: the $m$ moment conditions cannot all be satisfied exactly, so GMM finds the $\theta$ that comes closest in the $W_n$-weighted norm. The optimal weighting matrix — the one that minimizes the asymptotic variance of $\hat{\theta}_{\text{GMM}}$ — is $W^* = \operatorname{Cov}(g(X; \theta_0))^{-1}$, the inverse of the covariance matrix of the moment conditions. This is **efficient GMM**.
+
+GMM is the workhorse of empirical economics: it covers instrumental variables (IV) estimation, Euler equation estimation in dynamic consumption models, asset-pricing moment conditions, and the Arellano-Bond estimator for dynamic panels. The asymptotic theory parallels M-estimation but with the additional weighting-matrix layer. We do not develop GMM further in formalStatistics; the natural home is a future econometrics topic. For the canonical reference, see Hansen (1982).
+</RemarkBlock>
+
+**Where this leads.** Sufficient Statistics (coming soon) extends Topic 13's evaluation framework with the Rao-Blackwell theorem and Lehmann–Scheffé, comparing UMVUE to both MLE and MoM; when MLE and MoM coincide (exponential families), they are both UMVUE under completeness. Hypothesis Testing (coming soon) builds the score test and Wald test as M-estimator-based tests, and the sandwich variance reappears as the basis of robust hypothesis tests under model misspecification. Confidence Intervals (coming soon) inverts the M-estimator asymptotic-normality result: a Wald-type interval is $\hat{\theta}_n \pm z_{\alpha/2} \cdot \sqrt{\hat{V}/n}$, with $\hat{V}$ the sandwich-variance estimate. Linear Regression (coming soon) treats OLS as the M-estimator with $\psi(x, y; \beta) = x(y - x^\top\beta)$; White's heteroskedasticity-consistent standard errors are exactly the sandwich formula applied to OLS. Generalized Linear Models (coming soon) develops the Huber and Tukey extensions of OLS — robust regression — built on §15.10–§15.11.
+
+Across [formalML](https://formalml.com), M-estimation organizes much of supervised learning. <ExternalLink href="https://formalml.com/topics/empirical-risk-minimization" site="formalml" topic="Empirical Risk Minimization" /> *is* M-estimation — the empirical risk is the average loss, and minimizing it solves a Z-estimating equation. <ExternalLink href="https://formalml.com/topics/robust-statistics" site="formalml" topic="Robust Statistics" /> develops the Huber and Tukey M-estimators in regression, with the influence-function machinery and breakdown-point analysis built atop §15.11. <ExternalLink href="https://formalml.com/topics/quantile-regression" site="formalml" topic="Quantile Regression" /> adopts the check-loss ψ-function, a non-smooth instance of the framework. And <ExternalLink href="https://formalml.com/topics/generalized-method-of-moments" site="formalml" topic="Generalized Method of Moments" /> extends MoM to the over-identified setting Hansen (1982) introduced.
+
+The reader who has worked through Topics 13–15 has the complete classical estimation toolkit: an evaluation framework (Topic 13), a maximally efficient default estimator (Topic 14), a fast warm-start with closed-form structure for many families (Topic 15 first half), and a unifying asymptotic theory that subsumes everything and accommodates robust alternatives (Topic 15 second half). Track 4 closes with Sufficient Statistics (Topic 16), which gives the data-reduction theory completing the foundations.
+
+---
+
+### References
+
+1. Casella, G., & Berger, R. L. (2002). [*Statistical Inference*](https://www.cengage.com/c/statistical-inference-2e-casella/) (2nd ed.). Duxbury.
+2. van der Vaart, A. W. (1998). [*Asymptotic Statistics*](https://www.cambridge.org/core/books/asymptotic-statistics/A3C7DAD3F7E66A1FA60E9C8FE132EE1D). Cambridge University Press.
+3. Hampel, F. R., Ronchetti, E. M., Rousseeuw, P. J., & Stahel, W. A. (1986). [*Robust Statistics: The Approach Based on Influence Functions*](https://www.wiley.com/en-us/Robust+Statistics%3A+The+Approach+Based+on+Influence+Functions-p-9780471828921). Wiley.
+4. Rousseeuw, P. J., & Leroy, A. M. (1987). [*Robust Regression and Outlier Detection*](https://onlinelibrary.wiley.com/doi/book/10.1002/0471725382). Wiley.
+5. Lehmann, E. L., & Casella, G. (1998). [*Theory of Point Estimation*](https://link.springer.com/book/10.1007/b98854) (2nd ed.). Springer.
+6. Wasserman, L. (2004). [*All of Statistics*](https://link.springer.com/book/10.1007/978-0-387-21736-9). Springer.
+7. Hansen, L. P. (1982). [*Large Sample Properties of Generalized Method of Moments Estimators*](https://www.jstor.org/stable/1912775). *Econometrica*, 50(4), 1029–1054.
+8. Huber, P. J. (1964). [*Robust Estimation of a Location Parameter*](https://projecteuclid.org/euclid.aoms/1177703732). *Annals of Mathematical Statistics*, 35(1), 73–101.
