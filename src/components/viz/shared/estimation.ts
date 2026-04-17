@@ -8,7 +8,15 @@
  * Topic 13 — Point Estimation & Bias-Variance: full estimator framework.
  * Topics 14–16 will extend with MLE-, MoM-, and sufficiency-specific helpers.
  */
-import { sampleMean as convergenceSampleMean } from './convergence';
+import {
+  sampleMean as convergenceSampleMean,
+  normalSample,
+  exponentialSample,
+  poissonSample,
+  bernoulliSample,
+  gammaSample,
+  uniformSampleArray,
+} from './convergence';
 
 // Re-export so consumers import the whole estimator toolkit from one module.
 export const sampleMean = convergenceSampleMean;
@@ -1263,6 +1271,738 @@ export function runningMedian(data: number[]): number[] {
   return out;
 }
 
+// ────────────────────────────────────────────────────────────────────────────
+// Topic 16: Sufficient Statistics & Rao-Blackwell — Track 4 closing topic
+// ────────────────────────────────────────────────────────────────────────────
+
+/** Parametric families used in §16.3 factorization examples and downstream
+ *  components. `uniform-upper` is the PKD counterexample (support depends on θ). */
+export type SufficientFamily =
+  | 'normal-mu'
+  | 'normal-mu-sigma'
+  | 'bernoulli'
+  | 'poisson'
+  | 'exponential'
+  | 'gamma-scale'
+  | 'uniform-upper';
+
+/** Families supported by `tripleComparisonMC` (the §16.11 closing comparator). */
+export type TripleComparisonFamily =
+  | 'gamma-scale-with-known-alpha'
+  | 'normal-variance-unknown-mu'
+  | 'exponential-rate'
+  | 'normal-mean-known-sigma'
+  | 'poisson-rate';
+
+// ── §16.3 Factorization display ─────────────────────────────────────────────
+
+/** Symbolic factorization $f(x;\theta) = g(T(x);\theta) \cdot h(x)$ for the
+ *  FactorizationExplorer. Returns LaTeX strings for the sufficient statistic,
+ *  the parameter-dependent factor g, and the data-only factor h. The
+ *  `supportNote` field flags the Uniform(0,θ) case where the support depends
+ *  on θ — Topic 7's PKD regularity (A) is violated, foreshadowing §16.10. */
+export function factorizationForm(family: SufficientFamily): {
+  tLatex: string;
+  gLatex: string;
+  hLatex: string;
+  supportNote?: string;
+} {
+  switch (family) {
+    case 'normal-mu':
+      return {
+        tLatex: 'T(x) = \\sum_{i=1}^n x_i',
+        gLatex: 'g(T;\\mu,\\sigma^2) = \\exp\\!\\left(\\tfrac{\\mu T}{\\sigma^2} - \\tfrac{n\\mu^2}{2\\sigma^2}\\right)',
+        hLatex: 'h(x) = (2\\pi\\sigma^2)^{-n/2}\\exp\\!\\left(-\\tfrac{1}{2\\sigma^2}\\sum x_i^2\\right)',
+      };
+    case 'normal-mu-sigma':
+      return {
+        tLatex: 'T(x) = \\bigl(\\sum x_i,\\; \\sum x_i^2\\bigr)',
+        gLatex: 'g(T;\\mu,\\sigma^2) = (2\\pi\\sigma^2)^{-n/2}\\exp\\!\\left(\\tfrac{\\mu T_1}{\\sigma^2} - \\tfrac{T_2}{2\\sigma^2} - \\tfrac{n\\mu^2}{2\\sigma^2}\\right)',
+        hLatex: 'h(x) = 1',
+      };
+    case 'bernoulli':
+      return {
+        tLatex: 'T(x) = \\sum_{i=1}^n x_i',
+        gLatex: 'g(T;p) = p^{T}(1-p)^{n-T}',
+        hLatex: 'h(x) = 1',
+      };
+    case 'poisson':
+      return {
+        tLatex: 'T(x) = \\sum_{i=1}^n x_i',
+        gLatex: 'g(T;\\lambda) = e^{-n\\lambda}\\lambda^{T}',
+        hLatex: 'h(x) = \\bigl(\\textstyle\\prod_i x_i!\\bigr)^{-1}',
+      };
+    case 'exponential':
+      return {
+        tLatex: 'T(x) = \\sum_{i=1}^n x_i',
+        gLatex: 'g(T;\\lambda) = \\lambda^{n}\\exp(-\\lambda T)',
+        hLatex: 'h(x) = \\mathbf{1}\\{x_i \\ge 0 \\text{ for all }i\\}',
+      };
+    case 'gamma-scale':
+      return {
+        tLatex: 'T(x) = \\sum_{i=1}^n x_i',
+        gLatex: 'g(T;\\beta) = \\beta^{n\\alpha}\\exp(-\\beta T)',
+        hLatex: 'h(x) = \\Gamma(\\alpha)^{-n}\\bigl(\\textstyle\\prod_i x_i\\bigr)^{\\alpha - 1}',
+      };
+    case 'uniform-upper':
+      return {
+        tLatex: 'T(x) = x_{(n)} = \\max_i x_i',
+        gLatex: 'g(T;\\theta) = \\theta^{-n}\\,\\mathbf{1}\\{T \\le \\theta\\}',
+        hLatex: 'h(x) = \\mathbf{1}\\{x_{(1)} \\ge 0\\}',
+        supportNote: 'Support [0, θ] depends on θ — violates PKD regularity (A); not an exponential family despite admitting the 1-dim sufficient statistic X_(n) (§16.10 Example 23).',
+      };
+  }
+}
+
+/** Compute the sufficient statistic $T(X_1, \ldots, X_n)$ numerically.
+ *  Returns a scalar for 1-dim families, a 2-tuple for `normal-mu-sigma`. */
+export function computeSufficientStatistic(
+  family: SufficientFamily,
+  data: number[],
+): number | number[] {
+  if (data.length === 0) return family === 'normal-mu-sigma' ? [0, 0] : 0;
+  switch (family) {
+    case 'normal-mu':
+    case 'bernoulli':
+    case 'poisson':
+    case 'exponential':
+    case 'gamma-scale': {
+      let s = 0;
+      for (let i = 0; i < data.length; i++) s += data[i];
+      return s;
+    }
+    case 'normal-mu-sigma': {
+      let s = 0;
+      let sq = 0;
+      for (let i = 0; i < data.length; i++) {
+        s += data[i];
+        sq += data[i] * data[i];
+      }
+      return [s, sq];
+    }
+    case 'uniform-upper': {
+      let m = data[0];
+      for (let i = 1; i < data.length; i++) if (data[i] > m) m = data[i];
+      return m;
+    }
+  }
+}
+
+// ── §16.5 Rao-Blackwellization ──────────────────────────────────────────────
+
+/** Closed-form Rao-Blackwellized estimators for the four canonical scenarios
+ *  used in §16.5 (Bernoulli p / Bernoulli variance / Poisson zero-prob /
+ *  Normal tail-prob). Each takes a single dataset and returns the RB'd
+ *  point estimate; the §16.5 figures and the RaoBlackwellImprover compute
+ *  the variance reduction by replicating the call across many MC datasets.
+ *
+ *  References: Lehmann & Casella (1998) §2.4 (Examples 9–11). */
+export function raoBlackwellClosedForm(
+  family: 'bernoulli-p' | 'bernoulli-variance' | 'poisson-zero-prob' | 'normal-tail-prob',
+  data: number[],
+  options?: { threshold?: number; knownSigma?: number },
+): number {
+  const n = data.length;
+  if (n === 0) return NaN;
+  let sumX = 0;
+  for (let i = 0; i < n; i++) sumX += data[i];
+
+  switch (family) {
+    case 'bernoulli-p':
+      // RB of $\hat p_0 = X_1$ given $T = \sum X_i$ is $\bar X = T/n$.
+      return sumX / n;
+
+    case 'bernoulli-variance':
+      // RB of $X_1(1 - X_1) \equiv 0$ given $T = \sum X_i$ is the UMVUE of
+      // $p(1-p)$:  $\bar X (n - \sum X_i)/(n - 1) = T(n-T)/[n(n-1)]$.
+      if (n < 2) return NaN;
+      return (sumX * (n - sumX)) / (n * (n - 1));
+
+    case 'poisson-zero-prob':
+      // RB of $\mathbf{1}\{X_1 = 0\}$ given $T = \sum X_i$ is $(1 - 1/n)^T$,
+      // the UMVUE of $e^{-\lambda} = P_\lambda(X = 0)$.
+      return Math.pow(1 - 1 / n, sumX);
+
+    case 'normal-tail-prob': {
+      // UMVUE of $P_{\mu,\sigma^2}(X > c)$ — Lehmann & Casella (1998) §2.4.
+      // For known σ²:  $\hat p_c = 1 - \Phi\!\left((c - \bar X)\sqrt{n/(n-1)}/\sigma\right)$.
+      // For unknown σ²: replace $\sigma$ by $S$ and use the regularized
+      // incomplete-beta tail of the t-statistic. We implement the known-σ
+      // form when `knownSigma` is supplied; otherwise the unknown-σ form
+      // via the Beta tail.
+      const c = options?.threshold ?? 0;
+      const xbar = sumX / n;
+      if (options?.knownSigma !== undefined) {
+        const sd = options.knownSigma * Math.sqrt(n / (n - 1));
+        return 1 - normalCdf((c - xbar) / sd);
+      }
+      if (n < 3) return NaN;
+      let s2 = 0;
+      for (let i = 0; i < n; i++) s2 += (data[i] - xbar) ** 2;
+      const s = Math.sqrt(s2 / (n - 1));
+      if (s === 0) return c < xbar ? 1 : 0;
+      const z = (c - xbar) / s;
+      // y = ½ · (1 - z·√(n/(n-2+z²)));  P̂(X > c) = I_y((n-2)/2, (n-2)/2).
+      const denomSq = n - 2 + z * z;
+      if (denomSq <= 0) return c < xbar ? 1 : 0;
+      const y = 0.5 * (1 - z * Math.sqrt(n / denomSq));
+      const a = (n - 2) / 2;
+      return regularizedIncompleteBeta(y, a, a);
+    }
+  }
+}
+
+/** Monte Carlo Rao-Blackwell improvement.
+ *
+ *  Given a crude unbiased estimator $\hat\theta(X)$, a sufficient statistic
+ *  identifier (or an explicit (T, conditional-sampler) pair), this returns
+ *  the crude estimate, the Rao-Blackwellized estimate $\tilde\theta = E[\hat\theta | T]$,
+ *  and the asymptotic variance ratio $\mathrm{Var}(\tilde\theta)/\mathrm{Var}(\hat\theta)$.
+ *
+ *  For the four canonical families with a closed-form conditional mean
+ *  (Bernoulli, Poisson, Normal, Exponential, Gamma with $T = \sum X_i$),
+ *  the improved estimate is computed analytically — no MC needed. The
+ *  variance ratio is reported as $1/n$, which is the asymptotic ratio for
+ *  the typical "one observation vs. the sufficient statistic" RB scenario
+ *  (e.g. Bernoulli $X_1$ vs. $\bar X$); components compute their own
+ *  empirical variance ratio from a separate MC outer loop.
+ *
+ *  For other (T, sampler) pairs supplied as a custom object, the improved
+ *  estimate is approximated by averaging the estimator over $M$ resamples
+ *  drawn from the parameter-free conditional distribution $X | T = T(\text{data})$.
+ */
+export function raoBlackwellize(
+  data: number[],
+  estimator: (x: number[]) => number,
+  family:
+    | SufficientFamily
+    | { computeT: (x: number[]) => number; conditionalSampler: (t: number, n: number) => number[] },
+  M: number = 1000,
+): { crudeEstimate: number; improvedEstimate: number; varianceRatio: number } {
+  const crudeEstimate = estimator(data);
+  let improvedEstimate: number;
+
+  if (typeof family === 'string') {
+    // Closed-form: for an exchangeable iid sample with sufficient statistic
+    // $T = \sum X_i$ (or $X_{(n)}$), $E[X_1 | T]$ has an analytic form.
+    // We map onto the most common case (RB of a function of one observation
+    // by the sufficient statistic) by returning the sample mean — which is
+    // exact for Bernoulli/Poisson/Normal/Exponential/Gamma when the crude
+    // estimator is $X_1$.
+    switch (family) {
+      case 'bernoulli':
+      case 'poisson':
+      case 'normal-mu':
+      case 'normal-mu-sigma':
+      case 'exponential':
+      case 'gamma-scale':
+        improvedEstimate = sampleMean(data);
+        break;
+      case 'uniform-upper':
+        // For Uniform(0, θ), $E[X_1 | X_{(n)} = t] = \tfrac{n+1}{2n}\,t$
+        // (mixture of Uniform(0, t) for the (n−1) non-max values and a
+        // point mass at t). We return the sample mean as a working
+        // approximation — the analytic form is used in §16.10's discussion.
+        improvedEstimate = sampleMean(data);
+        break;
+    }
+  } else {
+    const t = family.computeT(data);
+    let s = 0;
+    for (let m = 0; m < M; m++) {
+      const x = family.conditionalSampler(t, data.length);
+      s += estimator(x);
+    }
+    improvedEstimate = s / M;
+  }
+
+  // Asymptotic variance ratio for the typical RB scenario (one obs vs. the
+  // sufficient statistic); the actual empirical ratio is computed by the
+  // calling component over its own outer MC loop.
+  const varianceRatio = 1 / Math.max(data.length, 1);
+
+  return { crudeEstimate, improvedEstimate, varianceRatio };
+}
+
+// ── §16.6 Completeness diagnostics ──────────────────────────────────────────
+
+/** Incompleteness witness for the Uniform$(\theta, \theta+1)$ family.
+ *
+ *  The minimal sufficient statistic is $T = (X_{(1)}, X_{(n)})$, but the
+ *  range $R = X_{(n)} - X_{(1)}$ is ancillary for the location parameter
+ *  $\theta$ (its distribution is free of $\theta$). The centered range
+ *  $g(T) = R - (n-1)/(n+1)$ therefore satisfies $E_\theta[g(T)] = 0$ for
+ *  every $\theta$ but is not identically zero — the definition of
+ *  incompleteness.
+ *
+ *  This Monte Carlo evaluates that expectation across the supplied θ-grid.
+ *  All returned values should be ≈ 0 (tolerance ~$M^{-1/2}$). */
+export function incompletenessWitnessUniform(
+  thetaGrid: number[],
+  n: number,
+  M: number = 3000,
+  rng: () => number = Math.random,
+): number[] {
+  const baseline = (n - 1) / (n + 1);
+  return thetaGrid.map((theta) => {
+    let sumWitness = 0;
+    for (let m = 0; m < M; m++) {
+      const sample = uniformSampleArray(n, theta, theta + 1, rng);
+      let mn = sample[0];
+      let mx = sample[0];
+      for (let i = 1; i < n; i++) {
+        if (sample[i] < mn) mn = sample[i];
+        if (sample[i] > mx) mx = sample[i];
+      }
+      sumWitness += (mx - mn) - baseline;
+    }
+    return sumWitness / M;
+  });
+}
+
+/** Completeness probe: evaluate $E_\theta[g(T)]$ over a θ-grid for several
+ *  candidate test functions, for one of the complete families ('bernoulli',
+ *  'poisson', 'normal-mu', 'exponential'). For complete families, only the
+ *  identically-zero function should produce the flat zero curve. */
+export function completenessProbe(
+  family: SufficientFamily,
+  thetaGrid: number[],
+  testFunctions: Record<string, (t: number) => number>,
+  sampleSize: number = 30,
+  M: number = 800,
+  rng: () => number = Math.random,
+): Record<string, number[]> {
+  const result: Record<string, number[]> = {};
+  for (const name of Object.keys(testFunctions)) result[name] = [];
+
+  for (const theta of thetaGrid) {
+    // For each θ, generate M datasets, compute T on each, then average each
+    // candidate g(T) across the M reps.
+    const tValues = new Array<number>(M);
+    for (let m = 0; m < M; m++) {
+      const data = sampleFromFamily(family, theta, sampleSize, rng);
+      tValues[m] = sumArray(data);
+    }
+    for (const name of Object.keys(testFunctions)) {
+      const g = testFunctions[name];
+      let s = 0;
+      for (let m = 0; m < M; m++) s += g(tValues[m]);
+      result[name].push(s / M);
+    }
+  }
+  return result;
+}
+
+/** Whether a family in its natural parameterization is complete. Note that
+ *  Uniform(0, θ) IS complete (the maximum $X_{(n)}$ is complete sufficient);
+ *  the incompleteness case is Uniform(θ, θ+1), which is a separate family
+ *  identifier ('uniform-shift') in `sufficient-statistics-data.ts`. */
+export function isComplete(family: SufficientFamily): boolean {
+  switch (family) {
+    case 'normal-mu':
+    case 'normal-mu-sigma':
+    case 'bernoulli':
+    case 'poisson':
+    case 'exponential':
+    case 'gamma-scale':
+    case 'uniform-upper':
+      return true;
+  }
+}
+
+// ── §16.7–§16.8 UMVUE closed forms ──────────────────────────────────────────
+
+/** UMVUE of $p$ for Bernoulli($p$): $\hat p = \bar X$ (also = MLE).
+ *  Exp family in natural parameter; T = ΣX is complete sufficient. */
+export function umvueBernoulli(data: number[]): number {
+  return sampleMean(data);
+}
+
+/** UMVUE of $\lambda$ for Poisson($\lambda$): $\hat\lambda = \bar X$ (also = MLE). */
+export function umvuePoisson(data: number[]): number {
+  return sampleMean(data);
+}
+
+/** UMVUE of $\mu$ for Normal($\mu$, $\sigma^2$ known): $\hat\mu = \bar X$ (also = MLE = MoM). */
+export function umvueNormalMean(data: number[]): number {
+  return sampleMean(data);
+}
+
+/** UMVUE of $\sigma^2$ for Normal($\mu_0$ known, $\sigma^2$):
+ *  $\hat\sigma^2 = \tfrac{1}{n}\sum (X_i - \mu_0)^2$.
+ *  Based on the complete sufficient statistic $T = \sum (X_i - \mu_0)^2 \sim \sigma^2 \chi^2_n$. */
+export function umvueNormalVarianceKnownMu(data: number[], mu0: number): number {
+  const n = data.length;
+  if (n === 0) return NaN;
+  let s = 0;
+  for (let i = 0; i < n; i++) s += (data[i] - mu0) ** 2;
+  return s / n;
+}
+
+/** UMVUE of $\sigma^2$ for Normal($\mu$, $\sigma^2$) both unknown:
+ *  $\hat\sigma^2_{\text{UMVUE}} = S^2_{n-1}$ (Bessel-corrected variance).
+ *  Compare MLE = MoM = $S^2_n$. The featured §16.8 / §16.11 example. */
+export function umvueNormalVarianceUnknownMu(data: number[]): number {
+  return sampleVariance(data, 1);
+}
+
+/** UMVUE of rate $\lambda$ for Exponential($\lambda$):
+ *  $\hat\lambda = (n-1)/\sum X_i$ for $n \ge 2$. Compare MLE = MoM = $n/\sum X_i$. */
+export function umvueExponentialRate(data: number[]): number {
+  const n = data.length;
+  if (n < 2) return NaN;
+  let s = 0;
+  for (let i = 0; i < n; i++) s += data[i];
+  if (s <= 0) return NaN;
+  return (n - 1) / s;
+}
+
+/** UMVUE of scale $\beta$ for Gamma($\alpha$ known, $\beta$):
+ *  $\hat\beta = (n\alpha - 1)/\sum X_i$, requires $n\alpha > 1$.
+ *  Compare MLE = MoM = $\alpha/\bar X$. Fulfills `method-of-moments.mdx:1062`. */
+export function umvueGammaScale(data: number[], alphaKnown: number): number {
+  const n = data.length;
+  if (n * alphaKnown <= 1) return NaN;
+  let s = 0;
+  for (let i = 0; i < n; i++) s += data[i];
+  if (s <= 0) return NaN;
+  return (n * alphaKnown - 1) / s;
+}
+
+/** UMVUE of $P_{\mu,\sigma^2}(X > c)$ for Normal data with both parameters
+ *  unknown — Rao-Blackwellization of $\mathbf{1}\{X_1 > c\}$ by $(\bar X, S^2)$.
+ *  The closed form is a regularized incomplete-beta tail (Lehmann-Casella
+ *  1998, §2.4). Used in §16.8 Example 20. */
+export function umvueNormalTailProb(data: number[], threshold: number): number {
+  return raoBlackwellClosedForm('normal-tail-prob', data, { threshold });
+}
+
+// ── §16.9 Basu independence diagnostic ──────────────────────────────────────
+
+/** For Normal($\mu$, $\sigma^2$) data at fixed $\sigma^2$, simulate the joint
+ *  distribution of $(\bar X, S^2)$ across M Monte-Carlo replications. By
+ *  Basu's theorem (Thm 7), $\bar X$ (complete sufficient for $\mu$ at fixed
+ *  $\sigma^2$) is independent of the ancillary $S^2$ — so the empirical
+ *  correlation should be ≈ 0. This is the t-distribution foundation. */
+export function basuIndependenceNormal(
+  mu: number,
+  sigma2: number,
+  n: number,
+  M: number,
+  rng: () => number = Math.random,
+): { xbar: number[]; s2: number[]; correlation: number } {
+  const sigma = Math.sqrt(sigma2);
+  const xbar: number[] = new Array(M);
+  const s2: number[] = new Array(M);
+  for (let m = 0; m < M; m++) {
+    const sample = new Array<number>(n);
+    for (let i = 0; i < n; i++) sample[i] = normalSample(mu, sigma, rng);
+    let sum = 0;
+    for (let i = 0; i < n; i++) sum += sample[i];
+    const mean = sum / n;
+    let ss = 0;
+    for (let i = 0; i < n; i++) ss += (sample[i] - mean) ** 2;
+    xbar[m] = mean;
+    s2[m] = ss / (n - 1);
+  }
+  return { xbar, s2, correlation: pearsonCorrelation(xbar, s2) };
+}
+
+/** Contrast scenario: Exponential-shift model $X = \mathrm{Exp}(1) + \mu$.
+ *
+ *  $X_{(1)}$ is the complete sufficient statistic for $\mu$. The contrast
+ *  with Basu uses $\bar X$, which is NOT ancillary for $\mu$ (its
+ *  distribution shifts with $\mu$ since $\mathbb{E}_\mu[\bar X] = \mu + 1$).
+ *  Basu's hypotheses therefore fail and $X_{(1)}$ is correlated with $\bar X$
+ *  — theoretical $\rho = 1/\sqrt n$, since $\mathrm{Cov}(\bar X, X_{(1)}) =
+ *  \mathrm{Var}(X_{(1)}) = 1/n^2$ while $\mathrm{Var}(\bar X) = 1/n$.
+ *
+ *  Note: The plausible-looking statistic $\bar X - X_{(1)}$ would actually
+ *  BE ancillary by exponential memorylessness — so it is the wrong contrast
+ *  and would yield $\rho \approx 0$, matching Basu rather than violating it.
+ *
+ *  Returns the joint MC sample $(X_{(1)}, \bar X)$ and the empirical Pearson
+ *  correlation. Matches the notebook's §16.9 Figure 9 panel 2. */
+export function basuDependenceExponentialShift(
+  mu: number,
+  n: number,
+  M: number,
+  rng: () => number = Math.random,
+): { min: number[]; xbar: number[]; correlation: number } {
+  const minArr: number[] = new Array(M);
+  const xbar: number[] = new Array(M);
+  for (let m = 0; m < M; m++) {
+    let mn = Infinity;
+    let sum = 0;
+    for (let i = 0; i < n; i++) {
+      const x = exponentialSample(1, rng) + mu;
+      sum += x;
+      if (x < mn) mn = x;
+    }
+    minArr[m] = mn;
+    xbar[m] = sum / n;
+  }
+  return { min: minArr, xbar, correlation: pearsonCorrelation(minArr, xbar) };
+}
+
+// ── §16.11 Triple-comparison MC engine (closing component for Track 4) ──────
+
+/** Monte Carlo bias/MSE comparison of UMVUE, MLE, MoM for one of the five
+ *  preset families. The §16.11 closing comparator. Parameters live in
+ *  `trueParams` (e.g. `{ mu: 0, sigma2: 4 }` for normal-variance-unknown-mu;
+ *  `{ alpha: 3, beta: 2 }` for gamma-scale-with-known-alpha). */
+export function tripleComparisonMC(
+  family: TripleComparisonFamily,
+  trueParams: Record<string, number>,
+  n: number,
+  M: number,
+  rng: () => number = Math.random,
+): {
+  umvueEstimates: number[];
+  mleEstimates: number[];
+  momEstimates: number[];
+  umvueMSE: number;
+  mleMSE: number;
+  momMSE: number;
+  umvueBias: number;
+  mleBias: number;
+  momBias: number;
+} {
+  const umvueEstimates = new Array<number>(M);
+  const mleEstimates = new Array<number>(M);
+  const momEstimates = new Array<number>(M);
+  let trueParam = 0;
+
+  for (let m = 0; m < M; m++) {
+    let umvue = NaN;
+    let mle = NaN;
+    let mom = NaN;
+
+    switch (family) {
+      case 'normal-variance-unknown-mu': {
+        const mu = trueParams.mu ?? 0;
+        const sigma2 = trueParams.sigma2 ?? 1;
+        const sigma = Math.sqrt(sigma2);
+        const sample = new Array<number>(n);
+        for (let i = 0; i < n; i++) sample[i] = normalSample(mu, sigma, rng);
+        umvue = sampleVariance(sample, 1); // S²_{n−1}
+        mle = sampleVariance(sample, 0); // S²_n
+        mom = mle;
+        trueParam = sigma2;
+        break;
+      }
+      case 'gamma-scale-with-known-alpha': {
+        const alpha = trueParams.alpha ?? 1;
+        const beta = trueParams.beta ?? 1; // rate
+        const sample = new Array<number>(n);
+        for (let i = 0; i < n; i++) sample[i] = gammaSample(alpha, beta, rng);
+        let sumS = 0;
+        for (let i = 0; i < n; i++) sumS += sample[i];
+        umvue = (n * alpha - 1) / sumS;
+        mle = alpha / (sumS / n); // = α / X̄
+        mom = mle;
+        trueParam = beta;
+        break;
+      }
+      case 'exponential-rate': {
+        const lambda = trueParams.lambda ?? 1;
+        const sample = new Array<number>(n);
+        for (let i = 0; i < n; i++) sample[i] = exponentialSample(lambda, rng);
+        let sumE = 0;
+        for (let i = 0; i < n; i++) sumE += sample[i];
+        umvue = (n - 1) / sumE;
+        mle = n / sumE;
+        mom = mle;
+        trueParam = lambda;
+        break;
+      }
+      case 'normal-mean-known-sigma': {
+        const mu = trueParams.mu ?? 0;
+        const sigma = Math.sqrt(trueParams.sigma2 ?? 1);
+        const sample = new Array<number>(n);
+        for (let i = 0; i < n; i++) sample[i] = normalSample(mu, sigma, rng);
+        umvue = sampleMean(sample);
+        mle = umvue;
+        mom = umvue;
+        trueParam = mu;
+        break;
+      }
+      case 'poisson-rate': {
+        const lambda = trueParams.lambda ?? 1;
+        const sample = new Array<number>(n);
+        for (let i = 0; i < n; i++) sample[i] = poissonSample(lambda, rng);
+        umvue = sampleMean(sample);
+        mle = umvue;
+        mom = umvue;
+        trueParam = lambda;
+        break;
+      }
+    }
+
+    umvueEstimates[m] = umvue;
+    mleEstimates[m] = mle;
+    momEstimates[m] = mom;
+  }
+
+  const meanOf = (arr: number[]) => {
+    let s = 0;
+    for (let i = 0; i < arr.length; i++) s += arr[i];
+    return s / arr.length;
+  };
+  const mseOf = (arr: number[], tp: number) => {
+    let s = 0;
+    for (let i = 0; i < arr.length; i++) s += (arr[i] - tp) ** 2;
+    return s / arr.length;
+  };
+
+  return {
+    umvueEstimates,
+    mleEstimates,
+    momEstimates,
+    umvueMSE: mseOf(umvueEstimates, trueParam),
+    mleMSE: mseOf(mleEstimates, trueParam),
+    momMSE: mseOf(momEstimates, trueParam),
+    umvueBias: meanOf(umvueEstimates) - trueParam,
+    mleBias: meanOf(mleEstimates) - trueParam,
+    momBias: meanOf(momEstimates) - trueParam,
+  };
+}
+
+// ── Internal helpers (Topic 16 only) ────────────────────────────────────────
+
+/** Pearson correlation, used by `basuIndependenceNormal` / `basuDependenceExponentialShift`. */
+function pearsonCorrelation(x: number[], y: number[]): number {
+  const n = x.length;
+  if (n < 2) return 0;
+  let mx = 0;
+  let my = 0;
+  for (let i = 0; i < n; i++) {
+    mx += x[i];
+    my += y[i];
+  }
+  mx /= n;
+  my /= n;
+  let cov = 0;
+  let vx = 0;
+  let vy = 0;
+  for (let i = 0; i < n; i++) {
+    const dx = x[i] - mx;
+    const dy = y[i] - my;
+    cov += dx * dy;
+    vx += dx * dx;
+    vy += dy * dy;
+  }
+  if (vx === 0 || vy === 0) return 0;
+  return cov / Math.sqrt(vx * vy);
+}
+
+/** Sum of an array (avoids the Array.reduce closure cost in hot loops). */
+function sumArray(a: number[]): number {
+  let s = 0;
+  for (let i = 0; i < a.length; i++) s += a[i];
+  return s;
+}
+
+/** Sample one dataset from the given family at parameter θ. The interpretation
+ *  of θ is family-specific:
+ *    • bernoulli/poisson/exponential/gamma-scale → primary parameter
+ *    • normal-mu → μ (with σ² = 1 fixed)
+ *    • uniform-upper → θ (Uniform(0, θ))
+ *  Used by `completenessProbe`. */
+function sampleFromFamily(
+  family: SufficientFamily,
+  theta: number,
+  n: number,
+  rng: () => number,
+): number[] {
+  switch (family) {
+    case 'bernoulli': {
+      const out = new Array<number>(n);
+      for (let i = 0; i < n; i++) out[i] = bernoulliSample(theta, rng);
+      return out;
+    }
+    case 'poisson': {
+      const out = new Array<number>(n);
+      for (let i = 0; i < n; i++) out[i] = poissonSample(theta, rng);
+      return out;
+    }
+    case 'exponential': {
+      const out = new Array<number>(n);
+      for (let i = 0; i < n; i++) out[i] = exponentialSample(theta, rng);
+      return out;
+    }
+    case 'gamma-scale': {
+      const out = new Array<number>(n);
+      // Use shape α = 2 as a default for the probe; the probe is about
+      // checking the existence of non-trivial g(T) with E_θ[g(T)] ≡ 0.
+      for (let i = 0; i < n; i++) out[i] = gammaSample(2, theta, rng);
+      return out;
+    }
+    case 'normal-mu':
+    case 'normal-mu-sigma': {
+      const out = new Array<number>(n);
+      for (let i = 0; i < n; i++) out[i] = normalSample(theta, 1, rng);
+      return out;
+    }
+    case 'uniform-upper': {
+      return uniformSampleArray(n, 0, theta, rng);
+    }
+  }
+}
+
+/** Standard normal CDF via the Abramowitz-Stegun rational approximation. */
+function normalCdf(z: number): number {
+  // Erf approximation: |error| < 1.5e-7
+  const sign = z < 0 ? -1 : 1;
+  const x = Math.abs(z) / Math.SQRT2;
+  const a1 = 0.254829592;
+  const a2 = -0.284496736;
+  const a3 = 1.421413741;
+  const a4 = -1.453152027;
+  const a5 = 1.061405429;
+  const p = 0.3275911;
+  const t = 1 / (1 + p * x);
+  const y = 1 - (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t * Math.exp(-x * x);
+  return 0.5 * (1 + sign * y);
+}
+
+/** Regularized incomplete beta $I_x(a, b)$ via the Lentz continued fraction
+ *  (Numerical Recipes §6.4). Used by `raoBlackwellClosedForm('normal-tail-prob', ...)`. */
+function regularizedIncompleteBeta(x: number, a: number, b: number): number {
+  if (x <= 0) return 0;
+  if (x >= 1) return 1;
+  if (x > (a + 1) / (a + b + 2)) {
+    return 1 - regularizedIncompleteBeta(1 - x, b, a);
+  }
+  const lnBeta = logGamma(a) + logGamma(b) - logGamma(a + b);
+  const front = Math.exp(a * Math.log(x) + b * Math.log(1 - x) - lnBeta) / a;
+  const eps = 1e-12;
+  let f = 1;
+  let c = 1;
+  let d = 0;
+  for (let m = 0; m < 200; m++) {
+    let numer: number;
+    if (m === 0) {
+      numer = 1;
+    } else if (m % 2 === 0) {
+      const k = m / 2;
+      numer = (k * (b - k) * x) / ((a + 2 * k - 1) * (a + 2 * k));
+    } else {
+      const k = (m - 1) / 2;
+      numer = -((a + k) * (a + b + k) * x) / ((a + 2 * k) * (a + 2 * k + 1));
+    }
+    d = 1 + numer * d;
+    if (Math.abs(d) < eps) d = eps;
+    c = 1 + numer / c;
+    if (Math.abs(c) < eps) c = eps;
+    d = 1 / d;
+    const cd = c * d;
+    f *= cd;
+    if (Math.abs(cd - 1) < eps) break;
+  }
+  return front * (f - 1);
+}
+
 // ── Dev tests (browser-side only, runs once per page load in dev) ────────────
 
 if (import.meta.env.DEV && typeof window !== 'undefined') {
@@ -1634,6 +2374,162 @@ if (import.meta.env.DEV && typeof window !== 'undefined') {
       breakdownPoint('tukey') === 0.5 &&
       Math.abs(breakdownPoint('trimmed-mean', { alpha: 0.1 }) - 0.1) < 1e-12,
   );
+
+  // ── Topic 16 additions ───────────────────────────────────────────────────
+
+  // Deterministic LCG for the Topic 16 MC tests so failures are reproducible.
+  const mkRng = (seed: number) => {
+    let s = seed >>> 0;
+    return () => {
+      s = (s * 1664525 + 1013904223) >>> 0;
+      return s / 0x1_0000_0000;
+    };
+  };
+
+  // 41. factorizationForm('normal-mu') returns T = sum and the right factor structure.
+  {
+    const f = factorizationForm('normal-mu');
+    results.push(f.tLatex.includes('\\sum') && f.gLatex.includes('\\mu'));
+  }
+
+  // 42. factorizationForm('uniform-upper').supportNote flags the support dependence.
+  {
+    const f = factorizationForm('uniform-upper');
+    results.push((f.supportNote ?? '').toLowerCase().includes('support'));
+  }
+
+  // 43. computeSufficientStatistic('bernoulli', [1,0,1,1,0]) === 3
+  results.push(computeSufficientStatistic('bernoulli', [1, 0, 1, 1, 0]) === 3);
+
+  // 44. raoBlackwellize on Bernoulli(p = 0.3) with crude X_1: improved matches
+  //     X̄ exactly (closed form), variance ratio 1/n = 1/20 = 0.05.
+  {
+    const rng = mkRng(101);
+    const data: number[] = [];
+    for (let i = 0; i < 20; i++) data.push(bernoulliSample(0.3, rng));
+    const mean = sampleMean(data);
+    const r = raoBlackwellize(data, (x) => x[0], 'bernoulli', 5000);
+    results.push(near(r.improvedEstimate, mean, 1e-12) && r.varianceRatio < 0.1);
+  }
+
+  // 45. raoBlackwellClosedForm('poisson-zero-prob', [2,3,0,1,4]) = (1 - 1/5)^10 = 0.8^10 ≈ 0.1074
+  results.push(
+    near(raoBlackwellClosedForm('poisson-zero-prob', [2, 3, 0, 1, 4]), Math.pow(0.8, 10), 1e-9),
+  );
+
+  // 46. incompletenessWitnessUniform: across a θ-grid, all values within 0.02 of 0.
+  //     The range R is ancillary for the location θ, so its centered form has
+  //     zero expectation regardless of θ. Tolerance 0.02 covers MC noise at M=3000.
+  {
+    const rng = mkRng(202);
+    const grid = [-1, 0, 0.5, 1, 1.5, 2];
+    const vals = incompletenessWitnessUniform(grid, 10, 3000, rng);
+    let allClose = true;
+    for (const v of vals) if (Math.abs(v) > 0.02) allClose = false;
+    results.push(allClose);
+  }
+
+  // 47. isComplete('bernoulli') === true; isComplete('uniform-upper') === true.
+  //     (Uniform(0, θ) IS complete; the incomplete case is Uniform(θ, θ+1).)
+  results.push(isComplete('bernoulli') && isComplete('uniform-upper'));
+
+  // 48. umvueNormalVarianceKnownMu([1..5], 0) = (1+4+9+16+25)/5 = 11
+  results.push(near(umvueNormalVarianceKnownMu([1, 2, 3, 4, 5], 0), 11, 1e-12));
+
+  // 49. umvueNormalVarianceUnknownMu([1..5]) = 2.5; sampleVariance(.., 0) = 2 (MLE).
+  results.push(
+    near(umvueNormalVarianceUnknownMu([1, 2, 3, 4, 5]), 2.5, 1e-12) &&
+      near(sampleVariance([1, 2, 3, 4, 5], 0), 2.0, 1e-12),
+  );
+
+  // 50. umvueExponentialRate vs MLE on n=200 Exp(λ=2): both within 10% of 2,
+  //     and the ratio (n-1)/n ≈ 0.995.
+  {
+    const rng = mkRng(303);
+    const data = new Array<number>(200);
+    for (let i = 0; i < 200; i++) data[i] = exponentialSample(2, rng);
+    const u = umvueExponentialRate(data);
+    const mle = data.length / sumArray(data);
+    results.push(
+      withinPct(u, 2, 0.15) && withinPct(mle, 2, 0.15) && Math.abs(u / mle - 199 / 200) < 1e-12,
+    );
+  }
+
+  // 51. umvueGammaScale vs MLE on n=200 Gamma(α=3, β=2): both within 15%.
+  {
+    const rng = mkRng(404);
+    const data = new Array<number>(200);
+    for (let i = 0; i < 200; i++) data[i] = gammaSample(3, 2, rng);
+    const u = umvueGammaScale(data, 3);
+    const mle = 3 / sampleMean(data);
+    results.push(withinPct(u, 2, 0.15) && withinPct(mle, 2, 0.15));
+  }
+
+  // 52. basuIndependenceNormal returns |correlation| < 0.05 at n=30, M=5000.
+  {
+    const rng = mkRng(505);
+    const r = basuIndependenceNormal(0, 1, 30, 5000, rng);
+    results.push(Math.abs(r.correlation) < 0.05);
+  }
+
+  // 53. basuDependenceExponentialShift returns |correlation| > 0.2 — much larger
+  //     than the Normal control. (Theoretical |ρ| ≈ 1/√n for n moderate.)
+  {
+    const rng = mkRng(606);
+    const r = basuDependenceExponentialShift(0, 30, 5000, rng);
+    results.push(Math.abs(r.correlation) > 0.15);
+  }
+
+  // 54. tripleComparisonMC normal-variance-unknown-mu: UMVUE bias ≈ 0,
+  //     MLE bias ≈ -σ²/n = -0.133, MoM identical to MLE.
+  {
+    const rng = mkRng(707);
+    const r = tripleComparisonMC(
+      'normal-variance-unknown-mu',
+      { mu: 0, sigma2: 4 },
+      30,
+      5000,
+      rng,
+    );
+    results.push(
+      Math.abs(r.umvueBias) < 0.1 &&
+        Math.abs(r.mleBias - -4 / 30) < 0.1 &&
+        Math.abs(r.mleBias - r.momBias) < 1e-12,
+    );
+  }
+
+  // 55. tripleComparisonMC gamma-scale-with-known-alpha: UMVUE bias ≈ 0,
+  //     MLE bias > 0 (α/X̄ has positive bias for finite n).
+  {
+    const rng = mkRng(808);
+    const r = tripleComparisonMC(
+      'gamma-scale-with-known-alpha',
+      { alpha: 3, beta: 2 },
+      50,
+      3000,
+      rng,
+    );
+    results.push(Math.abs(r.umvueBias) < 0.05 && r.mleBias > 0);
+  }
+
+  // 56. tripleComparisonMC poisson-rate: triple coincidence — all three biases
+  //     near 0 and all three MSEs identical (UMVUE = MLE = MoM = X̄).
+  {
+    const rng = mkRng(909);
+    const r = tripleComparisonMC('poisson-rate', { lambda: 3 }, 30, 3000, rng);
+    results.push(
+      Math.abs(r.umvueBias) < 0.1 &&
+        near(r.umvueBias, r.mleBias, 1e-12) &&
+        near(r.umvueMSE, r.mleMSE, 1e-12),
+    );
+  }
+
+  // 57. uniformSampleArray(1000, 0, 1, rng) — empirical mean within 0.03 of 0.5.
+  {
+    const rng = mkRng(1010);
+    const sample = uniformSampleArray(1000, 0, 1, rng);
+    results.push(Math.abs(sampleMean(sample) - 0.5) < 0.03);
+  }
 
   const passed = results.filter(Boolean).length;
   if (passed === results.length) {

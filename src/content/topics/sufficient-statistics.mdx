@@ -1,0 +1,874 @@
+---
+title: "Sufficient Statistics & Rao-Blackwell"
+subtitle: "Data reduction, UMVUE, and the Pitman-Koopman-Darmois characterization — the theorems that close classical estimation."
+status: "published"
+difficulty: "intermediate"
+prerequisites:
+  - "exponential-families"
+  - "point-estimation"
+  - "maximum-likelihood"
+  - "method-of-moments"
+  - "expectation-moments"
+tags:
+  - "statistics"
+  - "estimation"
+  - "sufficient-statistics"
+  - "rao-blackwell"
+  - "lehmann-scheffe"
+  - "umvue"
+  - "completeness"
+  - "minimal-sufficiency"
+  - "basu-theorem"
+  - "ancillary-statistics"
+  - "factorization-theorem"
+  - "pitman-koopman-darmois"
+  - "data-reduction"
+  - "exponential-families"
+domain: "statistical-estimation"
+videoId: null
+notebookPath: "notebooks/sufficient-statistics/16_sufficient_statistics.ipynb"
+githubUrl: "https://github.com/jonx0037/formalStatistics/blob/main/src/content/topics/sufficient-statistics.mdx"
+datePublished: 2026-04-24
+estimatedReadTime: 55
+abstract: "A statistic $T(X)$ is sufficient for a parameter $\\theta$ when the conditional distribution of the full data given $T$ is parameter-free — intuitively, $T$ carries all the evidence the data has to offer. The Fisher-Neyman factorization theorem, which Topic 7 stated only for exponential families, is established here in full generality: $T$ is sufficient if and only if the joint density factors as $g(T(x); \\theta) \\cdot h(x)$. This is the operational test and the engine of everything that follows. Rao-Blackwell's theorem promotes sufficiency to optimality: conditioning any unbiased estimator on a sufficient statistic cannot increase its mean squared error, and strictly decreases it unless the estimator was already a function of $T$. Completeness is the second leg — a family is complete when no non-trivial function of $T$ has identically zero expectation; the Lehmann-Scheffé theorem then guarantees that any unbiased function of a complete sufficient statistic is *the* uniformly minimum-variance unbiased estimator (UMVUE). For Normal $\\sigma^2$ with unknown mean, the UMVUE is $S^2_{n-1}$ — cleanly distinct from both the MLE and the MoM, which coincide at $S^2_n$. Basu's theorem closes a surprising circle: a complete sufficient statistic is independent of every ancillary statistic, giving the $\\bar X \\perp\\!\\!\\!\\perp S^2$ independence that makes the t-distribution well-defined. Finally, the Pitman-Koopman-Darmois theorem delivers the structural punchline: under regularity (support independent of $\\theta$, smoothness), a family that admits a fixed-dimensional sufficient statistic for iid samples of every size must be an exponential family — Topic 7's special families are, in a precise sense, the only ones where data reduction scales. Topic 16 closes Track 4 by comparing UMVUE, MLE, and MoM on the Gamma, the Normal, and the Exponential; where completeness holds, the three agree (exponential families in the natural parameter), and where it fails, their differences tell a clean story about bias, efficiency, and the geometry of the likelihood."
+formalcalculusPrereqs:
+  - topic: "integration"
+    site: "formalcalculus"
+    relationship: "The factorization theorem and Rao-Blackwell proofs use joint-density integration and the interchange of integration with conditional expectation (Fubini). The PKD proof integrates a separable functional equation in both arguments."
+  - topic: "differentiation"
+    site: "formalcalculus"
+    relationship: "The PKD proof cross-differentiates the log-factorization in the data argument and the parameter, deriving the separable equation that characterizes the exponential-family form."
+  - topic: "sequences-limits"
+    site: "formalcalculus"
+    relationship: "Almost-sure equality in the Rao-Blackwell and Basu conclusions; asymptotic-sufficiency remarks in §16.12 use convergence in probability."
+formalmlConnections:
+  - topic: "information-bottleneck"
+    site: "formalml"
+    relationship: "The information bottleneck method finds a compressed representation $T$ of the data $X$ that preserves information about a target $Y$. In the special case $\\theta = Y$ and $T$ is the sufficient statistic, the bottleneck recovers the Topic 16 notion of sufficiency. Learned sufficient statistics are the non-parametric analog."
+  - topic: "representation-learning"
+    site: "formalml"
+    relationship: "Self-supervised learning objectives (contrastive, masked-modeling) implicitly discover sufficient statistics of $X$ for downstream tasks. The Rao-Blackwellization intuition — that optimal estimators are functions of $T$ — reappears as the rationale for pretrained-feature reuse."
+  - topic: "variational-inference"
+    site: "formalml"
+    relationship: "Variational bounds on the mutual information between $T$ and $\\theta$ give tractable proxies for sufficiency in deep models. The exp-family structure from Topic 7 §7.7 gives the closed-form ELBO updates."
+  - topic: "minimum-description-length"
+    site: "formalml"
+    relationship: "MDL codes data as parameter + residual; under exp-family sufficiency, the optimal parameter code uses exactly the sufficient statistic, making MDL and sufficiency operationally equivalent in that setting."
+connections:
+  - topic: "exponential-families"
+    relationship: "Topic 7 §7.6 stated the factorization theorem only for exponential families. Topic 16 §16.3 proves it in full generality. Topic 7 §7.8 showed MLE = moment-matching $\\nabla A(\\hat\\eta) = \\bar T$; Topic 16 §16.11 shows this coincides with the UMVUE when completeness holds. The Pitman-Koopman-Darmois theorem (§16.10) closes the loop: under regularity, exp families are the ONLY families with fixed-dimensional sufficient statistics — a converse to §7.6."
+  - topic: "point-estimation"
+    relationship: "Topic 13 built bias, MSE, consistency, asymptotic normality, efficiency, Fisher information, CRLB. Topic 16 extends the toolkit with sufficiency, completeness, UMVUE, and the Rao-Blackwell optimality of conditioning on $T$. The MSE decomposition from Topic 13 powers the Rao-Blackwell proof via Eve's law."
+  - topic: "maximum-likelihood"
+    relationship: "Topic 14 developed MLE consistency, asymptotic normality, and efficiency. Topic 16 establishes that the MLE — when a complete sufficient statistic exists — is a function of it (Thm 5 applied to the MLE's unbiasedness in natural parameterization). §16.11 shows that for exp families in the natural parameter, MLE coincides with UMVUE."
+  - topic: "method-of-moments"
+    relationship: "Topic 15 closed with the (coming soon) promise that UMVUE would be compared against MLE and MoM. §16.11 fulfills it: for Exponential rate, Gamma scale (with known shape), Normal variance, and Poisson rate, compare the three. In exp families in their natural parameter, all three coincide under completeness; for Normal $\\sigma^2$ with $\\mu$ unknown, the UMVUE ($S^2_{n-1}$) strictly differs from the MLE = MoM ($S^2_n$)."
+  - topic: "expectation-moments"
+    relationship: "Topic 4 established conditional expectation and Eve's law (total variance). The Rao-Blackwell proof (§16.5 Proof 2) applies Eve's law directly — $\\mathrm{Var}(\\hat\\theta) = \\mathbb{E}[\\mathrm{Var}(\\hat\\theta \\mid T)] + \\mathrm{Var}(\\mathbb{E}[\\hat\\theta \\mid T])$ — with the first term non-negative yielding the conclusion."
+  - topic: "conditional-probability"
+    relationship: "The sufficient-statistic definition (Def 1) says the conditional distribution of $X$ given $T = t$ does not depend on $\\theta$. This uses the conditional-distribution framework developed in Topic 2."
+references:
+  - type: "book"
+    title: "Theory of Point Estimation"
+    author: "Erich L. Lehmann & George Casella"
+    year: 1998
+    edition: "2nd"
+    publisher: "Springer"
+    isbn: "978-0-387-98502-2"
+    url: "https://link.springer.com/book/10.1007/b98854"
+    note: "Chapters 1–2 are the definitive modern reference for sufficiency, completeness, Rao-Blackwell, Lehmann-Scheffé, Basu, and the PKD theorem. The approach throughout Topic 16 follows Lehmann-Casella's organization and notation."
+  - type: "book"
+    title: "Statistical Inference"
+    author: "George Casella & Roger L. Berger"
+    year: 2002
+    edition: "2nd"
+    publisher: "Duxbury"
+    isbn: "978-0-534-24312-8"
+    url: "https://www.cengage.com/c/statistical-inference-2e-casella/"
+    note: "Chapters 6.2–7.3 cover sufficiency, minimal sufficiency, completeness, and UMVUE at the level adopted here. The worked examples in §16.5 and §16.8 are standard textbook material from this source."
+  - type: "book"
+    title: "Fundamentals of Statistical Exponential Families"
+    author: "Lawrence D. Brown"
+    year: 1986
+    publisher: "IMS Lecture Notes Monograph Series, Vol. 9"
+    url: "https://projecteuclid.org/euclid.lnms/1215466757"
+    note: "The definitive treatment of exponential families, including the full $k$-parameter Pitman-Koopman-Darmois theorem with measure-theoretic regularity conditions. Cited in §16.10 Remark 11 as the reference for the multiparameter case (which Topic 16 states without proof)."
+  - type: "paper"
+    title: "On the Mathematical Foundations of Theoretical Statistics"
+    author: "Ronald A. Fisher"
+    year: 1922
+    journal: "Philosophical Transactions of the Royal Society A"
+    volume: "222"
+    pages: "309–368"
+    url: "https://royalsocietypublishing.org/doi/10.1098/rsta.1922.0009"
+    note: "Fisher's introduction of sufficiency (§7 of his paper). Cited in §16.1 as the historical origin of the concept."
+  - type: "paper"
+    title: "Application of the Radon-Nikodym Theorem to the Theory of Sufficient Statistics"
+    author: "Paul R. Halmos & Leonard J. Savage"
+    year: 1949
+    journal: "Annals of Mathematical Statistics"
+    volume: "20(2)"
+    pages: "225–241"
+    url: "https://projecteuclid.org/euclid.aoms/1177730032"
+    note: "The measure-theoretic formalization of the factorization theorem. Cited in §16.1 Remark 1 and §16.3 for rigor background."
+  - type: "paper"
+    title: "Information and the Accuracy Attainable in the Estimation of Statistical Parameters"
+    author: "C. Radhakrishna Rao"
+    year: 1945
+    journal: "Bulletin of the Calcutta Mathematical Society"
+    volume: "37"
+    pages: "81–91"
+    note: "Rao's original conditioning-inequality argument; published in 1945 before Blackwell's 1947 extension. Cited jointly as Rao (1945) / Blackwell (1947) in §16.5 for the theorem's history."
+  - type: "paper"
+    title: "Conditional Expectation and Unbiased Sequential Estimation"
+    author: "David Blackwell"
+    year: 1947
+    journal: "Annals of Mathematical Statistics"
+    volume: "18(1)"
+    pages: "105–110"
+    url: "https://projecteuclid.org/euclid.aoms/1177730497"
+    note: "Blackwell's independent derivation and extension of Rao's theorem. The standard statement 'Rao-Blackwell theorem' combines both."
+  - type: "paper"
+    title: "Completeness, Similar Regions, and Unbiased Estimation — Part I"
+    author: "Erich L. Lehmann & Henry Scheffé"
+    year: 1950
+    journal: "Sankhyā"
+    volume: "10(4)"
+    pages: "305–340"
+    url: "https://www.jstor.org/stable/25048038"
+    note: "The foundational paper on completeness and UMVUE. Cited in §16.6 and §16.7."
+  - type: "paper"
+    title: "On Statistics Independent of a Complete Sufficient Statistic"
+    author: "Debabrata Basu"
+    year: 1955
+    journal: "Sankhyā"
+    volume: "15(4)"
+    pages: "377–380"
+    url: "https://www.jstor.org/stable/25048259"
+    note: "Basu's theorem in its original form. The proof in §16.9 follows Basu's own argument."
+  - type: "paper"
+    title: "Sur les lois de probabilité à estimation exhaustive"
+    author: "Georges Darmois"
+    year: 1935
+    journal: "Comptes rendus de l'Académie des Sciences"
+    volume: "200"
+    pages: "1265–1266"
+    note: "Darmois' original statement and proof of the scalar characterization theorem. The §16.10 proof follows Darmois' cross-differentiation argument. Companion independent derivations: Koopman (1936), Pitman (1936)."
+  - type: "paper"
+    title: "On Distributions Admitting a Sufficient Statistic"
+    author: "Bernard O. Koopman"
+    year: 1936
+    journal: "Transactions of the American Mathematical Society"
+    volume: "39(3)"
+    pages: "399–409"
+    url: "https://www.jstor.org/stable/1989758"
+    note: "Koopman's independent derivation of the characterization theorem. Joint attribution with Darmois and Pitman."
+  - type: "paper"
+    title: "Sufficient Statistics and Intrinsic Accuracy"
+    author: "E. J. G. Pitman"
+    year: 1936
+    journal: "Mathematical Proceedings of the Cambridge Philosophical Society"
+    volume: "32(4)"
+    pages: "567–579"
+    url: "https://doi.org/10.1017/S0305004100019307"
+    note: "Pitman's independent derivation, giving the theorem the third name it bears."
+---
+
+import DefinitionBlock from '../../components/ui/DefinitionBlock.astro';
+import TheoremBlock from '../../components/ui/TheoremBlock.astro';
+import ProofBlock from '../../components/ui/ProofBlock.astro';
+import ExampleBlock from '../../components/ui/ExampleBlock.astro';
+import RemarkBlock from '../../components/ui/RemarkBlock.astro';
+import ExternalLink from '../../components/ui/ExternalLink.astro';
+
+import FactorizationExplorer from '../../components/viz/FactorizationExplorer.tsx';
+import RaoBlackwellImprover from '../../components/viz/RaoBlackwellImprover.tsx';
+import CompletenessProbe from '../../components/viz/CompletenessProbe.tsx';
+import BasuIndependence from '../../components/viz/BasuIndependence.tsx';
+import UMVUEComparator from '../../components/viz/UMVUEComparator.tsx';
+
+## 16.1 From §7.6 to a Theory of Data Reduction
+
+[Topic 7 §7.6](/topics/exponential-families) stated the Fisher-Neyman factorization theorem only for *exponential families*: for a family of the form $f(x;\theta) = h(x)\exp(\eta(\theta) T(x) - A(\theta))$, the statistic $T$ is sufficient *by construction* — the factorization is already in the form the theorem demands. Topic 16 generalizes this to **arbitrary dominated families** and builds the full machinery of data reduction: minimal sufficiency, completeness, Rao-Blackwell optimality, the Lehmann-Scheffé UMVUE theorem, Basu's independence theorem, and — closing the circle — the Pitman-Koopman-Darmois converse.
+
+The thesis of the topic is one sentence: **a sufficient statistic is exactly the data summary that loses nothing about the parameter, and exponential families are the only families where the summary stays small.** Everything else — Rao-Blackwell, Lehmann-Scheffé, Basu — sharpens this into operational tools for building optimal estimators.
+
+![Two-panel motivation. Left: 30 raw Bernoulli observations are collapsed into a single count T = ΣXᵢ via a horizontal arrow labeled "data reduction, lossless for p". Right: histogram of X̄ across M = 5000 Monte-Carlo replications of Bernoulli(p = 0.3) at n = 30, with the theoretical N(p, p(1-p)/n) overlay — demonstrating that all inference about p is contained in the sufficient statistic.](/images/topics/sufficient-statistics/data-reduction-motivation.png)
+
+<RemarkBlock number={1} title="Fisher (1922) and Halmos–Savage (1949)">
+The concept of sufficiency originates with R. A. Fisher's 1922 paper, *On the Mathematical Foundations of Theoretical Statistics* (§7 of that paper introduces "sufficient statistics" as one of the cornerstones of his program). Fisher's argument was operational: estimators that ignore the sufficient statistic discard usable information, and one should prefer those that don't. The measure-theoretic formalization — the modern statement and proof of the factorization theorem in full generality — came nearly thirty years later in Halmos & Savage (1949), *Application of the Radon-Nikodym Theorem to the Theory of Sufficient Statistics*. The Halmos–Savage paper handles the dominated-family case rigorously via the Radon–Nikodym derivative, which is what Topic 16 §16.3 quietly invokes when it speaks of densities $f(x; \theta) = dP_\theta/d\mu$ for a common dominating measure $\mu$.
+</RemarkBlock>
+
+<RemarkBlock number={2} title='What "data reduction" actually means'>
+Sufficiency is a strong claim: $T$ is a *lossless compression of the data with respect to $\theta$*. Once you know $T$, the rest of the data is parameter-free noise — the conditional distribution $X \mid T$ does not depend on $\theta$ at all. This is information-theoretic in spirit but does not require Shannon information; it is a structural statement about the family $\{P_\theta\}$. The compression is sometimes dramatic — for $n$ Bernoulli trials, the sufficient statistic is a single integer in $\{0, 1, \ldots, n\}$; for $n$ Normal observations with both parameters unknown, it's a 2-vector $(\sum X_i, \sum X_i^2)$. Topics 7, 13, 14, and 15 used this fact implicitly. §16.10 will reveal *why* the compression stays small only in exponential families.
+</RemarkBlock>
+
+## 16.2 Sufficient Statistics: The Conditional-Distribution Definition
+
+The cleanest definition of sufficiency uses conditional distributions directly — no factorization theorem yet, no exponential-family scaffolding. The conditional distribution of the data given a sufficient statistic is *parameter-free*; everything else is downstream.
+
+<DefinitionBlock number={1} title="Sufficient statistic">
+A statistic $T(X)$ is **sufficient** for $\theta$ if the conditional distribution of $X$ given $T(X) = t$ does not depend on $\theta$ — that is, $P_\theta(X \in \cdot \mid T = t)$ is the same for every $\theta \in \Theta$ and every $t$ in the range of $T$.
+
+Operationally: knowing $T$ leaves no further parameter information in the data. The residual randomness of $X \mid T$ is "noise" in the strict sense that its distribution is fixed regardless of the truth.
+</DefinitionBlock>
+
+<DefinitionBlock number={2} title="Jointly sufficient statistics">
+A vector statistic $T(X) = (T_1(X), \ldots, T_k(X))$ is **jointly sufficient** for a parameter $\theta = (\theta_1, \ldots, \theta_p) \in \Theta$ if the conditional distribution of $X$ given $T(X) = t$ does not depend on $\theta$. The dimension $k$ of the sufficient statistic need not equal the parameter dimension $p$ — though when $T$ is *minimal* (§16.4), and the family is regular (§16.10), the two dimensions match.
+</DefinitionBlock>
+
+<TheoremBlock number={1} title="Order statistic is always sufficient for iid samples">
+For iid data $X_1, \ldots, X_n$ from any common distribution $P_\theta$, the order statistic $T(X) = (X_{(1)}, \ldots, X_{(n)})$ is sufficient for $\theta$.
+</TheoremBlock>
+
+The reason is structural: the iid joint density is symmetric in the arguments, so $f(x; \theta) = f(x_{\sigma(1)}, \ldots, x_{\sigma(n)}; \theta)$ for every permutation $\sigma$. Conditioning on the order statistic is equivalent to conditioning on the *unordered* sample — and given the unordered sample, the distribution over labelings is uniform over all $n!$ permutations regardless of $\theta$. The order statistic is sufficient by construction. It is rarely *minimal* — for most families, a much smaller statistic also suffices.
+
+<ExampleBlock number={1} title="Normal(μ, σ² known): T = ΣXᵢ via direct conditional check">
+Let $X_1, \ldots, X_n$ be iid $\mathcal{N}(\mu, \sigma^2)$ with $\sigma^2$ known. Define $T = \sum_{i=1}^n X_i$. We check sufficiency directly: the conditional density of $X$ given $T = t$ is
+
+$$f(x \mid T = t; \mu) \;=\; \frac{f(x; \mu)}{f_T(t; \mu)} \cdot \mathbf{1}\!\left\{\sum x_i = t\right\}.$$
+
+The numerator is the iid Normal density $(2\pi\sigma^2)^{-n/2}\exp(-\sum(x_i - \mu)^2 / 2\sigma^2)$. Expanding the squared-deviation sum,
+
+$$\sum (x_i - \mu)^2 \;=\; \sum x_i^2 - 2\mu\sum x_i + n\mu^2 \;=\; \sum x_i^2 - 2\mu t + n\mu^2.$$
+
+The denominator $f_T(t;\mu)$ is the density of $T \sim \mathcal{N}(n\mu, n\sigma^2)$, which contains the same $-2\mu t / 2\sigma^2 = -\mu t/\sigma^2$ term and the same $n\mu^2/2\sigma^2$ term. The two cancel exactly, leaving the conditional density independent of $\mu$. Hence $T$ is sufficient.
+</ExampleBlock>
+
+<ExampleBlock number={2} title="Bernoulli(p): T = ΣXᵢ via the binomial conditional">
+Let $X_1, \ldots, X_n$ be iid $\mathrm{Bernoulli}(p)$, and define $T = \sum X_i$. The joint pmf is $p^t (1-p)^{n-t}$ where $t = T(x)$. Conditional on $T = t$, every binary vector $x \in \{0,1\}^n$ with $\sum x_i = t$ has probability
+
+$$P_p(X = x \mid T = t) \;=\; \frac{p^t(1-p)^{n-t}}{\binom{n}{t}p^t(1-p)^{n-t}} \;=\; \binom{n}{t}^{-1},$$
+
+uniform over the $\binom{n}{t}$ vectors in the level set. The conditional is parameter-free — $T$ is sufficient.
+</ExampleBlock>
+
+<ExampleBlock number={3} title="Sample size n is trivially sufficient — but useless">
+The constant statistic $T(X) = n$ is trivially sufficient: the "conditional distribution of $X$ given $T = n$" is just the marginal joint distribution of $X$, which depends on $\theta$ in general — so this is *not* a counterexample, just a degenerate case of the definition. The genuinely degenerate sufficient statistic is the identity, $T(X) = X$ itself, which is sufficient because conditioning on the full data leaves nothing to vary. Both extremes — too coarse to compress, too fine to compress — motivate **minimal sufficiency** (§16.4): the coarsest sufficient statistic that still captures everything.
+</ExampleBlock>
+
+![Sufficient-statistic diagram. Left: raw sample space partitioned by level sets of T. Center: the statistic map T : Xⁿ → T. Right: the conditional distribution X | T = t with annotation "parameter-free by sufficiency". Bernoulli (T = ΣXᵢ, partition by count) and Normal (partition by (X̄, S²)) examples are overlaid.](/images/topics/sufficient-statistics/sufficient-statistic-diagram.png)
+
+<RemarkBlock number={3} title="Conditional-distribution vs factorization definitions">
+The conditional-distribution definition (Def 1) is conceptually clean but operationally heavy — checking it requires writing out the joint density and dividing through, as in Examples 1 and 2. The Fisher–Neyman factorization theorem (§16.3) gives an equivalent and *easier* operational test: $T$ is sufficient iff the joint density factors as $g(T(x); \theta) \cdot h(x)$. The two definitions agree for dominated families (the standard setting), with the equivalence proved in §16.3. From here forward, factorization is the tool of choice; the conditional definition is the conceptual anchor.
+</RemarkBlock>
+
+## 16.3 The Fisher-Neyman Factorization Theorem
+
+The factorization theorem is the engine of everything downstream. It converts the conditional-distribution definition (which requires checking that conditional densities are constant in $\theta$) into a one-line algebraic check on the joint density itself.
+
+<TheoremBlock number={2} title="Fisher–Neyman factorization (general)">
+Let $\{P_\theta : \theta \in \Theta\}$ be a family of distributions on a measurable space $(\mathcal{X}, \mathcal{A})$, dominated by a common $\sigma$-finite measure $\mu$, with densities $f(x; \theta) = dP_\theta/d\mu$. A statistic $T : \mathcal{X} \to \mathcal{T}$ is **sufficient** for $\theta$ if and only if there exist non-negative measurable functions $g(\cdot; \theta)$ on $\mathcal{T} \times \Theta$ and $h(\cdot)$ on $\mathcal{X}$ such that
+
+$$f(x; \theta) \;=\; g(T(x); \theta) \cdot h(x) \qquad \mu\text{-a.s.}$$
+</TheoremBlock>
+
+The factorization splits the joint density into a $\theta$-dependent factor that touches the data only through $T$ and a $\theta$-independent factor $h$ that absorbs everything else. The proof, which we give in full below, is direct in the discrete case and extends to the dominated case via Halmos–Savage.
+
+<ProofBlock>
+**Discrete case (sufficiency $\Leftrightarrow$ factorization).**
+
+*($\Leftarrow$ Factorization $\Rightarrow$ sufficient.)* Suppose $f(x;\theta) = g(T(x); \theta) \cdot h(x)$. For any $x$ in the support and $t = T(x)$,
+
+$$P_\theta(X = x \mid T = t) \;=\; \frac{f(x;\theta)}{P_\theta(T = t)}\,\mathbf{1}\{T(x) = t\}.$$
+
+The denominator is $P_\theta(T = t) = \sum_{x' : T(x') = t} f(x'; \theta) = g(t; \theta) \sum_{x' : T(x') = t} h(x')$, since $g(T(x'); \theta) = g(t; \theta)$ is constant on the level set. Substituting,
+
+$$P_\theta(X = x \mid T = t) \;=\; \frac{g(t;\theta) h(x)}{g(t;\theta) \sum_{x'} h(x')} \;=\; \frac{h(x)}{\sum_{x' : T(x') = t} h(x')}.$$
+
+The conditional probability is a function of $x$ alone — no $\theta$ dependence — so $T$ is sufficient.
+
+*($\Rightarrow$ Sufficient $\Rightarrow$ factorization.)* Suppose $T$ is sufficient. Then $P_\theta(X = x \mid T = T(x))$ does not depend on $\theta$. Define
+
+$$h(x) \;=\; P_{\theta_0}(X = x \mid T = T(x)), \qquad g(t; \theta) \;=\; P_\theta(T = t),$$
+
+for any fixed reference $\theta_0$. By sufficiency, $h(x)$ does not depend on the choice of $\theta_0$. Then
+
+$$f(x;\theta) \;=\; P_\theta(X = x) \;=\; P_\theta(T = T(x)) \cdot P_\theta(X = x \mid T = T(x)) \;=\; g(T(x); \theta) \cdot h(x),$$
+
+which is the desired factorization.
+
+**Continuous / dominated-family case.** The discrete argument extends to the dominated-family setting via the Radon–Nikodym theorem. Let $\mu$ be a $\sigma$-finite measure dominating $\{P_\theta\}$, so $f(x;\theta) = dP_\theta/d\mu$. The conditional density $f(x \mid T = t; \theta)$ is well-defined as a Radon–Nikodym derivative on the level set $\{T(x) = t\}$, and sufficiency means this derivative does not depend on $\theta$. The same algebra carries through with sums replaced by integrals: $g(t;\theta)$ becomes the marginal density of $T$, and $h(x)$ becomes the conditional density of $X$ given $T(x)$ — both well-defined on a $\mu$-conull set.
+
+∎ — using the conditional-probability definition (§2) and the dominated-family assumption (Halmos & Savage, 1949).
+</ProofBlock>
+
+![Factorization theorem in four families. Top-left: Normal(μ, σ²) — density with g and h factors color-coded. Top-right: Bernoulli — probability factors. Bottom-left: Poisson — exp(-nλ) λ^(Σx) / Πxᵢ! decomposition. Bottom-right: Uniform(0, θ) — non-exponential family case with f(x;θ) = θ^(-n) · indicator(max ≤ θ) · indicator(min ≥ 0), showing T = max via the support indicator.](/images/topics/sufficient-statistics/factorization-theorem.png)
+
+<FactorizationExplorer client:visible />
+
+<ExampleBlock number={4} title="Normal(μ, σ²): two-line factorization">
+For $X_1, \ldots, X_n$ iid $\mathcal{N}(\mu, \sigma^2)$ with both parameters unknown, the joint density expands to
+
+$$f(x; \mu, \sigma^2) \;=\; (2\pi\sigma^2)^{-n/2}\exp\!\left(-\tfrac{1}{2\sigma^2}\sum x_i^2 \;+\; \tfrac{\mu}{\sigma^2}\sum x_i \;-\; \tfrac{n\mu^2}{2\sigma^2}\right).$$
+
+Setting $T_1 = \sum x_i$ and $T_2 = \sum x_i^2$, the parameter-dependent factor is $g(T_1, T_2; \mu, \sigma^2) = (2\pi\sigma^2)^{-n/2}\exp(\mu T_1/\sigma^2 - T_2/(2\sigma^2) - n\mu^2/(2\sigma^2))$ and the data-only factor is $h(x) = 1$. Hence $T = (\sum X_i, \sum X_i^2)$ is jointly sufficient — a 2-vector matching the parameter dimension.
+</ExampleBlock>
+
+<ExampleBlock number={5} title="Uniform(0, θ): the non-exponential-family case">
+For $X_1, \ldots, X_n$ iid $\mathrm{Uniform}(0, \theta)$, the joint density is
+
+$$f(x; \theta) \;=\; \theta^{-n} \cdot \mathbf{1}\!\left\{0 \le x_{(1)} \text{ and } x_{(n)} \le \theta\right\} \;=\; \underbrace{\theta^{-n} \mathbf{1}\!\{x_{(n)} \le \theta\}}_{g(T;\theta)} \;\cdot\; \underbrace{\mathbf{1}\!\{x_{(1)} \ge 0\}}_{h(x)},$$
+
+so $T(X) = X_{(n)} = \max_i X_i$ is sufficient by factorization. The factorization is *clean* — but the family is **not** an exponential family: the support $[0, \theta]$ depends on $\theta$, the support indicator cannot be absorbed into the exp-family form, and Topic 7's construction does not apply. This example will return in §16.10 as the canonical counterexample to the Pitman–Koopman–Darmois theorem: a non-exp-family with a fixed-dimensional sufficient statistic, escaping the converse only by violating the regularity condition that support not depend on $\theta$.
+</ExampleBlock>
+
+<ExampleBlock number={6} title="Poisson(λ): T = ΣXᵢ via factorization">
+For $X_1, \ldots, X_n$ iid $\mathrm{Poisson}(\lambda)$, the joint pmf is
+
+$$f(x;\lambda) \;=\; \prod_{i=1}^n \frac{e^{-\lambda}\lambda^{x_i}}{x_i!} \;=\; \underbrace{e^{-n\lambda}\lambda^{\sum x_i}}_{g(T;\lambda)} \;\cdot\; \underbrace{\left(\prod_i x_i!\right)^{-1}}_{h(x)},$$
+
+so $T = \sum X_i$ is sufficient. As an exponential family in canonical form $f(x;\lambda) = (x!)^{-1}\exp(x\log\lambda - \lambda)$, the natural sufficient statistic is exactly this sum.
+</ExampleBlock>
+
+<RemarkBlock number={4} title="Factorization is operationally easier than the conditional check">
+Compare Example 1 (the direct conditional check for Normal $\mu$, which required expanding the squared-deviation sum and showing two terms cancel) with Example 4 (the factorization, which is two lines). For most families that arise in practice, factorization gives the sufficient statistic immediately by inspection: write down the joint density, group terms by $\theta$-dependence, and read off $T$. The conditional-distribution definition remains the conceptual anchor — it tells us *why* sufficiency means data reduction — but the factorization theorem is what we *compute* with.
+</RemarkBlock>
+
+## 16.4 Minimal Sufficiency
+
+Sufficiency is closed under invertible (and even non-invertible) refinement: if $T$ is sufficient, so is $(T, X_1)$, the order statistic, or any other statistic from which $T$ can be recovered. We want the *coarsest* sufficient statistic — the one that summarizes maximally without losing parameter information.
+
+<DefinitionBlock number={3} title="Minimal sufficient statistic">
+A sufficient statistic $T$ is **minimal sufficient** for $\theta$ if, for every other sufficient statistic $T'$, there exists a measurable function $\phi$ with $T = \phi(T')$ almost surely. Equivalently, the partition of the sample space induced by $T$ is the *coarsest* partition under which sufficiency holds.
+</DefinitionBlock>
+
+<TheoremBlock number={3} title="Minimal sufficiency via likelihood-ratio constancy (Lehmann–Scheffé)">
+Suppose the family $\{P_\theta\}$ has densities $f(x;\theta)$ with respect to a common dominating measure. A statistic $T(X)$ is minimal sufficient for $\theta$ if and only if, for every pair of sample points $x, y$,
+
+$$\frac{f(x; \theta)}{f(y; \theta)} \text{ does not depend on } \theta \;\Longleftrightarrow\; T(x) = T(y).$$
+</TheoremBlock>
+
+The forward direction is clear: if $T$ is minimal sufficient and $T(x) = T(y)$, then $x$ and $y$ lie in the same level set of every sufficient statistic, so the likelihood ratio cannot distinguish $\theta$-dependence at $x$ from $y$. The converse — that any statistic with this likelihood-ratio constancy property is minimal sufficient — uses sufficiency of $T$ (the level sets give a sufficient partition, by factorization) plus the *minimality* of the partition (any coarser partition would merge points with $\theta$-varying likelihood ratios, breaking sufficiency). The proof is short but technical; we omit the algebra here and refer to Casella & Berger (2002, §6.2.2).
+
+![Minimal sufficiency partition. Left: 200 iid Normal(0, 1) samples of size n=10, each represented by its minimal sufficient (X̄, S²) — a 2-dim partition matching the parameter dimension. Right: the same samples plotted via the non-minimal (X̄, X₁) — a strictly finer partition that wastes information on the identity of X₁.](/images/topics/sufficient-statistics/minimal-sufficiency-partition.png)
+
+<ExampleBlock number={7} title="Normal(μ, σ²): (X̄, S²) is minimal sufficient">
+For iid Normal data with both parameters unknown, the likelihood ratio is
+
+$$\frac{f(x;\mu,\sigma^2)}{f(y;\mu,\sigma^2)} \;=\; \exp\!\left(\tfrac{\mu}{\sigma^2}\bigl[\textstyle\sum x_i - \sum y_i\bigr] - \tfrac{1}{2\sigma^2}\bigl[\sum x_i^2 - \sum y_i^2\bigr]\right).$$
+
+This is constant in $(\mu, \sigma^2)$ if and only if $\sum x_i = \sum y_i$ AND $\sum x_i^2 = \sum y_i^2$ — equivalently, $\bar x = \bar y$ AND $S^2(x) = S^2(y)$. By Theorem 3, $T(X) = (\bar X, S^2)$ is minimal sufficient. The dimension matches the parameter dimension — a feature shared by every regular exponential family (and forced, under regularity, by Pitman–Koopman–Darmois).
+</ExampleBlock>
+
+<ExampleBlock number={8} title="(X̄, X₁) is sufficient but NOT minimal for Normal μ">
+For Normal data with $\sigma^2$ known, $T = \bar X$ is minimal sufficient. The expanded statistic $T' = (\bar X, X_1)$ is also sufficient (any function from which $T$ can be recovered inherits sufficiency), but it is *not* minimal: for any pair of samples $x, y$ with $\bar x = \bar y$ but $x_1 \ne y_1$, the likelihood ratio is constant in $\mu$ (since the joint density depends on $x$ only through $\bar x$), but $T'(x) \ne T'(y)$. Theorem 3's biconditional fails, so $T'$ is not minimal. Carrying $X_1$ along is information-wasting: it refines the partition without buying any inferential content.
+</ExampleBlock>
+
+<RemarkBlock number={5} title="Complete sufficient ⇒ minimal sufficient (converse false)">
+A theorem due to Bahadur (1957) states that a complete sufficient statistic is minimal sufficient. The converse is false: the standard counterexample is Uniform$(\theta, \theta+1)$, where the minimal sufficient statistic $T = (X_{(1)}, X_{(n)})$ is *not* complete (Example 13, §16.6). Completeness is a strictly stronger property than minimality. The Lehmann–Scheffé theorem (§16.7) requires completeness, not just minimality, because it needs to rule out the existence of multiple unbiased functions of $T$ — and minimality alone does not.
+</RemarkBlock>
+
+## 16.5 The Rao-Blackwell Theorem
+
+Sufficiency is structural — it identifies which summaries preserve parameter information. Rao–Blackwell makes it *operational*: any unbiased estimator can be improved (in the MSE sense) by conditioning on a sufficient statistic. The improvement is constructive and tight: it strictly reduces variance unless the estimator was already a function of $T$.
+
+<DefinitionBlock number={4} title='Rao-Blackwellized estimator'>
+Given an estimator $\hat\theta(X)$ and a sufficient statistic $T(X)$, the **Rao-Blackwellized estimator** is
+
+$$\tilde\theta(T) \;=\; \mathbb{E}[\hat\theta(X) \mid T].$$
+
+By sufficiency, the conditional distribution of $X \mid T$ does not depend on $\theta$, so the conditional expectation is a function of $T$ alone (not of $\theta$) — hence a *statistic*. The construction is constructive: integrate $\hat\theta(X)$ against the parameter-free conditional distribution $X \mid T$.
+</DefinitionBlock>
+
+<TheoremBlock number={4} title="Rao–Blackwell: conditioning on a sufficient T does not increase MSE">
+Let $T$ be sufficient for $\theta$ and let $\hat\theta$ be an unbiased estimator of $\theta$ with finite variance. Define $\tilde\theta = \mathbb{E}[\hat\theta \mid T]$. Then:
+
+1. $\tilde\theta$ is a statistic (function of $T$ alone).
+2. $\tilde\theta$ is unbiased: $\mathbb{E}_\theta[\tilde\theta] = \theta$.
+3. $\mathrm{Var}_\theta(\tilde\theta) \le \mathrm{Var}_\theta(\hat\theta)$, with equality iff $\hat\theta = \tilde\theta$ almost surely (i.e., $\hat\theta$ was already a function of $T$).
+
+Since both estimators are unbiased, MSE = variance, so $\mathrm{MSE}(\tilde\theta) \le \mathrm{MSE}(\hat\theta)$.
+</TheoremBlock>
+
+<ProofBlock>
+**Step 1 — $\tilde\theta$ is a statistic.** The conditional distribution of $\hat\theta(X)$ given $T$ depends on $X$ only through $T$ (because $T$ is sufficient and $\hat\theta$ is a function of $X$), and crucially does not depend on $\theta$. So $\tilde\theta = \mathbb{E}[\hat\theta \mid T]$ is computable without knowing $\theta$ — it is a function of $T$ alone.
+
+**Step 2 — $\tilde\theta$ is unbiased.** By the law of iterated expectation (Topic 4),
+
+$$\mathbb{E}_\theta[\tilde\theta] \;=\; \mathbb{E}_\theta[\mathbb{E}[\hat\theta \mid T]] \;=\; \mathbb{E}_\theta[\hat\theta] \;=\; \theta.$$
+
+**Step 3 — $\mathrm{Var}(\tilde\theta) \le \mathrm{Var}(\hat\theta)$ via Eve's law.** The law of total variance (Eve's law, Topic 4) decomposes the variance of $\hat\theta$ as
+
+$$\mathrm{Var}_\theta(\hat\theta) \;=\; \mathbb{E}_\theta[\mathrm{Var}(\hat\theta \mid T)] \;+\; \mathrm{Var}_\theta(\mathbb{E}[\hat\theta \mid T]).$$
+
+Substituting $\tilde\theta = \mathbb{E}[\hat\theta \mid T]$,
+
+$$\mathrm{Var}_\theta(\hat\theta) \;=\; \underbrace{\mathbb{E}_\theta[\mathrm{Var}(\hat\theta \mid T)]}_{\ge 0} \;+\; \mathrm{Var}_\theta(\tilde\theta).$$
+
+The first term is non-negative, with equality if and only if $\mathrm{Var}(\hat\theta \mid T) = 0$ almost surely — i.e., $\hat\theta$ is constant given $T$, which means $\hat\theta$ is itself a function of $T$. Otherwise, $\mathrm{Var}(\tilde\theta) < \mathrm{Var}(\hat\theta)$ strictly.
+
+Since both estimators are unbiased, MSE equals variance, so $\mathrm{MSE}(\tilde\theta) \le \mathrm{MSE}(\hat\theta)$ — strictly so whenever $\hat\theta$ was not already a function of $T$.
+
+∎ — using sufficiency of $T$ (Def 1), iterated expectation, and Eve's law (Topic 4).
+</ProofBlock>
+
+![Rao-Blackwell MSE drop. Left: Bernoulli p at n=20, histogram of crude p̂₀ = X₁ (0/1-valued, very wide) vs Rao-Blackwellized p̃ = X̄ (concentrated around 0.3) across M = 10000 MC samples, with variance ratio annotation ~20×. Center: Poisson λ=2 at n=10, crude 𝟙(X₁=0) vs RB'd (1−1/n)ˆ(ΣXᵢ) — discrete 0/1 vs smooth RB'd. Right: MSE bars comparing crude vs RB'd across four scenarios, demonstrating "RB never hurts".](/images/topics/sufficient-statistics/rao-blackwell-mse-drop.png)
+
+<RaoBlackwellImprover client:visible />
+
+<ExampleBlock number={9} title="Bernoulli p: X₁ Rao-Blackwellized by ΣXᵢ gives X̄">
+For iid $\mathrm{Bernoulli}(p)$ with $T = \sum X_i$ sufficient, the crude estimator $\hat p_0 = X_1$ is unbiased ($\mathbb{E}[X_1] = p$) but lies in $\{0, 1\}$ — variance is $p(1-p)$, the maximum possible for an estimator with this support. Conditioning on $T$:
+
+$$\tilde p \;=\; \mathbb{E}[X_1 \mid T = t] \;=\; \frac{t}{n} \;=\; \bar X,$$
+
+since by exchangeability all $X_i$ have the same conditional distribution given $T$, and their conditional sum is $T$. The Rao-Blackwellized estimator is the sample mean, with $\mathrm{Var}(\bar X) = p(1-p)/n$ — a factor $n$ smaller than $\mathrm{Var}(X_1)$. The RaoBlackwellImprover above visualizes this dramatic shrinkage at $n = 20$.
+</ExampleBlock>
+
+<ExampleBlock number={10} title="Poisson: UMVUE of P(X = 0) = exp(−λ) via Rao-Blackwellization">
+Suppose we want to estimate $g(\lambda) = P_\lambda(X = 0) = e^{-\lambda}$ from iid $\mathrm{Poisson}(\lambda)$ data. The crude estimator $\hat g_0 = \mathbf{1}\{X_1 = 0\}$ is unbiased ($\mathbb{E}[\mathbf{1}\{X_1 = 0\}] = e^{-\lambda}$), but it is a 0/1 indicator. Conditioning on $T = \sum X_i$ (which is $\mathrm{Poisson}(n\lambda)$):
+
+$$\tilde g \;=\; \mathbb{E}[\mathbf{1}\{X_1 = 0\} \mid T = t] \;=\; P(X_1 = 0 \mid \textstyle\sum X_i = t).$$
+
+The conditional distribution of $(X_1, \ldots, X_n)$ given $\sum X_i = t$ is $\mathrm{Multinomial}(t; 1/n, \ldots, 1/n)$. So $X_1 \mid T = t \sim \mathrm{Binomial}(t, 1/n)$, and $P(X_1 = 0 \mid T = t) = (1 - 1/n)^t$. The Rao-Blackwellized estimator is
+
+$$\tilde g \;=\; \left(1 - \tfrac{1}{n}\right)^{\sum X_i},$$
+
+which is the UMVUE of $e^{-\lambda}$ (since $\sum X_i$ is complete sufficient — see §16.6 Lemma 1 — and Lehmann–Scheffé applies). A 0/1 estimator promoted to a smooth, sample-size-aware estimator with provably minimum variance among unbiased estimators.
+</ExampleBlock>
+
+<ExampleBlock number={11} title='Normal variance Rao-Blackwellization: preview of §16.7 Example 14'>
+Suppose we want to estimate $\sigma^2$ for iid $\mathcal{N}(\mu, \sigma^2)$ with $\mu$ known. The crude estimator $\hat\sigma^2_0 = (X_1 - \mu)^2$ is unbiased ($\mathbb{E}[(X_1 - \mu)^2] = \sigma^2$) but uses only one observation. Conditioning on the sufficient statistic $T = \sum (X_i - \mu)^2 \sim \sigma^2 \chi^2_n$:
+
+$$\tilde\sigma^2 \;=\; \mathbb{E}[(X_1 - \mu)^2 \mid T = t] \;=\; \frac{t}{n} \;=\; \frac{1}{n}\sum (X_i - \mu)^2,$$
+
+by exchangeability of $(X_i - \mu)^2$ given $T$. The variance ratio is $n$ — a factor-$n$ reduction. We finish this calculation in §16.7 Example 14, where Lehmann–Scheffé promotes it to the UMVUE.
+</ExampleBlock>
+
+<RemarkBlock number={6} title="Rao-Blackwell is constructive, not just existence">
+Rao–Blackwell does more than prove the existence of a better estimator — it tells you exactly *what* it is: the conditional expectation $\mathbb{E}[\hat\theta \mid T]$, computable by integrating against the parameter-free conditional distribution $X \mid T$. For the canonical families (Bernoulli, Poisson, Normal, Exponential, Gamma) the conditional distribution has a closed form, and the Rao-Blackwellized estimator is a direct calculation. This constructive aspect is what makes the theorem operational: Rao (1945) and Blackwell (1947) independently realized that every unbiased estimator can be *mechanically* upgraded by this recipe, without needing to know whether a UMVUE even exists.
+</RemarkBlock>
+
+## 16.6 Completeness
+
+Rao–Blackwell guarantees that conditioning on a sufficient statistic does not hurt. But it does not guarantee uniqueness: two different unbiased estimators might Rao-Blackwellize to two different unbiased functions of $T$. **Completeness** is the structural property that closes this gap — it says no two distinct unbiased functions of $T$ can have the same expectation, so the Rao-Blackwellization map is injective on unbiased functions.
+
+<DefinitionBlock number={5} title="Complete family; bounded completeness">
+A family $\{P_\theta : \theta \in \Theta\}$ of distributions of a statistic $T$ is **complete** if, for every measurable function $g$ with $\mathbb{E}_\theta[|g(T)|] < \infty$ for all $\theta$,
+
+$$\mathbb{E}_\theta[g(T)] \;=\; 0 \text{ for all } \theta \in \Theta \;\Longrightarrow\; g(T) \;=\; 0 \text{ almost surely under every } P_\theta.$$
+
+A statistic $T$ is **complete sufficient** for $\theta$ if it is sufficient and the family of its distributions $\{P_\theta^T : \theta \in \Theta\}$ is complete. The statistic is **boundedly complete** if the implication above holds for every *bounded* measurable $g$. Bounded completeness is strictly weaker than full completeness, and in fact suffices for the Lehmann–Scheffé theorem (§16.7 Remark 7).
+</DefinitionBlock>
+
+<TheoremBlock type="lemma" number={1} title="Completeness of exponential families in the natural parameter">
+Let $T$ be the canonical sufficient statistic of an exponential family $f(x; \eta) = h(x)\exp(\eta^\top T(x) - A(\eta))$ with natural parameter $\eta$ ranging over an open subset $H \subseteq \mathbb{R}^k$. Then $T$ is **complete** for $\eta$.
+</TheoremBlock>
+
+The argument is a one-liner: $\mathbb{E}_\eta[g(T)] = \int g(t) \exp(\eta^\top t - A(\eta)) \, d\nu(t) = 0$ for every $\eta$ in the open set $H$ implies, by the uniqueness of the Laplace transform of the signed measure $g(t) \, d\nu(t)$ on $\mathbb{R}^k$, that $g(t) = 0$ almost everywhere under the dominating measure $\nu$. The technical details (open natural parameter space, analyticity of $A(\eta)$, appropriate moment conditions) are handled rigorously in Brown (1986, §2.2). For our purposes, the operational consequence is clean: **every full-rank exponential family with an open natural parameter space has a complete sufficient statistic**, and Lehmann–Scheffé will deliver the UMVUE in every such family.
+
+![Completeness demonstration. Left: Bernoulli (complete) — four candidate test functions g₁, g₂, g₃, g₄ of T = ΣXᵢ plotted as 𝔼_p[g(T)] vs p; only the constant-zero function gives the flat zero curve. Right: Uniform(θ, θ+1) (incomplete) — the range-based witness g(T) = (X_(n) − X_(1)) − (n−1)/(n+1) plotted as 𝔼_θ[g(T)] vs θ — the curve is identically zero for all θ (since the range is ancillary for the location parameter θ), with a non-witness contrast g'(T) = X_(1) − 1/(n+1) plotted as a linear-in-θ reference line.](/images/topics/sufficient-statistics/completeness-demo.png)
+
+<CompletenessProbe client:visible />
+
+<ExampleBlock number={12} title='Bernoulli, Binomial, Poisson, Normal, Gamma — all complete'>
+By Lemma 1, every exponential family in its natural parameter has a complete sufficient statistic. Concretely:
+
+- **Bernoulli($p$):** $T = \sum X_i \sim \mathrm{Binomial}(n, p)$ is complete for $p$.
+- **Binomial($n, p$) with $n$ known:** $T = X$ itself is complete for $p$.
+- **Poisson($\lambda$):** $T = \sum X_i \sim \mathrm{Poisson}(n\lambda)$ is complete for $\lambda$.
+- **Normal($\mu, \sigma^2$) with $\sigma^2$ known:** $T = \bar X$ is complete for $\mu$.
+- **Normal($\mu, \sigma^2$) jointly:** $T = (\bar X, S^2)$ is complete for $(\mu, \sigma^2)$.
+- **Gamma($\alpha, \beta$) with $\alpha$ known:** $T = \sum X_i$ is complete for $\beta$.
+- **Exponential($\lambda$):** $T = \sum X_i$ is complete for $\lambda$.
+
+Each delivers a UMVUE via Lehmann–Scheffé (§16.7).
+</ExampleBlock>
+
+<ExampleBlock number={13} title="Uniform(θ, θ+1) is NOT complete — the centered-range witness">
+Consider $X_1, \ldots, X_n$ iid $\mathrm{Uniform}(\theta, \theta + 1)$ — a unit-width interval shifted by $\theta$. The minimal sufficient statistic is the pair $T = (X_{(1)}, X_{(n)})$ — *two-dimensional* for a *one-dimensional* parameter, an immediate structural warning sign.
+
+Why incompleteness? Because $\theta$ is a pure location parameter, the **range** $R = X_{(n)} - X_{(1)}$ is *ancillary* for $\theta$: its distribution depends only on $n$, not on $\theta$. (Specifically, $R$ has mean $(n-1)/(n+1)$ and a $\mathrm{Beta}(n-1, 2)$-shaped density, both free of $\theta$.) Therefore the centered range
+
+$$g(T) \;=\; R \;-\; \frac{n-1}{n+1} \;=\; (X_{(n)} - X_{(1)}) \;-\; \frac{n-1}{n+1}$$
+
+satisfies $\mathbb{E}_\theta[g(T)] = 0$ for every $\theta \in \mathbb{R}$ — yet $g(T)$ is *not* identically zero. This is the definition of incompleteness: a non-trivial function of $T$ with zero expectation under every $P_\theta$.
+
+The CompletenessProbe above lets you visualize this directly: choose Uniform$(\theta, \theta+1)$, evaluate the centered range across the $\theta$-grid, and see the empirical $\mathbb{E}_\theta[g(T)] \approx 0$ curve. By contrast, on the same grid a non-witness like $g'(T) = X_{(1)} - 1/(n+1)$ traces a non-zero linear function of $\theta$ — illustrating the difference between an ancillary-derived witness (which makes incompleteness visible) and a generic test function (which does not).
+</ExampleBlock>
+
+<RemarkBlock number={7} title="Bounded completeness suffices for Lehmann–Scheffé">
+The Lehmann–Scheffé theorem (§16.7) is usually proved using *full* completeness. But a closer look at the proof shows that only *bounded* completeness is needed — the only test functions that arise are differences $h_1(T) - h_2(T)$ between unbiased estimators of the same quantity, and these are bounded whenever both have finite second moment. Bounded completeness is strictly weaker than full completeness, and a small number of important families (notably some non-regular location-scale families) are boundedly complete without being completely complete. For the canonical exponential families in this topic, the distinction does not matter — all are fully complete by Lemma 1.
+</RemarkBlock>
+
+## 16.7 The Lehmann-Scheffé Theorem
+
+Sufficiency reduces the data without loss; completeness reduces unbiased functions of the data without redundancy. Lehmann–Scheffé combines them into a uniqueness-and-optimality statement: *the* unique unbiased function of a complete sufficient statistic is *the* uniformly minimum-variance unbiased estimator.
+
+<DefinitionBlock number={6} title='UMVUE'>
+An estimator $\tilde\theta$ of a parameter (or parametric function) $g(\theta)$ is the **uniformly minimum-variance unbiased estimator (UMVUE)** if:
+
+1. $\tilde\theta$ is unbiased: $\mathbb{E}_\theta[\tilde\theta] = g(\theta)$ for every $\theta \in \Theta$.
+2. For every other unbiased estimator $\hat\theta$ of $g(\theta)$, $\mathrm{Var}_\theta(\tilde\theta) \le \mathrm{Var}_\theta(\hat\theta)$ for every $\theta \in \Theta$.
+
+The "uniformly" applies to the parameter — the variance dominance must hold simultaneously at every $\theta$, not just on average or at a particular value. UMVUE existence is non-trivial: there are families with no UMVUE at all (Remark 8). When a UMVUE exists, it is essentially unique (Theorem 6).
+</DefinitionBlock>
+
+<TheoremBlock number={5} title="Lehmann–Scheffé: unbiased function of complete sufficient ⇒ UMVUE">
+Let $T$ be a complete sufficient statistic for $\theta$, and let $\tilde\theta = h(T)$ be an unbiased estimator of $g(\theta)$ that is a function of $T$. Then $\tilde\theta$ is the unique UMVUE of $g(\theta)$.
+</TheoremBlock>
+
+<ProofBlock>
+**Existence (any unbiased estimator can be improved to a function of $T$).** Let $\hat\theta^*$ be any unbiased estimator of $g(\theta)$. Define $\hat\theta^{**} = \mathbb{E}[\hat\theta^* \mid T]$. By the Rao–Blackwell theorem (Theorem 4), $\hat\theta^{**}$ is a function of $T$, is unbiased for $g(\theta)$, and has variance $\mathrm{Var}(\hat\theta^{**}) \le \mathrm{Var}(\hat\theta^*)$.
+
+**Uniqueness (any two unbiased functions of $T$ agree almost surely).** Suppose $\tilde\theta_1 = h_1(T)$ and $\tilde\theta_2 = h_2(T)$ are both unbiased for $g(\theta)$. Then for every $\theta \in \Theta$,
+
+$$\mathbb{E}_\theta[h_1(T) - h_2(T)] \;=\; g(\theta) - g(\theta) \;=\; 0.$$
+
+By completeness of $T$ (Definition 5), this forces $h_1(T) - h_2(T) = 0$ almost surely under every $P_\theta$ — that is, $h_1(T) = h_2(T)$ a.s.
+
+**Optimality (Rao-Blackwellization always lands on $\tilde\theta$).** For any unbiased $\hat\theta^*$, the Rao-Blackwellization $\hat\theta^{**} = \mathbb{E}[\hat\theta^* \mid T]$ is an unbiased function of $T$. By uniqueness, $\hat\theta^{**} = \tilde\theta$ almost surely. Therefore
+
+$$\mathrm{Var}(\tilde\theta) \;=\; \mathrm{Var}(\hat\theta^{**}) \;\le\; \mathrm{Var}(\hat\theta^*),$$
+
+with the second inequality from Rao-Blackwell. This holds for *every* unbiased $\hat\theta^*$, so $\tilde\theta$ is the UMVUE — uniformly across $\theta$ and uniquely up to a.s. equality.
+
+∎ — by Rao-Blackwell (Theorem 4) and completeness (Definition 5).
+</ProofBlock>
+
+<TheoremBlock number={6} title='UMVUE uniqueness almost surely'>
+If a UMVUE of $g(\theta)$ exists, then it is unique up to almost-sure equality under every $P_\theta$ — that is, any two UMVUE candidates $\tilde\theta_1$ and $\tilde\theta_2$ agree on a set of $P_\theta$-measure 1 for every $\theta$.
+</TheoremBlock>
+
+This is a corollary of Theorem 5: any UMVUE must be a function of any complete sufficient $T$ (otherwise Rao-Blackwellization strictly improves it), and any two unbiased functions of $T$ agree a.s. by completeness. Without completeness, the uniqueness conclusion fails — a family with multiple inequivalent UMVUEs exists in principle, but is exotic.
+
+![Lehmann-Scheffé construction. Left: the Lehmann-Scheffé "diamond" — θ̂* (any unbiased) → θ̃ = 𝔼[θ̂* | T] (Rao-Blackwellized, function of T) → unique UMVUE (by completeness). Right: for Normal σ² known μ, histograms of crude σ̂² = (X₁ − μ)², RB'd σ̃² = Σ(Xᵢ − μ)²/n, with the variance-ratio = n annotation.](/images/topics/sufficient-statistics/lehmann-scheffe-construction.png)
+
+<ExampleBlock number={14} title="Normal σ² with known μ: UMVUE = Σ(Xᵢ − μ)²/n (worked in full)">
+Let $X_1, \ldots, X_n$ be iid $\mathcal{N}(\mu, \sigma^2)$ with $\mu$ known and $\sigma^2$ unknown. The complete sufficient statistic is $T = \sum (X_i - \mu)^2$, which has distribution $\sigma^2 \chi^2_n$. The unbiased function of $T$ for $\sigma^2$ is
+
+$$\hat\sigma^2_{\text{UMVUE}} \;=\; \frac{T}{n} \;=\; \frac{1}{n}\sum_{i=1}^n (X_i - \mu)^2,$$
+
+since $\mathbb{E}[T] = n\sigma^2$. By Lehmann–Scheffé (Theorem 5), this is *the* UMVUE of $\sigma^2$ in this model. Variance: $\mathrm{Var}(\hat\sigma^2_{\text{UMVUE}}) = \mathrm{Var}(T)/n^2 = (2n\sigma^4)/n^2 = 2\sigma^4/n$ — exactly the CRLB (Topic 13 §13.7). The UMVUE is *efficient* in this case.
+
+Note the crucial assumption $\mu$ known. With $\mu$ unknown the model is exactly the same family but with two parameters, and the complete sufficient statistic becomes $(\bar X, \sum(X_i - \bar X)^2)$ — leading to the famous Bessel correction; see Example 19 below.
+</ExampleBlock>
+
+<ExampleBlock number={15} title="Gamma scale β with known α: UMVUE = (nα − 1)/ΣXᵢ">
+Let $X_1, \ldots, X_n$ be iid $\mathrm{Gamma}(\alpha, \beta)$ with shape $\alpha$ known and rate $\beta$ unknown — an exponential family in $\beta$. The complete sufficient statistic is $T = \sum X_i \sim \mathrm{Gamma}(n\alpha, \beta)$, with $\mathbb{E}[T^{-1}] = \beta / (n\alpha - 1)$ for $n\alpha > 1$ (a standard Gamma reciprocal-moment identity). Hence the unbiased function of $T$ for $\beta$ is
+
+$$\hat\beta_{\text{UMVUE}} \;=\; \frac{n\alpha - 1}{\sum X_i}.$$
+
+By Lehmann–Scheffé this is the UMVUE. Compare with the MLE / MoM: $\hat\beta_{\text{MLE}} = \hat\beta_{\text{MoM}} = \alpha / \bar X = n\alpha / \sum X_i$. The two estimators differ by exactly the bias-correction factor $(n\alpha - 1)/(n\alpha)$ — a small but non-trivial gap that the §16.11 UMVUEComparator visualizes. **This is the example that fulfills the [`method-of-moments.mdx:1062`](/topics/method-of-moments) promise.**
+</ExampleBlock>
+
+<RemarkBlock number={8} title="UMVUE may not exist; when it exists, need not attain the CRLB">
+Two cautions worth flagging. First, a UMVUE need not exist. In families without a complete sufficient statistic, the set of unbiased estimators may have no member that uniformly dominates the others — the Lehmann–Scheffé existence proof relies critically on completeness. Second, even when the UMVUE exists, it does not always attain the Cramér–Rao lower bound. The CRLB is a *bound on variance*, derived from the information inequality; UMVUE is the *best unbiased estimator*. The UMVUE attains the CRLB precisely in *full-rank exponential families with the parameter being the natural one* — exactly the same condition for which MLE = UMVUE = MoM coincide (§16.11 Theorem 9). Outside that boundary, the UMVUE has variance strictly above the CRLB, and the gap measures the unattainability of efficient estimation in that family.
+</RemarkBlock>
+
+## 16.8 UMVUE Worked Examples
+
+The Lehmann–Scheffé theorem turns sufficiency + completeness into an algorithm: identify the complete sufficient statistic, find an unbiased function of it, and you have the UMVUE. The five canonical examples below demonstrate the algorithm and lay the ground for §16.11's triple-estimator comparison.
+
+| Family | Parameter | UMVUE | MLE | MoM | Relationship |
+|---|---|---|---|---|---|
+| Bernoulli($p$) | $p$ | $\bar X$ | $\bar X$ | $\bar X$ | triple coincidence |
+| Poisson($\lambda$) | $\lambda$ | $\bar X$ | $\bar X$ | $\bar X$ | triple coincidence |
+| Normal($\mu, \sigma^2$) | $\mu$ ($\sigma^2$ known) | $\bar X$ | $\bar X$ | $\bar X$ | triple coincidence |
+| Normal($\mu, \sigma^2$) | $\sigma^2$ ($\mu$ unknown) | $S^2_{n-1}$ | $S^2_n$ | $S^2_n$ | **UMVUE $\ne$ MLE = MoM** |
+| Exponential($\lambda$) | $\lambda$ | $(n-1)/\sum X$ | $n/\sum X$ | $n/\sum X$ | UMVUE $\ne$ MLE = MoM |
+| Gamma($\alpha, \beta$), $\alpha$ known | $\beta$ | $(n\alpha-1)/\sum X$ | $\alpha/\bar X$ | $\alpha/\bar X$ | UMVUE $\ne$ MLE = MoM |
+
+<ExampleBlock number={16} title="Bernoulli p: UMVUE = MLE = X̄">
+$T = \sum X_i$ is complete sufficient for $p$, and $\mathbb{E}[T/n] = p$, so $\hat p_{\text{UMVUE}} = \bar X$. The MLE is also $\bar X$ (Topic 14, Example 14.1), and so is the MoM (Topic 15, Example 15.3). All three coincide — the Bernoulli is exp family in its natural parameter, so Theorem 9 (§16.11) applies. Variance: $\mathrm{Var}(\bar X) = p(1-p)/n$, which equals the CRLB $1/I(p) = p(1-p)/n$ — efficient.
+</ExampleBlock>
+
+<ExampleBlock number={17} title="Poisson λ: UMVUE = MLE = X̄">
+$T = \sum X_i \sim \mathrm{Poisson}(n\lambda)$ is complete sufficient for $\lambda$, and $\mathbb{E}[T/n] = \lambda$, so $\hat\lambda_{\text{UMVUE}} = \bar X$. The MLE (Topic 14, Example 14.4) and MoM (Topic 15, §15.2) both also equal $\bar X$. Triple coincidence again, and again CRLB-attaining: $\mathrm{Var}(\bar X) = \lambda/n = 1/I(\lambda)$.
+</ExampleBlock>
+
+<ExampleBlock number={18} title="Normal μ (σ² known): UMVUE = MLE = MoM = X̄">
+With $\sigma^2$ known, $T = \bar X \sim \mathcal{N}(\mu, \sigma^2/n)$ is complete sufficient and unbiased for $\mu$, hence the UMVUE. The MLE is also $\bar X$ (Topic 14, Example 14.2 with $\sigma^2$ fixed), and the MoM is too (Topic 15, Example 15.1). All three coincide; the variance $\sigma^2/n$ equals the CRLB.
+</ExampleBlock>
+
+<ExampleBlock number={19} title="Normal σ² with μ unknown: UMVUE = S²ₙ₋₁, MLE = MoM = S²ₙ — the featured case">
+With $\mu$ also unknown, the complete sufficient statistic is the pair $T = (\bar X, \sum (X_i - \bar X)^2)$. The unbiased function of $T$ for $\sigma^2$ is the **Bessel-corrected** sample variance,
+
+$$\hat\sigma^2_{\text{UMVUE}} \;=\; S^2_{n-1} \;=\; \frac{1}{n-1}\sum_{i=1}^n (X_i - \bar X)^2,$$
+
+since $\sum (X_i - \bar X)^2 \sim \sigma^2 \chi^2_{n-1}$ and $\mathbb{E}[\chi^2_{n-1}] = n - 1$. The MLE and MoM, by contrast, both land at the un-corrected
+
+$$\hat\sigma^2_{\text{MLE}} \;=\; \hat\sigma^2_{\text{MoM}} \;=\; S^2_n \;=\; \frac{1}{n}\sum_{i=1}^n (X_i - \bar X)^2,$$
+
+with bias $\mathbb{E}[S^2_n] - \sigma^2 = -\sigma^2 / n$. The bias is small but does not disappear: at $n = 30$ and $\sigma^2 = 4$, the MLE/MoM bias is $-0.133$. The featured §16.11 comparison runs all three estimators in parallel and shows the UMVUE on top by a small but persistent margin in MSE for moderate $n$.
+</ExampleBlock>
+
+<ExampleBlock number={20} title="UMVUE of P(X > c) for Normal data via Rao-Blackwellization of an indicator">
+Suppose we want to estimate $g(\mu, \sigma^2) = P_{\mu,\sigma^2}(X > c)$ for some fixed threshold $c$. The crude unbiased estimator is the indicator $\hat g_0 = \mathbf{1}\{X_1 > c\}$. Conditioning on the complete sufficient $(\bar X, S^2)$, the UMVUE turns out to be a regularized incomplete-beta tail:
+
+$$\hat g_{\text{UMVUE}} \;=\; I_{y}\!\left(\frac{n-2}{2}, \frac{n-2}{2}\right), \quad \text{where } y = \frac{1}{2}\!\left(1 - \frac{c - \bar X}{S}\sqrt{\frac{n}{n - 2 + (c-\bar X)^2/S^2}}\right),$$
+
+with $I_y$ the regularized incomplete beta function. This is the formula used by `umvueNormalTailProb` in `estimation.ts`. The full derivation (in Lehmann & Casella, 1998, §2.4) integrates the indicator against the conditional distribution of $X_1$ given $(\bar X, S^2)$, which has a scaled-Beta form. The point: even for non-trivial parametric functions, Rao-Blackwellization combined with completeness gives the UMVUE in closed form when the sufficient statistic has tractable conditional distributions.
+</ExampleBlock>
+
+![UMVUE Normal variance — featured figure for Example 19. Left: sampling distributions for n=10, σ²=4: UMVUE S²_(n-1), MLE S²_n, MoM S²_n plotted as histograms over M=10000 replications. Center: bias bars — UMVUE ≈ 0, MLE = MoM ≈ -σ²/n = -0.4. Right: MSE bars — UMVUE has slightly higher variance but zero bias; MLE/MoM slightly lower variance but biased; UMVUE wins for moderate n.](/images/topics/sufficient-statistics/umvue-normal-variance.png)
+
+<RemarkBlock number={9} title="Bias-efficiency pattern across UMVUE / MLE / MoM">
+Reading the table at the top of §16.8: in every exp-family in its natural parameter, UMVUE = MLE = MoM = $\bar X$ (or its relevant linear transform). Outside the natural parameterization, UMVUE and MLE diverge in a structured way: UMVUE prioritizes unbiasedness ($S^2_{n-1}$ for Normal $\sigma^2$); MLE and MoM coincidentally prioritize a different summary ($S^2_n$, the maximum-likelihood projection onto the tangent space) and pay a small bias cost. For finite $n$, the comparison is family-specific: sometimes UMVUE wins on MSE (Normal $\sigma^2$ at moderate $n$), sometimes MLE wins (e.g., Gamma scale in some regimes — its slight positive bias and lower variance can yield smaller MSE for very small $n$). Asymptotically, all three are consistent and asymptotically Normal at the same $n^{-1/2}$ rate; the bias gap shrinks as $1/n$, so it disappears in the asymptotic limit.
+</RemarkBlock>
+
+## 16.9 Ancillary Statistics and Basu's Theorem
+
+Sufficient statistics carry *all* the parameter information; ancillary statistics carry *none* of it. Basu's theorem says that when the first is complete sufficient, the two are independent — a startlingly clean structural result with broad consequences in Track 5.
+
+<DefinitionBlock number={7} title="Ancillary statistic; first-order ancillary">
+A statistic $A(X)$ is **ancillary** for $\theta$ if its distribution under $P_\theta$ does not depend on $\theta$ — that is, $P_\theta(A \in B)$ is the same function of $B$ for every $\theta \in \Theta$.
+
+A statistic is **first-order ancillary** for $\theta$ if its mean does not depend on $\theta$, even if higher moments might. First-order ancillarity is strictly weaker than full ancillarity. For most of our purposes — and for Basu's theorem — we use full ancillarity.
+</DefinitionBlock>
+
+Examples of ancillary statistics: the sample range $R = X_{(n)} - X_{(1)}$ for a pure-location family; the studentized statistic $(X_1 - \bar X)/S$ in a Normal family with location parameter $\mu$ and known shape; any function of standardized residuals after removing a location and scale.
+
+<TheoremBlock number={7} title="Basu: complete sufficient ⊥⊥ ancillary">
+If $T$ is a complete sufficient statistic for $\theta$ and $A$ is an ancillary statistic for $\theta$, then $T$ and $A$ are independent under every $P_\theta$.
+</TheoremBlock>
+
+<ProofBlock>
+Fix any measurable event $B$ in the $\sigma$-algebra generated by $A$. Define
+
+$$g(T) \;=\; P_\theta(A \in B \mid T) \;-\; P_\theta(A \in B).$$
+
+**The conditional probability does not depend on $\theta$.** Because $T$ is sufficient, the conditional distribution of $X$ (and hence of any function of $X$, including $A$) given $T$ does not depend on $\theta$. So $P_\theta(A \in B \mid T)$ is the same function of $T$ for every $\theta$ — it is a statistic.
+
+**The marginal probability does not depend on $\theta$.** Because $A$ is ancillary for $\theta$, its distribution under $P_\theta$ does not depend on $\theta$. So $P_\theta(A \in B)$ is a constant in $\theta$.
+
+Hence $g(T)$ is a well-defined statistic (a function of $T$ minus a constant). Taking expectation under $P_\theta$:
+
+$$\mathbb{E}_\theta[g(T)] \;=\; \mathbb{E}_\theta[P_\theta(A \in B \mid T)] \;-\; P_\theta(A \in B) \;=\; P_\theta(A \in B) \;-\; P_\theta(A \in B) \;=\; 0,$$
+
+where the first equality uses iterated expectation. This holds for *every* $\theta \in \Theta$. By completeness of $T$, the implication $\mathbb{E}_\theta[g(T)] = 0 \,\forall \theta \Rightarrow g(T) = 0$ a.s. forces
+
+$$P_\theta(A \in B \mid T) \;=\; P_\theta(A \in B) \quad \text{a.s.}$$
+
+This is the definition of independence of $A$ and $T$ under $P_\theta$, for every measurable $B$ — hence $A \perp\!\!\!\perp T$ under $P_\theta$, for every $\theta$.
+
+∎ — by sufficiency of $T$, ancillarity of $A$, and completeness (Definition 5).
+</ProofBlock>
+
+![Basu independence demo. Left: scatter of (X̄, S²) across M=10000 Normal(μ=0, σ²=1) samples at n=30 — visually uncorrelated cloud, sample correlation ≈ 0, annotation "Basu: complete sufficient X̄ for μ at fixed σ² is independent of ancillary S²". Center: scatter of (X_(1), X̄) for Exp-shift model X = Exp(1) + μ — visible positive correlation ≈ 0.18, annotation "Basu does NOT apply — X̄ is not ancillary for μ". Right: t-statistic histogram t = √n(X̄ − μ)/S with t_(n-1) density overlay — independence from Basu making the t ratio work.](/images/topics/sufficient-statistics/basu-independence.png)
+
+<BasuIndependence client:visible />
+
+<ExampleBlock number={21} title="Normal: X̄ ⊥⊥ S² — the t-distribution foundation">
+For $X_1, \ldots, X_n$ iid $\mathcal{N}(\mu, \sigma^2)$ with $\sigma^2$ fixed and known, $\bar X$ is complete sufficient for $\mu$. The sample variance $S^2 = (n-1)^{-1}\sum (X_i - \bar X)^2$ has distribution $\sigma^2 \chi^2_{n-1}/(n-1)$, which depends on $\sigma^2$ but not on $\mu$ — so $S^2$ is ancillary for $\mu$ at fixed $\sigma^2$. By Basu's theorem,
+
+$$\bar X \;\perp\!\!\!\perp\; S^2.$$
+
+This is the independence that makes the t-statistic $t = \sqrt{n}(\bar X - \mu)/S$ have a well-defined distribution: it's the ratio of an independent $\mathcal{N}(0, 1)$ (from $\sqrt n(\bar X - \mu)/\sigma$) and $\sqrt{\chi^2_{n-1}/(n-1)}$ (from $S/\sigma$) — exactly the construction of Student's $t_{n-1}$. The t-test, the t-confidence-interval, and the entire Track 5 chapter on hypothesis testing for Normal-mean problems all rest on this Basu corollary. The BasuIndependence component above visualizes this independence as a decorrelated MC scatter cloud.
+</ExampleBlock>
+
+<ExampleBlock number={22} title="Uniform(0, θ): X₍ₙ₎ complete sufficient, X₍ₙ₋₁₎/X₍ₙ₎ ancillary ⇒ independent">
+For $X_1, \ldots, X_n$ iid $\mathrm{Uniform}(0, \theta)$, $T = X_{(n)}$ is complete sufficient for $\theta$ (a standard exercise — completeness follows from the fact that any zero-expectation function $g(T)$ must satisfy $\int_0^\theta g(t) \cdot n t^{n-1}/\theta^n \, dt = 0$ for all $\theta$, which by differentiation in $\theta$ forces $g \equiv 0$ on $(0, \infty)$). The ratio $A = X_{(n-1)}/X_{(n)}$ has distribution $\mathrm{Beta}(n-1, 1)$ regardless of $\theta$ — pure scale-equivariance — so $A$ is ancillary. Basu's theorem then gives $X_{(n)} \perp\!\!\!\perp X_{(n-1)}/X_{(n)}$, a non-obvious consequence of the structure of order statistics. This kind of independence underlies many likelihood-ratio test statistics and pivotal quantities for scale parameters.
+</ExampleBlock>
+
+<RemarkBlock number={10} title="Basu is load-bearing for Track 5 — t-distribution independence">
+The independence $\bar X \perp\!\!\!\perp S^2$ in Example 21 is the technical engine of one-sample Normal inference. Without it, the ratio $t = \sqrt n (\bar X - \mu)/S$ would have a distribution depending on the joint distribution of $(\bar X, S)$ in a complicated way; with it, the ratio becomes the textbook $t_{n-1}$. Track 5 (hypothesis testing) and Track 5.5 (confidence intervals) build the t-test, the F-test, and the analysis of variance on this foundation. Basu provides the abstract reason: complete sufficiency for one parameter ($\mu$, with $\sigma^2$ fixed) plus ancillarity for that parameter ($S^2$, whose distribution doesn't depend on $\mu$) gives independence, which is exactly what pivotal-quantity inference needs. We will return to this when we develop the t-test in Track 5.
+</RemarkBlock>
+
+## 16.10 The Pitman-Koopman-Darmois Theorem
+
+The classical results so far — sufficiency, completeness, Rao-Blackwell, Lehmann-Scheffé, Basu — work for any family that *has* a complete sufficient statistic. The Pitman–Koopman–Darmois theorem is the **converse direction**: it says that, under regularity, the only families admitting *fixed-dimensional* sufficient statistics for iid samples of every size are the exponential families.
+
+In other words: Topic 7's exponential families are not just *one* class with nice data-reduction properties — they are the *only* class. This converts Topic 7's "exponential families are convenient" into "exponential families are essentially forced" — a structural result with serious philosophical weight.
+
+<TheoremBlock number={8} title="Pitman–Koopman–Darmois (scalar θ, regular family)">
+Let $\{f(x; \theta) : \theta \in \Theta\}$ be a family of densities on $\mathcal{X} \subseteq \mathbb{R}$ with respect to Lebesgue measure, and assume:
+
+- **(A)** The support $S = \{x : f(x;\theta) > 0\}$ is independent of $\theta$.
+- **(B)** $f(x;\theta) > 0$ on $S \times \Theta$.
+- **(C)** $f$ is twice continuously differentiable in $(x, \theta)$ jointly on $S \times \Theta$.
+
+Suppose, in addition, that for every sample size $n \ge 1$, there exists a *scalar-valued* sufficient statistic $T_n(x_1, \ldots, x_n)$ for $\theta$ (i.e., a real-valued function, not a vector). Then $f$ is an exponential family in canonical form:
+
+$$f(x; \theta) \;=\; h(x)\,\exp\!\bigl(\eta(\theta)\,T(x) - A(\theta)\bigr)$$
+
+for some twice continuously differentiable functions $\eta : \Theta \to \mathbb{R}$, $T : S \to \mathbb{R}$, $A : \Theta \to \mathbb{R}$, and $h : S \to (0, \infty)$.
+</TheoremBlock>
+
+<ProofBlock>
+**Step 1 — Apply Fisher–Neyman to the iid joint density.** By Theorem 2 (Fisher–Neyman factorization), sufficiency of $T_n$ means
+
+$$\prod_{i=1}^n f(x_i; \theta) \;=\; g_n\!\bigl(T_n(x_1, \ldots, x_n);\,\theta\bigr) \cdot h_n(x_1, \ldots, x_n).$$
+
+Taking logs:
+
+$$\sum_{i=1}^n \log f(x_i; \theta) \;=\; \log g_n(T_n, \theta) + \log h_n(x_1, \ldots, x_n).$$
+
+**Step 2 — Differentiate in $\theta$.** Differentiating both sides with respect to $\theta$ (which is allowed because of (B) and (C)),
+
+$$\sum_{i=1}^n \partial_\theta \log f(x_i; \theta) \;=\; \partial_\theta \log g_n(T_n, \theta).$$
+
+The left-hand side is a sum of one-variable functions $\partial_\theta \log f(x_i; \theta)$. The right-hand side depends on $(x_1, \ldots, x_n)$ only through the scalar $T_n$. This functional-form constraint will force the structure.
+
+**Step 3 — Cross-differentiate in $x_j$.** Fix any $j \in \{1, \ldots, n\}$ and differentiate both sides with respect to $x_j$:
+
+$$\partial_{x_j}\partial_\theta \log f(x_j; \theta) \;=\; \partial_T\partial_\theta \log g_n(T_n, \theta) \cdot \partial_{x_j} T_n(x_1, \ldots, x_n).$$
+
+The left-hand side depends only on the pair $(x_j, \theta)$; the right-hand side depends on $(x_1, \ldots, x_n, \theta)$ only through $T_n$ and the partial $\partial_{x_j} T_n$. For this equation to hold for every choice of $(x_1, \ldots, x_n)$ and every $j$, the structural form must separate: there exist differentiable functions $\eta : \Theta \to \mathbb{R}$ and $T : S \to \mathbb{R}$ such that
+
+$$\partial_x \partial_\theta \log f(x; \theta) \;=\; \eta'(\theta) \cdot T'(x).$$
+
+(This step is the content of the original Darmois (1935) argument; the careful version handles the case $\partial_{x_j} T_n = 0$ on a measure-zero set.)
+
+**Step 4 — Integrate in $x$.** Integrating the previous equation in $x$,
+
+$$\partial_\theta \log f(x; \theta) \;=\; \eta'(\theta) \cdot T(x) \;+\; B'(\theta),$$
+
+where $B'(\theta)$ is the "constant of integration in $x$" — a function of $\theta$ alone.
+
+**Step 5 — Integrate in $\theta$.** Integrating in $\theta$,
+
+$$\log f(x; \theta) \;=\; \eta(\theta) \cdot T(x) \;+\; B(\theta) \;+\; D(x),$$
+
+where $D(x)$ is the "constant of integration in $\theta$." Exponentiating:
+
+$$f(x; \theta) \;=\; e^{D(x)} \cdot \exp\!\bigl(\eta(\theta) T(x) + B(\theta)\bigr) \;=\; h(x) \cdot \exp\!\bigl(\eta(\theta) T(x) - A(\theta)\bigr),$$
+
+where $h(x) = e^{D(x)}$ and $A(\theta) = -B(\theta)$. This is the canonical exponential-family form (Topic 7 §7.3) with natural parameter $\eta(\theta)$, sufficient statistic $T(x)$, log-partition $A(\theta)$, and base measure $h(x)$.
+
+∎ — via Fisher–Neyman (Theorem 2) and the separable functional equation derived in Steps 3–5.
+</ProofBlock>
+
+![PKD theorem schematic. Left: schematic of the PKD theorem's logic — "regular family with fixed-dim sufficient statistic for every n" ⟹ "exponential family"; inverse arrow "Topic 7: exp families HAVE fixed-dim sufficient statistics". Right: the Uniform(0, θ) counterexample — support [0, θ] shown with θ-dependent right endpoint (shaded region changes with θ), annotation "support depends on θ — violates PKD regularity (A); Uniform is NOT an exponential family despite having 1-dim sufficient statistic X_(n)".](/images/topics/sufficient-statistics/pkd-theorem.png)
+
+<ExampleBlock number={23} title="Uniform(0, θ): 1-dim sufficient statistic but NOT exp family — regularity (A) fails">
+Consider $X_1, \ldots, X_n$ iid $\mathrm{Uniform}(0, \theta)$. By Example 5, $T = X_{(n)}$ is sufficient (scalar, fixed-dimensional, for every $n$). Yet this family is *not* an exponential family — and the PKD theorem's regularity (A) tells us why: the support $S = [0, \theta]$ depends on $\theta$, so (A) fails. The cross-differentiation step in the proof relies on $f > 0$ on a $\theta$-independent set, and this fails at the boundary $x = \theta$. Without (A), the PKD conclusion does not apply, and Uniform$(0, \theta)$ escapes the conclusion despite having a fixed-dim sufficient statistic.
+
+The lesson: the regularity conditions in PKD are not technical decorations — they are the price of the structural conclusion. Drop the support condition and the converse fails. The non-exp families with fixed-dim sufficient statistics that arise in practice (Uniform endpoints, truncated families, exponential shifts) are exactly those whose support varies with the parameter.
+</ExampleBlock>
+
+<RemarkBlock number={11} title="k-parameter PKD: Jacobian rank-k condition">
+The scalar Theorem 8 generalizes to $\theta \in \Theta \subseteq \mathbb{R}^k$ with a $k$-dimensional sufficient statistic. The regularity (A)–(C) conditions extend in the obvious way (support independent of $\theta$, twice differentiability), and the new condition is a Jacobian-rank requirement: the $k \times k$ matrix $[\partial \eta_j(\theta)/\partial \theta_\ell]$ must have full rank on $\Theta$. Under these conditions, the family is a $k$-parameter exponential family. The proof — which requires careful measure-theoretic regularity to handle the multi-dimensional integration — is the content of Brown (1986, §2.3). For our purposes, the scalar version is enough; the multiparameter generalization is a Remark, not a Theorem, in this topic.
+</RemarkBlock>
+
+<RemarkBlock number={12} title='PKD justifies "exponential families are special"'>
+Topic 7 introduced exponential families as a "convenient class with closed-form sufficient statistics, MLEs, and conjugate priors." PKD reverses the direction: under regularity, exponential families are the *only* such class. This is what makes the exp-family chapter foundational rather than ornamental — every regular family with bounded-dimensional sufficient statistics is, structurally, an exponential family. The catalog in Topic 7 (Bernoulli, Binomial, Poisson, Normal, Gamma, Beta, Multinomial, Dirichlet, etc.) is not a curated list of nice examples but an enumeration of all the families satisfying PKD's regularity. This is why exponential families appear everywhere in machine learning — variational inference, generalized linear models, conjugate Bayesian computation, energy-based models — they are the structural attractor for "tractable + parametric + regular."
+</RemarkBlock>
+
+## 16.11 UMVUE vs MLE vs MoM: The Estimator Landscape Closes
+
+Track 4 began with the evaluation framework (Topic 13: bias, variance, MSE, consistency, asymptotic normality, efficiency, CRLB) and applied it to two estimation methods: maximum likelihood (Topic 14) and method of moments (Topic 15). Topic 16 has now added the third — UMVUE via Lehmann–Scheffé. §16.11 brings all three into a single comparison: where they agree, where they diverge, and what their differences tell us about bias, efficiency, and the geometry of the likelihood.
+
+<TheoremBlock number={9} title='Exp-family triple coincidence: UMVUE = MLE = MoM in the natural parameter'>
+Let $\{f(x;\eta) = h(x)\exp(\eta T(x) - A(\eta))\}$ be a one-parameter exponential family with $\eta$ the natural parameter and $T$ the canonical sufficient statistic. Suppose $T$ is complete sufficient (Lemma 1) and the MoM equation selects the natural parameter directly (i.e., the MoM estimating equation is $\bar T = A'(\eta)$, the moment-matching identity from Topic 7 §7.8). Then
+
+$$\hat\eta_{\text{UMVUE}} \;=\; \hat\eta_{\text{MLE}} \;=\; \hat\eta_{\text{MoM}}.$$
+
+In particular, all three estimators coincide for Bernoulli($p$), Poisson($\lambda$), Normal($\mu$, $\sigma^2$ known) at the parameter $\mu$, and any other exp-family in its natural parameterization with a one-to-one $\eta$-map.
+</TheoremBlock>
+
+The proof is short: Topic 7 §7.8 showed $\hat\eta_{\text{MLE}}$ solves the moment-matching identity $\bar T = A'(\hat\eta)$, which is exactly the MoM equation $\hat\eta_{\text{MoM}}$ solves. Lehmann–Scheffé (§16.7) gives that the unbiased function of $T$ for $\eta$ — when one exists — is the unique UMVUE. In the natural parameter case, $\bar T$ is unbiased for $A'(\eta) = \mathbb{E}[T]$, and the inversion $\eta = (A')^{-1}(\bar T)$ is monotone, so the UMVUE coincides with the MLE.
+
+This Theorem fulfills the [`method-of-moments.mdx:1062`](/topics/method-of-moments) promise: in exponential families in the natural parameter, the three estimation principles agree exactly. The interesting cases — and the focus of the UMVUEComparator below — are the families *just outside* this regime: Normal $\sigma^2$ with $\mu$ unknown (where the MoM and MLE land on a different summary than the UMVUE), and Gamma scale with known shape (where the UMVUE applies a $(n\alpha - 1)/(n\alpha)$ correction the MLE does not).
+
+![Estimator landscape — the closing figure for Track 4. Top-left: Exponential λ=2, n=30: MC sampling distributions of UMVUE, MLE, MoM overlay — UMVUE = (n-1)/ΣX, MLE = MoM = n/ΣX, small bias difference. Top-right: Gamma scale (α=3 known), β=2, n=50: UMVUE = (nα-1)/ΣX vs MLE = MoM = α/X̄ — visible gap. Bottom-left: Normal σ² unknown μ, σ²=4, n=30: featured "all three differ" case — UMVUE S²_29, MLE = MoM S²_30. Bottom-right: Poisson λ=3, n=30: triple coincidence at X̄ — exp-family-in-natural-parameter coincidence.](/images/topics/sufficient-statistics/estimator-landscape.png)
+
+<UMVUEComparator client:visible />
+
+<ExampleBlock number={24} title="Exponential rate λ: all three close, UMVUE strictly unbiased">
+For iid $\mathrm{Exponential}(\lambda)$, $T = \sum X_i$ is complete sufficient and $T \sim \mathrm{Gamma}(n, \lambda)$, with $\mathbb{E}[T^{-1}] = \lambda/(n - 1)$ for $n \ge 2$. So the UMVUE is
+
+$$\hat\lambda_{\text{UMVUE}} \;=\; \frac{n - 1}{\sum X_i}.$$
+
+The MLE and MoM both equal $\hat\lambda_{\text{MLE/MoM}} = n/\sum X_i = 1/\bar X$ (Topic 14 Example 14.7; Topic 15 Example 15.2). The two differ by exactly the factor $(n-1)/n$ — a small but persistent bias gap. The UMVUE is strictly unbiased; the MLE/MoM has a small positive bias going to zero as $1/n$. UMVUEComparator's Exponential preset visualizes this: the three sampling distributions overlap heavily, but UMVUE sits exactly on $\lambda$ while MLE/MoM are slightly displaced.
+</ExampleBlock>
+
+<ExampleBlock number={25} title="Gamma scale β (with α known): UMVUE ≠ MLE = MoM (fulfills §1062)">
+This is the example that fulfills the [`method-of-moments.mdx:1062`](/topics/method-of-moments) promise. For iid $\mathrm{Gamma}(\alpha, \beta)$ with $\alpha$ known, the family is one-parameter exponential in $\beta$ (rate). $T = \sum X_i \sim \mathrm{Gamma}(n\alpha, \beta)$ is complete sufficient. The UMVUE is
+
+$$\hat\beta_{\text{UMVUE}} \;=\; \frac{n\alpha - 1}{\sum X_i},$$
+
+while the MLE and MoM both equal $\hat\beta_{\text{MLE/MoM}} = \alpha/\bar X = n\alpha/\sum X_i$. The bias-correction factor is exactly $(n\alpha - 1)/(n\alpha)$ — a clean instance of the structural pattern: when the parameter is *not* the natural one (here $\beta$ rather than $-\beta$ as the natural parameter), MLE/MoM and UMVUE differ in finite samples but agree asymptotically. The UMVUEComparator's Gamma preset at $\alpha = 3$, $\beta = 2$, $n = 50$ shows the gap clearly: UMVUE bias $\approx 0$, MLE/MoM bias $> 0$, MSE close but UMVUE marginally better.
+</ExampleBlock>
+
+<ExampleBlock number={26} title="Normal σ² (with μ unknown) revisited — featured triple comparison">
+Returning to Example 19 with the full triple-comparison lens. UMVUE is $S^2_{n-1}$ (the Bessel-corrected variance, unbiased); MLE = MoM is $S^2_n$ (with bias $-\sigma^2/n$). At $n = 30$ and $\sigma^2 = 4$, the bias gap is $-0.133$, the variance ratio is $S^2_n / S^2_{n-1} = (n-1)/n \approx 0.967$, and MSE comparison is dictated by
+
+$$\mathrm{MSE}(S^2_{n-1}) = \mathrm{Var}(S^2_{n-1}) = \frac{2\sigma^4}{n-1}, \qquad \mathrm{MSE}(S^2_n) = \mathrm{Var}(S^2_n) + \mathrm{Bias}^2 = \frac{(n-1)\cdot 2\sigma^4}{n^2} + \frac{\sigma^4}{n^2} = \frac{(2n - 1)\sigma^4}{n^2}.$$
+
+For $\sigma^2 = 4$ and $n = 30$: MSE(UMVUE) $\approx 1.103$, MSE(MLE/MoM) $\approx 1.049$ — slightly lower for the biased estimator. This is the small-sample regime where the bias-variance trade-off can favor the biased MLE; for larger $n$, both MSEs collapse and the UMVUE's strict unbiasedness wins. The UMVUEComparator's Normal preset visualizes both regimes by varying $n$.
+</ExampleBlock>
+
+<RemarkBlock number={13} title="This closes Track 4 — the complete classical estimation toolkit">
+Track 4 began with the evaluation framework (Topic 13) and asked: which estimators win on bias, variance, and MSE, and how do we know? Topics 14–16 answered this for the three classical methods.
+
+- **MLE (Topic 14):** asymptotically efficient under regularity; consistency and asymptotic normality from the LLN/CLT machinery.
+- **MoM (Topic 15):** simpler, sometimes equivalent to MLE (in exp families, exactly), often less efficient (ARE $< 1$ outside).
+- **UMVUE (Topic 16):** the unique unbiased estimator with minimum variance, when complete sufficiency is available.
+
+The three principles agree in exp families in their natural parameter (Theorem 9). They diverge in structurally interpretable ways outside: UMVUE prioritizes strict unbiasedness; MLE prioritizes asymptotic efficiency (with bias going to zero); MoM trades both for closed-form simplicity. The Normal $\sigma^2$ unknown case is the canonical "all three differ" example, and §16.11 provides the synthesis.
+
+Track 4 is now closed. Track 5 picks up the inferential toolkit — hypothesis testing, confidence intervals, Bayesian inference — built on top of the estimators we now have.
+</RemarkBlock>
+
+## 16.12 Where Sufficiency Falls Short
+
+Sufficiency is foundational but not the whole story of inference. Three short remarks flag where its reach ends.
+
+<RemarkBlock number={14} title="Ancillarity recovery — Fisher's conditionality principle">
+After sufficient-statistic-based reduction, an ancillary statistic can still provide a "more relevant reference set" for inference. **Fisher's conditionality principle** says that inference for $\theta$ should be conducted *conditional* on the observed value of any ancillary statistic — even though the marginal distribution of the ancillary is parameter-free. This creates a tension: sufficiency reduces the data to $T$ for the *model*; ancillarity refines the inference to a relevant subset for *interpretation*. In a one-sample Normal location problem with known variance, the ancillary is trivial and the conditionality principle adds nothing. In more complex problems (e.g. linear regression with covariates that are themselves random), the ancillary is the design matrix and conditional inference becomes the standard frequentist approach. We take this up in Track 5 (confidence intervals via pivotal quantities) and again in the Bayesian track (the likelihood principle, where conditioning on ancillary statistics is equivalent to using the likelihood for inference).
+</RemarkBlock>
+
+<RemarkBlock number={15} title="Non-regular families — Uniform endpoints and the Pitman estimator">
+The Lehmann–Scheffé machinery requires completeness, which in turn typically requires regularity (PKD assumption (A): support independent of $\theta$). Non-regular families — Uniform$(0, \theta)$ being the canonical example — escape PKD by violating (A), and Lehmann–Scheffé does not directly apply. Yet these families have *minimum-variance unbiased estimators* (MVUEs), constructed by different means. For Uniform$(0, \theta)$, the MVUE is $\hat\theta = \tfrac{n+1}{n} X_{(n)}$ — a bias-correction of the MLE $X_{(n)}$. The general theory of estimators in non-regular families is the **Pitman estimator** framework (named for the same Pitman as in PKD), which builds optimal equivariant estimators using the group structure of the parameter (location, scale, location-scale). Track 6 (linear regression and beyond) returns to this when discussing equivariant procedures for shifts and scales.
+</RemarkBlock>
+
+<RemarkBlock number={16} title='Asymptotic sufficiency — Le Cam'>
+For non-exp families (no fixed-dim sufficient statistic), data reduction in the strict sense fails — the minimal sufficient statistic grows with $n$. But **asymptotic sufficiency** rescues a weaker version: as $n \to \infty$, the MLE becomes asymptotically sufficient in the sense that *all* relevant inferential information concentrates on a finite-dimensional sufficient statistic tangent to the true parameter. This is the content of Le Cam's *Local Asymptotic Normality* program: under regularity, the log-likelihood ratio sequence behaves locally like a Normal location family, and the MLE is the asymptotically efficient estimator. The framework unifies MLE asymptotic efficiency, Bayesian contraction rates, and the CLT into a single picture — and it generalizes to non-iid, non-parametric, and high-dimensional settings. Le Cam's book (1986) and van der Vaart's *Asymptotic Statistics* (1998) are the canonical references. The information-bottleneck and representation-learning topics on formalml.com pick up the same thread for learned (rather than computed) sufficient statistics.
+</RemarkBlock>
+
+## 16.13 Summary & Forward Look
+
+<RemarkBlock number={17} title='The conceptual lattice of sufficiency, completeness, and ancillarity'>
+
+| Concept | Definition | Inferential role |
+|---|---|---|
+| **Sufficient $T$** | $X \mid T$ parameter-free | preserves all parameter info |
+| **Minimal sufficient** | coarsest sufficient | no data redundancy |
+| **Complete $T$** | $\mathbb{E}_\theta[g(T)] = 0\ \forall \theta \Rightarrow g(T) = 0$ a.s. | no functional redundancy in $T$ |
+| **Ancillary $A$** | distribution free of $\theta$ | carries no parameter info |
+| **UMVUE** | unbiased, min variance uniformly | Lehmann–Scheffé construction |
+
+The lattice of implications: complete sufficient $\Rightarrow$ minimal sufficient (Bahadur 1957). Complete sufficient $\perp\!\!\!\perp$ ancillary (Basu, Theorem 7). Lehmann–Scheffé combines completeness + sufficiency $\Rightarrow$ unique UMVUE (Theorem 5). Pitman–Koopman–Darmois closes the loop: under regularity, exp families are the only families with fixed-dim sufficient statistics for every $n$ (Theorem 8). Topic 7's exp-family construction supplies the sufficient statistic; Topic 16 supplies the entire optimality theory built on top.
+
+</RemarkBlock>
+
+**Closing Track 4.** The classical estimation toolkit is now complete:
+
+- **Topic 13:** the evaluation framework — bias, MSE, consistency, asymptotic normality, efficiency, Fisher information, CRLB.
+- **Topic 14:** the maximum likelihood estimator — score equation, asymptotic efficiency, Newton-Raphson and Fisher scoring.
+- **Topic 15:** the method of moments and M-estimation — closed-form moment matching, ARE comparison with MLE, the sandwich variance.
+- **Topic 16:** sufficiency, completeness, Rao–Blackwell, Lehmann–Scheffé, Basu, and Pitman–Koopman–Darmois — the structural theory of optimal unbiased estimation, the converse to Topic 7's exp families.
+
+The three operative principles (UMVUE, MLE, MoM) coincide in exp families in the natural parameter (§16.11 Theorem 9) and diverge in structurally informative ways outside. Track 4 is closed.
+
+<RemarkBlock number={18} title="Where this leads">
+Topic 16's machinery is foundational for almost every downstream topic on this site and on formalml.com.
+
+- **Hypothesis Testing** (coming soon) — score tests, Wald tests, and likelihood-ratio tests are all functions of the sufficient statistic; the t-test relies on Basu's $\bar X \perp\!\!\!\perp S^2$ independence; the Neyman-Pearson lemma uses sufficiency to construct most powerful tests.
+- **Confidence Intervals** (coming soon) — pivotal quantities are constructed from ancillary statistics (Basu's theorem gives the required independence); Wilks-type intervals use asymptotic sufficiency of the MLE.
+- **Bayesian Foundations** (coming soon) — the posterior depends on the data only through the sufficient statistic. Conjugate priors (Topic 7 §7.7) become especially natural when $T$ is complete sufficient — the posterior collapses to a finite-dimensional family.
+- **Linear Regression** (coming soon, Track 6) — OLS estimators are functions of $(\mathbf{X}^\top\mathbf{X}, \mathbf{X}^\top\mathbf{y})$ — sufficient statistics for the Normal linear model. Gauss–Markov gives UMVUE among linear unbiased estimators; under Normal errors, this is *the* UMVUE.
+- **Generalized Linear Models** (coming soon) — GLMs leverage exp-family sufficient statistics directly; iteratively reweighted least squares is a score-based algorithm that descends along the sufficient statistic's geometry.
+- **formalml.com — Information bottleneck** — the IB method finds a representation $T$ of $X$ that preserves information about a target $Y$. In the special case where $\theta = Y$, the IB recovers exactly the Topic 16 notion of sufficiency. Learned sufficient statistics are the deep-learning analog of the parametric ones we've built here.
+- **formalml.com — Representation learning** — self-supervised contrastive and masked-modeling objectives implicitly discover sufficient statistics of $X$ for downstream tasks. The Rao–Blackwellization intuition (optimal estimators are functions of $T$) reappears as the rationale for pretrained-feature reuse.
+
+The thread connecting all of these: **sufficient statistics are the abstract object that data reduction discovers; everything else is downstream.**
+</RemarkBlock>
+
+---
+
+### References
+
+1. Erich L. Lehmann & George Casella. (1998). [*Theory of Point Estimation*](https://link.springer.com/book/10.1007/b98854) (2nd ed.). Springer.
+2. George Casella & Roger L. Berger. (2002). [*Statistical Inference*](https://www.cengage.com/c/statistical-inference-2e-casella/) (2nd ed.). Duxbury.
+3. Lawrence D. Brown. (1986). [*Fundamentals of Statistical Exponential Families*](https://projecteuclid.org/euclid.lnms/1215466757). IMS Lecture Notes Monograph Series, Vol. 9.
+4. Ronald A. Fisher. (1922). [*On the Mathematical Foundations of Theoretical Statistics*](https://royalsocietypublishing.org/doi/10.1098/rsta.1922.0009). *Philosophical Transactions of the Royal Society A*, 222, 309–368.
+5. Paul R. Halmos & Leonard J. Savage. (1949). [*Application of the Radon-Nikodym Theorem to the Theory of Sufficient Statistics*](https://projecteuclid.org/euclid.aoms/1177730032). *Annals of Mathematical Statistics*, 20(2), 225–241.
+6. C. Radhakrishna Rao. (1945). *Information and the Accuracy Attainable in the Estimation of Statistical Parameters*. *Bulletin of the Calcutta Mathematical Society*, 37, 81–91.
+7. David Blackwell. (1947). [*Conditional Expectation and Unbiased Sequential Estimation*](https://projecteuclid.org/euclid.aoms/1177730497). *Annals of Mathematical Statistics*, 18(1), 105–110.
+8. Erich L. Lehmann & Henry Scheffé. (1950). [*Completeness, Similar Regions, and Unbiased Estimation — Part I*](https://www.jstor.org/stable/25048038). *Sankhyā*, 10(4), 305–340.
+9. Debabrata Basu. (1955). [*On Statistics Independent of a Complete Sufficient Statistic*](https://www.jstor.org/stable/25048259). *Sankhyā*, 15(4), 377–380.
+10. Georges Darmois. (1935). *Sur les lois de probabilité à estimation exhaustive*. *Comptes rendus de l'Académie des Sciences*, 200, 1265–1266.
+11. Bernard O. Koopman. (1936). [*On Distributions Admitting a Sufficient Statistic*](https://www.jstor.org/stable/1989758). *Transactions of the American Mathematical Society*, 39(3), 399–409.
+12. E. J. G. Pitman. (1936). [*Sufficient Statistics and Intrinsic Accuracy*](https://doi.org/10.1017/S0305004100019307). *Mathematical Proceedings of the Cambridge Philosophical Society*, 32(4), 567–579.

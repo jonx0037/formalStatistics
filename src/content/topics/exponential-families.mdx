@@ -549,7 +549,7 @@ For an i.i.d. sample $X_1, \ldots, X_n$ from this family, the sum $\sum_{i=1}^n 
 </TheoremBlock>
 
 <ProofBlock>
-The Fisher-Neyman factorization theorem (which Sufficient Statistics (coming soon) will develop in full generality) states that $T(X)$ is sufficient for $\theta$ if and only if the joint density factors as
+The Fisher-Neyman factorization theorem (which [Sufficient Statistics](/topics/sufficient-statistics) develops in full generality) states that $T(X)$ is sufficient for $\theta$ if and only if the joint density factors as
 
 $$
 f(x \mid \theta) = g(T(x), \theta) \cdot h(x)
@@ -577,7 +577,7 @@ The power of this result is *dimensional reduction*. No matter how large the sam
 - **Normal (unknown $\mu$ and $\sigma^2$):** $\mathbf{T}(x) = (x, x^2)$, so the sufficient statistics are $\sum x_i$ and $\sum x_i^2$. Two numbers summarize the entire sample.
 - **Poisson:** $T(k) = k$, so $\sum T(k_i) = \sum k_i$ — the total count. One number.
 
-This is not a feature of specific distributions — it is a *structural consequence* of the exponential family form. Sufficient Statistics (coming soon) will develop the full theory, including the Rao-Blackwell theorem (sufficient statistics yield optimal estimators) and completeness (no redundancy in the sufficient statistic).
+This is not a feature of specific distributions — it is a *structural consequence* of the exponential family form. [Sufficient Statistics](/topics/sufficient-statistics) develops the full theory, including the Rao-Blackwell theorem (sufficient statistics yield optimal estimators), completeness (no redundancy in the sufficient statistic), and the Pitman-Koopman-Darmois converse: under regularity, exponential families are the ONLY families admitting fixed-dimensional sufficient statistics as n grows.
 
 <img src="/images/topics/exponential-families/sufficient-statistics.png" alt="Bernoulli n observations to 1 sufficient statistic, Normal n observations to 2, general dimension reduction diagram" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
 
@@ -929,7 +929,7 @@ The exponential family is the single most important structural concept in parame
 
 **What comes next.** This topic established the unifying framework. The downstream topics build on it:
 
-- Sufficient Statistics (coming soon) develops the full theory of data reduction, including the Rao-Blackwell theorem and completeness, building directly on the sufficient statistic $T(x)$ identified here
+- [Sufficient Statistics](/topics/sufficient-statistics) develops the full theory of data reduction, including the Rao-Blackwell theorem, completeness, Lehmann-Scheffé UMVUE, Basu's independence theorem, and the Pitman-Koopman-Darmois converse, building directly on the sufficient statistic $T(x)$ identified here
 - [Maximum Likelihood Estimation](/topics/maximum-likelihood) develops the asymptotic theory of MLE — consistency, asymptotic normality, efficiency — using the exponential family as the primary example class
 - Bayesian Foundations (coming soon) develops the full Bayesian framework, with the conjugate prior theorem from Section 7.7 as the starting point for conjugate inference
 - Generalized Linear Models (coming soon) develops the complete GLM framework — estimation via IRLS, deviance, model diagnostics — requiring the exponential family response distribution established here

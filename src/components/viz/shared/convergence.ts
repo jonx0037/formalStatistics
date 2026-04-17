@@ -953,3 +953,43 @@ export function paretoSampleArray(
   }
   return out;
 }
+
+// ── Topic 16: Sufficient Statistics & Rao-Blackwell ─────────────────────────
+
+/**
+ * Draw n iid Uniform(lower, upper) samples — array variant.
+ *
+ * Distinct from the existing single-sample `uniformSample(a, b, rng?)` (which
+ * returns a `number`), this version returns the full array in one call,
+ * matching the n-samples-out signature used by Topic 16 components
+ * (`FactorizationExplorer`, `CompletenessProbe`, `BasuIndependence`).
+ *
+ * Used for:
+ *   • Uniform(0, θ) — the PKD counterexample case (§16.3 Example 5,
+ *     §16.10 Example 23). Sufficient statistic exists (T = X_(n)) but
+ *     support depends on θ — not an exponential family.
+ *   • Uniform(θ, θ+1) — the canonical incomplete family (§16.6 Example 13).
+ *     Minimal sufficient statistic is (X_(1), X_(n)); the range R = X_(n) − X_(1)
+ *     is ancillary, providing the witness for incompleteness.
+ *
+ * Mirrors the `paretoSampleArray` precedent (single-sample + array variants
+ * coexist in this module to preserve callers from Topics 1–15).
+ *
+ * @param n — number of samples
+ * @param lower — left endpoint of the support
+ * @param upper — right endpoint of the support
+ * @param rng — uniform[0,1) RNG (default: Math.random)
+ */
+export function uniformSampleArray(
+  n: number,
+  lower: number,
+  upper: number,
+  rng: () => number = Math.random,
+): number[] {
+  const out = new Array<number>(n);
+  const width = upper - lower;
+  for (let i = 0; i < n; i++) {
+    out[i] = lower + width * rng();
+  }
+  return out;
+}
