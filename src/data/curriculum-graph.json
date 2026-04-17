@@ -20,7 +20,7 @@
     { "id": "method-of-moments", "label": "Method of Moments & M-Estimation", "domain": "statistical-estimation", "status": "published", "url": "/topics/method-of-moments" },
     { "id": "sufficient-statistics", "label": "Sufficient Statistics & Rao-Blackwell", "domain": "statistical-estimation", "status": "published", "url": "/topics/sufficient-statistics" },
 
-    { "id": "hypothesis-testing", "label": "Hypothesis Testing Framework", "domain": "hypothesis-testing-confidence", "status": "planned", "url": "/topics/hypothesis-testing" },
+    { "id": "hypothesis-testing", "label": "Hypothesis Testing Framework", "domain": "hypothesis-testing-confidence", "status": "published", "url": "/topics/hypothesis-testing" },
     { "id": "likelihood-ratio-tests", "label": "Likelihood Ratio Tests & Neyman-Pearson", "domain": "hypothesis-testing-confidence", "status": "planned", "url": "/topics/likelihood-ratio-tests" },
     { "id": "confidence-intervals", "label": "Confidence Intervals & Duality", "domain": "hypothesis-testing-confidence", "status": "planned", "url": "/topics/confidence-intervals" },
     { "id": "multiple-testing", "label": "Multiple Testing & False Discovery", "domain": "hypothesis-testing-confidence", "status": "planned", "url": "/topics/multiple-testing" },
@@ -77,7 +77,11 @@
     { "source": "expectation-moments", "target": "sufficient-statistics" },
 
     { "source": "point-estimation", "target": "hypothesis-testing" },
-    { "source": "random-variables", "target": "hypothesis-testing" },
+    { "source": "sufficient-statistics", "target": "hypothesis-testing" },
+    { "source": "maximum-likelihood", "target": "hypothesis-testing" },
+    { "source": "central-limit-theorem", "target": "hypothesis-testing" },
+    { "source": "modes-of-convergence", "target": "hypothesis-testing" },
+    { "source": "continuous-distributions", "target": "hypothesis-testing" },
     { "source": "hypothesis-testing", "target": "likelihood-ratio-tests" },
     { "source": "maximum-likelihood", "target": "likelihood-ratio-tests" },
     { "source": "hypothesis-testing", "target": "confidence-intervals" },
