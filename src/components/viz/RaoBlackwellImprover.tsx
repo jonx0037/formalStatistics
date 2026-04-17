@@ -196,7 +196,7 @@ export default function RaoBlackwellImprover() {
       <div className="mb-3 grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
         <label className="flex flex-col gap-1">
           <span style={{ color: 'var(--color-text-muted)' }}>n = {n}</span>
-          <input type="range" min={5} max={100} value={n} onChange={(e) => { setN(Number(e.target.value)); setParams((p) => ({ ...p, n: Number(e.target.value) })); }} className="w-full" />
+          <input type="range" min={5} max={100} value={n} onChange={(e) => setN(Number(e.target.value))} className="w-full" />
         </label>
         <label className="flex flex-col gap-1">
           <span style={{ color: 'var(--color-text-muted)' }}>M = {M}</span>

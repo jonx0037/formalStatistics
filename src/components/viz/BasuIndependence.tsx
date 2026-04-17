@@ -63,11 +63,22 @@ export default function BasuIndependence() {
     const innerW = canvasW - MARGIN.left - MARGIN.right;
     const innerH = H - MARGIN.top - MARGIN.bottom;
 
-    // Compute extents with padding
-    const xMin = Math.min(...mc.x);
-    const xMax = Math.max(...mc.x);
-    const yMin = Math.min(...mc.y);
-    const yMax = Math.max(...mc.y);
+    // Defensive guard: empty arrays make Math.min(...[]) = +Infinity and spread
+    // on very large arrays can exhaust the call stack. Compute extents with a
+    // single pass and fall back to a sane unit domain when the array is empty.
+    if (mc.x.length === 0 || mc.y.length === 0) return;
+    let xMin = mc.x[0];
+    let xMax = mc.x[0];
+    for (let i = 1; i < mc.x.length; i++) {
+      if (mc.x[i] < xMin) xMin = mc.x[i];
+      if (mc.x[i] > xMax) xMax = mc.x[i];
+    }
+    let yMin = mc.y[0];
+    let yMax = mc.y[0];
+    for (let i = 1; i < mc.y.length; i++) {
+      if (mc.y[i] < yMin) yMin = mc.y[i];
+      if (mc.y[i] > yMax) yMax = mc.y[i];
+    }
     const xPad = (xMax - xMin) * 0.05 || 0.1;
     const yPad = (yMax - yMin) * 0.05 || 0.1;
 

@@ -97,7 +97,13 @@ export default function CompletenessProbe() {
     const allCurves = isUniformShift
       ? [(probeData as { witness: number[]; contrast: number[] }).witness, (probeData as { witness: number[]; contrast: number[] }).contrast]
       : Object.values(probeData as Record<string, number[]>);
-    const yExt = d3.extent(allCurves.flat()) as [number, number];
+    // d3.extent on an empty array returns [undefined, undefined], which yields
+    // a NaN domain and renders nothing. Fall back to a unit domain around 0.
+    const flat = allCurves.flat();
+    const rawExt = d3.extent(flat);
+    const yExt: [number, number] = (rawExt[0] !== undefined && rawExt[1] !== undefined)
+      ? [rawExt[0], rawExt[1]]
+      : [-1, 1];
     const yPad = Math.max(0.5, (yExt[1] - yExt[0]) * 0.1);
     const y = d3.scaleLinear().domain([yExt[0] - yPad, yExt[1] + yPad]).range([innerH, 0]);
 
