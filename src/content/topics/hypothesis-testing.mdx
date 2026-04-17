@@ -188,9 +188,11 @@ import ExampleBlock from '../../components/ui/ExampleBlock.astro';
 import RemarkBlock from '../../components/ui/RemarkBlock.astro';
 import ExternalLink from '../../components/ui/ExternalLink.astro';
 
-{/* The five Topic-17 interactive components are wired in Checkpoint 3:
-    NullAlternativeSimulator, PowerCurveExplorer, PValueDemonstrator,
-    TTestBasuFoundation, WaldScoreLRTComparison. */}
+import NullAlternativeSimulator from '../../components/viz/NullAlternativeSimulator.tsx';
+import PowerCurveExplorer from '../../components/viz/PowerCurveExplorer.tsx';
+import PValueDemonstrator from '../../components/viz/PValueDemonstrator.tsx';
+import TTestBasuFoundation from '../../components/viz/TTestBasuFoundation.tsx';
+import WaldScoreLRTComparison from '../../components/viz/WaldScoreLRTComparison.tsx';
 
 ## 17.1 From Estimation to Decisions
 
@@ -303,7 +305,7 @@ The exact size is $0.0207 < 0.05$, so the test is conservative at the nominal $\
 
 ![Two panels. Left: continuous null distribution with shaded two-sided rejection region, critical values ±c_α marked, Type I area shaded. Right: discrete null — Binomial(20, 0.5) PMF bars with rejection region X ≥ 15 colored, annotated "exact size ≈ 0.021 < α = 0.05".](/images/topics/hypothesis-testing/test-statistic-size.png)
 
-{/* <NullAlternativeSimulator client:visible /> — added in Checkpoint 3 */}
+<NullAlternativeSimulator client:visible />
 
 ## 17.4 Type I, Type II, and Power
 
@@ -354,7 +356,7 @@ In a regular parametric family, the Cramér-Rao lower bound (Thm 13.9) says any 
 
 ![Three panels. Left: H₀ (green) and H_A (red) sampling distributions of X̄ under μ = 0 vs μ = 0.5 at n = 30, σ = 1; Type I area shaded under H₀ right of c, Type II area shaded under H_A left of c. Center: power curve β(μ) as a sigmoid rising from α to 1. Right: sample-size envelope — power vs n at fixed effect size, with horizontal line at 1 − β = 0.8 crossing at n ≈ 25.](/images/topics/hypothesis-testing/type-I-type-II-power.png)
 
-{/* <PowerCurveExplorer client:visible /> — added in Checkpoint 3 */}
+<PowerCurveExplorer client:visible />
 
 ## 17.5 P-values
 
@@ -398,7 +400,7 @@ Simulate 10,000 samples of size $n = 30$ from $\mathcal{N}(0, 1)$ (the null dist
 
 ![Three panels. Left: one-sided test with observed T = t_obs and shaded p-value tail under the null density. Center: 10,000-sample MC of p-values under Normal H₀, histogram overlaid with flat Uniform(0, 1) density. Right: MC p-value histogram under H_A (Normal with shift μ = 0.5), strongly right-skewed toward zero.](/images/topics/hypothesis-testing/pvalue-uniformity.png)
 
-{/* <PValueDemonstrator client:visible /> — added in Checkpoint 3 */}
+<PValueDemonstrator client:visible />
 
 <RemarkBlock number={6} title="The ASA statement, replication, and what p-values don't tell you">
 A string of papers from the 2005–2016 period argued that naive p-value interpretation is a major driver of non-replicable research. [Ioannidis (2005)](https://doi.org/10.1371/journal.pmed.0020124), *Why Most Published Research Findings Are False*, used a prior-probability argument to show that a statistically significant finding ($p < 0.05$) is often more likely to be a false positive than a true positive, depending on the prior probability of the null — p-values are emphatically *not* $P(H_0 \mid \text{data})$. [Gelman & Loken (2013)](http://www.stat.columbia.edu/~gelman/research/unpublished/p_hacking.pdf), *The Garden of Forking Paths*, argued that even well-intentioned researchers inflate Type I error through researcher degrees of freedom (p-hacking, HARKing) without formal multiple testing. The [ASA Statement on p-Values](https://doi.org/10.1080/00031305.2016.1154108) (Wasserstein & Lazar, 2016) synthesized the critique into six principles, emphasizing that a p-value quantifies *inconsistency with a null model under specific assumptions*, not the probability of a hypothesis, and not the importance of an effect.
@@ -594,7 +596,7 @@ Proof 3 Step 4 is the load-bearing step. Without Basu's $\bar X \perp\!\!\!\perp
 
 ![Featured figure. Three panels. Left: under H₀, MC histogram of T_n = √n(X̄ − μ₀)/S for n = 10 with μ = μ₀, overlaid with exact t_9 density. Center: Basu independence — scatter of (X̄, S²) across 5000 MC samples, decorrelated cloud, annotation "Basu: X̄ ⊥⊥ S² — what makes the t-ratio distribution-free of (μ, σ²)". Right: under H_A (μ = μ₀ + 0.8σ), MC t-histogram shifted right, shaded rejection region, power annotated.](/images/topics/hypothesis-testing/ttest-basu-foundation.png)
 
-{/* <TTestBasuFoundation client:visible /> — the featured Track-5 component, added in Checkpoint 3 */}
+<TTestBasuFoundation client:visible />
 
 ## 17.8 The χ²-test
 
@@ -768,7 +770,7 @@ The score test is parameterization-invariant when the MLE is computed on the sam
 
 ![Three panels. Left: overlaid null-distribution histograms of W_n (Wald, amber), S_n (Score, purple), −2log Λ_n (LRT, green) for Bernoulli H₀: p = 0.5 at n = 30, 10000 MC runs, common χ²_1 density overlaid. Center: algebraic formulas with Bernoulli specializations. Right: under H_A (true p = 0.65), overlay of the three alternative distributions — similar means, slightly different spreads, the first glimpse of finite-sample power differences.](/images/topics/hypothesis-testing/wald-score-lrt.png)
 
-{/* <WaldScoreLRTComparison client:visible /> — added in Checkpoint 3 */}
+<WaldScoreLRTComparison client:visible />
 
 ## 17.10 Duality with Confidence Intervals
 
