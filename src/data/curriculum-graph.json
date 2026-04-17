@@ -17,7 +17,7 @@
 
     { "id": "point-estimation", "label": "Point Estimation & Bias-Variance", "domain": "statistical-estimation", "status": "published", "url": "/topics/point-estimation" },
     { "id": "maximum-likelihood", "label": "Maximum Likelihood Estimation", "domain": "statistical-estimation", "status": "published", "url": "/topics/maximum-likelihood" },
-    { "id": "method-of-moments", "label": "Method of Moments & M-Estimation", "domain": "statistical-estimation", "status": "planned", "url": "/topics/method-of-moments" },
+    { "id": "method-of-moments", "label": "Method of Moments & M-Estimation", "domain": "statistical-estimation", "status": "published", "url": "/topics/method-of-moments" },
     { "id": "sufficient-statistics", "label": "Sufficient Statistics & Rao-Blackwell", "domain": "statistical-estimation", "status": "planned", "url": "/topics/sufficient-statistics" },
 
     { "id": "hypothesis-testing", "label": "Hypothesis Testing Framework", "domain": "hypothesis-testing-confidence", "status": "planned", "url": "/topics/hypothesis-testing" },
@@ -69,6 +69,7 @@
     { "source": "continuous-distributions", "target": "maximum-likelihood" },
     { "source": "point-estimation", "target": "method-of-moments" },
     { "source": "expectation-moments", "target": "method-of-moments" },
+    { "source": "maximum-likelihood", "target": "method-of-moments" },
     { "source": "maximum-likelihood", "target": "sufficient-statistics" },
     { "source": "exponential-families", "target": "sufficient-statistics" },
 
