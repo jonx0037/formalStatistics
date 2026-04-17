@@ -1,0 +1,889 @@
+---
+title: "Hypothesis Testing Framework"
+subtitle: "Null, alternative, power, p-values, and the z/t/χ² test family — the decision-theoretic core of classical inference."
+status: "published"
+difficulty: "intermediate"
+prerequisites:
+  - "sufficient-statistics"
+  - "maximum-likelihood"
+  - "point-estimation"
+  - "central-limit-theorem"
+  - "modes-of-convergence"
+  - "continuous-distributions"
+tags:
+  - "statistics"
+  - "inference"
+  - "hypothesis-testing"
+  - "null-hypothesis"
+  - "alternative-hypothesis"
+  - "test-statistic"
+  - "p-value"
+  - "type-i-error"
+  - "type-ii-error"
+  - "power"
+  - "z-test"
+  - "t-test"
+  - "chi-squared-test"
+  - "wald-test"
+  - "score-test"
+  - "likelihood-ratio-test"
+  - "basu-theorem"
+  - "ab-testing"
+domain: "hypothesis-testing-confidence"
+videoId: null
+notebookPath: "notebooks/hypothesis-testing/17_hypothesis_testing.ipynb"
+githubUrl: "https://github.com/jonx0037/formalStatistics/blob/main/src/content/topics/hypothesis-testing.mdx"
+datePublished: 2026-05-08
+estimatedReadTime: 55
+abstract: "A hypothesis test is a decision procedure. The data analyst specifies a null hypothesis $H_0$ (the status quo, the skeptical baseline), an alternative $H_1$ (the claim we might act on), a test statistic $T(X)$, and a rejection region $R$; the procedure rejects $H_0$ when $T(X) \\in R$. Two errors are possible — Type I (rejecting a true $H_0$) and Type II (failing to reject a false $H_0$) — and their probabilities define size $\\alpha$ and power $\\beta(\\theta) = P_\\theta(T \\in R)$. The p-value is the tail probability of the test statistic under $H_0$; under the continuous null it is uniform on $[0, 1]$, a proof given in full in §17.5. The z-test applies the CLT to a standardized sample mean and is the simplest asymptotic test. The one-sample t-test for Normal data with unknown variance has a clean finite-sample distribution only because of Basu's theorem (§16.9): $\\bar X \\perp\\!\\!\\!\\perp S^2$ is what makes $t = \\sqrt n(\\bar X - \\mu_0)/S$ follow $t_{n-1}$ exactly. The $\\chi^2$ test handles variance inference and goodness-of-fit. Three asymptotic tests — Wald, score (Rao), and likelihood-ratio — are stated here as the general-purpose machinery of parametric inference, with their null distributions ($\\chi^2_k$ under regularity) cited from Topic 14's asymptotic-normality theorem; Wilks' full proof of the LRT null distribution is deferred to Topic 18. A short preview in §17.10 flags the duality between hypothesis tests and confidence intervals, with the full theory belonging to Topic 19. The framework's limitations are acknowledged honestly: p-values are not posterior probabilities; multiple testing inflates error rates; model comparison is not the same as hypothesis testing. Topic 17 opens Track 5's decision-theoretic arc with the scaffolding on which Topics 18–20 build."
+formalcalculusPrereqs:
+  - topic: "integration"
+    site: "formalcalculus"
+    relationship: "Rejection-region probabilities under both $H_0$ and $H_\\theta$ are integrals of the sampling density over $R$. Power $\\beta(\\theta) = \\int_R f(x; \\theta)\\,dx$ is a calculus-of-variations object in $\\theta$."
+  - topic: "sequences-limits"
+    site: "formalcalculus"
+    relationship: "Convergence in distribution is the language of asymptotic null distributions (§17.9). Consistency of tests — power $\\to 1$ as $n \\to \\infty$ under any fixed alternative — is a sequences-limits statement."
+  - topic: "differentiation"
+    site: "formalcalculus"
+    relationship: "The power function $\\beta(\\theta)$ is differentiated to characterize most-powerful tests (previewed in §17.4, full treatment in Topic 18). The score test uses $\\partial_\\theta \\ell(\\theta)$ directly."
+formalmlConnections:
+  - topic: "ab-testing-platforms"
+    site: "formalml"
+    relationship: "A/B testing is hypothesis testing applied at platform scale. The null 'Design A and Design B have the same conversion rate' is a two-sample proportion test; sample-size calculations are §17.4 power calculations with Type II error controlled. Sequential testing, always-valid confidence intervals, and CUPED variance reduction are modern extensions of this core framework."
+  - topic: "statistical-learning-theory"
+    site: "formalml"
+    relationship: "PAC generalization bounds are uniform-confidence statements of the form $P(\\sup_h |\\hat R(h) - R(h)| > \\epsilon) \\le \\delta$ — Type-I-error-style guarantees. VC bounds and Rademacher complexity provide the concentration inequalities that play the role of null distributions in statistical learning."
+  - topic: "model-comparison"
+    site: "formalml"
+    relationship: "Cross-validation, AIC, BIC, and held-out likelihood are ML-native alternatives to nested hypothesis testing. §17.11 Remark 14 frames the conceptual contrast: classical testing asks 'reject $H_0$?'; ML model comparison asks 'which model predicts better?' — different questions, different machinery."
+  - topic: "causal-inference"
+    site: "formalml"
+    relationship: "Randomized experiments use t-tests and z-tests for average treatment effects; falsification and placebo tests are hypothesis tests for identification assumptions. The score test reappears as a specification test in instrumental-variables regression."
+connections:
+  - topic: "sufficient-statistics"
+    relationship: "Topic 16 Thm 7 (Basu) gives $\\bar X \\perp\\!\\!\\!\\perp S^2$ for Normal data — the technical engine of the one-sample t-test derivation in §17.7. Without Basu, the ratio $t = \\sqrt n(\\bar X - \\mu_0)/S$ would not have a clean distribution. Topic 16's UMVUE framework is also the source of the 'natural' test statistic in §17.6 (standardized $\\bar X$)."
+  - topic: "maximum-likelihood"
+    relationship: "Topic 14 Thm 14.3 (MLE asymptotic normality) powers the Wald test in §17.9: $\\sqrt{n}(\\hat\\theta_n - \\theta_0) \\xrightarrow{d} \\mathcal{N}(0, I(\\theta_0)^{-1})$ under $H_0$, so $W_n = n(\\hat\\theta_n - \\theta_0)^2 I(\\hat\\theta_n) \\xrightarrow{d} \\chi^2_1$. The score function $U(\\theta) = \\partial_\\theta \\ell$ defines the score test. The log-likelihood-ratio $\\Lambda = L(\\hat\\theta_0)/L(\\hat\\theta)$ defines the LRT."
+  - topic: "central-limit-theorem"
+    relationship: "Topic 11 is the engine of §17.6's z-test: $\\sqrt{n}(\\bar X - \\mu_0)/\\sigma \\xrightarrow{d} \\mathcal{N}(0, 1)$ under $H_0$ is a direct CLT statement. The null distribution of every asymptotic test in §17.9 is ultimately a CLT corollary (for Wald), a continuous-mapping corollary (for Wilks), or a Slutsky corollary (for the score test)."
+  - topic: "point-estimation"
+    relationship: "Test statistics are estimators; power calculations use Fisher information and the CRLB (Thm 13.9). The sample-size calculation in §17.4 is an inversion of the asymptotic-normality Theorem 13.10."
+  - topic: "modes-of-convergence"
+    relationship: "Convergence in distribution (Def 9.X) is how null distributions of asymptotic tests are stated. Continuous mapping gives $Z_n^2 \\xrightarrow{d} \\chi^2_1$ from $Z_n \\xrightarrow{d} \\mathcal{N}(0, 1)$ — the derivation of the squared z-test's null distribution in §17.6."
+  - topic: "continuous-distributions"
+    relationship: "Topic 6 introduces Chi-squared, Student's t, and F as derived distributions with the (coming soon) promise of full use in hypothesis testing. §17.6, §17.7, §17.8 together fulfill that promise: z uses Normal, t uses Student's t_{n-1}, chi-squared uses $\\chi^2_{n-1}$, F (one-sample variance ratio) is cited in §17.8 Example 6 with full two-sample F-test deferred to linear-regression."
+references:
+  - type: "book"
+    title: "Testing Statistical Hypotheses"
+    author: "Erich L. Lehmann & Joseph P. Romano"
+    year: 2005
+    edition: "3rd"
+    publisher: "Springer"
+    isbn: "978-0-387-98864-1"
+    url: "https://link.springer.com/book/10.1007/0-387-27605-X"
+    note: "The definitive modern treatment of classical hypothesis testing. Chapter 3 (uniformly most powerful tests) and Chapter 12 (large-sample theory) shape the §17.9 coverage. Topic 17's notation and decomposition into size/level/power closely follow Lehmann-Romano."
+  - type: "book"
+    title: "Statistical Inference"
+    author: "George Casella & Roger L. Berger"
+    year: 2002
+    edition: "2nd"
+    publisher: "Duxbury"
+    isbn: "978-0-534-24312-8"
+    url: "https://www.cengage.com/c/statistical-inference-2e-casella/"
+    note: "Chapter 8 (Hypothesis Testing) is the intermediate-textbook anchor; the z/t/chi-squared progression in §17.6–§17.8 follows Casella-Berger §8.3–§8.4."
+  - type: "paper"
+    title: "On the Mathematical Foundations of Theoretical Statistics"
+    author: "Ronald A. Fisher"
+    year: 1922
+    journal: "Philosophical Transactions of the Royal Society A"
+    volume: "222"
+    pages: "309–368"
+    url: "https://royalsocietypublishing.org/doi/10.1098/rsta.1922.0009"
+    note: "Fisher's formulation of significance testing via p-values. Cited in §17.1 (historical framing) and §17.5 (Fisher's informal p-value definition)."
+  - type: "paper"
+    title: "On the Problem of the Most Efficient Tests of Statistical Hypotheses"
+    author: "Jerzy Neyman & Egon S. Pearson"
+    year: 1933
+    journal: "Philosophical Transactions of the Royal Society A"
+    volume: "231"
+    pages: "289–337"
+    url: "https://doi.org/10.1098/rsta.1933.0009"
+    note: "The foundational Neyman–Pearson paper introducing Type I / Type II errors, size, power, and the NP lemma. Cited in §17.1 (framing) and §17.4 (power function). The NP lemma itself is stated but proved in Topic 18."
+  - type: "paper"
+    title: "The Probable Error of a Mean"
+    author: "'Student' (William Sealy Gosset)"
+    year: 1908
+    journal: "Biometrika"
+    volume: "6(1)"
+    pages: "1–25"
+    url: "https://www.jstor.org/stable/2331554"
+    note: "Gosset's derivation of the t-distribution, under the pseudonym 'Student' imposed by Guinness Brewery. Cited in §17.7's historical note; the full rigorous derivation via Basu appears in §17.7 Thm 5."
+  - type: "paper"
+    title: "On the Criterion that a Given System of Deviations from the Probable is Such that It Can Be Reasonably Supposed to Have Arisen from Random Sampling"
+    author: "Karl Pearson"
+    year: 1900
+    journal: "Philosophical Magazine (5th series)"
+    volume: "50"
+    pages: "157–175"
+    url: "https://doi.org/10.1080/14786440009463897"
+    note: "Pearson's introduction of the chi-squared goodness-of-fit test. Cited in §17.8 history; the modern derivation via continuous mapping is given there."
+  - type: "paper"
+    title: "Tests of Statistical Hypotheses Concerning Several Parameters When the Number of Observations is Large"
+    author: "Abraham Wald"
+    year: 1943
+    journal: "Transactions of the American Mathematical Society"
+    volume: "54(3)"
+    pages: "426–482"
+    url: "https://doi.org/10.1090/S0002-9947-1943-0012401-3"
+    note: "Wald's definition of the Wald test and its asymptotic chi-squared distribution. Cited in §17.9 Def 13."
+  - type: "paper"
+    title: "Large Sample Tests of Statistical Hypotheses Concerning Several Parameters with Applications to Problems of Estimation"
+    author: "C. Radhakrishna Rao"
+    year: 1948
+    journal: "Mathematical Proceedings of the Cambridge Philosophical Society"
+    volume: "44(1)"
+    pages: "50–57"
+    url: "https://doi.org/10.1017/S0305004100023987"
+    note: "Rao's definition of the score test. Cited in §17.9 Def 14."
+  - type: "paper"
+    title: "The Large-Sample Distribution of the Likelihood Ratio for Testing Composite Hypotheses"
+    author: "Samuel S. Wilks"
+    year: 1938
+    journal: "Annals of Mathematical Statistics"
+    volume: "9(1)"
+    pages: "60–62"
+    url: "https://projecteuclid.org/euclid.aoms/1177732360"
+    note: "Wilks' theorem: $-2\\log\\Lambda \\xrightarrow{d} \\chi^2_k$ under regularity. Stated in §17.9 Thm 7; full proof deferred to Topic 18."
+  - type: "paper"
+    title: "The ASA's Statement on p-Values: Context, Process, and Purpose"
+    author: "Ronald L. Wasserstein & Nicole A. Lazar"
+    year: 2016
+    journal: "The American Statistician"
+    volume: "70(2)"
+    pages: "129–133"
+    url: "https://doi.org/10.1080/00031305.2016.1154108"
+    note: "The ASA's consensus statement on p-value misuse. Cited in §17.5 Remark 6, along with Ioannidis (2005) and Gelman–Loken (2013), as pointers to the replication-crisis literature. Full treatment of multiple testing is Topic 20."
+  - type: "paper"
+    title: "Why Most Published Research Findings Are False"
+    author: "John P. A. Ioannidis"
+    year: 2005
+    journal: "PLoS Medicine"
+    volume: "2(8)"
+    pages: "e124"
+    url: "https://doi.org/10.1371/journal.pmed.0020124"
+    note: "The prior-probability argument for the replication crisis. Cited in §17.5 Remark 6 as the canonical 'p-values are not posterior probabilities' warning."
+  - type: "paper"
+    title: "The Garden of Forking Paths: Why Multiple Comparisons Can Be a Problem, Even When There is No 'Fishing Expedition' or 'p-Hacking'"
+    author: "Andrew Gelman & Eric Loken"
+    year: 2013
+    journal: "Department of Statistics, Columbia University"
+    url: "http://www.stat.columbia.edu/~gelman/research/unpublished/p_hacking.pdf"
+    note: "Gelman–Loken's argument that researcher-degrees-of-freedom inflate Type I error even in good-faith analyses. Cited in §17.5 Remark 6 as the conceptual preview of Topic 20."
+---
+
+import DefinitionBlock from '../../components/ui/DefinitionBlock.astro';
+import TheoremBlock from '../../components/ui/TheoremBlock.astro';
+import ProofBlock from '../../components/ui/ProofBlock.astro';
+import ExampleBlock from '../../components/ui/ExampleBlock.astro';
+import RemarkBlock from '../../components/ui/RemarkBlock.astro';
+import ExternalLink from '../../components/ui/ExternalLink.astro';
+
+import NullAlternativeSimulator from '../../components/viz/NullAlternativeSimulator.tsx';
+import PowerCurveExplorer from '../../components/viz/PowerCurveExplorer.tsx';
+import PValueDemonstrator from '../../components/viz/PValueDemonstrator.tsx';
+import TTestBasuFoundation from '../../components/viz/TTestBasuFoundation.tsx';
+import WaldScoreLRTComparison from '../../components/viz/WaldScoreLRTComparison.tsx';
+
+## 17.1 From Estimation to Decisions
+
+Track 4 built the classical estimation toolkit — point estimation, maximum likelihood, method of moments, sufficient statistics, Rao-Blackwell, UMVUE. Track 5 opens a different question. Estimation asks: *given the data, what is our best guess for $\theta$?* Testing asks: *is the evidence strong enough to act against the status-quo claim $H_0$?* The distinction is not cosmetic. Estimation optimizes one quantity (MSE, say); testing trades off two — the risk of rejecting $H_0$ when it is true, and the risk of failing to reject when it is false. This topic builds the framework for that trade-off and applies it to the three canonical parametric families (z, t, $\chi^2$), the binomial exact test, and the asymptotic trio (Wald, score, LRT). Topic 18 will extend it with optimality theory (Neyman-Pearson, UMP, Wilks); Topic 19 with confidence intervals via the duality previewed in §17.10; Topic 20 with the multiple-testing correction needed once we admit that a single test rarely stands alone.
+
+![Two-panel opener. Left: conceptual diagram contrasting Fisher 1922 significance testing (single hypothesis, continuous evidence) with Neyman-Pearson 1933 decision theory (two hypotheses, two error types). Right: A/B testing cartoon — variants A (p_A = 0.10) and B (p_B = 0.11) with n = 1000 each; Monte Carlo histogram of p̂_B − p̂_A under H₀ overlaid with the shaded rejection region at α = 0.05, showing how "A/B testing is hypothesis testing".](/images/topics/hypothesis-testing/hypothesis-testing-motivation.png)
+
+<RemarkBlock number={1} title="Fisher 1922 vs Neyman-Pearson 1933 — two traditions in one framework">
+Fisher's [significance testing](https://royalsocietypublishing.org/doi/10.1098/rsta.1922.0009) (1922) framed the p-value as a continuous measure of evidence against a single null hypothesis: small p-values are surprising, large p-values are not, and the analyst uses judgment. Neyman and Pearson's [decision-theoretic formulation](https://doi.org/10.1098/rsta.1933.0009) (1933) recast testing as a choice between two hypotheses with two error types (Type I and Type II) and two controlled probabilities ($\alpha$ and $1 - \beta$). The modern textbook framework merges the two: a test statistic produces a p-value, and the p-value is compared to a pre-specified $\alpha$. Different communities weight the Fisherian and Neyman-Pearsonian views differently, and much of the replication-crisis discourse (Remark 6) stems from confusing the two. Topic 17 develops both threads: §17.5 treats the p-value on Fisher's terms, while §17.3 and §17.4 set up size and power in the Neyman-Pearson frame.
+</RemarkBlock>
+
+<RemarkBlock number={2} title="A/B testing is hypothesis testing — the ML-native canonical example">
+The running example throughout Topic 17 is the two-variant A/B test. Variant A has conversion rate $p_A$; variant B has conversion rate $p_B$. The question is: *does deploying variant B produce a higher conversion rate than the incumbent A?* The null $H_0: p_B \le p_A$ is the skeptical baseline (no improvement); the alternative $H_1: p_B > p_A$ is the claim we might act on. Every experimentation platform — Optimizely, Statsig, internal platforms at Google / Meta / Netflix — runs some flavor of this test billions of times per year. Sample-size calculations (§17.4 Example 6), two-sample proportion z-tests (§17.6 Example 10), and the multiple-testing correction for many simultaneous experiments (§17.11 Remark 16) are the theoretical foundation of that infrastructure. This connects Topic 17 to <ExternalLink href="https://formalml.com/topics/ab-testing-platforms" site="formalml" topic="A/B testing platforms" />.
+</RemarkBlock>
+
+<RemarkBlock number={3} title="Why testing is harder than estimation — two risks, not one">
+In estimation, we minimize a single risk (mean squared error, say). In testing, we manage two competing risks simultaneously: Type I error (rejecting a true $H_0$) and Type II error (failing to reject a false $H_0$). These pull in opposite directions — shrinking the rejection region reduces Type I error but increases Type II, and vice versa. No test can drive both to zero at fixed $n$; the entire Neyman-Pearson framework is built around this trade-off. The pragmatic convention is to fix $\alpha$ (Type I rate) at a conventional level (0.05, 0.01, or 0.001) and then maximize power (1 − Type II rate) subject to that constraint. Topic 18 formalizes "maximize power" via the uniformly-most-powerful (UMP) property; here we set up the framework.
+</RemarkBlock>
+
+## 17.2 The Hypothesis-Testing Setup
+
+Every hypothesis test is specified by four objects: the two hypotheses, a test statistic, and a rejection region. We formalize the hypotheses first.
+
+<DefinitionBlock number={1} title="Null and alternative hypotheses">
+Suppose $X_1, \ldots, X_n$ is a sample from a family $\{P_\theta : \theta \in \Theta\}$. A partition $\Theta = \Theta_0 \sqcup \Theta_1$ with $\Theta_0 \ne \emptyset$ and $\Theta_1 \ne \emptyset$ defines two hypotheses:
+
+- The **null hypothesis** $H_0: \theta \in \Theta_0$ — the claim we wish to disprove.
+- The **alternative hypothesis** $H_1: \theta \in \Theta_1$ — the claim we wish to act on.
+
+A test is a decision rule that accepts one of $H_0$ or $H_1$ on the basis of the observed data. Note the asymmetry: $H_0$ is the default, retained unless the data provide strong evidence against it. "Failing to reject $H_0$" is not the same as "accepting $H_0$" — we remain agnostic, having merely failed to accumulate enough contrary evidence.
+</DefinitionBlock>
+
+<DefinitionBlock number={2} title="Simple vs composite hypotheses">
+A hypothesis $H_i: \theta \in \Theta_i$ is **simple** if $\Theta_i$ is a singleton (one parameter value) and **composite** otherwise. A test with simple $H_0$ and simple $H_1$ is the cleanest case — Topic 18's Neyman-Pearson lemma gives a uniformly most powerful test for it. Most real-world tests are composite on at least one side: $H_0: \mu = 0$ (simple) vs $H_1: \mu \ne 0$ (composite two-sided) is typical.
+</DefinitionBlock>
+
+<DefinitionBlock number={3} title="One-sided vs two-sided alternatives">
+For a scalar $\theta \in \mathbb{R}$, the standard alternatives are:
+
+- **One-sided right**: $H_1: \theta > \theta_0$ (used when the analyst has a directional hypothesis — e.g., "the new drug helps").
+- **One-sided left**: $H_1: \theta < \theta_0$ (the mirror image).
+- **Two-sided**: $H_1: \theta \ne \theta_0$ (the agnostic alternative — "something is different").
+
+One-sided tests are more powerful against alternatives in the specified direction, but they commit the analyst to that direction *before seeing the data*. Choosing the side after looking at the data is a form of p-hacking (Remark 6).
+</DefinitionBlock>
+
+![Three-panel taxonomy. Left: simple vs composite — a point in parameter space vs an interval. Center: one-sided vs two-sided — half-lines vs full-line-minus-a-point. Right: decision tree mapping data to reject / fail-to-reject, with the "fail to reject ≠ accept" caveat annotated.](/images/topics/hypothesis-testing/setup-taxonomy.png)
+
+<ExampleBlock number={1} title="A/B test as a one-sided composite null">
+Variants A and B have conversion rates $p_A$ and $p_B$. The product team is considering deploying B only if it strictly improves on A. The hypotheses are
+
+$$H_0: p_B \le p_A \qquad \text{vs} \qquad H_1: p_B > p_A.$$
+
+Both are composite (each covers an interval in $p_B$ at fixed $p_A$). The relevant test statistic (§17.6 Example 10) is the pooled-variance two-sample proportion z-statistic. The one-sided framing captures the business constraint that the team is only interested in improvements, not in detecting arbitrary changes — and, as a bonus, gives more power at fixed $\alpha$ than a two-sided test against the same effect size.
+</ExampleBlock>
+
+<ExampleBlock number={2} title="A/B test as a two-sided simple null">
+If the product team cares whether A and B differ at all — perhaps because a decrease would also prompt action (roll back B; investigate B's unintended effects) — the two-sided framing is appropriate:
+
+$$H_0: p_B = p_A \qquad \text{vs} \qquad H_1: p_B \ne p_A.$$
+
+Here $H_0$ is simple (one parameter value: $p_A$, with $p_B$ forced to equal it) and $H_1$ is composite. The rejection region is the union of two tails, and at the same nominal $\alpha$ it has roughly half the power of Example 1 against a given directional effect — the price paid for detecting the opposite direction as well.
+</ExampleBlock>
+
+<ExampleBlock number={3} title="Clinical trial — three alternative framings">
+A clinical trial compares a new treatment (mean response $\mu_T$) to standard care ($\mu_S$). Three framings:
+
+- **Simple**: $H_0: \mu_T = \mu_S$, $H_1: \mu_T = \mu_S + \delta$ for a pre-specified clinically meaningful effect $\delta > 0$. Requires knowing $\delta$ up front; rare in practice but crucial for power calculations.
+- **One-sided composite**: $H_0: \mu_T \le \mu_S$, $H_1: \mu_T > \mu_S$. Matches the regulatory framing: we only approve the treatment if it improves on standard care.
+- **Two-sided composite**: $H_0: \mu_T = \mu_S$, $H_1: \mu_T \ne \mu_S$. Appropriate when an inferior treatment should also prompt action (withdraw, study further).
+
+Choice among the three is a substantive decision driven by the clinical, regulatory, and ethical context — not a statistical one.
+</ExampleBlock>
+
+## 17.3 Test Statistics, Rejection Regions, and Size
+
+With the hypotheses fixed, we need a summary of the data that concentrates the evidence for / against $H_0$, and a rule that uses that summary to make a decision.
+
+<DefinitionBlock number={4} title="Test statistic">
+A **test statistic** is a measurable function $T : \mathcal{X}^n \to \mathbb{R}$ that maps the data $X = (X_1, \ldots, X_n)$ to a single real number. Large $|T|$ (or large $T$ for one-sided tests) is interpreted as evidence against $H_0$; the reduction is the one we met in Topic 16 under the sufficiency banner, and indeed most canonical test statistics are functions of a sufficient statistic (e.g., the z-statistic is a function of $\bar X$, which is sufficient for $\mu$ in the Normal family with $\sigma^2$ known).
+</DefinitionBlock>
+
+<DefinitionBlock number={5} title="Rejection region; critical value">
+The **rejection region** $R \subseteq \mathcal{X}^n$ is the set of data values for which the test rejects $H_0$. When $R$ is specified via the test statistic as $R = \{X : T(X) > c\}$ (right-tailed), $R = \{X : T(X) < c\}$ (left-tailed), or $R = \{X : |T(X)| > c\}$ (two-tailed), the threshold $c$ is called the **critical value** and denoted $c_\alpha$ when calibrated to level $\alpha$.
+</DefinitionBlock>
+
+<DefinitionBlock number={6} title="Size and level of a test">
+The **size** of a test with rejection region $R$ is
+
+$$\alpha = \sup_{\theta \in \Theta_0} P_\theta(X \in R).$$
+
+That is, the size is the worst-case Type I error rate over the null set. A test has **level** $\alpha$ if its size is at most $\alpha$ — every test of size $\alpha$ has level $\alpha$, but a test of level $\alpha$ may have strictly smaller size. The distinction matters when the null distribution is discrete (Thm 1, Remark 4, Example 4).
+</DefinitionBlock>
+
+<TheoremBlock number={1} title="Size-level distinction for discrete vs continuous test statistics">
+For continuous null distributions, any $\alpha \in (0, 1)$ is achievable exactly: the critical value $c_\alpha$ can be chosen so that $P_{H_0}(T > c_\alpha) = \alpha$ on the nose. For discrete null distributions (e.g., Binomial, Poisson), only a countable set of $\alpha$ values is achievable; other levels force a conservative test, with actual size strictly less than the designed level.
+</TheoremBlock>
+
+<RemarkBlock number={4} title="Conservative vs exact size in practice">
+When the null distribution is discrete, the exact achievable sizes are the tail probabilities of that distribution — a discrete set. For Binomial$(20, 0.5)$, the right-tail probabilities $P(X \ge x)$ at integer $x$ give exact sizes $\{1, 0.999, 0.994, \ldots, 0.021, 0.006, 0.001, 0.00009, 10^{-6}\}$ — the sizes *jump* at each integer. A test designed to have level $\alpha = 0.05$ must pick a boundary whose exact size is $\le 0.05$; for $H_0: p = 0.5$ at $n = 20$, the best achievable right-tailed size is $0.021$ (at boundary $x = 15$), strictly less than $0.05$. This is not a flaw; it is the price of exactness. Conservative tests preserve the Type I guarantee at the cost of some power, and they are preferred over alternatives (randomization, mid-p) in most practical settings.
+</RemarkBlock>
+
+<ExampleBlock number={4} title="Bernoulli exact size at n = 20, p₀ = 0.5">
+Test $H_0: p = 0.5$ vs $H_1: p > 0.5$ using $T = \sum_{i=1}^{20} X_i$ with rejection region $\{T \ge 15\}$. Under $H_0$, $T \sim \mathrm{Binomial}(20, 0.5)$, so
+
+$$P_{H_0}(T \ge 15) = \sum_{k = 15}^{20} \binom{20}{k} (0.5)^{20} = \frac{15504 + 4845 + 1140 + 190 + 20 + 1}{2^{20}} = \frac{21700}{1048576} \approx 0.0207.$$
+
+The exact size is $0.0207 < 0.05$, so the test is conservative at the nominal $\alpha = 0.05$. Moving the boundary to $T \ge 14$ would give size $\approx 0.058 > 0.05$ — unacceptable. The next smaller achievable size is $0.0207$; the one after that is $0.0059$. No boundary achieves $\alpha = 0.05$ exactly, and the analyst must choose between conservative ($0.0207$) and anti-conservative ($0.0577$) rounding. This is the discrete-test pedagogical example that §17.6 Example 11 revisits in the binomial-exact treatment.
+</ExampleBlock>
+
+![Two panels. Left: continuous null distribution with shaded two-sided rejection region, critical values ±c_α marked, Type I area shaded. Right: discrete null — Binomial(20, 0.5) PMF bars with rejection region X ≥ 15 colored, annotated "exact size ≈ 0.021 < α = 0.05".](/images/topics/hypothesis-testing/test-statistic-size.png)
+
+<NullAlternativeSimulator client:visible />
+
+## 17.4 Type I, Type II, and Power
+
+The two errors of a test have names.
+
+<DefinitionBlock number={7} title="Type I error; Type II error">
+- **Type I error**: rejecting $H_0$ when $H_0$ is true. Its probability is the size $\alpha$ (§17.3 Def 6).
+- **Type II error**: failing to reject $H_0$ when $H_1$ is true. Its probability at a specific $\theta \in \Theta_1$ is conventionally written $1 - \beta(\theta)$ in the Neyman-Pearson convention where $\beta$ denotes *power*; some texts reverse this convention and write $\beta(\theta)$ for the Type II rate. Topic 17 follows Lehmann-Romano: **$\beta(\theta)$ is power** (probability of *rejection* at $\theta$), so Type II rate is $1 - \beta(\theta)$.
+</DefinitionBlock>
+
+<DefinitionBlock number={8} title="Power function">
+The **power function** of a test with rejection region $R$ is
+
+$$\beta(\theta) = P_\theta(X \in R), \qquad \theta \in \Theta.$$
+
+Evaluated at $\theta \in \Theta_0$, $\beta(\theta)$ is the Type I error rate at that null parameter (and $\sup_{\theta \in \Theta_0}\beta(\theta) = \alpha$, the size). Evaluated at $\theta \in \Theta_1$, $\beta(\theta)$ is the (actual) probability of correctly rejecting $H_0$ at the specific alternative $\theta$. A good test has $\beta$ close to $\alpha$ on $\Theta_0$ and close to 1 on $\Theta_1$; how close depends on the sample size and the distance between $\theta$ and $\Theta_0$.
+</DefinitionBlock>
+
+<TheoremBlock number={2} title="Monotonicity of power in effect size (exp-family one-sided tests)">
+For a one-parameter exponential family with monotone likelihood ratio (MLR) in the sufficient statistic $T$, the one-sided right-tail test $\{T > c\}$ has power $\beta(\theta)$ that is *non-decreasing* in $\theta$. In particular, for any $\theta_1 > \theta_0$, $\beta(\theta_1) \ge \beta(\theta_0) = \alpha$.
+</TheoremBlock>
+
+The proof uses the MLR property to show that the likelihood ratio $L(\theta_1)/L(\theta_0)$ is monotone in $T$, so the event $\{T > c\}$ has higher probability at $\theta_1$. The full argument uses Topic 18's optimality machinery; we cite the result here and use it in power calculations that follow.
+
+<ExampleBlock number={5} title="Power of the one-sample z-test against a Normal mean">
+For iid $\mathcal{N}(\mu, \sigma^2)$ data with $\sigma^2$ known, consider the right-tailed z-test of $H_0: \mu = \mu_0$ vs $H_1: \mu > \mu_0$ at level $\alpha$. The test rejects when $Z = \sqrt n(\bar X - \mu_0)/\sigma > z_\alpha$, where $z_\alpha = \Phi^{-1}(1 - \alpha)$ is the $(1 - \alpha)$-quantile of the standard Normal. Under $\mu$, $Z \sim \mathcal{N}(\sqrt n(\mu - \mu_0)/\sigma,\, 1)$, so
+
+$$\beta(\mu) = P_\mu(Z > z_\alpha) = 1 - \Phi\!\left(z_\alpha - \frac{\sqrt n\,(\mu - \mu_0)}{\sigma}\right).$$
+
+This closed-form expression is the analytic engine of the sample-size calculator in Example 6 and the `PowerCurveExplorer` component. Key observations: $\beta$ increases monotonically in $\mu$ (Thm 2); $\beta(\mu_0) = \alpha$; $\beta(\mu) \to 1$ as $\mu \to \infty$ at rate $\sqrt n / \sigma$ (the test is consistent).
+</ExampleBlock>
+
+<ExampleBlock number={6} title="Sample-size calculation: how large does n have to be?">
+Suppose we want power $1 - \beta = 0.8$ against the alternative $\mu = \mu_0 + 0.5\sigma$ (a "half-$\sigma$" effect) at level $\alpha = 0.05$, one-sided. Setting $\beta(\mu) = 0.8$ in Example 5 and solving:
+
+$$0.8 = 1 - \Phi\!\left(z_{0.05} - \frac{\sqrt n\,(0.5\sigma)}{\sigma}\right) = 1 - \Phi(1.645 - 0.5\sqrt n).$$
+
+Inverting, $\Phi(1.645 - 0.5\sqrt n) = 0.2$, so $1.645 - 0.5\sqrt n = \Phi^{-1}(0.2) = -0.8416$, giving $\sqrt n = (1.645 + 0.8416)/0.5 \approx 4.97$, hence $n \ge 24.7$. Rounding up, $n = 25$. More generally, for effect size $\delta$ measured in $\sigma$-units,
+
+$$n = \frac{(z_\alpha + z_\beta)^2 \sigma^2}{\delta^2},$$
+
+the textbook sample-size formula. The `PowerCurveExplorer` (§17.4 component) implements this closed form for the Normal scenarios and a numerical inversion for the binomial exact test.
+</ExampleBlock>
+
+<RemarkBlock number={5} title="Power and the CRLB — Fisher information bounds achievable power">
+In a regular parametric family, the Cramér-Rao lower bound (Thm 13.9) says any unbiased estimator $\hat\theta$ satisfies $\mathrm{Var}(\hat\theta) \ge 1/[n I(\theta)]$, where $I(\theta)$ is the Fisher information at $\theta$. This translates directly into an *upper bound* on achievable power for any asymptotically-Normal-based test: the smaller the estimator variance, the more concentrated its sampling distribution, and the larger the separation between $H_0$ and $H_1$ sampling distributions — hence higher power. Topic 18 will formalize this as the CRLB giving a "power envelope" that UMP tests achieve. At intermediate level, the intuition is: *power is to the estimator's variance what accuracy is to its bias*, and both are bounded below by Fisher information.
+</RemarkBlock>
+
+![Three panels. Left: H₀ (green) and H_A (red) sampling distributions of X̄ under μ = 0 vs μ = 0.5 at n = 30, σ = 1; Type I area shaded under H₀ right of c, Type II area shaded under H_A left of c. Center: power curve β(μ) as a sigmoid rising from α to 1. Right: sample-size envelope — power vs n at fixed effect size, with horizontal line at 1 − β = 0.8 crossing at n ≈ 25.](/images/topics/hypothesis-testing/type-I-type-II-power.png)
+
+<PowerCurveExplorer client:visible />
+
+## 17.5 P-values
+
+A rejection region with critical value $c_\alpha$ makes the test a binary decision. A more informative summary — and the one most practitioners actually report — is the p-value.
+
+<DefinitionBlock number={9} title="P-value">
+For a test with test statistic $T(X)$ and a right-tailed rejection rule $\{T > c\}$, the **p-value** of an observed data point $x$ is
+
+$$p(x) = P_{H_0}(T(X) \ge T(x)).$$
+
+That is, the p-value is the tail probability, under $H_0$, of the test statistic being *at least as extreme* as the observed value. For left-tailed tests replace $\ge$ with $\le$; for two-sided tests use $2 \min(P_{H_0}(T \ge T(x)),\,P_{H_0}(T \le T(x)))$ for symmetric null distributions (a convention; a few alternatives exist for non-symmetric nulls, discussed in §17.6 Example 11 for the binomial case).
+
+The rejection rule "reject when $p \le \alpha$" is equivalent to "reject when $T > c_\alpha$" — the two formulations give identical decisions. The advantage of the p-value is that it makes the *level* at which rejection occurs transparent, rather than forcing an all-or-nothing decision at a fixed $\alpha$.
+</DefinitionBlock>
+
+<TheoremBlock number={3} title="Uniformity of the p-value under continuous H₀">
+Let $T$ be a test statistic with continuous CDF $F$ under $H_0$. For a right-tailed test, the p-value $p(X) = 1 - F(T(X))$. Under $H_0$, $p(X) \sim \mathrm{Uniform}(0, 1)$.
+</TheoremBlock>
+
+<ProofBlock>
+**Step 1 — identify the distribution of $F(T)$.** Under $H_0$, $T$ has CDF $F$. The probability integral transform (Topic 6 §6.3) says that for any continuous CDF $F$ and any random variable $T$ with CDF $F$, the variable $U = F(T)$ is Uniform$(0, 1)$. We verify this directly: for any $u \in (0, 1)$,
+
+$$P(U \le u) = P(F(T) \le u) = P(T \le F^{-1}(u)) = F(F^{-1}(u)) = u,$$
+
+where the second equality uses strict monotonicity of $F$ on its support (which holds because $F$ is continuous and $T$ has full support on that region).
+
+**Step 2 — conclude for the p-value.** The p-value is $p(X) = 1 - F(T(X))$. By Step 1, $F(T)$ is Uniform$(0, 1)$ under $H_0$, hence $1 - F(T)$ is also Uniform$(0, 1)$: the reflection $u \mapsto 1 - u$ is a measure-preserving transformation of $[0, 1]$, so it maps the uniform distribution to itself.
+
+**Step 3 — size calibration.** It follows that for every $\alpha \in (0, 1)$,
+
+$$P_{H_0}(p(X) \le \alpha) = \alpha.$$
+
+Rejecting when $p \le \alpha$ therefore gives a test of exactly size $\alpha$ — an appealing formal property of the p-value rule.
+
+∎ — by the probability integral transform (Topic 6) and measure-preservation of $u \mapsto 1 - u$ on $[0, 1]$.
+</ProofBlock>
+
+<ExampleBlock number={7} title="Monte Carlo demonstration of p-value uniformity">
+Simulate 10,000 samples of size $n = 30$ from $\mathcal{N}(0, 1)$ (the null distribution). For each, compute the z-test statistic $Z = \sqrt n \bar X$ and its right-tailed p-value $p = 1 - \Phi(Z)$. The histogram of the 10,000 p-values is visibly flat on $[0, 1]$ — the empirical verification of Thm 3. Under an alternative (say $\mu = 0.5$), the same MC run gives a histogram concentrated near zero: power visualized as a distribution on the p-value scale. The `PValueDemonstrator` component (§17.5) makes this interactive.
+</ExampleBlock>
+
+![Three panels. Left: one-sided test with observed T = t_obs and shaded p-value tail under the null density. Center: 10,000-sample MC of p-values under Normal H₀, histogram overlaid with flat Uniform(0, 1) density. Right: MC p-value histogram under H_A (Normal with shift μ = 0.5), strongly right-skewed toward zero.](/images/topics/hypothesis-testing/pvalue-uniformity.png)
+
+<PValueDemonstrator client:visible />
+
+<RemarkBlock number={6} title="The ASA statement, replication, and what p-values don't tell you">
+A string of papers from the 2005–2016 period argued that naive p-value interpretation is a major driver of non-replicable research. [Ioannidis (2005)](https://doi.org/10.1371/journal.pmed.0020124), *Why Most Published Research Findings Are False*, used a prior-probability argument to show that a statistically significant finding ($p < 0.05$) is often more likely to be a false positive than a true positive, depending on the prior probability of the null — p-values are emphatically *not* $P(H_0 \mid \text{data})$. [Gelman & Loken (2013)](http://www.stat.columbia.edu/~gelman/research/unpublished/p_hacking.pdf), *The Garden of Forking Paths*, argued that even well-intentioned researchers inflate Type I error through researcher degrees of freedom (p-hacking, HARKing) without formal multiple testing. The [ASA Statement on p-Values](https://doi.org/10.1080/00031305.2016.1154108) (Wasserstein & Lazar, 2016) synthesized the critique into six principles, emphasizing that a p-value quantifies *inconsistency with a null model under specific assumptions*, not the probability of a hypothesis, and not the importance of an effect.
+
+These are genuine warnings, and Topic 20 will address the multiple-testing piece formally (Bonferroni, Benjamini-Hochberg FDR, Šidák). For Topic 17, the takeaway is: a p-value is a single number reporting a tail probability under a stated null; it is not a posterior probability, not an effect size, and not a replacement for thinking about the experimental design, power, and prior plausibility.
+</RemarkBlock>
+
+## 17.6 The z-test
+
+The z-test is the simplest test in the parametric toolkit: standardize the sample mean, compare to a standard Normal quantile. It is the direct consumer of the Central Limit Theorem (Topic 11 Thm 11.1) and the prototype for every asymptotic test in §17.9.
+
+<DefinitionBlock number={10} title="z-test (one-sample and two-sample)">
+**One-sample z-test.** For iid data $X_1, \ldots, X_n$ from a distribution with mean $\mu$ and known variance $\sigma^2$, the z-statistic for testing $H_0: \mu = \mu_0$ is
+
+$$Z = \frac{\sqrt n\,(\bar X - \mu_0)}{\sigma}.$$
+
+Under $H_0$, and under Normality of the data, $Z \sim \mathcal{N}(0, 1)$ exactly. For non-Normal data, $Z \xrightarrow{d} \mathcal{N}(0, 1)$ under $H_0$ by the CLT — an asymptotic result with finite-sample accuracy governed by Berry-Esseen (Topic 11 §11.4).
+
+**Two-sample z-test.** For two independent samples $X_1, \ldots, X_{n_1}$ and $Y_1, \ldots, Y_{n_2}$ with known variances $\sigma_1^2$ and $\sigma_2^2$, the two-sample z-statistic for testing $H_0: \mu_1 = \mu_2$ is
+
+$$Z = \frac{\bar X - \bar Y}{\sqrt{\sigma_1^2/n_1 + \sigma_2^2/n_2}}.$$
+
+Under $H_0$ (and Normality or asymptotically), $Z \sim \mathcal{N}(0, 1)$.
+</DefinitionBlock>
+
+<TheoremBlock number={4} title="Size of the z-test is exactly α under Normal null">
+Let $X_1, \ldots, X_n$ be iid $\mathcal{N}(\mu_0, \sigma^2)$ with $\sigma^2$ known. For the two-sided test that rejects $H_0: \mu = \mu_0$ when $|Z| > z_{\alpha/2}$ (where $Z = \sqrt n(\bar X - \mu_0)/\sigma$ and $z_{\alpha/2} = \Phi^{-1}(1 - \alpha/2)$), the size is exactly $\alpha$.
+</TheoremBlock>
+
+<ProofBlock>
+**Step 1 — null distribution of $Z$.** Under $H_0$, the sample mean $\bar X \sim \mathcal{N}(\mu_0, \sigma^2/n)$ *exactly* — Normal-sum closure (Topic 6 §6.5) says a sum of iid Normals is Normal with the expected mean and variance. Standardizing,
+
+$$Z = \frac{\sqrt n\,(\bar X - \mu_0)}{\sigma} \sim \mathcal{N}(0, 1) \quad \text{under } H_0,$$
+
+exactly — no asymptotics needed.
+
+**Step 2 — compute the size.** The size is $P_{H_0}(|Z| > z_{\alpha/2})$. Split into two tails:
+
+$$P_{H_0}(|Z| > z_{\alpha/2}) = P(Z > z_{\alpha/2}) + P(Z < -z_{\alpha/2}).$$
+
+By symmetry of the standard Normal density around zero, $P(Z > z_{\alpha/2}) = P(Z < -z_{\alpha/2})$. And by definition of $z_{\alpha/2}$,
+
+$$P(Z > z_{\alpha/2}) = 1 - \Phi(z_{\alpha/2}) = \alpha/2.$$
+
+Adding the two tails,
+
+$$P_{H_0}(|Z| > z_{\alpha/2}) = \alpha/2 + \alpha/2 = \alpha.$$
+
+**Step 3 — asymptotic extension when $\sigma^2$ is estimated.** If $\sigma^2$ is unknown and replaced by a consistent estimator $\hat\sigma^2$ (e.g., the sample variance), the ratio $Z_n = \sqrt n(\bar X - \mu_0)/\hat\sigma$ has null distribution $\mathcal{N}(0, 1)$ only *asymptotically* — by the CLT applied to $\sqrt n(\bar X - \mu_0)/\sigma$ and Slutsky's theorem (Topic 9) applied to the ratio $\sigma/\hat\sigma \xrightarrow{P} 1$. Exact size is $\alpha$ only in the $\sigma$-known case; for the $\sigma$-unknown case, the t-test (Thm 5) gives exact finite-sample size.
+
+∎ — using Normality of sums (Topic 6), symmetry of the standard Normal, and Slutsky's theorem (Topic 9) for the asymptotic case.
+</ProofBlock>
+
+<ExampleBlock number={8} title="One-sample z-test — IQ testing">
+A random sample of $n = 50$ adults has mean IQ $\bar x = 103.2$ and we wish to test whether the population mean differs from the standardized value $\mu_0 = 100$, assuming $\sigma = 15$ (the calibration target of the instrument). The z-statistic is
+
+$$z = \frac{\sqrt{50}\,(103.2 - 100)}{15} = \frac{7.071 \cdot 3.2}{15} \approx 1.508.$$
+
+Two-sided p-value: $p = 2\,(1 - \Phi(1.508)) \approx 0.131$. At $\alpha = 0.05$ we fail to reject. The point estimate is higher than $\mu_0$, but the evidence is not strong — a half-$\sigma$ effect would need $n \gtrsim 32$ to reach power 0.8 (Example 6), and we observed about $0.21 \sigma$.
+</ExampleBlock>
+
+<ExampleBlock number={9} title="Two-sample z-test — drug trial">
+A trial enrolls $n_1 = 100$ patients in the treatment arm (blood-pressure reduction $\bar X = 12.4$ mmHg, assumed $\sigma_1 = 8$) and $n_2 = 100$ in the placebo arm ($\bar Y = 8.1$, $\sigma_2 = 8$). Testing $H_0: \mu_T = \mu_P$:
+
+$$Z = \frac{12.4 - 8.1}{\sqrt{64/100 + 64/100}} = \frac{4.3}{\sqrt{1.28}} \approx 3.80.$$
+
+Two-sided p-value $\approx 0.00015$ — strongly significant. The observed treatment effect of $4.3$ mmHg at these standard errors is well outside the rejection region at any conventional $\alpha$.
+</ExampleBlock>
+
+<ExampleBlock number={10} title="Two-sample proportion z-test — A/B testing workhorse">
+An experiment ran $n_A = n_B = 10000$ impressions per variant. Variant A produced $k_A = 1200$ conversions ($\hat p_A = 0.12$); variant B produced $k_B = 1260$ ($\hat p_B = 0.126$). Testing $H_0: p_A = p_B$ with the pooled-variance z-statistic:
+
+$$\hat p = \frac{k_A + k_B}{n_A + n_B} = \frac{2460}{20000} = 0.123, \qquad \mathrm{SE} = \sqrt{\hat p (1 - \hat p)\left(\frac{1}{n_A} + \frac{1}{n_B}\right)} = \sqrt{0.123 \cdot 0.877 \cdot 0.0002} \approx 0.00465.$$
+
+$$Z = \frac{0.126 - 0.12}{0.00465} \approx 1.29.$$
+
+Two-sided p-value $\approx 0.197$; we fail to reject at $\alpha = 0.05$. The detected lift (0.6 percentage points, 5% relative) is plausible — but not strong enough at this sample size. A typical platform would either run the experiment longer or accept the null ("no detectable effect") given the sample-size budget. This is the canonical output of every A/B-testing platform on the planet; the interactive version of this calculation is in the `NullAlternativeSimulator` and `PowerCurveExplorer` components.
+</ExampleBlock>
+
+<ExampleBlock number={11} title="Binomial exact test — the fourth worked test family">
+Return to $H_0: p = 0.5$ vs $H_1: p > 0.5$ at $n = 20$ with observed $x_{\mathrm{obs}} = 15$. Two approaches:
+
+**Exact test.** The null distribution of $X = \sum X_i$ is $\mathrm{Binomial}(20, 0.5)$. The right-tailed p-value is the *exact* tail probability:
+
+$$p_{\mathrm{exact}} = P_{H_0}(X \ge 15) = \sum_{k=15}^{20} \binom{20}{k} (0.5)^{20} \approx 0.0207.$$
+
+At $\alpha = 0.05$, we reject. The rejection region $\{X \ge 15\}$ has exact size $0.0207$ — conservative (Remark 4).
+
+**Normal approximation.** Under $H_0$, $X \approx \mathcal{N}(10, 5)$; the standardized observed value is $z = (15 - 10)/\sqrt 5 \approx 2.236$, giving p-value $\approx 0.0127$. With a continuity correction (using $14.5$ instead of $15$), the p-value becomes $\approx 0.0207$ — close to the exact. Without continuity correction, the Normal approximation overstates significance.
+
+**Why this matters.** At $n = 20$, the Normal approximation p-value can be 30-40% off the exact p-value at moderate thresholds. At $n = 200$ it is typically within a few percent. The notebook figure (right panel) shows the size comparison across $n \in [10, 200]$: exact size stays below $\alpha$ by a discrete jump; Normal-approximation size oscillates above and below $\alpha$, converging as $n \to \infty$. The binomial exact test has the additional property — covered in Topic 18 — of being UMP one-sided for the Bernoulli family.
+</ExampleBlock>
+
+<RemarkBlock number={7} title="Why exact tests matter at small n">
+For small-$n$ discrete tests, the Normal approximation can miss the actual size by several percentage points — not an academic concern but a practical one. An experimenter who believes their nominal $\alpha$ is $0.05$ but whose actual Type I rate is $0.08$ is reporting misleading guarantees. For A/B tests at $n$ in the hundreds or more, the Normal approximation is typically accurate to within a percentage point; for medical or behavioral studies at $n \le 50$, exact tests are the responsible choice. The `PowerCurveExplorer` component includes a Binomial exact scenario that inverts the exact size via root-find (not the Normal approximation), letting the reader see this effect directly.
+</RemarkBlock>
+
+![Three panels. Left: one-sample z-test null N(0, 1) with two-sided rejection region at |z| > 1.96; observed Z = 1.51 marked, p-value ≈ 0.131 annotated. Center: Binomial(20, 0.5) PMF bars with rejection X ≥ 15 highlighted (exact size 0.021), superimposed Normal approximation density. Right: size comparison as n varies from 10 to 200 — exact discrete steps below α; Normal approximation oscillates above and below α, converging to α as n grows.](/images/topics/hypothesis-testing/z-test-and-exact.png)
+
+## 17.7 The t-test via Basu
+
+The one-sample t-test is the small-sample analog of the z-test: use $S$ (the sample standard deviation) in place of $\sigma$ when $\sigma$ is unknown. The substitution is natural, but it has a non-obvious consequence: the test statistic $T = \sqrt n(\bar X - \mu_0)/S$ no longer has a Normal null distribution. Under iid Normal data, it has a Student's $t_{n-1}$ distribution, and the derivation of that fact is the content of this section. The hinge is Basu's theorem (Topic 16 §16.9) — the single most important cross-reference from Track 4 into Track 5.
+
+<DefinitionBlock number={11} title="Student's t-test">
+**One-sample t-test.** For iid Normal data $X_1, \ldots, X_n \sim \mathcal{N}(\mu, \sigma^2)$ with *both* $\mu$ and $\sigma^2$ unknown, the t-statistic for testing $H_0: \mu = \mu_0$ is
+
+$$T = \frac{\sqrt n\,(\bar X - \mu_0)}{S}, \qquad S^2 = \frac{1}{n-1}\sum_{i=1}^n (X_i - \bar X)^2.$$
+
+Under $H_0$, $T \sim t_{n-1}$ (Student's t distribution with $n - 1$ degrees of freedom) *exactly* — Thm 5 below, via Basu.
+
+**Two-sample pooled t-test.** For two independent iid Normal samples with a common unknown variance, the pooled t-statistic for testing $H_0: \mu_1 = \mu_2$ is
+
+$$T = \frac{\bar X - \bar Y}{S_p\sqrt{1/n_1 + 1/n_2}}, \qquad S_p^2 = \frac{(n_1 - 1)S_1^2 + (n_2 - 1)S_2^2}{n_1 + n_2 - 2}.$$
+
+Under $H_0$ and the common-variance assumption, $T \sim t_{n_1 + n_2 - 2}$ exactly. When variances are unequal, Welch's modification (`welchTStatistic` in `testing.ts`) gives an approximate $t_{\nu}$ distribution with Satterthwaite degrees of freedom — asymptotic exactness only.
+</DefinitionBlock>
+
+<TheoremBlock number={5} title="Null distribution of the one-sample t-statistic is tₙ₋₁">
+Let $X_1, \ldots, X_n$ be iid $\mathcal{N}(\mu_0, \sigma^2)$ with both parameters unknown. Under $H_0: \mu = \mu_0$, the one-sample t-statistic
+
+$$T_n = \frac{\sqrt n\,(\bar X - \mu_0)}{S}$$
+
+has distribution $t_{n-1}$ exactly.
+</TheoremBlock>
+
+<ProofBlock>
+**Step 1 — build Student's $t$ from its defining ratio.** The $t_{n-1}$ distribution is defined (Topic 6 §6.6) as the law of
+
+$$T = \frac{Z}{\sqrt{V/(n-1)}},$$
+
+where $Z \sim \mathcal{N}(0, 1)$, $V \sim \chi^2_{n-1}$, and $Z \perp\!\!\!\perp V$. We will rewrite $T_n$ in this form and verify the three conditions.
+
+**Step 2 — express $T_n$ as a ratio of standardized quantities.** Under $H_0$,
+
+$$T_n = \sqrt n\,\frac{\bar X - \mu_0}{S} = \frac{\sqrt n\,(\bar X - \mu_0)/\sigma}{S/\sigma}.$$
+
+The numerator $\sqrt n\,(\bar X - \mu_0)/\sigma$ is $\mathcal{N}(0, 1)$ under $H_0$ (Topic 6 Normal-sum closure; same as in the z-test's Proof 2 Step 1). Call it $Z$.
+
+**Step 3 — identify the chi-squared denominator.** The scaled sample variance is
+
+$$\frac{(n-1)\,S^2}{\sigma^2} = \frac{1}{\sigma^2} \sum_{i=1}^n (X_i - \bar X)^2.$$
+
+It is a classical result (Topic 6 §6.6; proved via the orthogonal transformation argument in Casella-Berger Thm 5.3.1) that under iid Normal data,
+
+$$\frac{(n-1)\,S^2}{\sigma^2} \sim \chi^2_{n-1}.$$
+
+Call this random variable $V$. Then $S/\sigma = \sqrt{V/(n-1)}$, and
+
+$$T_n = \frac{Z}{\sqrt{V/(n-1)}}.$$
+
+This matches the defining ratio for Student's $t_{n-1}$ — *provided* $Z \perp\!\!\!\perp V$.
+
+**Step 4 — independence via Basu.** This is the hinge. For iid $\mathcal{N}(\mu, \sigma^2)$ data at fixed $\sigma^2$, $\bar X$ is complete sufficient for $\mu$ — a standard application of the exponential-family completeness result (Topic 16 §16.6 Lemma 1 specialized to the one-parameter Normal with $\sigma^2$ known). The sample variance $S^2 = (n-1)^{-1}\sum(X_i - \bar X)^2$ is ancillary for $\mu$ — its distribution depends on $\sigma^2$ but not on $\mu$, because $S^2$ is a function of the centered data $X_i - \bar X$ which is location-invariant. By [Basu's theorem](/topics/sufficient-statistics#section-16-9) (Topic 16 Thm 7),
+
+$$\bar X \;\perp\!\!\!\perp\; S^2.$$
+
+Continuous functions of independent random variables are independent, so
+
+$$\sqrt n\,(\bar X - \mu_0)/\sigma \;\perp\!\!\!\perp\; (n-1)\,S^2/\sigma^2,$$
+
+i.e., $Z \perp\!\!\!\perp V$.
+
+**Step 5 — conclude.** The ratio $T_n = Z/\sqrt{V/(n-1)}$ has $Z \sim \mathcal{N}(0, 1)$, $V \sim \chi^2_{n-1}$, and $Z \perp\!\!\!\perp V$ — exactly the defining conditions for $t_{n-1}$. Hence $T_n \sim t_{n-1}$ under $H_0$.
+
+∎ — using Normality of $\bar X$ (Topic 6), the $(n-1) S^2/\sigma^2 \sim \chi^2_{n-1}$ result (Topic 6 §6.6 / Casella-Berger 5.3.1), and [Basu's theorem](/topics/sufficient-statistics#section-16-9) (Topic 16 Thm 7 §16.9).
+</ProofBlock>
+
+<ExampleBlock number={12} title="One-sample t-test at n = 10 — where z and t disagree">
+A small clinical study measures fasting glucose in $n = 10$ patients on a new regimen: $\bar x = 105$ mg/dL, $s = 12$ mg/dL. Testing $H_0: \mu = 100$ (the standard reference value) two-sided:
+
+$$T = \frac{\sqrt{10}\,(105 - 100)}{12} = \frac{5\sqrt{10}}{12} \approx 1.318.$$
+
+**Using t:** Two-sided p-value from the $t_9$ distribution: $p_t = 2\,(1 - F_{t_9}(1.318)) \approx 0.220$.
+
+**Using z (wrong!):** Two-sided z-approximation p-value: $p_z = 2\,(1 - \Phi(1.318)) \approx 0.187$.
+
+The t p-value is $\sim 18\%$ larger than the z approximation — the $t_9$ density has heavier tails than $\mathcal{N}(0, 1)$, so extreme values are less surprising under $t_9$ and the resulting p-value is larger. For small $n$, ignoring this difference inflates the Type I rate. At $n = 30$ the discrepancy shrinks to $\sim 3\%$; at $n = 100$ it is negligible.
+</ExampleBlock>
+
+<ExampleBlock number={13} title="Two-sample pooled t-test">
+A lab tests two catalysts for a reaction yield: $n_1 = 8$ trials with catalyst A ($\bar X = 72$, $S_1 = 4.5$), $n_2 = 8$ trials with catalyst B ($\bar Y = 68$, $S_2 = 5.1$). Testing $H_0: \mu_A = \mu_B$ with equal-variance pooling:
+
+$$S_p^2 = \frac{7 \cdot 4.5^2 + 7 \cdot 5.1^2}{14} = \frac{141.75 + 182.07}{14} \approx 23.13, \qquad S_p \approx 4.81.$$
+
+$$T = \frac{72 - 68}{4.81\,\sqrt{1/8 + 1/8}} = \frac{4}{4.81 \cdot 0.5} = \frac{4}{2.405} \approx 1.663.$$
+
+Two-sided p-value from $t_{14}$: $\approx 0.119$. We fail to reject at $\alpha = 0.05$; the observed difference in yields is consistent with sampling noise at this $n$. For a detectable effect at $\alpha = 0.05$ with $1 - \beta = 0.8$, a similar magnitude would need roughly $n \ge 23$ per arm — a typical power-calculation output.
+</ExampleBlock>
+
+<RemarkBlock number={8} title="Basu is the hinge — the Track-4-to-Track-5 bridge">
+Proof 3 Step 4 is the load-bearing step. Without Basu's $\bar X \perp\!\!\!\perp S^2$, the ratio $T_n = Z/\sqrt{V/(n-1)}$ has a distribution that depends in a complicated way on the joint distribution of $(\bar X, S^2)$ — and $t_{n-1}$ is no longer the answer. Every finite-sample inference procedure for the one-sample Normal mean with unknown variance — the t-test, the t-confidence-interval, and their two-sample siblings — rests on this independence. Topic 16 gave Basu with a full proof and flagged the forward payoff; Topic 17 §17.7 is that payoff. For the *featured* visualization of this, see the `TTestBasuFoundation` component below, which shows the decorrelated scatter of $(\bar X, S^2)$ across MC replications, the resulting t-statistic histogram matching $t_{n-1}$, and a direct link back to [Topic 16 §16.9](/topics/sufficient-statistics#section-16-9).
+</RemarkBlock>
+
+![Featured figure. Three panels. Left: under H₀, MC histogram of T_n = √n(X̄ − μ₀)/S for n = 10 with μ = μ₀, overlaid with exact t_9 density. Center: Basu independence — scatter of (X̄, S²) across 5000 MC samples, decorrelated cloud, annotation "Basu: X̄ ⊥⊥ S² — what makes the t-ratio distribution-free of (μ, σ²)". Right: under H_A (μ = μ₀ + 0.8σ), MC t-histogram shifted right, shaded rejection region, power annotated.](/images/topics/hypothesis-testing/ttest-basu-foundation.png)
+
+<TTestBasuFoundation client:visible />
+
+## 17.8 The χ²-test
+
+Variance inference and goodness-of-fit are the two classical uses of the chi-squared test. The first tests $H_0: \sigma^2 = \sigma_0^2$ directly; the second tests whether observed category counts match expected counts under a hypothesized multinomial model (Pearson's original formulation, 1900).
+
+<DefinitionBlock number={12} title="Chi-squared variance test; Pearson goodness-of-fit">
+**Variance test.** For iid Normal data $X_1, \ldots, X_n \sim \mathcal{N}(\mu, \sigma^2)$ with unknown $\mu$, the test statistic for $H_0: \sigma^2 = \sigma_0^2$ is
+
+$$W = \frac{(n-1)\,S^2}{\sigma_0^2}.$$
+
+Under $H_0$, $W \sim \chi^2_{n-1}$ *exactly* (Thm 6 below).
+
+**Pearson goodness-of-fit.** For a categorical distribution with $k$ cells, observed counts $O_1, \ldots, O_k$ (summing to $n$), and expected counts $E_1, \ldots, E_k$ under $H_0$, the Pearson statistic is
+
+$$X^2 = \sum_{k=1}^K \frac{(O_k - E_k)^2}{E_k}.$$
+
+Under $H_0$, and assuming all $E_k$ are not too small (rule of thumb: $E_k \ge 5$), $X^2 \xrightarrow{d} \chi^2_{k - 1 - r}$ where $r$ is the number of parameters estimated from the data (zero if the null fixes all cell probabilities). The derivation is asymptotic, based on the multinomial CLT and continuous mapping.
+</DefinitionBlock>
+
+<TheoremBlock number={6} title="Null distribution of the variance statistic">
+For iid $\mathcal{N}(\mu, \sigma_0^2)$ data under $H_0: \sigma^2 = \sigma_0^2$, the test statistic $W = (n-1)\,S^2/\sigma_0^2$ has distribution $\chi^2_{n-1}$ exactly.
+</TheoremBlock>
+
+<ProofBlock>
+**Step 1 — reduce to the standard-Normal form.** By definition,
+
+$$W = \frac{(n-1)\,S^2}{\sigma_0^2} = \frac{1}{\sigma_0^2}\sum_{i=1}^n (X_i - \bar X)^2.$$
+
+Let $Y_i = (X_i - \mu)/\sigma_0$; under $H_0$, $Y_i \sim \mathcal{N}(0, 1)$ iid. Then $X_i - \bar X = \sigma_0(Y_i - \bar Y)$, so
+
+$$W = \sum_{i=1}^n (Y_i - \bar Y)^2.$$
+
+The problem is reduced to: what is the distribution of $\sum(Y_i - \bar Y)^2$ when the $Y_i$ are iid standard Normal?
+
+**Step 2 — orthogonal decomposition of the sum of squares.** Expand and collect:
+
+$$\sum_{i=1}^n Y_i^2 = \sum_{i=1}^n \bigl[(Y_i - \bar Y) + \bar Y\bigr]^2 = \sum_{i=1}^n (Y_i - \bar Y)^2 + 2\bar Y\sum_{i=1}^n (Y_i - \bar Y) + n\bar Y^2.$$
+
+The middle sum is zero because $\sum(Y_i - \bar Y) = 0$ identically. So
+
+$$\sum_{i=1}^n Y_i^2 = W + n\bar Y^2.$$
+
+**Step 3 — distribute the chi-squared degrees of freedom.** The left side: $\sum Y_i^2 \sim \chi^2_n$ because $Y_i$ iid $\mathcal{N}(0, 1)$ (Topic 6 §6.6, sum of squares of iid standard Normals). The last term on the right: $n\bar Y^2 = (\sqrt n\,\bar Y)^2$, and $\sqrt n\,\bar Y \sim \mathcal{N}(0, 1)$ under iid standard-Normal data, so $n\bar Y^2 \sim \chi^2_1$.
+
+**Step 4 — independence + MGF additivity give the split.** By [Basu's theorem](/topics/sufficient-statistics#section-16-9) (as in Proof 3 Step 4), $\bar Y \perp\!\!\!\perp \sum(Y_i - \bar Y)^2$. Hence the decomposition
+
+$$\sum_{i=1}^n Y_i^2 = W + n\bar Y^2$$
+
+writes a $\chi^2_n$ variable as the sum of two *independent* non-negative random variables, one of which ($n\bar Y^2$) is $\chi^2_1$. By the additivity of independent chi-squared variables (Topic 6 §6.6 via the MGF argument: the $\chi^2_a$ MGF is $(1 - 2t)^{-a/2}$, so products of MGFs sum the degrees of freedom), the other term must be $\chi^2_{n-1}$:
+
+$$W = \sum_{i=1}^n (Y_i - \bar Y)^2 \sim \chi^2_{n-1}.$$
+
+∎ — using the $\chi^2_n$ representation of $\sum Z_i^2$ (Topic 6), [Basu's independence](/topics/sufficient-statistics#section-16-9) (Topic 16 Thm 7), and MGF additivity for independent chi-squareds.
+</ProofBlock>
+
+<ExampleBlock number={14} title="One-sample variance test — process control">
+A manufacturing process specifies $\sigma_0^2 = 4$ (mm²) for a critical dimension. A sample of $n = 15$ units has $s^2 = 6.8$. Testing $H_0: \sigma^2 = 4$ vs $H_1: \sigma^2 > 4$ (right-tailed, since excess variance is the quality concern):
+
+$$W = \frac{14 \cdot 6.8}{4} = 23.8.$$
+
+Right-tailed p-value from $\chi^2_{14}$: $p = 1 - F_{\chi^2_{14}}(23.8) \approx 0.048$. We reject at $\alpha = 0.05$ (narrowly) — evidence that the process variance exceeds the specification. Contrast with the two-sided version: for a two-sided variance test at $\alpha = 0.05$, we use the equal-tailed p-value $2\,\min(F, 1 - F) = 2 \cdot 0.048 = 0.096$ — we would not reject. The asymmetry of the $\chi^2$ density makes the two-sided variance test less powerful than the one-sided version against one-sided alternatives.
+</ExampleBlock>
+
+<ExampleBlock number={15} title="Pearson χ² goodness-of-fit preview">
+A die is rolled $n = 120$ times; the six face counts are $O = (18, 22, 17, 25, 19, 19)$. Under $H_0$: the die is fair ($E_k = 20$ for all $k$):
+
+$$X^2 = \sum_{k=1}^{6} \frac{(O_k - 20)^2}{20} = \frac{4 + 4 + 9 + 25 + 1 + 1}{20} = \frac{44}{20} = 2.2.$$
+
+Right-tailed p-value from $\chi^2_5$ (df $= k - 1 - 0 = 5$, no parameters estimated): $p \approx 0.82$. The observed counts are easily consistent with a fair die. Note that the $\chi^2$ asymptotic here rests on the multinomial CLT, and degrades when some $E_k$ are small ($< 5$ is the classical rule of thumb); Lehmann-Romano Ch. 14 covers small-$E$ corrections.
+</ExampleBlock>
+
+<RemarkBlock number={9} title="The F-test is the variance-ratio cousin — full treatment in Linear Regression">
+For two independent iid Normal samples with possibly different variances, the ratio $F = S_1^2/S_2^2$ has an $F_{n_1-1, n_2-1}$ null distribution under $H_0: \sigma_1^2 = \sigma_2^2$. This is the F-test for equality of variances, and it is the direct generalization of the one-sample variance test to two samples. The F-test also underlies the analysis of variance (ANOVA) and the regression $F$-test for joint significance of coefficients. The full treatment belongs to Linear Regression (coming soon, Track 6), where the Normal linear model gives the F-test its natural home.
+</RemarkBlock>
+
+![Two panels. Left: null distribution of W = (n−1)S²/σ₀² — MC histogram for n = 15, σ = σ₀ = 1, overlaid with exact χ²_14 density, two-sided rejection region shaded at 2.5% / 97.5% quantiles (note the asymmetry — χ² is not symmetric). Right: goodness-of-fit Pearson χ² preview — 4-category observed-vs-expected bar chart, computed statistic, χ²_3 null density.](/images/topics/hypothesis-testing/chisquared-test.png)
+
+## 17.9 Asymptotic Tests: Wald, Score, LRT
+
+The z-test, t-test, and $\chi^2$-test all rely on special distributional assumptions (Normality and known families) to give exact null distributions. For general parametric models, three asymptotic tests built directly from the likelihood are the workhorses. They agree to first order under $H_0$ and diverge in finite-sample power — a divergence that Topic 18 treats in full.
+
+<DefinitionBlock number={13} title="Wald test">
+For a scalar parameter $\theta$ with MLE $\hat\theta_n$ and Fisher information $I(\theta)$ (Topic 13 Def 13.6), the **Wald test** statistic for $H_0: \theta = \theta_0$ is
+
+$$W_n = n\,(\hat\theta_n - \theta_0)^2\,I(\hat\theta_n).$$
+
+Intuition: $W_n$ is the squared standardized distance of the MLE from the null, scaled by the observed information. Under $H_0$ and standard regularity conditions, $W_n \xrightarrow{d} \chi^2_1$.
+
+For vector-valued $\theta \in \mathbb{R}^k$, the Wald statistic generalizes to $W_n = n\,(\hat\theta_n - \theta_0)^\top I(\hat\theta_n)\,(\hat\theta_n - \theta_0)$, asymptotically $\chi^2_k$.
+</DefinitionBlock>
+
+<DefinitionBlock number={14} title="Score (Rao) test">
+For the same setup, the **score test** (also called the Rao or Lagrange-multiplier test) uses the score function $U(\theta) = \partial_\theta \ell(\theta)$ evaluated *at the null*:
+
+$$S_n = \frac{U(\theta_0)^2}{n\,I(\theta_0)}.$$
+
+Under $H_0$ and regularity, $S_n \xrightarrow{d} \chi^2_1$. The score test has the desirable property that it only requires fitting the null model (no unrestricted MLE is needed) — a practical advantage in GLM and logistic regression applications where the null fit is much easier than the full fit.
+</DefinitionBlock>
+
+<DefinitionBlock number={15} title="Likelihood-ratio test">
+The **likelihood-ratio statistic** is
+
+$$-2\log\Lambda_n = -2\bigl[\ell(\theta_0) - \ell(\hat\theta_n)\bigr] = 2\bigl[\ell(\hat\theta_n) - \ell(\theta_0)\bigr].$$
+
+It is the log-likelihood difference between the restricted fit (at $\theta_0$) and the unrestricted fit (at the MLE $\hat\theta_n$). Under $H_0$ and Wilks' regularity conditions, $-2\log\Lambda_n \xrightarrow{d} \chi^2_k$ where $k$ is the number of restricted parameters (Wilks 1938; full proof in Topic 18).
+</DefinitionBlock>
+
+<TheoremBlock number={7} title="Asymptotic null distribution of Wald, score, LRT">
+Under standard regularity conditions (the MLE is consistent and asymptotically Normal per Topic 14 Thm 14.3; the Fisher information is continuous and positive at $\theta_0$; the log-likelihood is sufficiently smooth), the three statistics all have asymptotic null distribution $\chi^2_1$:
+
+$$W_n, \; S_n, \; -2\log\Lambda_n \;\xrightarrow{d}\; \chi^2_1 \quad \text{under } H_0.$$
+
+The Wald case follows inline from Topic 14 Thm 14.3 (MLE asymptotic normality) by Slutsky and continuous mapping — derived below. The score and LRT cases are stated; Wilks' full proof of the LRT case is Topic 18's territory.
+</TheoremBlock>
+
+**Derivation of the Wald case (inline).** By Topic 14 Thm 14.3, under $H_0$,
+
+$$\sqrt n\,(\hat\theta_n - \theta_0) \;\xrightarrow{d}\; \mathcal{N}(0,\,I(\theta_0)^{-1}).$$
+
+Therefore
+
+$$\sqrt{n\,I(\theta_0)}\,(\hat\theta_n - \theta_0) \;\xrightarrow{d}\; \mathcal{N}(0, 1).$$
+
+By consistency of $\hat\theta_n$ and continuity of $I(\cdot)$, $I(\hat\theta_n) \xrightarrow{P} I(\theta_0)$, so $\sqrt{I(\hat\theta_n)/I(\theta_0)} \xrightarrow{P} 1$. By Slutsky,
+
+$$\sqrt{n\,I(\hat\theta_n)}\,(\hat\theta_n - \theta_0) \;\xrightarrow{d}\; \mathcal{N}(0, 1).$$
+
+Squaring and applying the continuous mapping theorem (Topic 9):
+
+$$W_n = n\,(\hat\theta_n - \theta_0)^2\,I(\hat\theta_n) \;\xrightarrow{d}\; \chi^2_1 \quad \text{under } H_0.$$
+
+This two-line argument from Topic 14 is all that's needed for the Wald case. The score case uses a similar argument applied to the score function (one Taylor expansion at $\theta_0$); the LRT case (Wilks) requires a more delicate quadratic-approximation argument that Topic 18 develops in full.
+
+<ExampleBlock number={16} title="Wald, score, and LRT for the Bernoulli H₀: p = p₀">
+Let $X_1, \ldots, X_n$ iid Bernoulli$(p)$, $\hat p = \bar X$. For $H_0: p = p_0$:
+
+**Wald:**
+
+$$W_n = \frac{n\,(\hat p - p_0)^2}{\hat p\,(1 - \hat p)}.$$
+
+Variance estimate at the MLE: $\hat p(1 - \hat p)$.
+
+**Score:**
+
+$$S_n = \frac{n\,(\hat p - p_0)^2}{p_0\,(1 - p_0)}.$$
+
+Variance estimate at the null: $p_0(1 - p_0)$.
+
+**LRT:**
+
+$$-2\log\Lambda_n = 2n\!\left[\hat p \log\!\frac{\hat p}{p_0} + (1 - \hat p)\log\!\frac{1 - \hat p}{1 - p_0}\right].$$
+
+Under $H_0$, all three are asymptotically $\chi^2_1$ (Wilks, Wald, Rao). The three statistics differ by the choice of variance estimate (Wald uses $\hat p$, score uses $p_0$, LRT uses an information-theoretic hybrid via the KL divergence). At $p_0 = 0.5$ and $n = 100$, MC simulation under $H_0$ (5000 replications, `testing.ts` test #17) confirms all three have empirical mean $\approx 1$ and empirical quantiles matching $\chi^2_1$.
+</ExampleBlock>
+
+<RemarkBlock number={10} title="The three tests agree to first order under H₀">
+A short Taylor expansion of the log-likelihood around $\hat\theta_n$ reveals that all three statistics are asymptotically equivalent under $H_0$:
+
+$$W_n - (-2\log\Lambda_n) = O_P(n^{-1/2}), \qquad S_n - (-2\log\Lambda_n) = O_P(n^{-1/2}).$$
+
+At finite $n$ they differ, and the differences matter for power at alternatives close to the null; they can also matter for finite-sample Type I error in small samples. Topic 18 treats the finite-sample divergence quantitatively.
+</RemarkBlock>
+
+<RemarkBlock number={11} title="LRT is parameterization-invariant; Wald is not">
+One practical advantage of the LRT is that it is *invariant* under reparameterization. If we replace $\theta$ with $\eta = g(\theta)$ (any smooth one-to-one transformation), the log-likelihood ratio is unchanged — the maximized likelihoods are the same, just at different parameter values. Hence the LRT statistic and its p-value are identical under reparameterization.
+
+The Wald statistic, by contrast, is *not* invariant: $W_n^\theta = n\,(\hat\theta - \theta_0)^2 I(\hat\theta)$ and $W_n^\eta = n\,(\hat\eta - \eta_0)^2 I^\eta(\hat\eta)$ can differ substantially when $g$ is nonlinear — and their asymptotic $\chi^2_1$ distribution is only approximately right at either end. This is a common source of confusion in practice; for logistic regression (natural parameter $\theta = \logit p$ vs original parameter $p$), Wald statistics on $p$ and on $\logit p$ can give meaningfully different p-values. Practitioners often prefer the LRT for this reason.
+
+The score test is parameterization-invariant when the MLE is computed on the same parameterization in which $\theta_0$ is specified — in practice, it behaves similarly to the LRT.
+</RemarkBlock>
+
+![Three panels. Left: overlaid null-distribution histograms of W_n (Wald, amber), S_n (Score, purple), −2log Λ_n (LRT, green) for Bernoulli H₀: p = 0.5 at n = 30, 10000 MC runs, common χ²_1 density overlaid. Center: algebraic formulas with Bernoulli specializations. Right: under H_A (true p = 0.65), overlay of the three alternative distributions — similar means, slightly different spreads, the first glimpse of finite-sample power differences.](/images/topics/hypothesis-testing/wald-score-lrt.png)
+
+<WaldScoreLRTComparison client:visible />
+
+## 17.10 Duality with Confidence Intervals
+
+Every hypothesis test gives rise to a confidence interval, and every confidence interval gives rise to a family of hypothesis tests. The duality is exact. Topic 19 will develop the full theory; here we preview the construction.
+
+<RemarkBlock number={12} title="Test inversion: the non-rejection set is a confidence interval">
+Fix a level $\alpha$. For each candidate parameter value $\theta_0$, construct the level-$\alpha$ test of $H_0: \theta = \theta_0$. The **non-rejection set** — the collection of $\theta_0$ values for which the observed data does *not* lead to rejection — is a $(1 - \alpha)$ confidence interval for $\theta$:
+
+$$C(X) = \{\theta_0 : \text{the level-}\alpha\text{ test of } H_0: \theta = \theta_0 \text{ does not reject}\}.$$
+
+The coverage $P_\theta(\theta \in C(X)) \ge 1 - \alpha$ for every $\theta$, because the test controls Type I error at level $\alpha$ uniformly over $\Theta_0$ in each hypothesis direction. Conversely, any $(1 - \alpha)$ confidence interval $C(X)$ gives a family of level-$\alpha$ tests: reject $H_0: \theta = \theta_0$ iff $\theta_0 \notin C(X)$.
+
+The duality is more than a formal correspondence — it is a concrete construction. Inverting a z-test gives the z-interval; inverting a t-test gives the t-interval; inverting an LRT gives the profile-likelihood interval; inverting a score test gives the score interval. Topic 19 develops all four constructions.
+</RemarkBlock>
+
+<ExampleBlock number={17} title="Z-interval and t-interval as test inversions">
+**Z-interval.** For iid Normal data with known $\sigma^2$, the level-$\alpha$ two-sided z-test fails to reject $H_0: \mu = \mu_0$ iff $|\sqrt n(\bar X - \mu_0)/\sigma| \le z_{\alpha/2}$, i.e., iff
+
+$$\bar X - z_{\alpha/2}\,\frac{\sigma}{\sqrt n} \;\le\; \mu_0 \;\le\; \bar X + z_{\alpha/2}\,\frac{\sigma}{\sqrt n}.$$
+
+The non-rejection set is $\bar X \pm z_{\alpha/2}\,\sigma/\sqrt n$ — the textbook $(1 - \alpha)$ z-confidence interval.
+
+**T-interval.** For iid Normal data with unknown $\sigma^2$, the analogous inversion of the t-test gives
+
+$$\bar X \pm t_{n-1,\,\alpha/2}\,\frac{S}{\sqrt n},$$
+
+using the $(1 - \alpha/2)$-quantile of the $t_{n-1}$ distribution. For $n = 30$ and $\alpha = 0.05$, $t_{29, 0.025} \approx 2.045$ — slightly larger than the $z_{0.025} = 1.96$ of the z-interval, reflecting the extra variability introduced by estimating $\sigma$.
+
+The inversion also works for the Wald, score, and LRT tests in §17.9, giving three different $(1 - \alpha)$ intervals for a general parameter. Topic 19 develops the full set; for now, the preview is that the same machinery we just built handles both "is $\theta = \theta_0$?" and "what values of $\theta$ are plausible?".
+</ExampleBlock>
+
+<RemarkBlock number={13} title="Pivotal quantities and Wald / score / LRT intervals">
+The t-interval $\bar X \pm t_{n-1,\alpha/2}\,S/\sqrt n$ works because the quantity $T = \sqrt n(\bar X - \mu)/S$ is a *pivot* — its distribution ($t_{n-1}$) does not depend on any unknown parameter. The confidence interval is formed by inverting a distributional statement about the pivot. Pivots are available for the location-scale families (Normal, exponential with known rate, etc.) and give exact small-sample confidence intervals.
+
+When pivots are not available (most general parametric models), we invert asymptotic tests instead: the Wald interval uses $\hat\theta \pm z_{\alpha/2} / \sqrt{n\,I(\hat\theta)}$; the score interval uses the set $\{\theta : |S_n(\theta)| \le z_{\alpha/2}\}$; the LRT interval uses the set $\{\theta : -2\log\Lambda_n(\theta) \le \chi^2_{1,\alpha}\}$. All three have coverage $1 - \alpha$ asymptotically; their finite-sample coverage can differ substantially — the Wald interval is notoriously under-covering in small samples near the boundary (e.g., for binomial with $p$ near 0 or 1; the Wilson interval, based on the score test, is preferred). Full theory, with coverage diagnostics and comparisons, is **Confidence Intervals (coming soon, Topic 19)**.
+</RemarkBlock>
+
+![Two panels. Left: test inversion diagram — horizontal axis μ₀; for each μ₀, run the level-α test; shade the non-rejection set of μ₀ where |√n(x̄ − μ₀)/S| ≤ t at level α/2 — this shaded interval IS x̄ ± t at level α/2 times S/√n. Right: banner previewing Topic 19 — "Every hypothesis test gives a CI; every CI gives a family of hypothesis tests. The duality is exact."](/images/topics/hypothesis-testing/ci-duality-preview.png)
+
+## 17.11 Where the Framework Falls Short
+
+Classical hypothesis testing is a tightly specified decision procedure, and it fails to answer several questions that practitioners often want it to answer. An honest account lists the failure modes.
+
+<RemarkBlock number={14} title="Hypothesis testing is not model selection">
+A p-value tests whether the data are consistent with a *specific* null model. It does not rank competing models, and it does not quantify which model predicts better out of sample. An analyst who runs two separate hypothesis tests (one on each model) and picks the one with smaller p-value has not performed model comparison — they have performed two inconsistent Type I error controls and then post-selected. For genuine model comparison, use cross-validation, AIC, BIC, or held-out likelihood. Cross-validation is the ML-native standard; AIC and BIC are the frequentist and Bayesian large-sample approximations to out-of-sample predictive performance. The contrast is developed in <ExternalLink href="https://formalml.com/topics/model-comparison" site="formalml" topic="Model comparison" />.
+</RemarkBlock>
+
+<RemarkBlock number={15} title="Bayes factors as the Bayesian alternative">
+The Bayesian analog of a hypothesis test is the Bayes factor
+
+$$\mathrm{BF}_{10} = \frac{P(\text{data} \mid H_1)}{P(\text{data} \mid H_0)},$$
+
+the ratio of marginal likelihoods under the two hypotheses. A Bayes factor of 10 is commonly interpreted as "strong evidence for $H_1$"; combined with a prior odds $P(H_1)/P(H_0)$, it gives the posterior odds. Bayes factors are more consistent with Fisher's "evidence" framing and less vulnerable to the Ioannidis critique (Remark 6), but they require specifying priors for the competing hypotheses, which introduces its own modelling choices. Bayesian Foundations (coming soon, Track 7) will develop the full framework.
+</RemarkBlock>
+
+<RemarkBlock number={16} title="Multiple testing inflates Type I error">
+Running $m$ independent tests, each at level $\alpha$, under independence produces an *overall* false-positive rate $1 - (1 - \alpha)^m$ — which exceeds $\alpha$ rapidly: at $m = 20$ and $\alpha = 0.05$, the overall rate is $\approx 0.64$. Modern A/B testing platforms run thousands of simultaneous tests; naive per-test level control would give mostly false positives. Bonferroni correction (test each at level $\alpha/m$ to control family-wise error at $\alpha$) is the classical fix; Benjamini-Hochberg's false discovery rate (FDR) controls the proportion of rejections that are false positives, with less power loss than Bonferroni at large $m$. The full treatment is **Multiple Testing (coming soon, Topic 20)**, which addresses the "garden of forking paths" concern flagged in Remark 6.
+</RemarkBlock>
+
+<RemarkBlock number={17} title="Pre-registration and adversarial collaboration">
+Some replication-crisis concerns are not technical at all. A researcher who tests multiple hypotheses but reports only the significant one has inflated the effective Type I rate, and no multiple-testing correction can recover the right level if the correction isn't applied. The remedy is *pre-registration*: announcing the hypotheses, the analysis plan, and the stopping rule *before seeing the data*. Adversarial collaboration extends this by recruiting a skeptic as a co-author, tasked with anticipating and pre-committing to the interpretation of each possible outcome. Both are non-technical but important complements to the multiple-testing machinery of Topic 20.
+</RemarkBlock>
+
+## 17.12 Summary & Forward Look
+
+<RemarkBlock number={18} title="Topic 17 cheat sheet">
+A compact map of the test families we have met.
+
+| Test | Null $H_0$ | Assumes | Statistic | Null distribution | Exact or asymptotic? |
+|---|---|---|---|---|---|
+| z-test (one-sample) | $\mu = \mu_0$ | Normal, $\sigma$ known | $\sqrt n(\bar X - \mu_0)/\sigma$ | $\mathcal{N}(0, 1)$ | Exact (Normal); asymptotic (general) via CLT |
+| z-test (two-sample) | $\mu_1 = \mu_2$ | Both Normal, $\sigma_1, \sigma_2$ known | $(\bar X - \bar Y)/\sqrt{\sigma_1^2/n_1 + \sigma_2^2/n_2}$ | $\mathcal{N}(0, 1)$ | Exact under Normal; asymptotic via CLT |
+| Two-proportion z | $p_A = p_B$ | Large $n_A$, $n_B$ | $(\hat p_A - \hat p_B)/\mathrm{SE}_{\text{pool}}$ | $\mathcal{N}(0, 1)$ | Asymptotic |
+| Binomial exact | $p = p_0$ | Bernoulli | $X = \sum X_i$ | $\mathrm{Binomial}(n, p_0)$ | Exact (discrete) |
+| t-test (one-sample) | $\mu = \mu_0$ | Normal, $\sigma$ unknown | $\sqrt n(\bar X - \mu_0)/S$ | $t_{n-1}$ | **Exact** via Basu |
+| t-test (two-sample pooled) | $\mu_1 = \mu_2$ | Both Normal, $\sigma_1 = \sigma_2$ unknown | Pooled t | $t_{n_1 + n_2 - 2}$ | Exact under equal variance |
+| Welch t | $\mu_1 = \mu_2$ | Both Normal, unequal variances | Welch t | $t_{\hat\nu}$ (Satterthwaite) | Asymptotic |
+| $\chi^2$ variance | $\sigma^2 = \sigma_0^2$ | Normal | $(n-1)S^2/\sigma_0^2$ | $\chi^2_{n-1}$ | Exact |
+| Pearson $\chi^2$ (GoF) | Fixed cell probs | Multinomial, $E_k \ge 5$ | $\sum (O_k - E_k)^2 / E_k$ | $\chi^2_{k-1-r}$ | Asymptotic |
+| Wald | $\theta = \theta_0$ | Regular MLE | $n(\hat\theta - \theta_0)^2 I(\hat\theta)$ | $\chi^2_1$ | Asymptotic |
+| Score (Rao) | $\theta = \theta_0$ | Regular MLE | $U(\theta_0)^2/[n I(\theta_0)]$ | $\chi^2_1$ | Asymptotic |
+| LRT | $\theta = \theta_0$ | Wilks' regularity | $-2[\ell(\theta_0) - \ell(\hat\theta)]$ | $\chi^2_k$ | Asymptotic |
+
+The two "exact" entries (z-test with $\sigma$ known; t-test and $\chi^2$ variance under Normality) owe their exactness to the special structure of the Normal family — in particular, to Basu's theorem (Topic 16 §16.9) giving $\bar X \perp\!\!\!\perp S^2$.
+</RemarkBlock>
+
+![Testing cheat sheet — tidy one-page table summarizing each test family: null, assumptions, statistic, null distribution, and whether exact or asymptotic. Matches the Remark 18 table above in rendered form.](/images/topics/hypothesis-testing/testing-cheat-sheet.png)
+
+<RemarkBlock number={19} title="Where Track 5 goes next">
+Topic 17 set up the framework. The next three topics complete Track 5:
+
+- **Likelihood-Ratio Tests & Neyman-Pearson (coming soon, Topic 18)** — the optimality theory. Neyman-Pearson's lemma: the LRT is UMP for simple-vs-simple. Uniformly most powerful tests, monotone likelihood ratio families, Wilks' theorem proved in full, the three asymptotic tests' finite-sample power compared.
+- **Confidence Intervals (coming soon, Topic 19)** — the duality previewed in §17.10 becomes the construction. Pivotal quantities, Wald / score / LRT intervals, coverage diagnostics, the Wilson interval for binomial proportions (which fixes the Wald boundary problem from Remark 13).
+- **Multiple Testing (coming soon, Topic 20)** — family-wise error (Bonferroni, Holm, Šidák), false discovery rate (Benjamini-Hochberg, adaptive FDR), the replication crisis in quantitative terms.
+
+Beyond Track 5, the framework reappears in Linear Regression (F-tests, partial F-tests, ANOVA), Generalized Linear Models (Wald / score / LRT tests for GLM coefficients; the score test is the standard specification test), Bayesian Foundations (Bayes factors as the Bayesian counterpart), and Nonparametric Inference (permutation tests, rank tests, Kolmogorov-Smirnov). Finally, forward to <ExternalLink href="https://formalml.com/topics/ab-testing-platforms" site="formalml" topic="A/B testing platforms" />, where every deployed experimentation system is running variants of Topic 17's machinery at scale — and increasingly augmenting them with sequential-testing, variance-reduction (CUPED), and always-valid-inference extensions.
+
+The shift from estimation to testing — from "best guess" to "decide" — is the conceptual move. Every topic in Track 5 and beyond builds on the scaffolding we put up here.
+</RemarkBlock>
+
+---
+
+### References
+
+1. Erich L. Lehmann & Joseph P. Romano. (2005). [*Testing Statistical Hypotheses*](https://link.springer.com/book/10.1007/0-387-27605-X) (3rd ed.). Springer.
+2. George Casella & Roger L. Berger. (2002). [*Statistical Inference*](https://www.cengage.com/c/statistical-inference-2e-casella/) (2nd ed.). Duxbury.
+3. Ronald A. Fisher. (1922). [*On the Mathematical Foundations of Theoretical Statistics*](https://royalsocietypublishing.org/doi/10.1098/rsta.1922.0009). *Philosophical Transactions of the Royal Society A*, 222, 309–368.
+4. Jerzy Neyman & Egon S. Pearson. (1933). [*On the Problem of the Most Efficient Tests of Statistical Hypotheses*](https://doi.org/10.1098/rsta.1933.0009). *Philosophical Transactions of the Royal Society A*, 231, 289–337.
+5. 'Student' (William Sealy Gosset). (1908). [*The Probable Error of a Mean*](https://www.jstor.org/stable/2331554). *Biometrika*, 6(1), 1–25.
+6. Karl Pearson. (1900). [*On the Criterion that a Given System of Deviations from the Probable is Such that It Can Be Reasonably Supposed to Have Arisen from Random Sampling*](https://doi.org/10.1080/14786440009463897). *Philosophical Magazine (5th series)*, 50, 157–175.
+7. Abraham Wald. (1943). [*Tests of Statistical Hypotheses Concerning Several Parameters When the Number of Observations is Large*](https://doi.org/10.1090/S0002-9947-1943-0012401-3). *Transactions of the American Mathematical Society*, 54(3), 426–482.
+8. C. Radhakrishna Rao. (1948). [*Large Sample Tests of Statistical Hypotheses Concerning Several Parameters with Applications to Problems of Estimation*](https://doi.org/10.1017/S0305004100023987). *Mathematical Proceedings of the Cambridge Philosophical Society*, 44(1), 50–57.
+9. Samuel S. Wilks. (1938). [*The Large-Sample Distribution of the Likelihood Ratio for Testing Composite Hypotheses*](https://projecteuclid.org/euclid.aoms/1177732360). *Annals of Mathematical Statistics*, 9(1), 60–62.
+10. Ronald L. Wasserstein & Nicole A. Lazar. (2016). [*The ASA's Statement on p-Values: Context, Process, and Purpose*](https://doi.org/10.1080/00031305.2016.1154108). *The American Statistician*, 70(2), 129–133.
+11. John P. A. Ioannidis. (2005). [*Why Most Published Research Findings Are False*](https://doi.org/10.1371/journal.pmed.0020124). *PLoS Medicine*, 2(8), e124.
+12. Andrew Gelman & Eric Loken. (2013). [*The Garden of Forking Paths: Why Multiple Comparisons Can Be a Problem, Even When There is No 'Fishing Expedition' or 'p-Hacking'*](http://www.stat.columbia.edu/~gelman/research/unpublished/p_hacking.pdf). Department of Statistics, Columbia University.

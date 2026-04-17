@@ -11,7 +11,8 @@
     "build": "astro build",
     "postbuild": "pagefind --site dist",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "test:testing": "tsx src/components/viz/shared/testing.test.ts"
   },
   "dependencies": {
     "@astrojs/mdx": "^5.0.0",
