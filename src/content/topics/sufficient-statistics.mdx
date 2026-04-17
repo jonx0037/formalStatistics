@@ -607,6 +607,8 @@ with $I_y$ the regularized incomplete beta function. This is the formula used by
 Reading the table at the top of §16.8: in every exp-family in its natural parameter, UMVUE = MLE = MoM = $\bar X$ (or its relevant linear transform). Outside the natural parameterization, UMVUE and MLE diverge in a structured way: UMVUE prioritizes unbiasedness ($S^2_{n-1}$ for Normal $\sigma^2$); MLE and MoM coincidentally prioritize a different summary ($S^2_n$, the maximum-likelihood projection onto the tangent space) and pay a small bias cost. For finite $n$, the comparison is family-specific: sometimes UMVUE wins on MSE (Normal $\sigma^2$ at moderate $n$), sometimes MLE wins (e.g., Gamma scale in some regimes — its slight positive bias and lower variance can yield smaller MSE for very small $n$). Asymptotically, all three are consistent and asymptotically Normal at the same $n^{-1/2}$ rate; the bias gap shrinks as $1/n$, so it disappears in the asymptotic limit.
 </RemarkBlock>
 
+<a id="section-16-9" />
+
 ## 16.9 Ancillary Statistics and Basu's Theorem
 
 Sufficient statistics carry *all* the parameter information; ancillary statistics carry *none* of it. Basu's theorem says that when the first is complete sufficient, the two are independent — a startlingly clean structural result with broad consequences in Track 5.
