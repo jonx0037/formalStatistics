@@ -8,6 +8,7 @@ import {
   tukeyPsiPrime,
   mEstimatorLocation,
   mEstimatorVariance,
+  medianAbsoluteDeviation,
   sampleMean,
   sampleMedian,
   sampleVariance,
@@ -80,11 +81,8 @@ export default function MEstimatorGallery() {
     const medianEst = sampleMedian(data);
     const huberEst = mEstimatorLocation(data, (u) => huberPsi(u, k), { init: medianEst });
     const tukeyEst = mEstimatorLocation(data, (u) => tukeyPsi(u, c), { init: medianEst });
-    // Sandwich SE for each (using MAD scale internally consistent with mEstimatorLocation):
-    const mad = (() => {
-      const med = sampleMedian(data);
-      return Math.max(sampleMedian(data.map((x) => Math.abs(x - med))) / 0.6745, 1e-9);
-    })();
+    // Sandwich SE for each (using the same MAD scale as mEstimatorLocation):
+    const mad = Math.max(medianAbsoluteDeviation(data), 1e-9);
     const meanSE = Math.sqrt(sampleVariance(data, 1) / data.length);
     const medianSE = mad / Math.sqrt(data.length); // approximate; exact uses density at median
     const huberSE = Math.sqrt(Math.max(0, mEstimatorVariance(
@@ -102,8 +100,8 @@ export default function MEstimatorGallery() {
     return [
       { name: 'Sample mean', value: meanEst, se: meanSE, color: '#DC2626', breakdown: '0%' },
       { name: 'Sample median', value: medianEst, se: medianSE, color: '#7C3AED', breakdown: '50%' },
-      { name: 'Huber', value: huberEst.estimate, se: huberSE, color: '#2563EB', breakdown: '~5%' },
-      { name: 'Tukey', value: tukeyEst.estimate, se: tukeySE, color: '#059669', breakdown: '~50%' },
+      { name: 'Huber', value: huberEst.estimate, se: huberSE, color: '#2563EB', breakdown: '50%' },
+      { name: 'Tukey', value: tukeyEst.estimate, se: tukeySE, color: '#059669', breakdown: '50%' },
     ];
   }, [data, k, c]);
 

@@ -1,9 +1,8 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import * as d3 from 'd3';
 import { useResizeObserver } from './shared/useResizeObserver';
-import { runningMean } from './shared/convergence';
+import { runningMean, cauchySample, paretoSampleArray, normalSample, sampleSequence } from './shared/convergence';
 import { runningMedian } from './shared/estimation';
-import { cauchySample, paretoSampleArray, normalSample, sampleSequence } from './shared/convergence';
 import { pathologyPresets } from '../../data/method-of-moments-data';
 
 const MARGIN = { top: 16, right: 12, bottom: 36, left: 48 };
@@ -30,27 +29,6 @@ function generateSample(family: string, params: Record<string, number>, n: numbe
   }
 }
 
-// Two-heap O(n log n) running median for streaming use up to n=10,000 (gotcha #9).
-function fastRunningMedian(data: number[]): number[] {
-  const out = new Array<number>(data.length);
-  // Sorted insertion using bisect — O(n²) worst case for the *insert* but O(log n) for the search,
-  // adequate for n ≤ 10,000 and avoids the nested-sort O(n²) of the naive runningMedian.
-  const sorted: number[] = [];
-  for (let i = 0; i < data.length; i++) {
-    const x = data[i];
-    let lo = 0, hi = sorted.length;
-    while (lo < hi) {
-      const mid = (lo + hi) >>> 1;
-      if (sorted[mid] < x) lo = mid + 1;
-      else hi = mid;
-    }
-    sorted.splice(lo, 0, x);
-    const m = sorted.length;
-    out[i] = m % 2 === 0 ? 0.5 * (sorted[m / 2 - 1] + sorted[m / 2]) : sorted[(m - 1) / 2];
-  }
-  return out;
-}
-
 export default function CauchyPathologyExplorer() {
   const { ref: containerRef, width } = useResizeObserver<HTMLDivElement>();
   const w = Math.max(width ?? 720, 320);
@@ -68,7 +46,7 @@ export default function CauchyPathologyExplorer() {
   }, [preset, n, seed]);
 
   const rmean = useMemo(() => runningMean(sample), [sample]);
-  const rmedian = useMemo(() => fastRunningMedian(sample), [sample]);
+  const rmedian = useMemo(() => runningMedian(sample), [sample]);
 
   // Max excursion of the running mean — the headline statistic.
   const maxAbsMean = useMemo(() => {

@@ -1054,9 +1054,10 @@ export function tukeyPsiPrime(u: number, c: number): number {
 
 /**
  * Median Absolute Deviation, normalized so MAD/Φ⁻¹(0.75) ≈ σ for Normal data.
- * Used as the robust scale estimate inside `mEstimatorLocation`.
+ * Used as the robust scale estimate inside `mEstimatorLocation`, and re-used
+ * by `MEstimatorGallery` for sandwich-variance scaling.
  */
-function medianAbsoluteDeviation(data: number[]): number {
+export function medianAbsoluteDeviation(data: number[]): number {
   if (data.length === 0) return 0;
   const med = sampleMedian(data);
   const dev = data.map((x) => Math.abs(x - med));
@@ -1151,12 +1152,19 @@ export function mEstimatorVariance(
  * Asymptotic breakdown point ε* of common location estimators.
  * - 'mean'         → 0          (a single outlier moves the mean arbitrarily)
  * - 'median'       → 1/2        (the maximum possible)
- * - 'huber'        → ≈0.05      (a small fraction of outliers in the linear tail)
- * - 'tukey'        → ≈0.5       (redescending: extreme outliers get weight 0)
+ * - 'huber'        → 1/2        (with a robust scale like MAD, per Rousseeuw–Leroy §1)
+ * - 'tukey'        → 1/2        (redescending: extreme outliers get weight 0)
  * - 'trimmed-mean' → α           (the trimming proportion)
  *
- * The 'huber' value depends weakly on k; the convention 0.05 reflects the
- * default k = 1.345. Computed exactly per Rousseeuw–Leroy (1987) §1.
+ * Note: The Huber location estimator paired with a robust scale estimator
+ * (MAD, as used in `mEstimatorLocation`) achieves the maximum breakdown
+ * point of 1/2. The often-quoted figure 0.05 (or 5%) is the contamination
+ * level for which the default tuning constant k = 1.345 is *minimax-optimal*
+ * under Huber's gross-error model — it is not the breakdown point.
+ *
+ * Practical caveat: empirically, the Huber estimate begins to drift well
+ * before the asymptotic breakdown is reached, because at high contamination
+ * the MAD itself becomes corrupted. The drift is gradual rather than catastrophic.
  */
 export function breakdownPoint(
   estimator: 'mean' | 'median' | 'huber' | 'tukey' | 'trimmed-mean',
@@ -1168,11 +1176,10 @@ export function breakdownPoint(
     case 'median':
       return 0.5;
     case 'huber':
-      // Huber breakdown depends on the asymmetry between tail weight and influence.
-      // The textbook value at k = 1.345 is ~0.05; we hard-code this to match the
-      // demo presets. A slightly higher k raises the breakdown a few percentage
-      // points but stays well below the median's 0.5.
-      return 0.05;
+      // Huber + robust scale (MAD) achieves the maximum breakdown 1/2.
+      // (Rousseeuw–Leroy 1987, §1.) The 0.05 figure refers to the
+      // contamination level for which k = 1.345 is minimax — distinct concept.
+      return 0.5;
     case 'tukey':
       // Redescending → asymptotically 1/2; the realised value depends on the
       // tuning constant c. For c = 4.685 (default) the empirical breakdown is
@@ -1188,15 +1195,70 @@ export function breakdownPoint(
 // ── Running median (running mean already lives in convergence.ts) ────────────
 
 /**
- * Running median: out[i] = median(data[0..i]). O(n²) naive implementation —
- * adequate for n ≲ 5000. For the n=10,000 streaming use case in
- * `CauchyPathologyExplorer`, replace with a two-heap median tracker.
+ * Minimal binary-heap. Constructed with a `compare(a, b) → boolean` callback
+ * that returns true when `a` belongs above `b` in the heap order — so a
+ * max-heap passes `(a, b) => a > b` and a min-heap passes `(a, b) => a < b`.
+ */
+class Heap {
+  private data: number[] = [];
+  private readonly compare: (a: number, b: number) => boolean;
+  constructor(compare: (a: number, b: number) => boolean) {
+    this.compare = compare;
+  }
+  get size(): number { return this.data.length; }
+  peek(): number | undefined { return this.data[0]; }
+  push(value: number): void {
+    this.data.push(value);
+    let i = this.data.length - 1;
+    while (i > 0) {
+      const parent = (i - 1) >>> 1;
+      if (!this.compare(this.data[i], this.data[parent])) break;
+      [this.data[i], this.data[parent]] = [this.data[parent], this.data[i]];
+      i = parent;
+    }
+  }
+  pop(): number | undefined {
+    if (this.data.length === 0) return undefined;
+    const top = this.data[0];
+    const last = this.data.pop()!;
+    if (this.data.length > 0) {
+      this.data[0] = last;
+      let i = 0;
+      const n = this.data.length;
+      for (;;) {
+        let best = i;
+        const l = 2 * i + 1, r = l + 1;
+        if (l < n && this.compare(this.data[l], this.data[best])) best = l;
+        if (r < n && this.compare(this.data[r], this.data[best])) best = r;
+        if (best === i) break;
+        [this.data[i], this.data[best]] = [this.data[best], this.data[i]];
+        i = best;
+      }
+    }
+    return top;
+  }
+}
+
+/**
+ * Running median: out[i] = median(data[0..i]). True two-heap implementation —
+ * each insertion is O(log n), giving O(n log n) overall. Suitable for the
+ * n = 10,000 streaming use case in `CauchyPathologyExplorer` without UI stalls.
  */
 export function runningMedian(data: number[]): number[] {
   const n = data.length;
   const out = new Array<number>(n);
+  const lower = new Heap((a, b) => a > b); // max-heap for the lower half
+  const upper = new Heap((a, b) => a < b); // min-heap for the upper half
   for (let i = 0; i < n; i++) {
-    out[i] = sampleMedian(data.slice(0, i + 1));
+    const x = data[i];
+    if (lower.size === 0 || x <= (lower.peek() as number)) lower.push(x);
+    else upper.push(x);
+    // Rebalance so |size(lower) − size(upper)| ≤ 1, with lower allowed to be larger.
+    if (lower.size > upper.size + 1) upper.push(lower.pop() as number);
+    else if (upper.size > lower.size) lower.push(upper.pop() as number);
+    out[i] = lower.size === upper.size
+      ? 0.5 * ((lower.peek() as number) + (upper.peek() as number))
+      : (lower.peek() as number);
   }
   return out;
 }
@@ -1561,11 +1623,15 @@ if (import.meta.env.DEV && typeof window !== 'undefined') {
     results.push(v > 0.001 && v < 0.004);
   }
 
-  // 40. breakdownPoint values match Rousseeuw–Leroy table.
+  // 40. breakdownPoint values match Rousseeuw–Leroy table. Huber + robust
+  //     scale (MAD) achieves the maximum 1/2 — the 0.05 figure cited in some
+  //     references is the contamination level for which k = 1.345 is minimax,
+  //     a distinct concept from the breakdown point.
   results.push(
     breakdownPoint('mean') === 0 &&
       breakdownPoint('median') === 0.5 &&
-      Math.abs(breakdownPoint('huber') - 0.05) < 0.01 &&
+      breakdownPoint('huber') === 0.5 &&
+      breakdownPoint('tukey') === 0.5 &&
       Math.abs(breakdownPoint('trimmed-mean', { alpha: 0.1 }) - 0.1) < 1e-12,
   );
 

@@ -8,7 +8,6 @@ import {
   momUniform,
   mleGammaShape,
   sampleMean,
-  sampleVariance,
   areTheoretical,
   areCurveTheoretical,
 } from './shared/estimation';
@@ -90,7 +89,13 @@ export default function AREExplorer() {
   const [seed, setSeed] = useState(1);
 
   const ops = useMemo(() => getOps(preset.family), [preset.family]);
-  const truth = preset.defaultParams[Object.keys(preset.defaultParams)[0]];
+  // Truth on the swept axis — the value of the parameter being varied along
+  // the ARE curve. For families where `sweepParam` is one of `defaultParams`
+  // we read it from there; for families where the sweep axis is `n`
+  // (uniform-endpoint), we use the live `n` slider value.
+  const truth = preset.sweepParam === 'n'
+    ? n
+    : (preset.defaultParams[preset.sweepParam] ?? preset.defaultParams[Object.keys(preset.defaultParams)[0]]);
   const trueParam = ops.trueParam(preset.defaultParams);
 
   // Run the Monte Carlo sampling-distribution comparison.

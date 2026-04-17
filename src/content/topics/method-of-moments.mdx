@@ -1005,13 +1005,15 @@ where $\mathcal{F}_\varepsilon(P)$ is the set of distributions within $\varepsil
      class="w-full rounded-lg border my-6"
      style="border-color: var(--color-border);" />
 
-<ExampleBlock number={20} title="Breakdown points: mean (0), median (1/2), Huber (~0.05), Tukey (~0.5)">
+The figure above uses the older convention of reporting Huber and Tukey's *minimax-contamination* tolerances rather than their asymptotic breakdown points. With a robust scale like the MAD, both Huber and Tukey achieve the maximum breakdown point of 1/2 (Rousseeuw–Leroy 1987) — the same as the median. The 5% bar for Huber should be read as: *under the minimax-optimal tuning, the estimator is designed to be near-efficient against an $\varepsilon = 0.05$ contamination class*. Empirical drift past ~10–20% in finite samples is a separate, gentler phenomenon driven by corruption of the MAD itself.
+
+<ExampleBlock number={20} title="Breakdown points: mean (0), median (1/2), Huber (1/2 with MAD), Tukey (1/2)">
 The breakdown points for common location estimators are:
 
 - **Sample mean.** $\varepsilon^* = 0$. A single outlier at $+\infty$ sends the mean to $+\infty$.
 - **Sample median.** $\varepsilon^* = 1/2$. Up to nearly half the sample can be arbitrarily corrupted before the median becomes undefined; the median is the optimum in this sense.
-- **Huber location** at $k = 1.345$. $\varepsilon^* \approx 0.05$. The clipping protects against moderate contamination but a sustained contamination beyond $\sim 5\%$ still drifts the estimator.
-- **Tukey biweight** at $c = 4.685$. $\varepsilon^* \approx 0.5$. Redescending — once outliers are far enough out, they have *zero* weight, so increasing the fraction further does not move the estimate (until the redescending region itself becomes the majority of the data, at which point the estimator can have multiple local optima).
+- **Huber location** at $k = 1.345$, paired with a robust scale (MAD). $\varepsilon^* = 1/2$. Asymptotically, the Huber-with-MAD estimator achieves the maximum breakdown point — the same as the median (Rousseeuw–Leroy 1987, §1). The often-quoted figure $\varepsilon \approx 0.05$ is a *different* quantity: the contamination level for which the default $k = 1.345$ is *minimax-optimal* under Huber's gross-error model. In practice the estimator drifts gradually as $\varepsilon$ grows, well before the asymptotic 1/2 is reached, because at high contamination the MAD itself becomes corrupted.
+- **Tukey biweight** at $c = 4.685$. $\varepsilon^* = 1/2$ (asymptotic). Redescending — once outliers are far enough out, they have *zero* weight, so increasing the fraction further does not move the estimate (until the redescending region itself becomes the majority of the data, at which point the estimator can have multiple local optima).
 - **$\alpha$-trimmed mean.** $\varepsilon^* = \alpha$. Trim the top and bottom $\alpha n$ observations and average the rest; the breakdown is exactly the trimming proportion.
 </ExampleBlock>
 

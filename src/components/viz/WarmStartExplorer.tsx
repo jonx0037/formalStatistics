@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import * as d3 from 'd3';
 import { useResizeObserver } from './shared/useResizeObserver';
 import {
@@ -6,6 +6,7 @@ import {
   mleGammaShape,
   digamma,
   trigamma,
+  logGamma,
   sampleMean,
 } from './shared/estimation';
 import { gammaSample, sampleSequence } from './shared/convergence';
@@ -104,19 +105,10 @@ export default function WarmStartExplorer() {
 
     let sumLog = 0;
     for (let i = 0; i < data.length; i++) sumLog += Math.log(Math.max(data[i], 1e-300));
-    const lnGamma = (a: number) => {
-      // Use the series via Stirling approximation already implicit in trigamma; here
-      // we compute log Γ via integration of digamma with anchor at 1: log Γ(1) = 0.
-      // For the visualization we just need a *relative* shape; offset is irrelevant.
-      // Use Lanczos-style Stirling for sufficient accuracy.
-      if (a <= 0) return NaN;
-      const s = 0.5 * Math.log(2 * Math.PI) + (a - 0.5) * Math.log(a) - a +
-        1 / (12 * a) - 1 / (360 * a * a * a);
-      return s;
-    };
+    const sumX = data.reduce((s, x) => s + x, 0);
     const ll = grid.map((alpha) => {
       if (alpha <= 0) return NaN;
-      return n * (alpha * Math.log(profileBeta) - lnGamma(alpha)) + (alpha - 1) * sumLog - profileBeta * data.reduce((s, x) => s + x, 0);
+      return n * (alpha * Math.log(profileBeta) - logGamma(alpha)) + (alpha - 1) * sumLog - profileBeta * sumX;
     });
 
     const x = d3.scaleLinear().domain([lo, hi]).range([0, innerW]);
@@ -153,9 +145,8 @@ export default function WarmStartExplorer() {
     // Iterate markers per trajectory.
     trajectories.forEach((tr) => {
       tr.path.forEach((alpha, i) => {
-        if (alpha < lo || alpha > hi) return;
-        // Approximate ℓ at this α using the same lnGamma approximation.
-        const llVal = n * (alpha * Math.log(profileBeta) - lnGamma(alpha)) + (alpha - 1) * sumLog - profileBeta * data.reduce((s, x) => s + x, 0);
+        if (alpha < lo || alpha > hi || alpha <= 0) return;
+        const llVal = n * (alpha * Math.log(profileBeta) - logGamma(alpha)) + (alpha - 1) * sumLog - profileBeta * sumX;
         if (!Number.isFinite(llVal)) return;
         g.append('circle').attr('cx', x(alpha)).attr('cy', y(llVal))
           .attr('r', i === 0 ? 5 : 3).attr('fill', tr.color)

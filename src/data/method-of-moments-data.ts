@@ -226,14 +226,14 @@ export const robustContaminationPresets: ContaminationPreset[] = [
     base: { family: 'Normal', mu: 5, sigma: 1 },
     contamination: { fraction: 0.3, magnitude: 10 },
     description:
-      "Past Huber's breakdown — Huber estimate drifts. Tukey (redescending) still holds.",
+      "Empirically, the Huber estimate drifts here because the MAD scale itself is corrupted by 30% outliers. Tukey's redescending ψ holds longer. Both have asymptotic breakdown 1/2.",
   },
   {
     name: 'Normal(5, 1) + 40% contamination',
     base: { family: 'Normal', mu: 5, sigma: 1 },
     contamination: { fraction: 0.4, magnitude: 15 },
     description:
-      'Past both Huber and Tukey breakdown; only the median (½ breakdown) holds. The efficiency-robustness Pareto frontier.',
+      'Approaching the asymptotic breakdown of 1/2. All three robust estimators (median, Huber-with-MAD, Tukey) drift in finite samples; only the median keeps a tight bound. Pareto frontier of efficiency vs robustness.',
   },
 ];
 
