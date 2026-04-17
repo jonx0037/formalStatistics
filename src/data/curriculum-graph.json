@@ -18,7 +18,7 @@
     { "id": "point-estimation", "label": "Point Estimation & Bias-Variance", "domain": "statistical-estimation", "status": "published", "url": "/topics/point-estimation" },
     { "id": "maximum-likelihood", "label": "Maximum Likelihood Estimation", "domain": "statistical-estimation", "status": "published", "url": "/topics/maximum-likelihood" },
     { "id": "method-of-moments", "label": "Method of Moments & M-Estimation", "domain": "statistical-estimation", "status": "published", "url": "/topics/method-of-moments" },
-    { "id": "sufficient-statistics", "label": "Sufficient Statistics & Rao-Blackwell", "domain": "statistical-estimation", "status": "planned", "url": "/topics/sufficient-statistics" },
+    { "id": "sufficient-statistics", "label": "Sufficient Statistics & Rao-Blackwell", "domain": "statistical-estimation", "status": "published", "url": "/topics/sufficient-statistics" },
 
     { "id": "hypothesis-testing", "label": "Hypothesis Testing Framework", "domain": "hypothesis-testing-confidence", "status": "planned", "url": "/topics/hypothesis-testing" },
     { "id": "likelihood-ratio-tests", "label": "Likelihood Ratio Tests & Neyman-Pearson", "domain": "hypothesis-testing-confidence", "status": "planned", "url": "/topics/likelihood-ratio-tests" },
@@ -72,6 +72,9 @@
     { "source": "maximum-likelihood", "target": "method-of-moments" },
     { "source": "maximum-likelihood", "target": "sufficient-statistics" },
     { "source": "exponential-families", "target": "sufficient-statistics" },
+    { "source": "point-estimation", "target": "sufficient-statistics" },
+    { "source": "method-of-moments", "target": "sufficient-statistics" },
+    { "source": "expectation-moments", "target": "sufficient-statistics" },
 
     { "source": "point-estimation", "target": "hypothesis-testing" },
     { "source": "random-variables", "target": "hypothesis-testing" },
