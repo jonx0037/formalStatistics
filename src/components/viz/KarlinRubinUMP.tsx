@@ -4,7 +4,7 @@ import { useResizeObserver } from './shared/useResizeObserver';
 import {
   umpOneSidedBoundary,
   standardNormalCDF,
-  logLikelihoodRatio,
+  chiSquaredCDF,
 } from './shared/testing';
 import { cdfBinomial, cdfPoisson } from './shared/distributions';
 import {
@@ -61,27 +61,11 @@ function powerAt(
     return 1 - cdfPoisson(boundary - 1, n * theta);
   }
   if (family === 'exponential') {
-    // One-sided test on rate λ. For the scenario "H₀: λ ≥ λ₀, H₁: λ < λ₀"
-    // (the brief preset), rejection is for LARGE ΣX.
-    // β(λ) = P_λ(ΣX > boundary) = 1 − F_Gamma_{n, λ}(boundary).
-    // Use (2λ·ΣX) ~ χ²_{2n}; F_Gamma(boundary) = F_χ²_{2n}(2λ·boundary).
-    // We integrate the Gamma density numerically (matches NPLemmaVisualizer's approach).
+    // β(λ) = P_λ(ΣX > boundary). Using (2λ·ΣX) ~ χ²_{2n}:
+    //   P(ΣX > c) = 1 − F_χ²_{2n}(2λ·c).
+    // Exact via the shared chi-squared CDF (PR #20 Gemini review).
     if (boundary <= 0) return 1;
-    // Compute via chi-squared CDF: regGammaP(n, λ·boundary) = F_Gamma(boundary)
-    // Reuse an inline incomplete-gamma via series/CF — we approximate with numerical integration
-    const upper = boundary + 30 / theta;
-    const steps = 400;
-    const dx = (upper - boundary) / steps;
-    // log density at t: n log θ + (n−1) log t − θ t − lgamma(n)
-    let lgn = 0;
-    for (let i = 2; i < n; i++) lgn += Math.log(i);
-    let s = 0;
-    for (let i = 0; i < steps; i++) {
-      const t = boundary + (i + 0.5) * dx;
-      const logp = n * Math.log(theta) + (n - 1) * Math.log(t) - theta * t - lgn;
-      s += Math.exp(logp) * dx;
-    }
-    return Math.min(1, Math.max(0, s));
+    return 1 - chiSquaredCDF(2 * theta * boundary, 2 * n);
   }
   return 0;
 }
@@ -136,35 +120,33 @@ export default function KarlinRubinUMP() {
     const innerW = leftW - MARGIN.left - MARGIN.right;
     const innerH = H - MARGIN.top - MARGIN.bottom;
 
-    // Build a grid of T values, then simulate a single x̄ that produces each T, then compute log-LR.
-    // Simpler: just compute log-LR as a function of T using the closed-form per family.
+    // Closed-form log Λ(x) expressed directly in the sufficient statistic T.
+    // This replaces an earlier array-allocation + logLikelihoodRatio dispatch that
+    // was O(n) per grid point × 80 grid points per render (PR #20 Gemini review).
     let tValues: number[];
     let logLRvals: number[];
     const logRatioAtT = (t: number) => {
-      // Use our logLikelihoodRatio implementation on a synthetic sample that averages to t/n.
-      // For Bernoulli: sample = array of sum = t, rest 0; for Normal: sample = array of mean = t; etc.
       if (preset.family === 'bernoulli') {
-        // ΣX = t, rest 0
-        const k = Math.round(t);
-        const data = new Array(n).fill(0);
-        for (let i = 0; i < k && i < n; i++) data[i] = 1;
-        return logLikelihoodRatio('bernoulli', data, theta0, theta1);
+        // T = ΣXᵢ ∈ {0,…,n}: log Λ = T·log(p₁/p₀) + (n−T)·log((1−p₁)/(1−p₀))
+        return (
+          t * Math.log(theta1 / theta0) +
+          (n - t) * Math.log((1 - theta1) / (1 - theta0))
+        );
       }
       if (preset.family === 'normal-mean-known-sigma') {
-        // x̄ = t, so sample is a length-n array all = t
-        const data = new Array(n).fill(t);
-        return logLikelihoodRatio('normal-mean-known-sigma', data, theta0, theta1, sigma);
+        // T = x̄: log Λ = n(θ₁−θ₀)(2x̄ − θ₀ − θ₁) / (2σ²)
+        return (
+          (n * (theta1 - theta0) * (2 * t - theta0 - theta1)) /
+          (2 * sigma * sigma)
+        );
       }
       if (preset.family === 'poisson') {
-        // ΣX = t, distribute equally
-        const k = t / n;
-        const data = new Array(n).fill(k);
-        return logLikelihoodRatio('poisson', data, theta0, theta1);
+        // T = ΣXᵢ ~ Poisson(n·λ): log Λ = n(λ₀−λ₁) + T·log(λ₁/λ₀)
+        return n * (theta0 - theta1) + t * Math.log(theta1 / theta0);
       }
       if (preset.family === 'exponential') {
-        // ΣX = t, distribute equally (mean t/n)
-        const data = new Array(n).fill(t / n);
-        return logLikelihoodRatio('exponential', data, theta0, theta1);
+        // T = ΣXᵢ ~ Gamma(n, λ): log Λ = n·log(λ₁/λ₀) − (λ₁−λ₀)·T
+        return n * Math.log(theta1 / theta0) - (theta1 - theta0) * t;
       }
       return 0;
     };

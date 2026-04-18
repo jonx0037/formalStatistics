@@ -446,6 +446,58 @@ console.log('========================================\n');
   check('32. localPower(bernoulli, θ₀=0.5, h=2)', approx(v, 0.977, 1e-2), v, 0.977, 'tol 1e-2; nc=16');
 }
 
+// ── 33. nonCentralChiSquaredCDF stability at large λ (PR #20 Gemini review) ──
+// The old `exp(-λ/2)` start underflowed near λ = 1400. The peak-first log-space
+// rewrite stays finite at λ = 2000. Sanity: at x = mean = k + λ = 2001 the CDF
+// should be ≈ 0.5 (the distribution is near-symmetric around its mean for large
+// λ by the Normal approximation ncχ²_k(λ) ≈ N(k + λ, 2(k + 2λ))).
+{
+  const v = nonCentralChiSquaredCDF(2001, 1, 2000);
+  check(
+    `33a. nonCentralChiSquaredCDF(mean=2001, 1, 2000) ≈ 0.5 (got ${v.toFixed(4)})`,
+    Number.isFinite(v) && v > 0.45 && v < 0.55,
+    v,
+    '≈0.5 at mean',
+  );
+}
+
+// Sanity check 1 SD above mean: CDF ≈ Φ(1) ≈ 0.84.
+{
+  const mean = 1 + 2000;
+  const sd = Math.sqrt(2 * (1 + 2 * 2000));
+  const v = nonCentralChiSquaredCDF(mean + sd, 1, 2000);
+  check(
+    `33b. nonCentralChiSquaredCDF(mean+SD, 1, 2000) ≈ 0.84 (got ${v.toFixed(4)})`,
+    Number.isFinite(v) && Math.abs(v - 0.8413) <= 0.01,
+    v,
+    'Normal-approx target 0.8413',
+  );
+}
+
+// ── 34. nonCentralChiSquaredPDF stability at large λ ──────────────────────
+// Peak-first iteration must not underflow. At x = mean the density should be
+// near the Normal-approximation peak 1/(σ√(2π)) where σ² = 2(k + 2λ).
+{
+  const mean = 1 + 2000;
+  const sd = Math.sqrt(2 * (1 + 2 * 2000));
+  const normalApproxPeak = 1 / (sd * Math.sqrt(2 * Math.PI));
+  const v = nonCentralChiSquaredPDF(mean, 1, 2000);
+  check(
+    `34. nonCentralChiSquaredPDF(mean, 1, 2000) ≈ Normal-approx peak (got ${v.toExponential(3)})`,
+    Number.isFinite(v) && v > 0 && Math.abs(v - normalApproxPeak) / normalApproxPeak < 0.05,
+    v,
+    `Normal-approx target ${normalApproxPeak.toExponential(3)}`,
+  );
+}
+
+// ── 35. Small-λ regression vs old implementation (λ = 4, 16 unchanged) ────
+// The peak-first sum must agree with the literature values to the same tolerance
+// the pre-PR-#20 series hit — these are the Topic 17/18 MC-validation anchors.
+{
+  const v = nonCentralChiSquaredCDF(3.84, 1, 4);
+  check('35. nonCentralChiSquaredCDF(3.84, 1, 4) regression', approx(v, 0.485, 5e-3), v, 0.485, 'tol 5e-3 vs scipy (same as test 28)');
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 console.log('\n========================================');
 console.log(` Results: ${passed} passed, ${failed} failed / ${passed + failed} total`);

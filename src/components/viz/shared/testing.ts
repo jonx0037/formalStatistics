@@ -1208,14 +1208,58 @@ export function wilksSimulate(
 // ── Non-central χ² for local power ──────────────────────────────────────────
 
 /**
+ * Sum the Poisson-mixture series
+ *   Σⱼ Poisson(j; λ/2) · term(k + 2j)
+ * using a peak-first log-space iteration. For small λ we could start at j = 0
+ * with w₀ = exp(−λ/2), but that underflows to 0 for λ ≳ 1400. Instead we
+ * compute the log-weight at the series peak j* = ⌊λ/2⌋ via lnGamma, iterate
+ * outward in both directions via the multiplicative recurrence
+ *   w_{j+1}/w_j = (λ/2)/(j+1),     w_{j−1}/w_j = j/(λ/2),
+ * and truncate each tail when the weight falls below 1e-14 of the peak.
+ * See the Johnson-Kotz-Balakrishnan treatment (Continuous Univariate
+ * Distributions, Vol. 2 §29) for the series itself; the peak-first trick
+ * is the standard fix for the Gemini review flagged on PR #20.
+ */
+function poissonMixtureSum(
+  k: number,
+  lambda: number,
+  term: (df: number) => number,
+): number {
+  const halfLambda = lambda / 2;
+  const jStar = Math.floor(halfLambda);
+  const logWPeak =
+    -halfLambda + jStar * Math.log(halfLambda) - lnGamma(jStar + 1);
+  const wPeak = Math.exp(logWPeak);
+  const cutoff = 1e-14 * Math.max(wPeak, Number.MIN_VALUE);
+
+  let sum = wPeak * term(k + 2 * jStar);
+
+  // Iterate upward from the peak: w_{j+1} = w_j · (λ/2) / (j+1)
+  let w = wPeak;
+  for (let j = jStar + 1; j < jStar + 2000; j++) {
+    w *= halfLambda / j;
+    sum += w * term(k + 2 * j);
+    if (w < cutoff) break;
+  }
+
+  // Iterate downward from the peak: w_{j−1} = w_j · j / (λ/2)
+  w = wPeak;
+  for (let j = jStar - 1; j >= 0; j--) {
+    w *= (j + 1) / halfLambda;
+    sum += w * term(k + 2 * j);
+    if (w < cutoff) break;
+  }
+
+  return sum;
+}
+
+/**
  * Non-central χ²_k(λ) CDF via the Poisson-mixture expansion
  *   F(x; k, λ) = Σⱼ e^{−λ/2} (λ/2)^j / j! · F_{χ²_{k+2j}}(x).
  *
- * Termination: truncate when the Poisson weight drops below 1e-12 AND we
- * are past the series peak j ≈ λ/2. Poisson weights first rise and then
- * decay, so an early-exit check alone would stop prematurely for λ > 0.
- *
- * Validated against `scipy.stats.ncx2.cdf` for λ ∈ [0, 50].
+ * Summed via `poissonMixtureSum` (peak-first, log-space). Stable for λ well
+ * beyond Topic 18's natural range (local-power h ≤ 4 gives λ ≤ 64) —
+ * validated against `scipy.stats.ncx2.cdf` for λ ∈ [0, 1000].
  */
 export function nonCentralChiSquaredCDF(
   x: number,
@@ -1227,17 +1271,7 @@ export function nonCentralChiSquaredCDF(
     throw new Error('nonCentralChiSquaredCDF requires λ ≥ 0');
   }
   if (lambda === 0) return chiSquaredCDF(x, k);
-  const halfLambda = lambda / 2;
-  let w = Math.exp(-halfLambda);
-  let sum = w * chiSquaredCDF(x, k);
-  const peak = Math.max(halfLambda, 10);
-  for (let j = 1; j < 1000; j++) {
-    w *= halfLambda / j;
-    const Fj = chiSquaredCDF(x, k + 2 * j);
-    sum += w * Fj;
-    if (w < 1e-12 && j > peak) break;
-  }
-  return sum;
+  return poissonMixtureSum(k, lambda, (df) => chiSquaredCDF(x, df));
 }
 
 /**
@@ -1254,17 +1288,7 @@ export function nonCentralChiSquaredPDF(
     throw new Error('nonCentralChiSquaredPDF requires λ ≥ 0');
   }
   if (lambda === 0) return chiSquaredPDF(x, k);
-  const halfLambda = lambda / 2;
-  let w = Math.exp(-halfLambda);
-  let sum = w * chiSquaredPDF(x, k);
-  const peak = Math.max(halfLambda, 10);
-  for (let j = 1; j < 1000; j++) {
-    w *= halfLambda / j;
-    const fj = chiSquaredPDF(x, k + 2 * j);
-    sum += w * fj;
-    if (w < 1e-12 && j > peak) break;
-  }
-  return sum;
+  return poissonMixtureSum(k, lambda, (df) => chiSquaredPDF(x, df));
 }
 
 // ── Local-power envelope ────────────────────────────────────────────────────

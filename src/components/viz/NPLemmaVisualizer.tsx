@@ -1,7 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import * as d3 from 'd3';
 import { useResizeObserver } from './shared/useResizeObserver';
-import { standardNormalCDF, npCriticalValue } from './shared/testing';
+import {
+  standardNormalCDF,
+  npCriticalValue,
+  chiSquaredCDF,
+} from './shared/testing';
 import { cdfBinomial, pmfBinomial } from './shared/distributions';
 import {
   npLemmaPresets,
@@ -68,22 +72,10 @@ function rightTailProb(family: 'normal-mean-known-sigma' | 'bernoulli' | 'expone
     return 1 - cdfBinomial(k, n, theta);
   }
   if (family === 'exponential') {
-    // ΣX ~ Gamma(n, θ) ⇒ (2θΣX) ~ χ²_{2n}
-    // P(ΣX > c) = P(χ²_{2n} > 2θc) = 1 - F_chi2_{2n}(2θc)
-    // We reuse chiSquaredCDF via a small computed helper
+    // ΣX ~ Gamma(n, θ) ⇒ (2θΣX) ~ χ²_{2n}, so the right-tail probability
+    // is exact via the existing chi-squared CDF (PR #20 Copilot/Gemini).
     if (c <= 0) return 1;
-    // Inline chiSquaredCDF: regGammaP(n, θc) via series/continued fraction
-    // but easier: since samplingPDF handles the PDF, integrate numerically
-    // for ≤ 20 steps from c to a large upper bound
-    const upper = c + 30 / theta;
-    const steps = 200;
-    const dx = (upper - c) / steps;
-    let s = 0;
-    for (let i = 0; i < steps; i++) {
-      const t = c + (i + 0.5) * dx;
-      s += samplingPDF('exponential', theta, n, sigma, t) * dx;
-    }
-    return Math.min(1, Math.max(0, s));
+    return 1 - chiSquaredCDF(2 * theta * c, 2 * n);
   }
   return 0;
 }
