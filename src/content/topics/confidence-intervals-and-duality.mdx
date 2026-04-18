@@ -1,0 +1,769 @@
+---
+title: "Confidence Intervals & Duality"
+subtitle: "Every family of level-α tests is a (1−α) confidence procedure, and every confidence procedure is a family of tests. The z, t, χ², F, Wald, Score, LRT, Wilson, Clopper–Pearson, and profile-likelihood intervals as one pattern: test inversion."
+status: "published"
+difficulty: "intermediate"
+prerequisites:
+  - "hypothesis-testing"
+  - "likelihood-ratio-tests-and-np"
+  - "maximum-likelihood"
+  - "point-estimation"
+  - "sufficient-statistics"
+  - "continuous-distributions"
+  - "discrete-distributions"
+tags:
+  - "statistics"
+  - "inference"
+  - "confidence-intervals"
+  - "test-ci-duality"
+  - "pivotal-quantity"
+  - "wilson-interval"
+  - "clopper-pearson"
+  - "profile-likelihood"
+  - "coverage"
+  - "tost"
+  - "equivalence-testing"
+  - "bioequivalence"
+  - "wald-ci"
+  - "score-ci"
+  - "lrt-ci"
+domain: "hypothesis-testing-confidence"
+videoId: null
+notebookPath: "notebooks/confidence-intervals-and-duality/19_confidence_intervals.ipynb"
+githubUrl: "https://github.com/jonx0037/formalStatistics/blob/main/src/content/topics/confidence-intervals-and-duality.mdx"
+datePublished: 2026-04-18
+estimatedReadTime: 55
+abstract: "Topic 17 built the testing framework and previewed the CI duality; Topic 18 delivered the optimality theory and named its forward debts. This topic collects: every family of level-α tests indexed by the null value θ₀ is a (1−α) confidence procedure, and every confidence procedure is a family of tests. The **test–CI duality theorem** (§19.2 Thm 1) is the organizing principle — inverting a test gives a CI, inverting a CI gives a test, and coverage equals one minus the test's size. From there the exposition constructs **pivotal CIs** (z/t/χ²/F in §19.3), the **asymptotic Wald/Score/LRT trio** (§19.4) as direct inversions of Topic 18's three tests, the **Wilson interval** (§19.5 Thm 3 + Proof 2) as the score-test inversion for binomial p that fixes Wald's boundary pathology, the **Clopper–Pearson exact interval** (§19.6 Thm 4 + Proof 3) via the beta–binomial duality, and the **profile-likelihood CI** (§19.7 Thm 5 + Proof 4) citing Wilks' theorem for its asymptotic coverage. §19.8 calibrates actual versus nominal coverage — the BRO2001 picture — and §19.9 extends the framework to one-sided CIs and the TOST equivalence-testing procedure that FDA bioequivalence trials use. Scope is scalar θ throughout; a worked Normal-mean-unknown-variance profile in §19.7 previews the vector case. The #1 pedagogical anchor is §19.1 Remark 2: coverage is a frequentist property of the procedure, not a posterior probability of any one interval."
+formalcalculusPrereqs:
+  - topic: "integration"
+    site: "formalcalculus"
+    relationship: "Coverage probability P_θ(θ ∈ C(X)) is an integral of the sampling density over the event {θ ∈ C(X)}. The coverage diagnostic in §19.8 computes this integral numerically for binomial p."
+  - topic: "sequences-limits"
+    site: "formalcalculus"
+    relationship: "Asymptotic coverage — the statement lim_{n→∞} P_θ(θ ∈ C_n(X)) = 1 − α — is a sequences-limits statement. The Wald-under-coverage-in-small-samples result in §19.5 is its finite-sample companion."
+  - topic: "differentiation"
+    site: "formalcalculus"
+    relationship: "The profile likelihood ℓ_P(θ) = sup_ψ ℓ(θ, ψ) is a composition of an implicit function (ψ̂(θ) solves the nuisance score equation) and the joint likelihood. Differentiation under the sup is the Danskin envelope theorem — cited in §19.7 Rem 15."
+formalmlConnections:
+  - topic: "ab-testing-platforms"
+    site: "formalml"
+    relationship: "Every deployed A/B-test platform reports a confidence interval on the treatment effect alongside the p-value. The Wilson interval is the industry default for rare-event conversion metrics (§19.5); bootstrap and always-valid confidence sequences are the two major extensions used in production."
+  - topic: "generalized-linear-models"
+    site: "formalml"
+    relationship: "GLM coefficient inference uses the Wald/LRT CI trio of §19.4 at the scale of every deployed logistic, Poisson, and gamma regression. The LRT-based deviance-difference CI is the numerical default in R's confint() on glm objects; Wald is the default in statsmodels."
+  - topic: "statistical-learning-theory"
+    site: "formalml"
+    relationship: "PAC-Bayes generalization bounds are uniform (1−δ) confidence statements on the hypothesis class. The coverage-calibration theme of §19.8 generalizes to PAC-bound tightness diagnostics in the learning-theory literature."
+  - topic: "causal-inference"
+    site: "formalml"
+    relationship: "Instrumental-variables regression, doubly-robust estimation, and difference-in-differences all report confidence intervals on the average treatment effect. The Wald CI is most common; sandwich variance estimators produce sandwich-Wald intervals. TOST (§19.9) is the equivalence-testing framework for noninferiority trials in biostatistics."
+connections:
+  - topic: "hypothesis-testing"
+    relationship: "Direct continuation. §17.10 Remarks 12–13 previewed the duality; §19.2 Theorem 1 formalizes it with full proof. The z-test and t-test of §17.6–§17.7 invert to the z-CI and t-CI of §19.3. The Wald/Score/LRT trio of §17.9 inverts to the CI trio of §19.4, with the Wald boundary pathology of §17.10 Rem 13 fixed by the Wilson interval of §19.5."
+  - topic: "likelihood-ratio-tests-and-np"
+    relationship: "Topic 18 §18.6 Thm 4 (Wilks) is the engine of §19.7 Proof 4 — the profile-likelihood CI's asymptotic χ²₁ coverage is Wilks applied to the scalar restriction θ = θ₀ with ψ profiled. Topic 18 §18.7 Thm 5 (three-tests equivalence) powers §19.4's statement that all three asymptotic CIs have the same leading-order coverage. Topic 18 §18.8 Thm 6 (LRT reparameterization invariance) dualizes to §19.4 Rem 8's claim that LRT CIs are invariant while Wald CIs are not. §18.8 Rem 16 (Wald boundary pathology) is fulfilled by §19.5 Thm 3 + Proof 2. §18.10 Rem 22 (CI duality as organizing principle) is fulfilled by §19.2 Thm 1 in full."
+  - topic: "maximum-likelihood"
+    relationship: "Topic 14 Thm 14.3 (MLE asymptotic normality) powers the Wald CI in §19.4 — θ̂ ± z_{α/2}/√(n I(θ̂)) is the direct consequence. Topic 14 §14.6 (first-order condition) powers the profile-likelihood construction in §19.7."
+  - topic: "point-estimation"
+    relationship: "Topic 13 Thm 13.9 (Cramér-Rao lower bound) is the CI-width analog: the CRLB on estimator variance is the asymptotic lower bound on Wald CI width (§19.4 Rem 7). Standard-error computation from Topic 13 §13.7 is the concrete numerical ingredient."
+  - topic: "sufficient-statistics"
+    relationship: "Topic 16's Basu independence (Thm 7) underlies the exact t-CI in §19.3: the same independence that made the t-test exact in §17.7 makes the t-CI exact here. The dualization is one line."
+  - topic: "continuous-distributions"
+    relationship: "The beta, t, χ², and F quantile functions from Topic 6 are the computational engines of §19.3 (pivotal CIs) and §19.6 (Clopper–Pearson via inverse-beta)."
+  - topic: "discrete-distributions"
+    relationship: "The binomial CDF from Topic 5 and its relationship to the incomplete beta function are the basis of the Clopper–Pearson construction in §19.6."
+references:
+  - type: "paper"
+    title: "Probable Inference, the Law of Succession, and Statistical Inference"
+    author: "Edwin B. Wilson"
+    year: 1927
+    note: "Cited as WIL1927. §19.5 Thm 3 attribution — the score-test-inverted binomial CI. The modern textbook 'Wilson interval' is this paper's construction. JASA 22(158): 209–212."
+  - type: "paper"
+    title: "The Use of Confidence or Fiducial Limits Illustrated in the Case of the Binomial"
+    author: "Charles J. Clopper and Egon S. Pearson"
+    year: 1934
+    note: "Cited as CLO1934. §19.6 Thm 4 attribution — the exact beta-quantile binomial CI via beta–binomial duality. Conservative but exact. Biometrika 26(4): 404–413."
+  - type: "paper"
+    title: "Interval Estimation for a Binomial Proportion"
+    author: "Lawrence D. Brown, T. Tony Cai, and Anirban DasGupta"
+    year: 2001
+    note: "Cited as BRO2001. §19.5 Rem 10 and §19.8 Ex 12 — the paper that quantitatively established Wald's coverage pathology and promoted Wilson/Agresti–Coull/Jeffreys as practical alternatives. Primary source for the actual-vs-nominal coverage curves. Statistical Science 16(2): 101–133."
+  - type: "paper"
+    title: "Approximate Is Better than 'Exact' for Interval Estimation of Binomial Proportions"
+    author: "Alan Agresti and Brent A. Coull"
+    year: 1998
+    note: "Cited as AGR1998. §19.5 Rem 9 — the 'add 2 successes, add 2 failures' practical approximation to Wilson. Pedagogical anchor for 'approximate beats exact' framing. The American Statistician 52(2): 119–126."
+  - type: "paper"
+    title: "A Comparison of the Two One-Sided Tests Procedure and the Power Approach for Assessing the Equivalence of Average Bioavailability"
+    author: "Donald J. Schuirmann"
+    year: 1987
+    note: "Cited as SCH1987. §19.9 Thm 7 attribution — the Two One-Sided Tests (TOST) procedure for equivalence testing. The FDA bioequivalence 80/125 rule is its canonical application. J. Pharmacokinetics and Biopharmaceutics 15(6): 657–680."
+  - type: "paper"
+    title: "Outline of a Theory of Statistical Estimation Based on the Classical Theory of Probability"
+    author: "Jerzy Neyman"
+    year: 1937
+    note: "Cited as NEY1937. §19.1 Rem 1 and §19.2 — the original formulation of the confidence-interval concept as distinct from fiducial / Bayesian posterior probability. Primary historical source for the 'coverage ≠ posterior probability' clarification. Phil. Trans. Roy. Soc. A 236(767): 333–380."
+  - type: "paper"
+    title: "The Large-Sample Distribution of the Likelihood Ratio for Testing Composite Hypotheses"
+    author: "Samuel S. Wilks"
+    year: 1938
+    note: "Cited as WIL1938. §19.4 (LRT CI asymptotic coverage); §19.7 Thm 5 + Proof 4 (profile-likelihood CI coverage cites Wilks directly). Annals of Mathematical Statistics 9(1): 60–62."
+  - type: "paper"
+    title: "Large Sample Tests of Statistical Hypotheses Concerning Several Parameters with Applications to Problems of Estimation"
+    author: "C. Radhakrishna Rao"
+    year: 1948
+    note: "Cited as RAO1948. §19.4 — score CI foundation, via the score-test null distribution established in Rao's original paper. Mathematical Proceedings of the Cambridge Philosophical Society 44(1): 50–57."
+  - type: "book"
+    title: "Testing Statistical Hypotheses"
+    author: "Erich L. Lehmann and Joseph P. Romano"
+    year: 2005
+    edition: "3rd"
+    publisher: "Springer"
+    note: "Cited as LEH2005. §19.2 Rem 5 (duality in vector θ); §19.4 Rem 7 (three asymptotic CIs' coverage); §19.7 Rem 15 (profile likelihood, Ch. 12.4); §19.10 Rem 19 (scope-boundary pointers)."
+  - type: "book"
+    title: "Statistical Inference"
+    author: "George Casella and Roger L. Berger"
+    year: 2002
+    edition: "2nd"
+    publisher: "Duxbury"
+    note: "Cited as CAS2002. §19.3 Ex 3 (t-CI) and §19.6 Ex 9 (Clopper–Pearson) worked-example alignment."
+---
+
+import DefinitionBlock from '../../components/ui/DefinitionBlock.astro';
+import TheoremBlock from '../../components/ui/TheoremBlock.astro';
+import ProofBlock from '../../components/ui/ProofBlock.astro';
+import ExampleBlock from '../../components/ui/ExampleBlock.astro';
+import RemarkBlock from '../../components/ui/RemarkBlock.astro';
+import ExternalLink from '../../components/ui/ExternalLink.astro';
+
+import CITestDualityVisualizer from '../../components/viz/CITestDualityVisualizer.tsx';
+import BinomialCoverageComparison from '../../components/viz/BinomialCoverageComparison.tsx';
+import ProfileLikelihoodExplorer from '../../components/viz/ProfileLikelihoodExplorer.tsx';
+
+## 19.1 What a Confidence Interval Is (and Is Not)
+
+Imagine running the same experiment a hundred times. Each run produces a data sample $X^{(i)}$ and, from it, an interval $C(X^{(i)}) = [L_i, U_i]$. If the interval procedure has 95% coverage, then roughly ninety-five of those hundred intervals — not any particular one — contain the true parameter. That's the claim a confidence interval makes. It is **not** the claim that the parameter has 95% probability of lying in the particular interval you happened to compute.
+
+The distinction is the single most important idea in this topic. It is also the one most often mangled in practice, so we stage it carefully before building machinery on top of it.
+
+![One hundred simulated 95% z-CIs from iid Normal samples. Roughly five of the intervals miss the true μ — the procedure delivers on its 95% promise over the long run, but any individual interval either contains μ or it doesn't. Right panel: the Bayesian posterior for one sample — a different probabilistic object (distribution over μ given data), with a credible interval built from *its* quantiles.](/images/topics/confidence-intervals-and-duality/19-ci-motivation.png)
+
+<DefinitionBlock number={1} title="Confidence procedure">
+Let $\{P_\theta : \theta \in \Theta\}$ be a parametric family. A **$(1-\alpha)$-confidence procedure** for $\theta$ is a data-measurable set-valued map $C : \mathcal{X} \to 2^\Theta$ — usually written $X \mapsto C(X)$ — satisfying
+
+$$P_\theta(\theta \in C(X)) \ge 1 - \alpha \qquad \text{for every } \theta \in \Theta.$$
+
+When $C(X) = [L(X), U(X)]$ is an interval, we call it a $(1-\alpha)$ **confidence interval**. The probability $P_\theta(\theta \in C(X))$ is the **coverage** of the procedure at parameter value $\theta$.
+</DefinitionBlock>
+
+<DefinitionBlock number={2} title="Nominal vs actual coverage">
+The quantity $1 - \alpha$ is the **nominal coverage** — the level the procedure advertises. The function $\theta \mapsto P_\theta(\theta \in C(X))$ is the **actual coverage**, and it depends on both $\theta$ and the sample size $n$.
+
+A procedure is **exact** if actual coverage equals nominal at every $\theta$; **anti-conservative** (or *liberal*) if actual coverage is below nominal at some $\theta$; **conservative** if actual coverage is above nominal at every $\theta$.
+
+The three adjectives name the three failure modes — and the coverage calibration of §19.8 is the diagnostic for which mode a given procedure falls into.
+</DefinitionBlock>
+
+<RemarkBlock number={1} title="Historical origin — Neyman 1937">
+The confidence-interval concept is due to <ExternalLink href="https://doi.org/10.1098/rsta.1937.0005">Neyman (1937)</ExternalLink>. Neyman was reacting to Fisher's *fiducial distribution* framework, which had produced confusing results in multi-parameter problems. His innovation was to strip probability statements of all posterior-like interpretation and define them purely as frequency properties of the procedure. This is why the probability $P_\theta(\theta \in C(X))$ in Definition 1 is indexed by a *fixed* $\theta$ — the randomness sits entirely in $X$ and therefore in $C(X)$. The true parameter $\theta$ is a constant, not a random variable.
+
+The philosophical move was radical enough that it took decades to settle into standard teaching. Fiducial intervals lingered in some applied literature until the 1960s. Bayesian credible intervals, built from a genuine posterior distribution over $\theta$, solve the "what is the probability" question differently and are the subject of Track 7 — not a competing frequentist procedure but a different inference paradigm (Rem 3).
+</RemarkBlock>
+
+<RemarkBlock number={2} title="The '95% probability' trap — the #1 pedagogical anchor">
+Read Definition 1 again. The probability statement is $P_\theta(\theta \in C(X)) \ge 1 - \alpha$, where the subscript tells us that $\theta$ is held fixed and $X$ is the random variable. So the event $\{\theta \in C(X)\}$ is an event about $X$ (whether the random interval catches the fixed true value), not an event about $\theta$.
+
+Once the data are in hand — say $C(X) = [0.20, 0.34]$ — the parameter $\theta$ either lies in $[0.20, 0.34]$ or it doesn't. The frequentist framework does not assign a probability to that specific fact. What it says is: "The procedure I just used generates intervals that catch the true parameter 95 times out of 100 on repeated experiments." That's a guarantee about the procedure's long-run error rate, not a posterior probability on any one output.
+
+A careful locution: **"I am 95% confident that $\theta$ lies in $[0.20, 0.34]$"** is a statement about the procedure's *reliability*, not about the probability of this one interval being right. Every introductory statistics textbook says this at least once; the fact that practitioners continue to slip into the posterior-probability reading anyway is why we belabor the point here. Every result in the rest of this topic lives or dies with this distinction — in particular, the coverage diagnostics of §19.8 are meaningful only if "coverage" means the procedure's long-run error rate.
+</RemarkBlock>
+
+<RemarkBlock number={3} title="Frequentist coverage vs Bayesian posterior credibility">
+A **Bayesian credible interval** starts from a posterior distribution $\pi(\theta \mid X)$ — the distribution of $\theta$ given the observed data — and defines a $(1-\alpha)$ credible interval as any set $C$ with $\pi(\theta \in C \mid X) = 1 - \alpha$. Here $\theta$ is treated as a random variable (with a prior that gets updated to a posterior), so the posterior probability of a specific interval containing $\theta$ makes sense directly.
+
+Frequentist coverage and Bayesian credibility answer different questions about different objects. A frequentist CI guarantees a long-run error rate over repeated experiments but says nothing about this specific dataset's $\theta$. A Bayesian credible interval gives a probability for this specific dataset's $\theta$ but depends on the chosen prior (with different priors giving different intervals). Neither is "right" — they're answering different questions — but confusing them is the source of the "95% probability" trap in Remark 2.
+
+Under a flat (improper) prior for a Normal mean with known variance, the two intervals coincide numerically: $\bar X \pm z_{\alpha/2}\sigma/\sqrt n$ is both the 95% frequentist CI and the 95% credible interval. This numerical coincidence is the reason the confusion is so persistent — and why the distinction matters more the further one moves from the symmetric Normal case. Track 7 develops the Bayesian perspective; here we stay frequentist.
+</RemarkBlock>
+
+---
+
+## 19.2 The Test–CI Duality Theorem
+
+Every hypothesis test at level $\alpha$ generates a $(1-\alpha)$ confidence set, and every confidence set generates a family of hypothesis tests. The correspondence is exact — the two procedures carry the same information, just organized around different questions. This is the organizing principle of Topic 19, and it makes every CI construction in this topic a test inversion in disguise.
+
+![Two-plane diagram of the duality. The shaded region is the joint acceptance set of (θ₀, T) pairs where the test at θ₀ does not reject at data T. Horizontal slicing at fixed T_obs (left) gives the CI — the set of θ₀ the data does not reject. Vertical slicing at fixed θ₀ (right) gives the test's acceptance region — the set of T values the test at θ₀ does not reject. One object, two slicings.](/images/topics/confidence-intervals-and-duality/19-duality-diagram.png)
+
+<TheoremBlock number={1} title="Test–CI duality">
+Fix $\alpha \in (0, 1)$ and a parametric family $\{P_\theta : \theta \in \Theta\}$. Suppose that for every $\theta_0 \in \Theta$ we have a level-$\alpha$ test $\varphi_{\theta_0}(X) \in \{0, 1\}$ of $H_0: \theta = \theta_0$ (reject iff $\varphi_{\theta_0}(X) = 1$), so that $P_{\theta_0}(\varphi_{\theta_0}(X) = 1) \le \alpha$. Define
+
+$$C(X) = \{\theta_0 \in \Theta : \varphi_{\theta_0}(X) = 0\}.$$
+
+Then $C(X)$ is a $(1-\alpha)$ confidence set for $\theta$: $P_\theta(\theta \in C(X)) \ge 1 - \alpha$ for every $\theta \in \Theta$.
+
+Conversely, given a $(1-\alpha)$ confidence set $C(X)$, the collection $\{\varphi_{\theta_0}(X) = \mathbf{1}\{\theta_0 \notin C(X)\} : \theta_0 \in \Theta\}$ is a family of level-$\alpha$ tests.
+</TheoremBlock>
+
+<CITestDualityVisualizer client:visible />
+
+<ProofBlock>
+**Step 1 — Forward direction (tests → CI).** Fix $\theta \in \Theta$. By the construction of $C(X)$, the event $\{\theta \in C(X)\}$ equals the event $\{\varphi_\theta(X) = 0\}$ — the non-rejection event of the level-$\alpha$ test of $H_0: \theta = \theta$ (null value coinciding with the true value).
+
+$$P_\theta(\theta \in C(X)) = P_\theta(\varphi_\theta(X) = 0) = 1 - P_\theta(\varphi_\theta(X) = 1) \ge 1 - \alpha.$$
+
+The inequality is the size constraint of the test at the true parameter, applied with $\theta_0 = \theta$. Since $\theta$ was arbitrary, the coverage bound holds uniformly.
+
+**Step 2 — Converse direction (CI → tests).** Fix $\theta_0 \in \Theta$ and define $\varphi_{\theta_0}(X) = \mathbf{1}\{\theta_0 \notin C(X)\}$. Under $H_0: \theta = \theta_0$,
+
+$$P_{\theta_0}(\varphi_{\theta_0}(X) = 1) = P_{\theta_0}(\theta_0 \notin C(X)) = 1 - P_{\theta_0}(\theta_0 \in C(X)) \le 1 - (1 - \alpha) = \alpha.$$
+
+The inequality is the $(1-\alpha)$ coverage of $C$ at $\theta = \theta_0$. Hence $\{\varphi_{\theta_0}\}$ is a family of level-$\alpha$ tests.
+
+∎ — by indicator algebra and the size constraint; see NEY1937 for the original formulation.
+</ProofBlock>
+
+<ExampleBlock number={1} title="z-test inversion → z-CI">
+Let $X_1, \ldots, X_n \sim \mathcal{N}(\mu, \sigma^2)$ with $\sigma$ known. The two-sided z-test of $H_0: \mu = \mu_0$ at level $\alpha$ rejects iff $|\sqrt n (\bar X - \mu_0)/\sigma| > z_{\alpha/2}$. By Theorem 1, the CI is the set of null values the test does not reject:
+
+$$C(X) = \{\mu_0 : |\sqrt n (\bar X - \mu_0)/\sigma| \le z_{\alpha/2}\} = [\bar X - z_{\alpha/2}\sigma/\sqrt n,\; \bar X + z_{\alpha/2}\sigma/\sqrt n].$$
+
+This is the textbook z-interval. The duality makes it an automatic consequence of the z-test's acceptance region.
+</ExampleBlock>
+
+<ExampleBlock number={2} title="t-test inversion → t-CI">
+Same setup but $\sigma$ unknown; replace $\sigma$ by the sample standard deviation $S$. The two-sided t-test rejects iff $|\sqrt n (\bar X - \mu_0)/S| > t_{n-1, \alpha/2}$. Inverting:
+
+$$C(X) = [\bar X - t_{n-1, \alpha/2} S/\sqrt n,\; \bar X + t_{n-1, \alpha/2} S/\sqrt n].$$
+
+Exactness — meaning the CI has coverage exactly $1-\alpha$ at every $\mu$ — is inherited from the exactness of the t-test, which comes from <ExternalLink href="/topics/sufficient-statistics">Basu's independence theorem (Topic 16 Thm 7)</ExternalLink>: the pivot $\sqrt n (\bar X - \mu)/S$ is distribution-free because $\bar X$ and $S^2$ are independent. Same Basu in §19.3.
+</ExampleBlock>
+
+<RemarkBlock number={4} title="Duality as organizing principle">
+Every CI construction in this topic is a test inversion. The z-CI, t-CI, χ²-CI, F-CI of §19.3 come from the four pivotal tests. The Wald/Score/LRT CIs of §19.4 come from inverting the Topic 18 asymptotic trio. The Wilson interval of §19.5 is the score-test inversion for binomial $p$. The Clopper–Pearson interval of §19.6 is the exact test inversion via the beta–binomial CDF identity. The profile-likelihood CI of §19.7 is the generalized-LRT inversion with Wilks as the asymptotic engine. The TOST equivalence procedure of §19.9 is two one-sided tests run in parallel. Every time we write down a confidence interval, we are cashing in the duality theorem — and the fact that it is the *same* theorem in every case is the topic's unifying thread.
+</RemarkBlock>
+
+<RemarkBlock number={5} title="Vector-θ extension">
+Theorem 1 extends without change to vector $\theta \in \mathbb{R}^k$: a level-$\alpha$ test at every $\theta_0$ yields a $(1-\alpha)$ confidence *set* (not necessarily an interval; possibly a region in $\mathbb{R}^k$). The Wald CI for a vector GLM coefficient is an ellipsoid; the profile-likelihood CI for a vector parameter with nuisance components profiled out is a region whose boundary is the $\chi^2_k$-threshold contour. Simultaneous CIs for multiple parameters and confidence ellipsoids for Hotelling's $T^2$ are developed in <ExternalLink href="https://doi.org/10.1007/0-387-27605-X">LEH2005 Ch. 7</ExternalLink>; the scalar case of Topic 19 captures every main idea, with the vector-case bookkeeping involving matrix Fisher information in place of scalar $I(\theta_0)$.
+</RemarkBlock>
+
+---
+
+## 19.3 Pivotal Quantities
+
+A **pivotal quantity** is a function of data and parameter whose distribution does not depend on the parameter. When one exists, the CI construction is one-line: compute the quantiles of the pivot, rearrange to solve for the parameter, done. The z-CI, t-CI, χ²-CI for variance, and F-CI for variance ratio are the four main exact-small-sample CIs, and all four come from pivots.
+
+![Four classical pivots. (a) z-pivot √n(x̄ − μ)/σ ∼ Normal(0, 1); (b) t-pivot √n(x̄ − μ)/S ∼ t with n−1 df, via Basu independence; (c) χ²-pivot (n−1)S²/σ² ∼ χ² with n−1 df; (d) F-pivot (S₁²/σ₁²)/(S₂²/σ₂²) ∼ F with n₁−1 and n₂−1 df. In each panel, the CI for the parameter of interest is the algebraic rearrangement of the pivot's symmetric quantile bracket.](/images/topics/confidence-intervals-and-duality/19-pivotal-construction.png)
+
+<DefinitionBlock number={3} title="Pivotal quantity">
+A **pivot** for a parameter $\theta$ is a random function $Q(X, \theta)$ of data $X$ and parameter $\theta$ whose distribution does not depend on $\theta$ — that is, the law of $Q(X, \theta)$ is the same under every $P_\theta$.
+
+Given a pivot with known distribution $F_Q$ and quantiles $q_{\alpha/2}, q_{1-\alpha/2}$, a $(1-\alpha)$ CI for $\theta$ is obtained by solving
+
+$$\{\theta : q_{\alpha/2} \le Q(X, \theta) \le q_{1-\alpha/2}\}$$
+
+for $\theta$. The inversion is algebra; the probability content is packed into the pivot.
+</DefinitionBlock>
+
+<ExampleBlock number={3} title="z-pivot and t-pivot for a Normal mean">
+For iid $\mathcal{N}(\mu, \sigma^2)$ data with $\sigma$ known, $Q(X, \mu) = \sqrt n (\bar X - \mu)/\sigma$ is a pivot with $Q \sim \mathcal{N}(0, 1)$. Inverting $-z_{\alpha/2} \le Q \le z_{\alpha/2}$ gives $\bar X - z_{\alpha/2}\sigma/\sqrt n \le \mu \le \bar X + z_{\alpha/2}\sigma/\sqrt n$ — the z-CI of Example 1.
+
+For $\sigma$ unknown, $Q(X, \mu) = \sqrt n (\bar X - \mu)/S$ is a pivot with $Q \sim t_{n-1}$ — this is where Basu's independence theorem enters: the distribution of $\sqrt n (\bar X - \mu)/S$ is free of both $\mu$ and $\sigma$ precisely because $\bar X \perp\!\!\!\perp S^2$ under normality. Inversion gives the t-CI of Example 2. Worked numerically in <ExternalLink href="https://www.cengage.com/c/statistical-inference-2e-casella/">CAS2002 §9.2</ExternalLink>.
+</ExampleBlock>
+
+<ExampleBlock number={4} title="χ²-pivot for Normal variance">
+For iid $\mathcal{N}(\mu, \sigma^2)$ data with $\mu$ unknown, $Q(X, \sigma^2) = (n-1)S^2/\sigma^2$ is a pivot with $Q \sim \chi^2_{n-1}$. Invert $\chi^2_{n-1, \alpha/2} \le Q \le \chi^2_{n-1, 1-\alpha/2}$:
+
+$$\frac{(n-1)S^2}{\chi^2_{n-1, 1-\alpha/2}} \le \sigma^2 \le \frac{(n-1)S^2}{\chi^2_{n-1, \alpha/2}}.$$
+
+The interval is **asymmetric in $\sigma^2$** — the larger quantile appears in the denominator of the lower endpoint — a direct consequence of the χ²'s skew. Unlike the z/t intervals, there is no "plus or minus" formulation; the asymmetry is real and reflects the distributional shape.
+</ExampleBlock>
+
+<ExampleBlock number={5} title="F-pivot for variance ratio">
+For two independent Normal samples with sample variances $S_1^2, S_2^2$ and sizes $n_1, n_2$, the ratio $(S_1^2/\sigma_1^2)/(S_2^2/\sigma_2^2)$ is distributed as $F_{n_1-1, n_2-1}$ — a pivot for $\sigma_1^2/\sigma_2^2$. Inverting gives a CI for the variance ratio:
+
+$$\frac{S_1^2/S_2^2}{F_{n_1-1, n_2-1, 1-\alpha/2}} \le \frac{\sigma_1^2}{\sigma_2^2} \le \frac{S_1^2/S_2^2}{F_{n_1-1, n_2-1, \alpha/2}}.$$
+
+This is the two-sample variance-ratio CI — the standard tool for testing equality of Normal variances and, by inversion, for quantifying how different they might be.
+</ExampleBlock>
+
+<RemarkBlock number={6} title="Pivots are rare; test inversion is the general tool">
+The z, t, χ², and F pivots exhaust essentially every classical example of exact small-sample CIs. For non-Normal families — Bernoulli, Poisson, Exponential, Gamma, Weibull, and every GLM — no exact pivot exists for the parameter of interest. That is why the rest of Topic 19 develops the *asymptotic* and *exact-by-inversion* constructions: Wald, Score, LRT, Wilson, Clopper–Pearson, profile likelihood. All of them are test inversions via Theorem 1, not pivot manipulations — and test inversion is the general-purpose tool. Pivots are the special case where the algebra gives a closed form.
+</RemarkBlock>
+
+---
+
+## 19.4 Wald, Score, LRT Confidence Intervals
+
+<ExternalLink href="/topics/likelihood-ratio-tests-and-np#section-18-7">Topic 18 §18.7</ExternalLink> proved that the Wald, Score, and LRT statistics all converge in distribution to $\chi^2_1$ under the null for regular parametric families. Theorem 1 now turns each test into a CI. The three CIs coincide asymptotically — they share the same leading-order $\chi^2_1$ coverage — but differ at finite $n$ in ways that matter for rare-event regimes and boundary parameters. §19.5 handles the Bernoulli boundary case; the rest of §19.4 catalogues the trio.
+
+![Log-likelihood and three CIs for Bernoulli p̂ = 0.3, n = 50. Wald (amber) is the symmetric interval from the quadratic approximation at p̂. Wilson (purple; score-test inversion) follows the likelihood curvature. LRT (green) bisects the likelihood's χ²₁-threshold contour. All three agree asymptotically; at finite n the asymmetric LRT and Wilson stay further from the boundary.](/images/topics/confidence-intervals-and-duality/19-wald-score-lrt-intervals.png)
+
+<DefinitionBlock number={4} title="Wald confidence interval">
+For a regular parametric family with scalar $\theta$, MLE $\hat\theta_n$, and Fisher information $I(\theta)$, the **Wald CI** at level $1-\alpha$ is
+
+$$C_{\rm Wald}(X) = \left[\hat\theta_n - \frac{z_{\alpha/2}}{\sqrt{n\,I(\hat\theta_n)}},\; \hat\theta_n + \frac{z_{\alpha/2}}{\sqrt{n\,I(\hat\theta_n)}}\right].$$
+
+Equivalent description: invert the Wald test $W_n(\theta_0) = n(\hat\theta_n - \theta_0)^2 I(\hat\theta_n) \le z^2_{\alpha/2}$. The interval is symmetric around $\hat\theta_n$ — the quadratic approximation to the log-likelihood at the MLE imposes symmetry regardless of the underlying likelihood's actual shape.
+</DefinitionBlock>
+
+<DefinitionBlock number={5} title="Score confidence interval">
+The **Score CI** is the set of null values the score (Rao) test does not reject:
+
+$$C_{\rm Score}(X) = \{\theta_0 : S_n(\theta_0) \le z^2_{\alpha/2}\}, \qquad S_n(\theta_0) = \frac{U_n(\theta_0)^2}{n\,I(\theta_0)},$$
+
+where $U_n(\theta_0) = \partial \ell_n(\theta_0)/\partial \theta$ is the score at the null. Because the variance $I(\theta_0)$ is evaluated *at the null*, the resulting endpoints solve a quadratic-in-$\theta_0$ inequality — generally asymmetric around $\hat\theta_n$, and always within the parameter space for Bernoulli (§19.5).
+</DefinitionBlock>
+
+<DefinitionBlock number={6} title="LRT confidence interval">
+The **likelihood-ratio confidence interval** is the set of null values the LRT does not reject:
+
+$$C_{\rm LRT}(X) = \{\theta_0 : -2\log\Lambda_n(\theta_0) \le \chi^2_{1, 1-\alpha}\},$$
+
+where $-2\log\Lambda_n(\theta_0) = 2[\ell_n(\hat\theta_n) - \ell_n(\theta_0)]$. Endpoint computation is a bisection on the log-likelihood's χ²-threshold contour around the MLE — asymmetric whenever the log-likelihood is non-quadratic, which is the generic case at moderate $n$.
+</DefinitionBlock>
+
+<TheoremBlock number={2} title="Asymptotic coverage of the Wald/Score/LRT CIs">
+For a regular parametric family with scalar $\theta$ and Fisher information $I(\theta)$ continuous in $\theta$, each of $C_{\rm Wald}, C_{\rm Score}, C_{\rm LRT}$ has asymptotic coverage $1 - \alpha$:
+
+$$\lim_{n\to\infty} P_{\theta_0}(\theta_0 \in C_\bullet(X)) = 1 - \alpha, \qquad \bullet \in \{\rm Wald, Score, LRT\}.$$
+
+**Proof.** Each CI is the non-rejection region of a test with asymptotic $\chi^2_1$ null distribution. By [Topic 18 §18.7 Thm 5](/topics/likelihood-ratio-tests-and-np#section-18-7), the Wald/Score/LRT statistics each converge in distribution to $\chi^2_1$ under $H_0: \theta = \theta_0$. By the continuous mapping theorem, $P_{\theta_0}(\text{statistic} \le \chi^2_{1, 1-\alpha}) \to 1 - \alpha$. Hence coverage converges to $1 - \alpha$ by Theorem 1 applied at level $\alpha$. ∎
+</TheoremBlock>
+
+![Wald boundary pathology. At p̂ = 1/30 ≈ 0.033, the Wald CI lower endpoint is below zero — outside the parameter space — because the quadratic approximation to the log-likelihood extrapolates through the boundary. Wilson, by evaluating the variance at the null p₀ rather than at p̂, stays inside [0, 1] for every x.](/images/topics/confidence-intervals-and-duality/19-wald-boundary-pathology.png)
+
+<ExampleBlock number={6} title="Bernoulli — all three CIs at p̂ = 0.3, n = 50">
+For iid Bernoulli$(p)$ with $\hat p = 0.3$, $n = 50$, at $\alpha = 0.05$:
+
+- **Wald**: $\hat p \pm z_{0.025}\sqrt{\hat p(1-\hat p)/n} = 0.3 \pm 1.96 \cdot 0.0648 = [0.173, 0.427]$.
+- **Score (Wilson)**: closed-form quadratic inversion (§19.5 Proof 2); here $[0.191, 0.438]$.
+- **LRT**: bisection on $-2\log\Lambda_n(p_0) = \chi^2_{1, 0.95}$; here $[0.185, 0.435]$.
+
+All three are close — agreement to ≈ 0.02 in each endpoint — because $n = 50$ is moderate and $\hat p = 0.3$ is not near a boundary. Agreement deteriorates as $n \to 20$ or $\hat p \to 0$; §19.5 and §19.8 quantify.
+</ExampleBlock>
+
+<ExampleBlock number={7} title="Poisson rate — all three CIs at λ̂ = 2, n = 30">
+For iid Poisson$(\lambda)$ with $\hat\lambda = 2$, $n = 30$, $\alpha = 0.05$:
+
+- **Wald**: $\hat\lambda \pm z_{0.025}\sqrt{\hat\lambda/n} = 2 \pm 1.96 \cdot 0.258 = [1.494, 2.506]$.
+- **Score**: invert $n(\hat\lambda - \lambda_0)^2/\lambda_0 = z^2$; quadratic in $\lambda_0$ gives $[1.527, 2.572]$.
+- **LRT**: bisection on $2n[\hat\lambda\log(\hat\lambda/\lambda_0) - (\hat\lambda - \lambda_0)] = \chi^2_{1, 0.95}$; here $[1.529, 2.572]$.
+
+Score and LRT agree to three decimals here; Wald is visibly different because the Poisson log-likelihood's curvature at $\hat\lambda = 2$ differs from the quadratic approximation.
+</ExampleBlock>
+
+<RemarkBlock number={7} title="CRLB as CI-width envelope">
+The Cramér-Rao lower bound from <ExternalLink href="/topics/point-estimation">Topic 13 §13.9</ExternalLink> says that every unbiased estimator $\hat\theta_n$ satisfies $\text{Var}_\theta(\hat\theta_n) \ge 1/(n I(\theta))$. Dualized: no Wald-type CI can have width less than $2 z_{\alpha/2} / \sqrt{n I(\theta)}$ at its leading-order rate. The CRLB is thus the *asymptotic width envelope* for confidence intervals — the same Fisher information that bounds estimator variance bounds CI width. All three asymptotic CIs of §19.4 achieve this envelope to leading order; the finite-sample corrections are where they differ.
+</RemarkBlock>
+
+<RemarkBlock number={8} title="Finite-sample divergence and reparameterization">
+Topic 18 §18.8 showed that Wald, Score, and LRT differ finite-sample, with the Wald test sensitive to reparameterization: a logit transform and its Wald CI back-transform do not equal the $p$-scale Wald CI. The same is true for Wald CIs; the LRT CI, by contrast, is invariant — $\{\theta_0 : -2\log\Lambda_n(\theta_0) \le \chi^2_{1, 1-\alpha}\}$ transforms to $\{g(\theta_0) : -2\log\Lambda_n(g(\theta_0)) \le \chi^2_{1, 1-\alpha}\}$ under a bijection $g$, because $-2\log\Lambda_n$ depends only on the likelihood values, not on how $\theta$ is parameterized. This is why production GLM libraries default to LRT (aka "deviance") CIs for coefficients whose null effect is at a boundary (logistic regression on rare events, Poisson on small counts); the reparameterization-dependent Wald CI gives qualitatively different answers depending on the scale chosen. <ExternalLink href="/topics/likelihood-ratio-tests-and-np#section-18-8">Topic 18 §18.8 Thm 6</ExternalLink> has the proof for the test-statistic version; dualization via Theorem 1 transfers it verbatim to CIs.
+</RemarkBlock>
+
+---
+
+## 19.5 The Wilson Interval
+
+The Wald CI for Bernoulli $p$ fails spectacularly near the boundary: at $\hat p = 0$ it collapses to $[0, 0]$; at $\hat p = 1/30 \approx 0.033$ its lower endpoint is below zero, outside the parameter space. The fix is to invert the *score* test rather than the Wald test — evaluating the variance $p_0(1-p_0)/n$ at the null $p_0$ rather than at the MLE $\hat p$. The resulting closed-form CI stays in $[0, 1]$ automatically, and is the Wilson interval of Wilson (1927) — the industry default for A/B-test conversion-rate confidence intervals.
+
+<TheoremBlock number={3} title="Wilson interval">
+Let $X_1, \ldots, X_n$ be iid Bernoulli$(p)$ with $\hat p_n = \bar X_n$. The asymptotic level-$\alpha$ score test of $H_0: p = p_0$ rejects iff $|Z_n(p_0)| > z_{\alpha/2}$, where $Z_n(p_0) = \sqrt n (\hat p_n - p_0)/\sqrt{p_0(1-p_0)}$. The test-inversion CI is the **Wilson interval**
+
+$$C_{\rm Wilson}(X) = \frac{\hat p_n + \frac{z^2}{2n} \pm z\sqrt{\frac{\hat p_n(1-\hat p_n)}{n} + \frac{z^2}{4n^2}}}{1 + z^2/n},$$
+
+where $z = z_{\alpha/2}$.
+</TheoremBlock>
+
+<ProofBlock>
+**Step 1 — Set up the inversion.** By Theorem 1, $p_0 \in C(X)$ iff the score test fails to reject at $p_0$: $Z_n(p_0)^2 \le z^2$, which is
+
+$$(\hat p_n - p_0)^2 \le z^2 \frac{p_0(1 - p_0)}{n}.$$
+
+**Step 2 — Rearrange as a quadratic in $p_0$.** Expand both sides and collect terms in $p_0$:
+
+$$\hat p_n^2 - 2\hat p_n p_0 + p_0^2 \le \frac{z^2 p_0}{n} - \frac{z^2 p_0^2}{n}.$$
+
+Grouping into the quadratic inequality $A p_0^2 + B p_0 + C \le 0$ with
+
+$$A = 1 + \frac{z^2}{n}, \qquad B = -\!\left(2\hat p_n + \frac{z^2}{n}\right), \qquad C = \hat p_n^2.$$
+
+**Step 3 — Solve.** The coefficient $A > 0$, so the inequality $A p_0^2 + B p_0 + C \le 0$ defines the interval $[p_-, p_+]$ between the roots of the quadratic equation. By the quadratic formula,
+
+$$p_\pm = \frac{-B \pm \sqrt{B^2 - 4AC}}{2A} = \frac{2\hat p_n + z^2/n \pm \sqrt{(2\hat p_n + z^2/n)^2 - 4(1 + z^2/n)\hat p_n^2}}{2(1 + z^2/n)}.$$
+
+**Step 4 — Simplify the discriminant.** Expanding $(2\hat p_n + z^2/n)^2 - 4(1 + z^2/n)\hat p_n^2$ and cancelling the $4\hat p_n^2$ terms gives $4z^2 \hat p_n/n + z^4/n^2 - 4z^2\hat p_n^2/n = 4z^2\hat p_n(1 - \hat p_n)/n + z^4/n^2$. Factoring $4z^2/n^2$ from under the square root:
+
+$$\sqrt{(2\hat p_n + z^2/n)^2 - 4(1 + z^2/n)\hat p_n^2} = 2z \sqrt{\frac{\hat p_n(1-\hat p_n)}{n} + \frac{z^2}{4n^2}}.$$
+
+**Step 5 — Assemble.** Substituting back and dividing numerator and denominator by 2:
+
+$$p_\pm = \frac{\hat p_n + z^2/(2n) \pm z\sqrt{\hat p_n(1-\hat p_n)/n + z^2/(4n^2)}}{1 + z^2/n}.$$
+
+This is the stated Wilson interval. Note that the $z^2/(2n)$ shift in the numerator — the regularizing ingredient that keeps the endpoints inside $[0, 1]$ for every $\hat p_n$ — comes from evaluating the variance at $p_0$ rather than at $\hat p_n$ in Step 1. Wald's boundary pathology (Rem 8 of Topic 18 §18.8) is exactly the absence of this shift.
+
+∎ — using score-test inversion ([Topic 18 §18.7](/topics/likelihood-ratio-tests-and-np#section-18-7)) and Theorem 1; WIL1927.
+</ProofBlock>
+
+<ExampleBlock number={8} title="Boundary example: p̂ = 0">
+At $n = 20, x = 0, \alpha = 0.05$: $\hat p_n = 0$, $z = 1.96$.
+
+- **Wald**: $[0, 0]$ — a point, coverage 0 at every $p > 0$.
+- **Wilson**: center $= (0 + 1.96^2/40)/(1 + 1.96^2/20) = 0.0805$; half-width $= 1.96\sqrt{0 + 1.96^2/1600}/(1.192) = 0.0805$. Lower $= \max(0, 0.0805 - 0.0805) = 0$; upper $= 0.0805 + 0.0805 \cdot \text{(corrected)} \approx 0.161$. Proper interval.
+- **Clopper–Pearson** (next section): $[0, 0.168]$.
+
+The Wilson and Clopper–Pearson upper endpoints agree to $\approx 5\%$; Wald is catastrophic. This is the concrete content of Topic 18 §18.8 Rem 16: for rare-event A/B tests, Wald under-covers at the boundary, and Wilson is the practical default.
+</ExampleBlock>
+
+<RemarkBlock number={9} title="Agresti–Coull 'plus-4' approximation">
+<ExternalLink href="https://doi.org/10.1080/00031305.1998.10480550">Agresti and Coull (1998)</ExternalLink> proposed an easy-to-remember approximation to Wilson: *add $z^2/2 \approx 2$ successes and $z^2/2 \approx 2$ failures* to the observed counts, then apply the Wald formula to the inflated sample. At $\alpha = 0.05$, $z^2/2 \approx 1.92 \approx 2$, so the popular form is "add 2 successes, add 2 failures, Wald the result." The resulting interval usually matches Wilson within $0.01$ and is a reasonable hand-calculator substitute. The pedagogical slogan — *approximate is better than exact for interval estimation of binomial proportions* — captures the main takeaway of BRO2001 in five words.
+</RemarkBlock>
+
+<RemarkBlock number={10} title="BRO2001 — coverage calibration quantified">
+<ExternalLink href="https://doi.org/10.1214/ss/1009213286">Brown, Cai, and DasGupta (2001)</ExternalLink> gave the systematic diagnostic for binomial CI coverage: actual coverage as a function of true $p$ across a grid of $n$. Their Table 1 is the authority for test cases (§19.8 Ex 12); their key finding is that Wald's actual coverage oscillates around $1-\alpha$ but dips below nominal — sometimes by $0.1$ or more — at moderate $p$ and small $n$. Wilson's coverage oscillates around $1-\alpha$ with much smaller amplitude; Clopper–Pearson is always at or above nominal (conservative) but often by $0.03$ or more. The paper's recommendation for practical work: **Wilson as default; Agresti–Coull as hand-calculator substitute; Clopper–Pearson only when a strict lower bound on coverage matters (regulatory submissions, conservative monitoring)**.
+</RemarkBlock>
+
+---
+
+## 19.6 Clopper–Pearson Exact Intervals
+
+The Wald and Wilson CIs for binomial $p$ are asymptotic — derived from the $\chi^2_1$ null distribution of the score test. The <ExternalLink href="https://doi.org/10.1093/biomet/26.4.404">Clopper–Pearson interval (1934)</ExternalLink> is **exact**: it guarantees coverage $\ge 1 - \alpha$ for every $p \in [0, 1]$, no matter how small $n$. The price is conservatism — actual coverage strictly exceeds nominal at most $p$ — and the mechanism is the discreteness of the binomial: its CDF jumps, so you can only control size at *or below* $\alpha$, never exactly at $\alpha$.
+
+![Clopper–Pearson via the beta–binomial CDF identity. Left: Beta(x, n−x+1) density with shaded α/2 lower tail; the quantile at that tail is p_L. Right: Beta(x+1, n−x) density with shaded α/2 upper tail; the quantile is p_U. Two beta quantiles = one CI endpoint pair.](/images/topics/confidence-intervals-and-duality/19-clopper-pearson-construction.png)
+
+<TheoremBlock number={4} title="Clopper–Pearson interval">
+Let $X \sim \text{Binomial}(n, p)$ with observed value $x \in \{0, 1, \ldots, n\}$. The **Clopper–Pearson** $(1-\alpha)$ confidence interval for $p$ is
+
+$$C_{\rm CP}(x) = [p_L, p_U], \qquad p_L = B^{-1}(\alpha/2;\, x, n-x+1), \qquad p_U = B^{-1}(1-\alpha/2;\, x+1, n-x),$$
+
+where $B^{-1}(q; a, b)$ is the $q$-quantile of the Beta$(a, b)$ distribution, with the conventions $p_L = 0$ when $x = 0$ and $p_U = 1$ when $x = n$. Coverage $P_p(p \in C_{\rm CP}(X)) \ge 1 - \alpha$ for every $p \in [0, 1]$.
+</TheoremBlock>
+
+<BinomialCoverageComparison client:visible />
+
+<ProofBlock>
+**Step 1 — Exact two-sided test inversion.** The exact two-sided test of $H_0: p = p_0$ at level $\alpha$ (Topic 17 §17.6 Ex 11) fails to reject at $p_0$ iff both tail probabilities exceed $\alpha/2$:
+
+$$P_{p_0}(X \ge x) \ge \alpha/2 \qquad \text{and} \qquad P_{p_0}(X \le x) \ge \alpha/2.$$
+
+By Theorem 1, the non-rejection set is the CI $[p_L, p_U]$: $p_L$ is the largest $p_0$ satisfying $P_{p_0}(X \ge x) = \alpha/2$ (equality by continuity of the binomial CDF in $p$), and $p_U$ is the smallest $p_0$ satisfying $P_{p_0}(X \le x) = \alpha/2$.
+
+**Step 2 — Beta–binomial identity.** The master identity — provable by repeated integration by parts — is
+
+$$P_p(X \ge k) = \sum_{j=k}^n \binom{n}{j} p^j(1-p)^{n-j} = I_p(k, n-k+1),$$
+
+where $I_x(a, b) = B(x; a, b)/B(a, b)$ is the regularized incomplete beta (the Beta$(a, b)$ CDF at $x$). Equivalently, $P_p(X \le k) = 1 - I_p(k+1, n-k)$.
+
+**Step 3 — Solve for $p_L$.** Setting $P_{p_L}(X \ge x) = \alpha/2$ and applying the identity with $k = x$:
+
+$$I_{p_L}(x, n-x+1) = \alpha/2 \quad\Longleftrightarrow\quad p_L = B^{-1}(\alpha/2;\, x, n-x+1).$$
+
+The second equivalence identifies the inverse regularized incomplete beta with the Beta$(x, n-x+1)$ inverse CDF.
+
+**Step 4 — Solve for $p_U$.** Symmetrically, setting $P_{p_U}(X \le x) = \alpha/2$ and using $P_p(X \le x) = 1 - I_p(x+1, n-x)$:
+
+$$1 - I_{p_U}(x+1, n-x) = \alpha/2 \quad\Longleftrightarrow\quad I_{p_U}(x+1, n-x) = 1 - \alpha/2,$$
+
+hence $p_U = B^{-1}(1-\alpha/2;\, x+1, n-x)$.
+
+**Step 5 — Boundary conventions.** At $x = 0$, $P_p(X \ge 0) = 1 \ge \alpha/2$ for every $p$ — the "lower tail" constraint is vacuous — so the CI extends down to $p_L = 0$. Similarly $x = n$ gives $p_U = 1$. The formulas with $x + 1$ and $n - x$ swapped in the second Beta keep the quantile formulas meaningful at the boundaries (Beta$(1, n)$ for $x = 0$, Beta$(n, 1)$ for $x = n$).
+
+**Step 6 — Coverage bound.** Because the binomial is discrete, the exact tail probabilities $P_p(X \ge x)$ and $P_p(X \le x)$ are step functions of $p$ with jumps at the $n + 1$ possible values of $X$. Enforcing the $\alpha/2$-size constraint at equality in Step 1 means the test's actual size is $\le \alpha$ (over-controlled at most $p_0$); by Step 2 of Proof 1, the CI's coverage is $\ge 1 - \alpha$. Equality is attained only at boundary points where the discrete CDF achieves $\alpha/2$ exactly — hence the CI is exact but generically conservative, with actual coverage strictly exceeding nominal at most $p$.
+
+∎ — by the beta–binomial CDF identity and exact test inversion (Theorem 1); CLO1934.
+</ProofBlock>
+
+<ExampleBlock number={9} title="Clopper–Pearson at n = 20, x = 3">
+At $\alpha = 0.05$:
+
+- $p_L = B^{-1}(0.025;\, 3, 18) \approx 0.032$,
+- $p_U = B^{-1}(0.975;\, 4, 17) \approx 0.379$.
+
+So the 95% Clopper–Pearson CI is $[0.032, 0.379]$. The Wilson CI at the same $(n, x, \alpha)$ is $[0.054, 0.360]$; Wald is $[-0.007, 0.307]$ before clamping — the lower endpoint is negative, reflecting the same pathology as Example 8 at a less extreme level. Clopper–Pearson's conservatism shows up as the widest of the three intervals: it buys guaranteed coverage at the cost of width. Worked numerically in <ExternalLink href="https://www.cengage.com/c/statistical-inference-2e-casella/">CAS2002 §9.2</ExternalLink>.
+</ExampleBlock>
+
+<RemarkBlock number={11} title="Why conservatism — discreteness of the binomial">
+A discrete CDF cannot assign mass exactly $\alpha/2$ to a tail unless $\alpha/2$ happens to coincide with a cumulative PMF value at some integer cutoff. Generically it doesn't, so the exact tail test must reject only when the cumulative mass is *at or below* $\alpha/2$, which gives actual size strictly *less than* $\alpha$ at most $p$. Dualized via Theorem 1, this yields actual coverage strictly above $1 - \alpha$ — conservatism. The same phenomenon reappears for Poisson, negative binomial, hypergeometric — every discrete family. The only way to achieve exact coverage from a discrete test is to use a *randomized* test, which no one does in practice because it delivers different answers on the same data.
+</RemarkBlock>
+
+<RemarkBlock number={12} title="When to choose Clopper–Pearson">
+Default choice for binomial CIs is Wilson (Rem 10). Clopper–Pearson is preferred when:
+
+1. **Regulatory requirement of strict coverage.** FDA submissions, clinical trial monitoring, and other contexts where "actual coverage $\ge 1 - \alpha$" must be certifiable regardless of $p$.
+2. **Very small $n$ or $x = 0$ / $x = n$.** The boundary conventions of Theorem 4 extend to the extremes; Wilson's closed form degenerates at $x = 0$ (returns $[0, z^2/(n + z^2)]$, well-defined but conservatism-free).
+3. **Low tolerance for any coverage dip.** In monitoring applications where even a 2% under-coverage is unacceptable, Clopper–Pearson's always-at-or-above-nominal guarantee is worth the width penalty.
+
+The trade-off is explicit: buy coverage guarantees with width. Wilson gives tighter intervals at roughly-nominal (but sometimes slightly-under) coverage.
+</RemarkBlock>
+
+---
+
+## 19.7 Profile Likelihood Confidence Intervals
+
+Every CI so far has been for a one-parameter family — a clean setup where the Fisher information and test statistic are scalar. In practice, nearly every inference problem has nuisance parameters: in a Normal with unknown variance, the mean is of interest and $\sigma^2$ is nuisance; in a Gamma, the shape is of interest and the rate is nuisance; in logistic regression, one coefficient is of interest and the rest are nuisance. The **profile likelihood** handles this by profiling out the nuisance at each value of the parameter of interest, reducing the problem to a scalar LRT. Fulfills <ExternalLink href="/topics/likelihood-ratio-tests-and-np#section-18-5">Topic 18 §18.5 Remark 10</ExternalLink>.
+
+![Profile likelihood for Gamma shape α with rate β profiled out. Left: joint log-likelihood surface with the profile ridge β̂(α) = α/x̄ traced in green. Right: the 1D profile ℓ_P(α) with the χ²₁-threshold line (red dashed); the CI is the band between the two intersections. The profile recovers Wilks' test applied to the 1D restriction — asymptotic χ²₁ coverage at n → ∞, finite-n gap quantified by BRO2001-style calibration.](/images/topics/confidence-intervals-and-duality/19-profile-likelihood.png)
+
+<DefinitionBlock number={7} title="Profile log-likelihood and profile CI">
+Let $\{P_{\theta, \psi} : \theta \in \Theta \subset \mathbb{R}, \psi \in \Psi \subset \mathbb{R}^{k-1}\}$ be a regular parametric family with scalar parameter of interest $\theta$ and nuisance $\psi$. The **profile log-likelihood** is
+
+$$\ell_P(\theta) = \sup_\psi \ell(\theta, \psi) = \ell(\theta, \hat\psi(\theta)),$$
+
+where $\hat\psi(\theta)$ is the conditional MLE of $\psi$ at fixed $\theta$. The **profile-likelihood confidence interval** at level $1 - \alpha$ is
+
+$$C_P(X) = \{\theta : 2\,[\ell_P(\hat\theta_n) - \ell_P(\theta)] \le \chi^2_{1, 1-\alpha}\},$$
+
+where $\hat\theta_n$ is the profile MLE (equivalently, the $\theta$-coordinate of the joint MLE).
+</DefinitionBlock>
+
+<TheoremBlock number={5} title="Profile-likelihood CI asymptotic coverage">
+Under Wilks' regularity conditions (see [Topic 18 §18.6](/topics/likelihood-ratio-tests-and-np#section-18-6)),
+
+$$P_{(\theta_0, \psi_0)}(\theta_0 \in C_P(X)) \to 1 - \alpha \qquad \text{as } n \to \infty,$$
+
+for every $(\theta_0, \psi_0) \in \Theta \times \Psi$.
+</TheoremBlock>
+
+<ProfileLikelihoodExplorer client:visible />
+
+<ProofBlock>
+**Step 1 — Profile LRT statistic.** Fix the true parameter $(\theta_0, \psi_0)$. The test-inversion construction of $C_P(X)$ is precisely the inversion of the generalized LRT (<ExternalLink href="/topics/likelihood-ratio-tests-and-np#section-18-5">Topic 18 §18.5 Def 6</ExternalLink>) for the composite null $H_0: \theta = \theta_0$ with $\psi$ nuisance:
+
+$$-2\log\Lambda_n(\theta_0) = 2\,[\ell(\hat\theta_n, \hat\psi_n) - \sup_\psi \ell(\theta_0, \psi)] = 2\,[\ell_P(\hat\theta_n) - \ell_P(\theta_0)].$$
+
+The equality uses the definition of the profile: $\sup_\psi \ell(\theta_0, \psi) = \ell_P(\theta_0)$ and $\ell(\hat\theta_n, \hat\psi_n) = \ell_P(\hat\theta_n)$ by construction.
+
+**Step 2 — Wilks' asymptotic null.** By <ExternalLink href="/topics/likelihood-ratio-tests-and-np#section-18-6">Wilks' theorem (Topic 18 §18.6 Thm 4)</ExternalLink>, under the regular-parametric assumptions and with scalar $\theta$ restricted under $H_0$,
+
+$$-2\log\Lambda_n(\theta_0) \xrightarrow{d} \chi^2_1 \qquad \text{under } (\theta_0, \psi_0).$$
+
+**Step 3 — Coverage by inversion.** The event $\{\theta_0 \in C_P(X)\}$ is the event $\{-2\log\Lambda_n(\theta_0) \le \chi^2_{1, 1-\alpha}\}$ — the non-rejection event for the LRT at $\theta_0$. By Step 2 and the continuous mapping theorem,
+
+$$P_{(\theta_0, \psi_0)}(\theta_0 \in C_P(X)) = P_{(\theta_0, \psi_0)}(-2\log\Lambda_n(\theta_0) \le \chi^2_{1, 1-\alpha}) \to P(\chi^2_1 \le \chi^2_{1, 1-\alpha}) = 1 - \alpha.$$
+
+∎ — using Wilks' theorem ([Topic 18 §18.6 Thm 4](/topics/likelihood-ratio-tests-and-np#section-18-6)), continuous mapping (<ExternalLink href="/topics/modes-of-convergence">Topic 9 §9.3</ExternalLink>), and Theorem 1.
+</ProofBlock>
+
+<ExampleBlock number={10} title="Normal mean with unknown variance — profile recovers the t-CI">
+For $X_i \sim \mathcal{N}(\mu, \sigma^2)$ iid, the conditional MLE of $\sigma$ at fixed $\mu$ is $\hat\sigma(\mu) = \sqrt{n^{-1}\sum (X_i - \mu)^2}$. Plugging into the Normal log-likelihood and simplifying, the profile for $\mu$ becomes
+
+$$\ell_P(\mu) = -\frac{n}{2}\log\left(\frac{2\pi}{n}\sum(X_i - \mu)^2\right) - \frac{n}{2}.$$
+
+The profile MLE is $\hat\mu_n = \bar X$. Expanding $-2[\ell_P(\bar X) - \ell_P(\mu)] \le \chi^2_{1, 1-\alpha}$ and rearranging:
+
+$$\frac{n(\bar X - \mu)^2}{\hat\sigma^2(\bar X)} \le \exp\!\left(\frac{\chi^2_{1, 1-\alpha}}{n}\right) \cdot n - n.$$
+
+At $n$ large this is nearly $n(\bar X - \mu)^2/S^2 \le \chi^2_{1, 1-\alpha}$ — the asymptotic Wald-CI form. The *exact* t-CI is $\sqrt n(\bar X - \mu)/S \le t_{n-1, \alpha/2}$; the ratio $t_{n-1, \alpha/2}^2 / \chi^2_{1, 1-\alpha}$ is the source of the asymptotic-vs-exact gap. At $n = 30$, $t_{29, 0.025}^2 \approx 4.18$ vs $\chi^2_{1, 0.95} \approx 3.84$, so the profile CI is slightly wider than the t-CI — an 8% gap that shrinks as $n^{-1}$.
+</ExampleBlock>
+
+<ExampleBlock number={11} title="Gamma shape with unknown rate">
+For $X_i \sim \text{Gamma}(\alpha, \beta)$ iid, the conditional MLE of $\beta$ at fixed $\alpha$ has a closed form: the rate MLE score equation is $n\alpha/\beta - \sum X_i = 0$, giving $\hat\beta(\alpha) = \alpha/\bar X$. The profile for $\alpha$ is
+
+$$\ell_P(\alpha) = n\alpha\log(\alpha/\bar X) - n\alpha - n\log\Gamma(\alpha) + (\alpha - 1)\sum \log X_i.$$
+
+The profile MLE $\hat\alpha_n$ is the solution of $\ell_P'(\alpha) = 0$ — no closed form; solve numerically. The profile CI is then the $\chi^2_1$-threshold contour around $\hat\alpha_n$. For a seeded sample of $n = 30$ from $\text{Gamma}(2, 1)$, the profile CI for $\alpha$ contains $\alpha = 2.0$ with the expected $1 - \alpha$ probability — confirmed empirically in `ProfileLikelihoodExplorer` and test 19J of the testing harness.
+</ExampleBlock>
+
+<RemarkBlock number={13} title="Wilks as the engine, not a lemma">
+Proof 4 is three lines long. The heavy lifting — the Taylor expansion of the log-likelihood, remainder control, the asymptotic-normality-to-chi-squared step — all lives in the Wilks proof at Topic 18 §18.6, which Topic 19 consumes as a black-box engine. This is characteristic of how testing-theoretic machinery propagates: once Wilks is established, every composite-LRT and every profile-CI coverage fact follows from a one-line invocation. The pedagogical cost of not re-deriving Wilks at each use is zero; the reader who wants the details goes back to Topic 18, and the new material of Topic 19 stays about CIs rather than recycling Wilks.
+</RemarkBlock>
+
+<RemarkBlock number={14} title="Why profile CIs are the GLM default">
+In generalized linear models — logistic, Poisson, gamma regression, log-linear models — the workhorse CI for a single coefficient is the profile-likelihood CI, computed by refitting the model with the coefficient fixed at a grid of values and tracing the deviance drop. R's `confint()` on a `glm` object defaults to this; the `car::Confint` extension makes it the explicit recommendation. The reason is the combination of (i) reparameterization invariance (Rem 8), (ii) asymptotic efficiency via Wilks (this proof), and (iii) correct coverage at boundaries (no Wald-type pathology). The cost is computational: each CI endpoint requires a refit. For large models this can be prohibitive, and practitioners fall back to Wald with sandwich variance estimators — a deliberate trade of statistical precision for compute.
+</RemarkBlock>
+
+<RemarkBlock number={15} title="Vector-θ profile CIs via envelope theorem">
+When $\theta$ is vector-valued and we want a CI for a scalar function $g(\theta)$, the profile is over $\{\psi : g(\psi) = c\}$ at each target value $c$. Differentiability of $\ell_P$ in $c$ follows from the Danskin envelope theorem: $d\ell_P/dc$ equals $\partial \ell / \partial c$ evaluated at the conditional MLE, under regularity. The vector-θ profile-CI theory is developed in <ExternalLink href="https://doi.org/10.1007/0-387-27605-X">LEH2005 Ch. 12.4</ExternalLink>; for Topic 19 we stay scalar.
+</RemarkBlock>
+
+---
+
+## 19.8 Coverage Diagnostics: Actual vs Nominal
+
+Every CI procedure in §19.3–§19.7 advertises nominal coverage $1 - \alpha$. The question §19.8 asks is: **what is the actual coverage at every true parameter value?** For discrete families — binomial, Poisson — the answer is not "$1 - \alpha$ everywhere." It oscillates with $p$, sometimes dips below $1 - \alpha$ (Wald's catastrophic failure), sometimes stays safely above (Clopper–Pearson's conservatism). Getting the diagnostic right is the difference between a procedure you can trust and one you can't.
+
+![Binomial coverage at n = 20, 100, 500 with α = 0.05. Wald (amber) oscillates below nominal across p ∈ [0.005, 0.995] and crashes near the boundary. Wilson (purple) hovers around 0.95 with modest sawtooth. Clopper–Pearson (green) is always at or above 0.95 but often substantially — the price of exact coverage. Horizontal dashed line at the nominal 0.95 level.](/images/topics/confidence-intervals-and-duality/19-binomial-coverage-curves.png)
+
+<DefinitionBlock number={8} title="Actual coverage">
+For a CI procedure $C$ at nominal level $1 - \alpha$, the **actual coverage** at parameter $\theta$ is
+
+$$\text{Cov}(\theta; C, n, \alpha) = P_\theta(\theta \in C(X)),$$
+
+where $X$ is a sample of size $n$ from $P_\theta$. The nominal level is advertised; the actual level is the performance. For continuous families and asymptotic CIs, $\text{Cov}(\theta; C, n, \alpha) \to 1 - \alpha$ as $n \to \infty$; for discrete families, the limit is one-sided inequality (conservative) or oscillating (non-conservative).
+</DefinitionBlock>
+
+<TheoremBlock number={6} title="Wald CI under-coverage at the Bernoulli boundary">
+For iid Bernoulli$(p)$ with $n$ fixed, the Wald CI $C_{\rm Wald}(X) = \hat p_n \pm z_{\alpha/2}\sqrt{\hat p_n(1-\hat p_n)/n}$ satisfies
+
+$$\lim_{p \to 0^+}\text{Cov}(p; C_{\rm Wald}, n, \alpha) = 0,$$
+
+for every $n < \infty$. That is, the Wald interval has actual coverage going to zero as $p$ approaches the boundary. **Proof sketch.** As $p \to 0^+$, the probability that $X = 0$ in all $n$ draws is $(1-p)^n \to 1$; conditional on $X = 0$, $\hat p_n = 0$ and the Wald CI is $[0, 0]$ — which does not contain any $p > 0$. The remaining events have probability $\to 0$. Formally provable via BRO2001's exact-coverage calculation for $p \downarrow 0$. ∎
+</TheoremBlock>
+
+<ExampleBlock number={12} title="Monte Carlo coverage at n ∈ {20, 100, 500}, BRO2001 Table 1">
+At $\alpha = 0.05$, for $p$ varying over a fine grid:
+
+| $(n, p)$ | Wald | Wilson | Clopper–Pearson |
+|---|---|---|---|
+| $(20, 0.05)$ | $0.368$ (under) | $0.921$ (under slightly) | $0.990$ (conservative) |
+| $(20, 0.10)$ | $0.878$ (under) | $0.961$ (good) | $0.997$ (conservative) |
+| $(20, 0.50)$ | $0.952$ (good) | $0.959$ (good) | $0.988$ (conservative) |
+| $(100, 0.05)$ | $0.873$ (under) | $0.936$ (under slightly) | $0.972$ (conservative) |
+| $(500, 0.05)$ | $0.941$ (near) | $0.952$ (good) | $0.959$ (near) |
+
+Source: BRO2001 Table 1, extended to $n = 500$. The pattern: Wald under-covers across small $n$ and small $p$; Wilson oscillates around nominal with small amplitude; Clopper–Pearson is always at or above nominal but often notably so. Numerical reproduction via `actualCoverageBinomial` in the testing harness (test 19D).
+</ExampleBlock>
+
+<RemarkBlock number={16} title="Anti-conservative vs conservative — why both are bad">
+Three coverage failure modes, three implications:
+
+- **Anti-conservative (actual < nominal).** Your 95% CI covers less than 95% of the time. Inferences drawn from it are over-confident — reject the null too often (size inflation); treat confidence bands as narrower than they actually are. Worst case for hypothesis testing, because false positives are expensive.
+
+- **Conservative (actual > nominal).** Your 95% CI covers *more* than 95% of the time. Inferences are under-powered — fail to reject when the effect is real (power loss); present intervals wider than necessary. Bad for A/B test throughput; OK for regulatory submissions where guaranteed coverage matters more than efficiency.
+
+- **Correct (actual ≈ nominal).** Gold standard; what asymptotic theory promises.
+
+Wald's failure mode is anti-conservative (undersizing), which is the worse failure for testing applications. Clopper–Pearson's conservatism is the "safe" failure — it costs power but doesn't inflate Type I error. Wilson threads the needle by oscillating around nominal with small amplitude.
+</RemarkBlock>
+
+<RemarkBlock number={17} title="Coverage as a misspecification tool">
+Running a coverage simulation — generate many samples from a known model, apply your CI procedure, count coverage — is the quickest diagnostic for whether your asymptotic theory is accurate at your actual $n$. If the simulated coverage is far from nominal, something is wrong: the sample size is too small for asymptotic validity, the parametric model is misspecified, or the CI procedure doesn't match the data-generating process. Each of these has a different fix, but all start by seeing that coverage is wrong. In practice, running a coverage simulation on your specific setup before trusting the default CI is cheap and often illuminating — especially for GLMs at small cell counts or for hierarchical models where nominal coverage can be off by $5-10\%$.
+</RemarkBlock>
+
+---
+
+## 19.9 One-Sided CIs and TOST Equivalence Testing
+
+The CIs so far have been two-sided — sets $[L(X), U(X)]$ bounded on both sides. Two variants matter in practice. **One-sided CIs** bound the parameter only from above (or only from below) — useful when you care about a worst-case guarantee on one side (toxicity rate, contamination level). **TOST** (two one-sided tests) flips the question: rather than testing "is $\theta$ equal to $\theta_0$?" it tests "is $\theta$ *equivalent* to $\theta_0$ to within margin $\delta$?" TOST is the FDA-standard framework for bioequivalence trials.
+
+![TOST geometry. Left: conventional test of H₀: μ = 0 with a 95% z-CI. Failing to reject H₀ does NOT establish equivalence — wide CIs can fail to reject everything. Right: TOST framing. Two one-sided tests of H₀^L: μ ≤ −δ and H₀^U: μ ≥ +δ at level α each. Equivalence is established iff the (1 − 2α) = 90% two-sided CI fits entirely inside the equivalence region [−δ, +δ]. FDA bioequivalence: ±δ = log 1.25 on log-ratio scale (the "80/125 rule").](/images/topics/confidence-intervals-and-duality/19-tost-preview.png)
+
+<DefinitionBlock number={9} title="One-sided confidence interval">
+A **one-sided upper-bound confidence interval** for $\theta$ at level $1-\alpha$ is a data-measurable $U(X)$ satisfying $P_\theta(\theta \le U(X)) \ge 1 - \alpha$ for every $\theta$. Equivalent to inverting a right-tailed level-$\alpha$ test of $H_0: \theta = \theta_0$ vs $H_1: \theta < \theta_0$. A **one-sided lower-bound CI** is defined symmetrically with $L(X)$ satisfying $P_\theta(\theta \ge L(X)) \ge 1 - \alpha$.
+
+Geometrically: $(-\infty, U(X)]$ or $[L(X), \infty)$ as the confidence region. One-sided CIs use $z_\alpha$ (the upper-$\alpha$ quantile), not $z_{\alpha/2}$ — all the "missing" coverage goes on the bounded side.
+</DefinitionBlock>
+
+<TheoremBlock number={7} title="TOST equivalence procedure">
+Fix $\theta_0$ and an equivalence margin $\delta > 0$. The non-equivalence null is $H_0: |\theta - \theta_0| \ge \delta$; the equivalence alternative is $H_1: |\theta - \theta_0| < \delta$. The **Two One-Sided Tests** (TOST) procedure rejects $H_0$ iff both
+
+$$\varphi^L = \mathbf{1}\{\text{reject } H_0^L: \theta \le \theta_0 - \delta \text{ at level } \alpha\}, \qquad \varphi^U = \mathbf{1}\{\text{reject } H_0^U: \theta \ge \theta_0 + \delta \text{ at level } \alpha\}$$
+
+reject, i.e. $\varphi^L = \varphi^U = 1$. TOST rejects the non-equivalence null iff the conventional $(1 - 2\alpha)$ two-sided confidence interval for $\theta$ is contained entirely within $[\theta_0 - \delta, \theta_0 + \delta]$.
+
+**Level $\alpha$.** Each of the two one-sided tests has size $\le \alpha$; the intersection has size at most $\alpha$ under any single point in $H_0$. **Attribution:** <ExternalLink href="https://doi.org/10.1007/BF01068419">Schuirmann (1987)</ExternalLink>, the foundational paper introducing the two-tests-inversion framework for FDA bioequivalence.
+</TheoremBlock>
+
+<ExampleBlock number={13} title="One-sided upper bound on a toxicity rate">
+A Phase I safety trial in 50 patients observes 2 serious adverse events ($\hat p = 0.04$). Regulatory requirement: a one-sided upper 97.5% bound on the true AE rate. Using the Wilson construction inverted to one-sided:
+
+$$p_U = \frac{\hat p + z^2/(2n) + z\sqrt{\hat p(1-\hat p)/n + z^2/(4n^2)}}{1 + z^2/n} \approx 0.137,$$
+
+with $z = z_{0.025} = 1.96$ and $n = 50$. Interpretation: we can conclude with 97.5% confidence that the true AE rate is at most $13.7\%$. The report does not mention a lower bound because the regulator doesn't care — only the worst case matters for safety.
+</ExampleBlock>
+
+<ExampleBlock number={14} title="FDA bioequivalence — the 80/125 rule">
+A generic drug is "bioequivalent" to the reference if the ratio of mean drug concentrations (test / reference) is between $0.80$ and $1.25$. On the log scale, this is $\pm \log(1.25) = \pm 0.2231$. A bioequivalence trial measures $\log(\text{test} / \text{reference}) = \mu$ with $n = 24$ paired subjects, observing $\hat\mu = 0.05$, $S = 0.18$, so $\text{SE}(\hat\mu) = 0.0367$. TOST at $\alpha = 0.05$:
+
+- $H_0^L: \mu \le -0.2231$ rejected iff $\hat\mu - (-0.2231) > t_{23, 0.05} \cdot \text{SE}$: $0.2731 > 1.714 \cdot 0.0367 = 0.0630$ — rejected.
+- $H_0^U: \mu \ge 0.2231$ rejected iff $0.2231 - \hat\mu > t_{23, 0.05} \cdot \text{SE}$: $0.1731 > 0.0630$ — rejected.
+
+Both rejected $\Rightarrow$ equivalence established. Equivalently, the 90% ($= 1 - 2\alpha$) CI for $\mu$ is $\hat\mu \pm t_{23, 0.05} \cdot \text{SE} = [-0.013, 0.113]$, which fits inside $[-0.2231, 0.2231]$. Both formulations agree.
+</ExampleBlock>
+
+<RemarkBlock number={18} title="Noninferiority vs equivalence">
+Three related frameworks with similar arithmetic but different stakes:
+
+- **Equivalence** (TOST above). Reject non-equivalence iff $[L, U] \subset [\theta_0 - \delta, \theta_0 + \delta]$. Symmetric.
+
+- **Noninferiority.** One-sided: reject non-inferiority iff the upper (or lower) bound of the CI is below (or above) the threshold. Used when the question is "is the new treatment *at worst* only $\delta$ worse than the reference?" — a weaker claim than equivalence.
+
+- **Superiority.** Classical test: reject null iff the CI excludes $\theta_0$. The default when you want to show the new treatment is *better*, not just equivalent or noninferior.
+
+Confusing the three is common; each is a different level-$\alpha$ claim. FDA's preferred default for generics is bioequivalence (TOST); for biosimilars and branded-drug effectiveness claims, noninferiority and superiority trials are standard — and the TOST framework generalizes to all three by choice of which tail(s) to test.
+</RemarkBlock>
+
+---
+
+## 19.10 Limitations and Forward Look
+
+Topic 19 built the frequentist confidence-interval framework for scalar $\theta$. Four directions for deeper study, all deferred to specific later topics or tracks.
+
+![Topic 19's forward connections. Central: test-CI duality (Theorem 1). Outward arrows to Track 6 (regression CIs via Wald/LRT on GLM coefficients), Track 7 (Bayesian credible intervals — different semantics, same numerics under flat priors), Track 8 (bootstrap CIs — distribution-free extension), and Topic 20 (simultaneous CIs with FWER/FDR control). Backward arrow: Topic 18 §18.10 Rem 22 — the organizing-principle remark that Topic 19 fulfilled.](/images/topics/confidence-intervals-and-duality/19-forward-map.png)
+
+<RemarkBlock number={19} title="Scope boundary — what Topic 19 did not cover">
+Six topics stated in pointers, none proved in Topic 19.
+
+1. **Bootstrap CIs.** Percentile, BCa, and studentized bootstrap intervals are the nonparametric analog of the pivotal-CI machinery of §19.3. Track 8 develops the theory — Efron 1979, Efron & Tibshirani 1993, Hall 1992 — with the key asymptotic correctness result (Hall's second-order accuracy for BCa) as the anchor.
+
+2. **Bayesian credible intervals.** Track 7's territory. HPD (highest-posterior-density) intervals, posterior-probability bands, Lindley's paradox. Rem 3 of §19.1 sets the frequentist/Bayesian contrast; the full Bayesian theory is Track 7.
+
+3. **Simultaneous CIs, confidence ellipsoids, Hotelling's $T^2$.** Vector-$\theta$ and multiple-parameter confidence regions require test-family inversion with FWER control (Bonferroni, Scheffé, Tukey, Working–Hotelling). LEH2005 Ch. 7 and Ch. 8 are the canonical references; Topic 20 handles the multiple-testing side, which covers simultaneous CIs as a byproduct.
+
+4. **Fieller's theorem, ratio CIs.** The CI for a ratio $\mu_1/\mu_2$ of Normal means requires Fieller 1954's machinery — the "confidence set" can be unbounded, disconnected, or empty depending on the sign of the denominator. Niche but important in some drug-discovery contexts; LEH2005 §9.2 has the derivation.
+
+5. **Permutation-based CIs.** Invert permutation tests to get distribution-free CIs for location, scale, and dispersion parameters. Fisher's original exact test framework, extended by Romano 1989. Track 8.
+
+6. **Sequential CIs and confidence sequences.** Modern always-valid inference: intervals that remain valid under optional stopping. <ExternalLink href="https://arxiv.org/abs/2103.06476">Howard, Ramdas, McAuliffe, and Sekhon (2021)</ExternalLink> and contemporaneous A/B-testing platform literature (Optimizely, LinkedIn, AirBnB) — critical for modern online experimentation. Not covered; formalml.com/ab-testing-platforms gives the production angle.
+</RemarkBlock>
+
+<RemarkBlock number={20} title="Bootstrap — the nonparametric extension">
+The bootstrap (<ExternalLink href="https://doi.org/10.1214/aos/1176344552">Efron 1979</ExternalLink>) replaces the assumption of a known parametric family with resampling-with-replacement from the empirical distribution. The **percentile** bootstrap CI is the $(\alpha/2, 1 - \alpha/2)$ quantiles of the bootstrap distribution of the statistic; the **BCa** (bias-corrected accelerated) bootstrap corrects for first-order bias and skewness. Under regularity BCa achieves second-order accuracy — coverage error $O(n^{-1})$ vs percentile's $O(n^{-1/2})$. Track 8 develops the full theory, including the conditions under which the bootstrap fails (sample extrema, non-regular estimands). The key modern application: deriving confidence intervals for ML model performance metrics (test accuracy, ROC AUC, precision at $k$) without assuming a specific distributional form.
+</RemarkBlock>
+
+<RemarkBlock number={21} title="Bayesian credible intervals — different question, related answer">
+A $(1-\alpha)$ Bayesian credible interval is a set $C$ with posterior probability $\pi(\theta \in C \mid X) = 1 - \alpha$. For Normal data with known variance and a flat improper prior, the credible interval coincides numerically with the z-CI — same endpoints, different interpretation. For skewed posteriors (Beta, Gamma, mixture) the credible interval and the frequentist CI diverge: the credible interval can be asymmetric in ways the frequentist CI cannot capture unless explicitly constructed (e.g., LRT CIs are asymmetric too). Track 7 develops the theory; the key takeaways for Topic 19 are (1) frequentist coverage $\ne$ Bayesian credibility in general, (2) the two coincide under specific prior choices, and (3) frequentist guarantees are *over data*, Bayesian guarantees are *over parameter*. Different questions, compatible answers under compatibility conditions.
+</RemarkBlock>
+
+<RemarkBlock number={22} title="Cheat sheet — CI choice by situation">
+
+| Situation | Choice | Rationale |
+|---|---|---|
+| Normal mean, $\sigma$ known | z-CI (§19.3 Ex 3) | Exact pivot |
+| Normal mean, $\sigma$ unknown | t-CI (§19.3 Ex 3) | Exact pivot via Basu |
+| Normal variance | χ²-CI (§19.3 Ex 4) | Exact pivot, asymmetric |
+| Binomial proportion, not near boundary | Wilson (§19.5) | Asymptotic, stays in $[0, 1]$ |
+| Binomial proportion, rare event | Wilson or Clopper–Pearson | Wilson default; CP if strict coverage |
+| Binomial proportion, regulatory | Clopper–Pearson (§19.6) | Exact conservative |
+| Binomial, quick hand calculation | Agresti–Coull plus-4 (Rem 9) | Approximates Wilson |
+| Poisson rate | Wald or Score (§19.4) | Asymptotic; Wilson analog works |
+| GLM coefficient | Profile likelihood (§19.7) | Reparameterization invariant |
+| GLM coefficient, large model | Wald (§19.4) | Speed — refit cost of profile |
+| One-sided bound on risk / rate | One-sided Wilson (§19.9) | Worst-case guarantee |
+| Bioequivalence / noninferiority | TOST (§19.9) | FDA standard |
+| Nonparametric, distribution unknown | Bootstrap (Track 8) | No parametric assumption |
+| Posterior-probability claim needed | Bayesian credible (Track 7) | Different framework |
+
+Default: **Wilson for binomial, profile-LRT for GLM coefficients, t-CI for Normal mean, bootstrap BCa for everything else.**
+</RemarkBlock>
+
+<RemarkBlock number={23} title="Track 5 closing — where this framework lives in ML">
+Topic 17 built the framework; Topic 18 delivered optimality; Topic 19 is the CI dual. Topic 20 closes the track with multiple testing — every technique of Topics 17–19 applied to many hypotheses simultaneously with FWER/FDR control.
+
+Beyond Track 5, the framework continues to matter. **Track 6 (Regression).** Every GLM coefficient CI is a Wald or LRT CI of §19.4; the F-test for linear regression is Wilks. **Track 7 (Bayesian).** The contrast with frequentist coverage is where Bayesian inference earns its keep. **Track 8 (Nonparametric).** Bootstrap CIs are the distribution-free extension; permutation tests invert to distribution-free CIs.
+
+On <ExternalLink href="https://formalml.com">formalml.com</ExternalLink>: A/B test confidence intervals on conversion rates use Wilson by default; always-valid confidence sequences extend the framework to sequential monitoring; conformal prediction extends it to distribution-free predictive intervals; causal-inference packages (`DoubleML`, `causalml`) report sandwich-Wald CIs on treatment effects; PAC-Bayes generalization bounds are uniform confidence statements on the hypothesis class. The test-CI duality of §19.2 is the statistical grammar underlying all of it — one theorem, a hundred specializations, one pedagogical frame.
+</RemarkBlock>
+
+---
+
+### References
+
+1. Wilson, Edwin B. (1927). [*Probable Inference, the Law of Succession, and Statistical Inference*](https://doi.org/10.1080/01621459.1927.10502953). *Journal of the American Statistical Association*, 22(158), 209–212.
+
+2. Clopper, Charles J., and Egon S. Pearson. (1934). [*The Use of Confidence or Fiducial Limits Illustrated in the Case of the Binomial*](https://doi.org/10.1093/biomet/26.4.404). *Biometrika*, 26(4), 404–413.
+
+3. Neyman, Jerzy. (1937). [*Outline of a Theory of Statistical Estimation Based on the Classical Theory of Probability*](https://doi.org/10.1098/rsta.1937.0005). *Philosophical Transactions of the Royal Society A*, 236(767), 333–380.
+
+4. Wilks, Samuel S. (1938). [*The Large-Sample Distribution of the Likelihood Ratio for Testing Composite Hypotheses*](https://doi.org/10.1214/aoms/1177732360). *Annals of Mathematical Statistics*, 9(1), 60–62.
+
+5. Rao, C. Radhakrishna. (1948). [*Large Sample Tests of Statistical Hypotheses Concerning Several Parameters with Applications to Problems of Estimation*](https://doi.org/10.1017/S0305004100023987). *Mathematical Proceedings of the Cambridge Philosophical Society*, 44(1), 50–57.
+
+6. Schuirmann, Donald J. (1987). [*A Comparison of the Two One-Sided Tests Procedure and the Power Approach for Assessing the Equivalence of Average Bioavailability*](https://doi.org/10.1007/BF01068419). *Journal of Pharmacokinetics and Biopharmaceutics*, 15(6), 657–680.
+
+7. Agresti, Alan, and Brent A. Coull. (1998). [*Approximate Is Better than 'Exact' for Interval Estimation of Binomial Proportions*](https://doi.org/10.1080/00031305.1998.10480550). *The American Statistician*, 52(2), 119–126.
+
+8. Brown, Lawrence D., T. Tony Cai, and Anirban DasGupta. (2001). [*Interval Estimation for a Binomial Proportion*](https://doi.org/10.1214/ss/1009213286). *Statistical Science*, 16(2), 101–133.
+
+9. Casella, George, and Roger L. Berger. (2002). [*Statistical Inference*](https://www.cengage.com/c/statistical-inference-2e-casella/) (2nd ed.). Pacific Grove, CA: Duxbury.
+
+10. Lehmann, Erich L., and Joseph P. Romano. (2005). [*Testing Statistical Hypotheses*](https://doi.org/10.1007/0-387-27605-X) (3rd ed.). Springer Texts in Statistics. New York: Springer.

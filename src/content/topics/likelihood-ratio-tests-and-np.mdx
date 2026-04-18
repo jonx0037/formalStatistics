@@ -482,7 +482,7 @@ When there are nuisance parameters, the restricted MLE $\tilde\theta_n$ in $\Lam
 $$
 L_P(\theta) = \sup_{\psi} L(\theta, \psi),
 $$
-a marginal likelihood in $\theta$ alone. Profile likelihood is a CI-construction tool first (Topic 19) and a testing artefact second; §18.6 Example 11 treats the Bernoulli case (no nuisance) directly, and §18.9's local-power argument likewise handles the scalar-$\theta$ case. For a full treatment of profile, integrated, and conditional likelihoods, see [Topic 19](/topics/confidence-intervals) (forthcoming) and the Reid-Fraser approach in the nonparametric Bayesian literature.
+a marginal likelihood in $\theta$ alone. Profile likelihood is a CI-construction tool first (Topic 19) and a testing artefact second; §18.6 Example 11 treats the Bernoulli case (no nuisance) directly, and §18.9's local-power argument likewise handles the scalar-$\theta$ case. For a full treatment of profile, integrated, and conditional likelihoods, see [Topic 19](/topics/confidence-intervals-and-duality#section-19-7) and the Reid-Fraser approach in the nonparametric Bayesian literature.
 </RemarkBlock>
 
 <RemarkBlock number={11} title="LRT as the general-purpose optimality substitute">
@@ -706,7 +706,7 @@ Note: results replicate with `wilksSimulate('bernoulli', 0.3, 20, 10000, undefin
 </ExampleBlock>
 
 <RemarkBlock number={16} title="Wald's boundary pathology">
-The Wald statistic $W_n = n(\hat\theta_n - \theta_0)^2 I(\hat\theta_n)$ breaks down when $\hat\theta_n$ lies near the parameter boundary: $I(\hat\theta_n) \to \infty$ (for Bernoulli at $\hat p = 0$ or $1$, $I = 1/[\hat p(1-\hat p)] \to \infty$), which can produce $W_n = 0 \cdot \infty$ or degenerate behavior. The Score statistic evaluates $I(\theta_0)$ at a boundary-safe null value and usually remains finite; the LRT uses the logarithm, which is well-behaved on $(0, 1)$ except at the endpoints themselves. For A/B tests with rare-event outcomes (conversion rates of 0.1% or smaller), the Wald test's boundary fragility motivates the Wilson interval in Topic 19 and the log-odds-ratio approach that modern experimentation platforms increasingly use.
+The Wald statistic $W_n = n(\hat\theta_n - \theta_0)^2 I(\hat\theta_n)$ breaks down when $\hat\theta_n$ lies near the parameter boundary: $I(\hat\theta_n) \to \infty$ (for Bernoulli at $\hat p = 0$ or $1$, $I = 1/[\hat p(1-\hat p)] \to \infty$), which can produce $W_n = 0 \cdot \infty$ or degenerate behavior. The Score statistic evaluates $I(\theta_0)$ at a boundary-safe null value and usually remains finite; the LRT uses the logarithm, which is well-behaved on $(0, 1)$ except at the endpoints themselves. For A/B tests with rare-event outcomes (conversion rates of 0.1% or smaller), the Wald test's boundary fragility motivates the [Wilson interval in Topic 19](/topics/confidence-intervals-and-duality#section-19-5) and the log-odds-ratio approach that modern experimentation platforms increasingly use.
 </RemarkBlock>
 
 <RemarkBlock number={17} title="GLM link choice is a reparameterization invariance question">
@@ -783,7 +783,7 @@ Four major topics in classical testing optimality were stated but not proved in 
 </RemarkBlock>
 
 <RemarkBlock number={22} title="CI duality preview — Topic 19">
-Every family of level-$\alpha$ tests indexed by the null value $\theta_0$ defines a $(1-\alpha)$-confidence set: the set of $\theta_0$ values the test does not reject. Conversely, every confidence procedure defines a family of hypothesis tests. This **test-CI duality** is the organizing principle of [Topic 19 (forthcoming)](/topics/confidence-intervals). The LRT gives **likelihood-ratio confidence intervals** — invariant under reparameterization, exact in the Normal case, and the practical default for GLM coefficients. The Wald-inversion CI is the simplest but suffers the boundary pathology of §18.8 Remark 16. Topic 19 treats all three constructions in parallel, with explicit coverage calibration.
+Every family of level-$\alpha$ tests indexed by the null value $\theta_0$ defines a $(1-\alpha)$-confidence set: the set of $\theta_0$ values the test does not reject. Conversely, every confidence procedure defines a family of hypothesis tests. This **test-CI duality** is the organizing principle of [Topic 19](/topics/confidence-intervals-and-duality). The LRT gives **likelihood-ratio confidence intervals** — invariant under reparameterization, exact in the Normal case, and the practical default for GLM coefficients. The Wald-inversion CI is the simplest but suffers the boundary pathology of §18.8 Remark 16. Topic 19 treats all three constructions in parallel, with explicit coverage calibration.
 </RemarkBlock>
 
 <RemarkBlock number={23} title="Multiple testing preview — Topic 20">

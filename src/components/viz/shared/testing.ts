@@ -1317,3 +1317,784 @@ export function localPower(
   const crit = chiSquaredInvCDF(1 - alpha, 1);
   return 1 - nonCentralChiSquaredCDF(crit, 1, nonCentrality);
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TOPIC 19 EXTENSIONS — Confidence Intervals & Duality
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// CI construction layer: pivotal (z, t, χ², F), asymptotic (Wald, Score, LRT),
+// binomial-specific (Wilson, Agresti-Coull, Clopper-Pearson), profile
+// likelihood, TOST equivalence, and a coverage simulator. Every CI function
+// either exploits test-CI duality directly — inverting one of the Topic 17–18
+// test statistics — or constructs a pivotal quantity in closed form.
+
+// ── F distribution ──────────────────────────────────────────────────────────
+
+/** Snedecor's F density f(x; d1, d2). */
+export function fPDF(x: number, df1: number, df2: number): number {
+  if (x <= 0 || df1 <= 0 || df2 <= 0) return 0;
+  const a = df1 / 2;
+  const b = df2 / 2;
+  const logC = lnGamma(a + b) - lnGamma(a) - lnGamma(b)
+    + a * Math.log(df1) - a * Math.log(df2);
+  return Math.exp(logC + (a - 1) * Math.log(x) - (a + b) * Math.log(1 + (df1 * x) / df2));
+}
+
+/** Snedecor's F CDF via I_{d1 x/(d1 x + d2)}(d1/2, d2/2). */
+export function fCDF(x: number, df1: number, df2: number): number {
+  if (x <= 0) return 0;
+  const z = (df1 * x) / (df1 * x + df2);
+  return regBetaI(z, df1 / 2, df2 / 2);
+}
+
+/**
+ * F inverse CDF via bisection on fCDF. The F range is [0, ∞); we bracket by
+ * doubling until fCDF exceeds p, then bisect. Tolerance 1e-10.
+ */
+export function fInvCDF(p: number, df1: number, df2: number): number {
+  if (p <= 0) return 0;
+  if (p >= 1) return Infinity;
+  // Bracket: start at the mode area, double upward.
+  let lo = 0;
+  let hi = 2;
+  while (fCDF(hi, df1, df2) < p) {
+    lo = hi;
+    hi *= 2;
+    if (hi > 1e12) return hi;
+  }
+  for (let i = 0; i < 80; i++) {
+    const mid = 0.5 * (lo + hi);
+    if (fCDF(mid, df1, df2) < p) lo = mid;
+    else hi = mid;
+    if (hi - lo < 1e-12 * Math.max(1, Math.abs(hi))) break;
+  }
+  return 0.5 * (lo + hi);
+}
+
+// ── Beta inverse CDF (powers Clopper–Pearson) ──────────────────────────────
+
+/**
+ * Inverse of regularized incomplete beta: returns x ∈ [0, 1] such that
+ * I_x(a, b) = p. Uses bisection for numerical robustness — the Beta CDF is
+ * monotone and well-behaved on (0, 1), and bisection converges to 1e-12 in
+ * 50 iterations without the failure modes Newton can hit near the endpoints.
+ *
+ * Boundary behavior: returns 0 for p ≤ 0 and 1 for p ≥ 1. This is exact for
+ * the degenerate cases and matches scipy's `beta.ppf` at the tolerance.
+ */
+export function betaInvCDF(p: number, a: number, b: number): number {
+  if (p <= 0) return 0;
+  if (p >= 1) return 1;
+  let lo = 0;
+  let hi = 1;
+  for (let i = 0; i < 80; i++) {
+    const mid = 0.5 * (lo + hi);
+    if (regBetaI(mid, a, b) < p) lo = mid;
+    else hi = mid;
+    if (hi - lo < 1e-12) break;
+  }
+  return 0.5 * (lo + hi);
+}
+
+// ── Shared CI types ─────────────────────────────────────────────────────────
+
+/** Standard CI result shape, used for all CI procedures. */
+export interface ConfidenceInterval {
+  lower: number;
+  upper: number;
+  alpha: number;
+  procedure: string;
+}
+
+/** Minimal CI endpoint pair — the return type most functions use. */
+export interface CIEndpoints {
+  lower: number;
+  upper: number;
+}
+
+// ── Pivotal confidence intervals (§19.3, exact small-sample) ────────────────
+
+/** z-CI for Normal mean, σ known: x̄ ± z_{α/2} σ / √n. */
+export function zCINormalMean(
+  data: number[],
+  sigmaKnown: number,
+  alpha: number,
+): CIEndpoints {
+  const n = data.length;
+  const mean = sampleMean(data);
+  const z = standardNormalInvCDF(1 - alpha / 2);
+  const half = (z * sigmaKnown) / Math.sqrt(n);
+  return { lower: mean - half, upper: mean + half };
+}
+
+/** t-CI for Normal mean, σ unknown: x̄ ± t_{n-1, α/2} S / √n. */
+export function tCINormalMean(data: number[], alpha: number): CIEndpoints {
+  const n = data.length;
+  const mean = sampleMean(data);
+  const s = Math.sqrt(sampleVarUnbiased(data));
+  const tq = studentTInvCDF(1 - alpha / 2, n - 1);
+  const half = (tq * s) / Math.sqrt(n);
+  return { lower: mean - half, upper: mean + half };
+}
+
+/**
+ * χ²-CI for Normal variance σ² (μ unknown):
+ *   [(n-1) S² / χ²_{n-1, 1-α/2}, (n-1) S² / χ²_{n-1, α/2}].
+ * The pivot is W = (n-1) S² / σ² ∼ χ²_{n-1}; inverting the event
+ * {χ²_{α/2} ≤ W ≤ χ²_{1-α/2}} gives the stated bounds.
+ */
+export function chiSquaredCINormalVariance(
+  data: number[],
+  alpha: number,
+): CIEndpoints {
+  const n = data.length;
+  const s2 = sampleVarUnbiased(data);
+  const qLo = chiSquaredInvCDF(alpha / 2, n - 1);
+  const qHi = chiSquaredInvCDF(1 - alpha / 2, n - 1);
+  return { lower: ((n - 1) * s2) / qHi, upper: ((n - 1) * s2) / qLo };
+}
+
+/**
+ * F-CI for ratio of Normal variances σ²₁ / σ²₂ (two independent samples).
+ * Pivot F = (S²₁/σ²₁) / (S²₂/σ²₂) ∼ F_{n1-1, n2-1}; inverting gives
+ *   [(S²₁/S²₂) / F_{α/2 upper}, (S²₁/S²₂) · F_{α/2 upper reversed df}]
+ * — stated here with the symmetric quantile convention F_{d1,d2,α/2} being
+ * the upper-α/2 quantile.
+ */
+export function fCIVarianceRatio(
+  data1: number[],
+  data2: number[],
+  alpha: number,
+): CIEndpoints {
+  const n1 = data1.length;
+  const n2 = data2.length;
+  const s1 = sampleVarUnbiased(data1);
+  const s2 = sampleVarUnbiased(data2);
+  const ratio = s1 / s2;
+  const fLo = fInvCDF(alpha / 2, n1 - 1, n2 - 1);
+  const fHi = fInvCDF(1 - alpha / 2, n1 - 1, n2 - 1);
+  return { lower: ratio / fHi, upper: ratio / fLo };
+}
+
+// ── Asymptotic CIs: Wald, Score, LRT (§19.4) ────────────────────────────────
+//
+// All three are test-inversion CIs. Wald inverts the Wald statistic (evaluated
+// at θ̂), Score inverts the Score statistic (evaluated at θ₀), and LRT inverts
+// −2 log Λₙ(θ₀). For simple families all three have closed-form or tractable
+// rootfind; complicated cases fall back to bracketed bisection.
+
+/** Clamp a scalar to the parameter space of a family. */
+function clampToParameterSpace(
+  family: AsymptoticTestFamily | 'normal-variance',
+  value: number,
+): number {
+  if (family === 'bernoulli') return Math.max(0, Math.min(1, value));
+  if (family === 'poisson' || family === 'exponential') return Math.max(0, value);
+  if (family === 'normal-variance') return Math.max(0, value);
+  return value;
+}
+
+/**
+ * Wald CI: θ̂ ± z_{α/2} / √(n I(θ̂)). Closed form for every supported family.
+ *
+ * Notes:
+ *  - `bernoulli`: θ̂ ± z √(p̂(1-p̂)/n) — the symmetric interval that motivates
+ *    Wilson's boundary fix (§19.5).
+ *  - `normal-mean-known-sigma`: coincides with the z-CI of §19.3.
+ *  - `normal-mean`: x̄ ± z S/√n — the asymptotic analog of the t-CI.
+ *  - `normal-variance` (μ estimated by x̄): σ̂² ± z σ̂² √(2/n) using the
+ *    variance-MLE standard error.
+ *  - `poisson`: λ̂ ± z √(λ̂ / n).
+ *  - `exponential`: λ̂ ± z λ̂ / √n, where λ̂ = 1 / x̄.
+ *
+ * Results are clamped to the parameter space; callers needing the raw
+ * unclamped endpoints can compute them directly from the formulas above.
+ */
+export function waldCI(
+  family: AsymptoticTestFamily | 'normal-variance',
+  data: number[],
+  alpha: number,
+  knownParam?: number,
+): CIEndpoints {
+  const n = data.length;
+  const mean = sampleMean(data);
+  const z = standardNormalInvCDF(1 - alpha / 2);
+  if (family === 'bernoulli') {
+    const p = mean;
+    const se = Math.sqrt((p * (1 - p)) / n);
+    return {
+      lower: clampToParameterSpace('bernoulli', p - z * se),
+      upper: clampToParameterSpace('bernoulli', p + z * se),
+    };
+  }
+  if (family === 'normal-mean-known-sigma') {
+    if (knownParam === undefined) {
+      throw new Error('normal-mean-known-sigma requires knownParam (σ)');
+    }
+    const half = (z * knownParam) / Math.sqrt(n);
+    return { lower: mean - half, upper: mean + half };
+  }
+  if (family === 'normal-mean') {
+    const s = Math.sqrt(sampleVarUnbiased(data));
+    const half = (z * s) / Math.sqrt(n);
+    return { lower: mean - half, upper: mean + half };
+  }
+  if (family === 'normal-variance') {
+    const s2 = sampleVarMLE(data);
+    const half = z * s2 * Math.sqrt(2 / n);
+    return {
+      lower: clampToParameterSpace('normal-variance', s2 - half),
+      upper: s2 + half,
+    };
+  }
+  if (family === 'poisson') {
+    const se = Math.sqrt(mean / n);
+    return {
+      lower: clampToParameterSpace('poisson', mean - z * se),
+      upper: mean + z * se,
+    };
+  }
+  if (family === 'exponential') {
+    if (mean <= 0) throw new Error('exponential Wald CI needs positive sample mean');
+    const lamHat = 1 / mean;
+    const se = lamHat / Math.sqrt(n);
+    return {
+      lower: clampToParameterSpace('exponential', lamHat - z * se),
+      upper: lamHat + z * se,
+    };
+  }
+  throw new Error(`Unknown family for waldCI: ${family}`);
+}
+
+/**
+ * Score CI: the set {θ₀ : S_n(θ₀) ≤ z²_{α/2}}, i.e. the inversion of the
+ * score (Rao) test. Closed form for Bernoulli (returns Wilson) and
+ * Poisson (quadratic in θ₀); numerical bisection elsewhere.
+ */
+export function scoreCI(
+  family: AsymptoticTestFamily,
+  data: number[],
+  alpha: number,
+  knownParam?: number,
+): CIEndpoints {
+  const n = data.length;
+  const mean = sampleMean(data);
+  const z = standardNormalInvCDF(1 - alpha / 2);
+  const z2 = z * z;
+  const crit = z2; // χ²_{1, 1-α}; since S_n is χ²_1-distributed, rejection iff S_n > z².
+
+  if (family === 'bernoulli') {
+    // Wilson form — see wilsonInterval; repeat here rather than recurse so
+    // the function can be imported standalone.
+    const p = mean;
+    const denom = 1 + z2 / n;
+    const center = (p + z2 / (2 * n)) / denom;
+    const half = (z * Math.sqrt((p * (1 - p)) / n + z2 / (4 * n * n))) / denom;
+    return {
+      lower: Math.max(0, center - half),
+      upper: Math.min(1, center + half),
+    };
+  }
+  if (family === 'normal-mean-known-sigma') {
+    if (knownParam === undefined) {
+      throw new Error('normal-mean-known-sigma requires knownParam (σ)');
+    }
+    const half = (z * knownParam) / Math.sqrt(n);
+    return { lower: mean - half, upper: mean + half };
+  }
+  if (family === 'poisson') {
+    // S_n(λ) = n(x̄ − λ)² / λ ≤ z²  ⇔  λ² − (2x̄ + z²/n)λ + x̄² ≤ 0.
+    // Roots of A λ² + B λ + C = 0 with A=1, B=−(2x̄ + z²/n), C=x̄².
+    const B = -(2 * mean + z2 / n);
+    const disc = B * B - 4 * mean * mean;
+    if (disc < 0) return { lower: Math.max(0, mean), upper: mean };
+    const rt = Math.sqrt(disc);
+    return {
+      lower: clampToParameterSpace('poisson', (-B - rt) / 2),
+      upper: (-B + rt) / 2,
+    };
+  }
+  // Numerical fallback: bracket and bisect on scoreStatistic.
+  return inverseStatisticCI(family, data, knownParam, crit, scoreStatistic);
+}
+
+/**
+ * LRT CI: the set {θ₀ : −2 log Λ_n(θ₀) ≤ χ²_{1, 1-α}}. Obtained by bracketed
+ * bisection on the LRT statistic as a function of θ₀; asymmetric around θ̂,
+ * honoring the log-likelihood curvature that Wald's quadratic approximation
+ * erases.
+ */
+export function lrtCI(
+  family: AsymptoticTestFamily,
+  data: number[],
+  alpha: number,
+  knownParam?: number,
+): CIEndpoints {
+  const crit = chiSquaredInvCDF(1 - alpha, 1);
+  return inverseStatisticCI(family, data, knownParam, crit, lrtStatistic);
+}
+
+/**
+ * Generic test-inversion CI: given a statistic T(θ₀) that is 0 at θ̂ and
+ * increases monotonically as θ₀ moves away from θ̂, find the two θ₀ values
+ * where T(θ₀) = critical value. Bracket on each side of θ̂, then bisect.
+ */
+function inverseStatisticCI(
+  family: AsymptoticTestFamily,
+  data: number[],
+  knownParam: number | undefined,
+  critical: number,
+  statistic: (
+    fam: AsymptoticTestFamily,
+    d: number[],
+    theta0: number,
+    k?: number,
+  ) => number,
+): CIEndpoints {
+  const n = data.length;
+  const mean = sampleMean(data);
+  const thetaHat = familyMLE(family, data, knownParam);
+
+  const f = (theta: number): number =>
+    statistic(family, data, theta, knownParam) - critical;
+
+  // Bracket left: search from θ̂ downward.
+  const lowerLimit = familyLowerBound(family);
+  let loLeft = thetaHat;
+  let hiLeft = thetaHat;
+  let stepLeft = Math.max(1e-4, Math.abs(thetaHat) * 0.01,
+                          Math.sqrt(sampleVarUnbiased(data) / n) * 0.5);
+  for (let i = 0; i < 80; i++) {
+    loLeft = Math.max(lowerLimit + 1e-12, hiLeft - stepLeft);
+    if (f(loLeft) > 0) break;
+    hiLeft = loLeft;
+    stepLeft *= 1.6;
+    if (loLeft === lowerLimit + 1e-12) break;
+  }
+
+  // Bracket right: search from θ̂ upward.
+  const upperLimit = familyUpperBound(family);
+  let loRight = thetaHat;
+  let hiRight = thetaHat;
+  let stepRight = Math.max(1e-4, Math.abs(thetaHat) * 0.01,
+                           Math.sqrt(sampleVarUnbiased(data) / n) * 0.5);
+  for (let i = 0; i < 80; i++) {
+    hiRight = Math.min(upperLimit - 1e-12, loRight + stepRight);
+    if (f(hiRight) > 0) break;
+    loRight = hiRight;
+    stepRight *= 1.6;
+    if (hiRight === upperLimit - 1e-12) break;
+  }
+
+  // `mean` and `n` are referenced above in the bracket-step initializers;
+  // kept in scope via the enclosing function closure but otherwise unused here.
+  void mean;
+  void n;
+
+  const lower = bisectRoot(f, loLeft, thetaHat, 60);
+  const upper = bisectRoot(f, thetaHat, hiRight, 60);
+  return {
+    lower: clampToParameterSpace(family, lower),
+    upper: clampToParameterSpace(family, upper),
+  };
+}
+
+function familyMLE(
+  family: AsymptoticTestFamily,
+  data: number[],
+  knownParam?: number,
+): number {
+  void knownParam;
+  const mean = sampleMean(data);
+  if (family === 'bernoulli') return mean;
+  if (family === 'normal-mean' || family === 'normal-mean-known-sigma') return mean;
+  if (family === 'poisson') return mean;
+  if (family === 'exponential') return 1 / mean;
+  throw new Error(`No MLE for family ${family}`);
+}
+
+function familyLowerBound(family: AsymptoticTestFamily): number {
+  if (family === 'bernoulli') return 0;
+  if (family === 'poisson' || family === 'exponential') return 0;
+  return -Infinity;
+}
+
+function familyUpperBound(family: AsymptoticTestFamily): number {
+  if (family === 'bernoulli') return 1;
+  return Infinity;
+}
+
+function bisectRoot(
+  f: (x: number) => number,
+  lo: number,
+  hi: number,
+  iters: number,
+): number {
+  let a = lo;
+  let b = hi;
+  const fa = f(a);
+  const fb = f(b);
+  if (fa * fb > 0) {
+    // Endpoints have same sign — no sign change. Return the endpoint with
+    // smaller |f| as a graceful degradation.
+    return Math.abs(fa) < Math.abs(fb) ? a : b;
+  }
+  for (let i = 0; i < iters; i++) {
+    const mid = 0.5 * (a + b);
+    const fm = f(mid);
+    if (fm === 0 || b - a < 1e-12 * Math.max(1, Math.abs(mid))) return mid;
+    if (fa * fm < 0) b = mid;
+    else a = mid;
+  }
+  return 0.5 * (a + b);
+}
+
+// ── Binomial-specific CIs: Wilson, Agresti-Coull, Clopper-Pearson (§19.5–6) ─
+
+/**
+ * Wilson interval for binomial p — the closed-form score-test inversion.
+ * Respects the parameter space [0, 1] by construction; at the boundary
+ * p̂ = 0 returns [0, z²/(n + z²)], at p̂ = 1 returns [n/(n + z²), 1]
+ * (both endpoints strictly interior).
+ */
+export function wilsonInterval(x: number, n: number, alpha: number): CIEndpoints {
+  const z = standardNormalInvCDF(1 - alpha / 2);
+  const z2 = z * z;
+  const pHat = x / n;
+  const denom = 1 + z2 / n;
+  const center = (pHat + z2 / (2 * n)) / denom;
+  const half = (z * Math.sqrt((pHat * (1 - pHat)) / n + z2 / (4 * n * n))) / denom;
+  return {
+    lower: Math.max(0, center - half),
+    upper: Math.min(1, center + half),
+  };
+}
+
+/**
+ * Agresti-Coull "plus-4" approximation to Wilson (AGR1998). Adds z²/2 ≈ 2
+ * successes and z²/2 failures to the observed counts, then applies Wald.
+ * Usually matches Wilson to within 0.01 and is easier to remember.
+ */
+export function agrestiCoullInterval(
+  x: number,
+  n: number,
+  alpha: number,
+): CIEndpoints {
+  const z = standardNormalInvCDF(1 - alpha / 2);
+  const z2 = z * z;
+  const nTilde = n + z2;
+  const pTilde = (x + z2 / 2) / nTilde;
+  const half = z * Math.sqrt((pTilde * (1 - pTilde)) / nTilde);
+  return {
+    lower: Math.max(0, pTilde - half),
+    upper: Math.min(1, pTilde + half),
+  };
+}
+
+/**
+ * Clopper–Pearson exact binomial CI via beta quantiles (CLO1934):
+ *   p_L = Beta^{-1}(α/2;     x,     n − x + 1),
+ *   p_U = Beta^{-1}(1 − α/2; x + 1, n − x).
+ * Boundary conventions (from the proof):
+ *   x = 0 ⇒ p_L = 0 and p_U = Beta^{-1}(1 − α/2; 1, n).
+ *   x = n ⇒ p_U = 1 and p_L = Beta^{-1}(α/2; n, 1).
+ * Exact (size ≤ α) but conservative on average (actual coverage > 1 − α).
+ */
+export function clopperPearsonInterval(
+  x: number,
+  n: number,
+  alpha: number,
+): CIEndpoints {
+  if (x === 0) {
+    return { lower: 0, upper: betaInvCDF(1 - alpha / 2, 1, n) };
+  }
+  if (x === n) {
+    return { lower: betaInvCDF(alpha / 2, n, 1), upper: 1 };
+  }
+  return {
+    lower: betaInvCDF(alpha / 2, x, n - x + 1),
+    upper: betaInvCDF(1 - alpha / 2, x + 1, n - x),
+  };
+}
+
+/**
+ * Generic exact CI for discrete one-parameter families via inversion of the
+ * exact two-sided test. Binomial uses the beta-quantile closed form (same as
+ * `clopperPearsonInterval`); Poisson uses the gamma-Poisson duality
+ *   P_θ(X ≥ k) = F_Γ(θ; k, 1)  ⇒  θ_L = Γ^{-1}(α/2; k, 1) / n,
+ * where Γ^{-1} is the inverse of the gamma CDF with shape k, rate 1.
+ */
+export function exactDiscreteCI(
+  family: 'binomial' | 'poisson',
+  observedStatistic: number,
+  sampleSize: number,
+  alpha: number,
+): CIEndpoints {
+  if (family === 'binomial') {
+    return clopperPearsonInterval(observedStatistic, sampleSize, alpha);
+  }
+  // Poisson: θ = λ, total count is ΣX_i ~ Poisson(nλ). Exact CI endpoints
+  // come from inverting the two-sided test via the gamma-Poisson duality.
+  const k = observedStatistic;
+  const n = sampleSize;
+  const lower = k === 0 ? 0 : gammaInvCDF(alpha / 2, k, 1) / n;
+  const upper = gammaInvCDF(1 - alpha / 2, k + 1, 1) / n;
+  return { lower, upper };
+}
+
+/** Inverse gamma CDF (shape a, rate 1) via bisection on regGammaP. */
+function gammaInvCDF(p: number, a: number, rate: number): number {
+  if (p <= 0) return 0;
+  if (p >= 1) return Infinity;
+  let lo = 0;
+  let hi = 2 * Math.max(1, a);
+  while (regGammaP(a, hi) < p) {
+    lo = hi;
+    hi *= 2;
+    if (hi > 1e14) return hi / rate;
+  }
+  for (let i = 0; i < 80; i++) {
+    const mid = 0.5 * (lo + hi);
+    if (regGammaP(a, mid) < p) lo = mid;
+    else hi = mid;
+    if (hi - lo < 1e-12 * Math.max(1, hi)) break;
+  }
+  return (0.5 * (lo + hi)) / rate;
+}
+
+// ── Profile likelihood CI (§19.7) ───────────────────────────────────────────
+
+/** Normal(μ, σ) log-likelihood. */
+export function logLikelihoodNormal2D(
+  mu: number,
+  sigma: number,
+  data: number[],
+): number {
+  if (sigma <= 0) return -Infinity;
+  const n = data.length;
+  let ss = 0;
+  for (let i = 0; i < n; i++) {
+    const d = data[i] - mu;
+    ss += d * d;
+  }
+  return -0.5 * n * Math.log(2 * Math.PI) - n * Math.log(sigma) - ss / (2 * sigma * sigma);
+}
+
+/** Gamma(shape, rate) log-likelihood. */
+export function logLikelihoodGamma2D(
+  shape: number,
+  rate: number,
+  data: number[],
+): number {
+  if (shape <= 0 || rate <= 0) return -Infinity;
+  const n = data.length;
+  let sumLog = 0;
+  let sum = 0;
+  for (let i = 0; i < n; i++) {
+    if (data[i] <= 0) return -Infinity;
+    sumLog += Math.log(data[i]);
+    sum += data[i];
+  }
+  return n * shape * Math.log(rate) - n * lnGamma(shape)
+    + (shape - 1) * sumLog - rate * sum;
+}
+
+/**
+ * Conditional MLE of σ given μ for a Normal sample:
+ *   σ̂(μ) = √(n⁻¹ Σ(X_i − μ)²).
+ */
+export function profileNuisanceOptimizerNormal(
+  mu: number,
+  data: number[],
+): number {
+  const n = data.length;
+  let ss = 0;
+  for (let i = 0; i < n; i++) {
+    const d = data[i] - mu;
+    ss += d * d;
+  }
+  return Math.sqrt(ss / n);
+}
+
+/**
+ * Conditional MLE of β given shape α for a Gamma sample:
+ *   β̂(α) = α / x̄.
+ * Derivation: ∂ℓ/∂β = nα/β − Σx_i = 0 ⇒ β̂ = nα / Σx_i = α / x̄.
+ */
+export function profileNuisanceOptimizerGamma(
+  shape: number,
+  data: number[],
+): number {
+  return shape / sampleMean(data);
+}
+
+/**
+ * Profile-likelihood CI for a scalar θ. Given a 2D log-likelihood
+ * `logLikelihood(θ, ψ)` and a nuisance optimizer `psiOptimize(θ)`, computes
+ *   C_P = {θ : 2 [ℓ_P(θ̂) − ℓ_P(θ)] ≤ χ²_{1, 1-α}}
+ * by evaluating the profile on a uniform θ-grid over `thetaSearchRange`, then
+ * bisecting for the endpoints on each side of the profile maximum.
+ *
+ * Returns the profile curve as `profileCurve: [θ, ℓ_P(θ)][]` so UI components
+ * can trace the threshold intersection directly.
+ */
+export function profileLikelihoodCI(
+  logLikelihood: (theta: number, psi: number) => number,
+  psiOptimize: (theta: number) => number,
+  thetaHat: number,
+  thetaSearchRange: [number, number],
+  alpha: number,
+  gridPoints = 200,
+): CIEndpoints & { profileCurve: Array<[number, number]> } {
+  const crit = chiSquaredInvCDF(1 - alpha, 1);
+  const [tLo, tHi] = thetaSearchRange;
+  const profileCurve: Array<[number, number]> = [];
+  let maxLL = -Infinity;
+  for (let i = 0; i < gridPoints; i++) {
+    const theta = tLo + (i / (gridPoints - 1)) * (tHi - tLo);
+    const psi = psiOptimize(theta);
+    const ll = logLikelihood(theta, psi);
+    profileCurve.push([theta, ll]);
+    if (ll > maxLL) maxLL = ll;
+  }
+  const threshold = maxLL - crit / 2;
+  const g = (theta: number): number => {
+    const psi = psiOptimize(theta);
+    return logLikelihood(theta, psi) - threshold;
+  };
+  // Bracket and bisect on each side of thetaHat.
+  let leftLo = tLo;
+  let leftHi = thetaHat;
+  if (g(leftLo) > 0) {
+    // Threshold crosses below grid minimum — return grid edge.
+    // (Useful for small-sample profiles that stay above threshold on one side.)
+  }
+  const lower = bisectRoot(g, leftLo, leftHi, 60);
+  const upper = bisectRoot(g, thetaHat, tHi, 60);
+  return { lower, upper, profileCurve };
+}
+
+// ── TOST equivalence procedure (§19.9) ──────────────────────────────────────
+
+/**
+ * Two One-Sided Tests (TOST) for equivalence with margin δ. Rejects the
+ * non-equivalence null H_0: |θ − θ_0| ≥ δ iff both one-sided z/t tests of
+ *   H_0^L: θ ≤ θ_0 − δ   (against θ > θ_0 − δ)
+ *   H_0^U: θ ≥ θ_0 + δ   (against θ < θ_0 + δ)
+ * reject at level α. Equivalent to checking that the (1 − 2α) two-sided CI
+ * is contained in [θ_0 − δ, θ_0 + δ].
+ *
+ * Implemented for `normal-mean` (t-distribution small-sample exact),
+ * `bernoulli` (z approximation on θ̂), and `poisson` (z approximation on λ̂).
+ */
+export function tostTest(
+  data: number[],
+  theta0: number,
+  delta: number,
+  alpha: number,
+  family: 'normal-mean' | 'bernoulli' | 'poisson',
+): { rejectLow: boolean; rejectHigh: boolean; equivalence: boolean; pLow: number; pHigh: number } {
+  const n = data.length;
+  const mean = sampleMean(data);
+  let tLow: number;
+  let tHigh: number;
+  let pLow: number;
+  let pHigh: number;
+
+  if (family === 'normal-mean') {
+    const s = Math.sqrt(sampleVarUnbiased(data));
+    const se = s / Math.sqrt(n);
+    tLow = (mean - (theta0 - delta)) / se; // should reject if large positive
+    tHigh = (mean - (theta0 + delta)) / se; // should reject if large negative
+    pLow = 1 - studentTCDF(tLow, n - 1);
+    pHigh = studentTCDF(tHigh, n - 1);
+  } else if (family === 'bernoulli') {
+    const p = mean;
+    const se = Math.sqrt((p * (1 - p)) / n);
+    tLow = (p - (theta0 - delta)) / se;
+    tHigh = (p - (theta0 + delta)) / se;
+    pLow = 1 - standardNormalCDF(tLow);
+    pHigh = standardNormalCDF(tHigh);
+  } else {
+    // poisson
+    const se = Math.sqrt(mean / n);
+    tLow = (mean - (theta0 - delta)) / se;
+    tHigh = (mean - (theta0 + delta)) / se;
+    pLow = 1 - standardNormalCDF(tLow);
+    pHigh = standardNormalCDF(tHigh);
+  }
+
+  const rejectLow = pLow <= alpha;
+  const rejectHigh = pHigh <= alpha;
+  return { rejectLow, rejectHigh, equivalence: rejectLow && rejectHigh, pLow, pHigh };
+}
+
+/**
+ * The (1 − 2α) two-sided CI that is equivalent to the TOST procedure at
+ * level α, computed as the standard asymptotic Wald-type CI for the relevant
+ * family. Equivalence is concluded iff this interval ⊂ [θ_0 − δ, θ_0 + δ].
+ */
+export function tostConfidenceInterval(
+  data: number[],
+  alpha: number,
+  family: 'normal-mean' | 'bernoulli' | 'poisson',
+): CIEndpoints {
+  if (family === 'normal-mean') return tCINormalMean(data, 2 * alpha);
+  if (family === 'bernoulli') return waldCI('bernoulli', data, 2 * alpha);
+  return waldCI('poisson', data, 2 * alpha);
+}
+
+// ── Coverage diagnostics (§19.8) ────────────────────────────────────────────
+
+/**
+ * Exact actual coverage of a binomial CI procedure: for each p in `pGrid`,
+ * sum P_p(X = x) over all x ∈ {0, ..., n} whose CI contains p. No Monte
+ * Carlo — the answer is exact, and the sawtooth pattern caused by the
+ * discreteness of binomial X is visible (which MC averaging would smooth
+ * away).
+ */
+export function actualCoverageBinomial(
+  ciProcedure: (x: number, n: number, alpha: number) => CIEndpoints,
+  n: number,
+  alpha: number,
+  pGrid: number[],
+): number[] {
+  const intervals: CIEndpoints[] = [];
+  for (let x = 0; x <= n; x++) intervals.push(ciProcedure(x, n, alpha));
+  const out: number[] = [];
+  for (const p of pGrid) {
+    let cov = 0;
+    for (let x = 0; x <= n; x++) {
+      const { lower, upper } = intervals[x];
+      if (p >= lower && p <= upper) cov += pmfBinomial(x, n, p);
+    }
+    out.push(cov);
+  }
+  return out;
+}
+
+/**
+ * Monte Carlo coverage simulator for a continuous-parameter CI procedure.
+ * `ciProcedure` consumes a sample array and an α; `sampler(trueParam, n)`
+ * returns a sample of length n. Seed defaults to 42 for reproducibility.
+ */
+export function coverageSimulator(
+  ciProcedure: (data: number[], alpha: number) => CIEndpoints,
+  sampler: (trueParam: number, n: number, rng: () => number) => number[],
+  trueParam: number,
+  n: number,
+  alpha: number,
+  M: number,
+  seed = 42,
+): { actualCoverage: number; meanWidth: number } {
+  const rng = seededRandom(seed);
+  let cov = 0;
+  let widthSum = 0;
+  for (let i = 0; i < M; i++) {
+    const data = sampler(trueParam, n, rng);
+    const { lower, upper } = ciProcedure(data, alpha);
+    if (trueParam >= lower && trueParam <= upper) cov++;
+    widthSum += upper - lower;
+  }
+  return { actualCoverage: cov / M, meanWidth: widthSum / M };
+}
