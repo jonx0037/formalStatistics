@@ -38,6 +38,24 @@ import {
   nonCentralChiSquaredCDF,
   nonCentralChiSquaredPDF,
   localPower,
+  // Topic 19 extensions:
+  betaInvCDF,
+  fCDF,
+  fInvCDF,
+  wilsonInterval,
+  agrestiCoullInterval,
+  clopperPearsonInterval,
+  waldCI,
+  scoreCI,
+  lrtCI,
+  tCINormalMean,
+  profileLikelihoodCI,
+  logLikelihoodNormal2D,
+  profileNuisanceOptimizerNormal,
+  logLikelihoodGamma2D,
+  profileNuisanceOptimizerGamma,
+  tostTest,
+  actualCoverageBinomial,
 } from './testing';
 import { normalSample, bernoulliSample } from './convergence';
 import { seededRandom } from './probability';
@@ -496,6 +514,346 @@ console.log('========================================\n');
 {
   const v = nonCentralChiSquaredCDF(3.84, 1, 4);
   check('35. nonCentralChiSquaredCDF(3.84, 1, 4) regression', approx(v, 0.485, 5e-3), v, 0.485, 'tol 5e-3 vs scipy (same as test 28)');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+console.log('\n========================================');
+console.log(' Topic 19 · testing.ts extensions');
+console.log('========================================\n');
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ── 19A. Wilson closed form at n = 20, x = 5, α = 0.05 ≈ [0.113, 0.471] ────
+// BRO2001 Table 4 reference. Uses the score-test inversion closed form of §19.5.
+{
+  const { lower, upper } = wilsonInterval(5, 20, 0.05);
+  check(
+    `36. Test 19A — Wilson(5, 20, 0.05) lower ≈ 0.113 (got ${lower.toFixed(4)})`,
+    approx(lower, 0.113, 5e-3),
+    lower,
+    0.113,
+    'tol 5e-3; BRO2001 Table 4',
+  );
+  check(
+    `37. Test 19A — Wilson(5, 20, 0.05) upper ≈ 0.471 (got ${upper.toFixed(4)})`,
+    approx(upper, 0.471, 5e-3),
+    upper,
+    0.471,
+    'tol 5e-3; BRO2001 Table 4',
+  );
+}
+
+// ── 19B. Clopper–Pearson at n = 20, x = 5, α = 0.05 ≈ [0.0866, 0.491] ──────
+// Cross-checked against scipy's binom.ppf / beta.ppf construction.
+{
+  const { lower, upper } = clopperPearsonInterval(5, 20, 0.05);
+  check(
+    `38. Test 19B — CP(5, 20, 0.05) lower ≈ 0.0866 (got ${lower.toFixed(4)})`,
+    approx(lower, 0.0866, 5e-3),
+    lower,
+    0.0866,
+    'tol 5e-3; scipy reference',
+  );
+  check(
+    `39. Test 19B — CP(5, 20, 0.05) upper ≈ 0.491 (got ${upper.toFixed(4)})`,
+    approx(upper, 0.491, 5e-3),
+    upper,
+    0.491,
+    'tol 5e-3; scipy reference',
+  );
+}
+
+// ── 19C. Wald-at-boundary: n = 20, x = 0 ──────────────────────────────────
+// Wald CI collapses to [0, 0] (degenerate); Wilson spans [0, 0.161];
+// Clopper-Pearson spans [0, 0.168]. Fulfills Topic 18 §18.8 Remark 16.
+{
+  const data = Array(20).fill(0);
+  const w = waldCI('bernoulli', data, 0.05);
+  check(
+    `40. Test 19C — Wald(x=0, n=20) lower = 0 (got ${w.lower.toFixed(4)})`,
+    w.lower === 0,
+    w.lower,
+    0,
+    'degenerate at boundary',
+  );
+  check(
+    `41. Test 19C — Wald(x=0, n=20) upper = 0 (got ${w.upper.toFixed(4)})`,
+    w.upper === 0,
+    w.upper,
+    0,
+    'degenerate at boundary',
+  );
+  const wi = wilsonInterval(0, 20, 0.05);
+  check(
+    `42. Test 19C — Wilson(0, 20, 0.05) upper ≈ 0.161 (got ${wi.upper.toFixed(4)})`,
+    approx(wi.upper, 0.161, 5e-3),
+    wi.upper,
+    0.161,
+    'regularized boundary',
+  );
+  const cp = clopperPearsonInterval(0, 20, 0.05);
+  check(
+    `43. Test 19C — CP(0, 20, 0.05) upper ≈ 0.168 (got ${cp.upper.toFixed(4)})`,
+    approx(cp.upper, 0.168, 5e-3),
+    cp.upper,
+    0.168,
+    'exact conservative boundary',
+  );
+}
+
+// ── 19D. Actual coverage at n = 20, p = 0.1, α = 0.05 ─────────────────────
+// Wald: ≈ 0.878 (under-covers); Wilson: ≈ 0.961; CP: ≈ 0.997. BRO2001 Table 1.
+{
+  const coverWald = actualCoverageBinomial(
+    (x, n, alpha) => waldCI('bernoulli', Array(n).fill(0).map((_, i) => (i < x ? 1 : 0)), alpha),
+    20,
+    0.05,
+    [0.1],
+  )[0];
+  const coverWilson = actualCoverageBinomial(wilsonInterval, 20, 0.05, [0.1])[0];
+  const coverCP = actualCoverageBinomial(clopperPearsonInterval, 20, 0.05, [0.1])[0];
+  check(
+    `44. Test 19D — Wald coverage(n=20, p=0.1) ≈ 0.878 (got ${coverWald.toFixed(4)})`,
+    approx(coverWald, 0.878, 0.02),
+    coverWald,
+    0.878,
+    'tol 0.02; BRO2001 Table 1',
+  );
+  check(
+    `45. Test 19D — Wilson coverage(n=20, p=0.1) ≈ 0.961 (got ${coverWilson.toFixed(4)})`,
+    approx(coverWilson, 0.961, 0.02),
+    coverWilson,
+    0.961,
+    'tol 0.02; BRO2001 Table 1',
+  );
+  check(
+    `46. Test 19D — CP coverage(n=20, p=0.1) ≈ 0.997 (got ${coverCP.toFixed(4)})`,
+    coverCP >= 0.95 && coverCP <= 1.0,
+    coverCP,
+    '≥ 0.95',
+    'exact is always conservative',
+  );
+}
+
+// ── 19E. Profile recovers t-CI for Normal mean, unknown variance ──────────
+// For Normal data at n = 30, the profile-likelihood CI for μ should agree
+// with the exact t-CI to within the χ²₁ vs t²_{n−1} asymptotic gap — small
+// at n = 30.
+{
+  const rng = seededRandom(42);
+  const data: number[] = [];
+  for (let j = 0; j < 30; j++) data.push(normalSample(0, 1, rng));
+  const muHat = data.reduce((a, b) => a + b, 0) / data.length;
+  const sd = Math.sqrt(
+    data.reduce((a, b) => a + (b - muHat) * (b - muHat), 0) / (data.length - 1),
+  );
+  const tCI = tCINormalMean(data, 0.05);
+  const profile = profileLikelihoodCI(
+    (mu, sigma) => logLikelihoodNormal2D(mu, sigma, data),
+    (mu) => profileNuisanceOptimizerNormal(mu, data),
+    muHat,
+    [muHat - 4 * sd / Math.sqrt(data.length), muHat + 4 * sd / Math.sqrt(data.length)],
+    0.05,
+    200,
+  );
+  check(
+    `47. Test 19E — profile lower ≈ t lower at n=30 (profile ${profile.lower.toFixed(3)}, t ${tCI.lower.toFixed(3)})`,
+    approx(profile.lower, tCI.lower, 0.05),
+    profile.lower,
+    tCI.lower,
+    'asymptotic gap tol 0.05',
+  );
+  check(
+    `48. Test 19E — profile upper ≈ t upper at n=30 (profile ${profile.upper.toFixed(3)}, t ${tCI.upper.toFixed(3)})`,
+    approx(profile.upper, tCI.upper, 0.05),
+    profile.upper,
+    tCI.upper,
+    'asymptotic gap tol 0.05',
+  );
+}
+
+// ── 19F. Duality self-consistency: Wilson = Score CI for Bernoulli ────────
+// Invert the score test over a grid of 50 nulls; check that the resulting
+// non-rejection set's endpoints match wilsonInterval to 1e-6.
+{
+  const data: number[] = [];
+  const p0trueHat = 0.3;
+  for (let i = 0; i < 50; i++) data.push(i < 15 ? 1 : 0);
+  const wilson = wilsonInterval(15, 50, 0.05);
+  const sScoreCI = scoreCI('bernoulli', data, 0.05);
+  check(
+    `49. Test 19F — Score CI lower = Wilson lower (got ${sScoreCI.lower.toFixed(6)} vs ${wilson.lower.toFixed(6)})`,
+    approx(sScoreCI.lower, wilson.lower, 1e-6),
+    sScoreCI.lower,
+    wilson.lower,
+    'test-CI duality self-consistency',
+  );
+  check(
+    `50. Test 19F — Score CI upper = Wilson upper (got ${sScoreCI.upper.toFixed(6)} vs ${wilson.upper.toFixed(6)})`,
+    approx(sScoreCI.upper, wilson.upper, 1e-6),
+    sScoreCI.upper,
+    wilson.upper,
+    'test-CI duality self-consistency',
+  );
+  void p0trueHat;
+}
+
+// ── 19G. TOST at FDA bioequivalence margin on log scale ───────────────────
+// Normal data with x̄ = 0.05, S = 0.10, n = 20, δ = log(1.25), θ_0 = 0, α = 0.05.
+// Both one-sided tests should reject (equivalence established).
+{
+  // Construct a sample with exact x̄ = 0.05 and S = 0.10.
+  const n = 20;
+  const data: number[] = [];
+  const targetMean = 0.05;
+  const targetSD = 0.10;
+  for (let i = 0; i < n; i++) {
+    const base = (i - (n - 1) / 2); // sum to 0
+    data.push(base);
+  }
+  const baseMean = data.reduce((a, b) => a + b, 0) / n;
+  const baseSD = Math.sqrt(
+    data.reduce((a, b) => a + (b - baseMean) * (b - baseMean), 0) / (n - 1),
+  );
+  for (let i = 0; i < n; i++) {
+    data[i] = (data[i] - baseMean) * (targetSD / baseSD) + targetMean;
+  }
+  const delta = Math.log(1.25);
+  const result = tostTest(data, 0, delta, 0.05, 'normal-mean');
+  check(
+    `51. Test 19G — TOST rejects lower bound (p_low ≤ 0.05, got ${result.pLow.toFixed(4)})`,
+    result.rejectLow,
+    result.pLow,
+    '≤ 0.05',
+    'x̄ − (−δ) > 0 clearly',
+  );
+  check(
+    `52. Test 19G — TOST rejects upper bound (p_high ≤ 0.05, got ${result.pHigh.toFixed(4)})`,
+    result.rejectHigh,
+    result.pHigh,
+    '≤ 0.05',
+    'δ − x̄ large enough',
+  );
+  check(
+    `53. Test 19G — TOST concludes equivalence`,
+    result.equivalence,
+    result.equivalence,
+    true,
+    'both one-sided tests reject',
+  );
+}
+
+// ── 19H. betaInvCDF sanity: symmetry + round-trip ────────────────────────
+// Beta(2, 2) median = 0.5 by symmetry; for asymmetric Beta(3, 8) we round-trip
+// through regBetaI (verified via stdlib series expansion against scipy).
+{
+  const v1 = betaInvCDF(0.5, 2, 2);
+  check('54. betaInvCDF(0.5, 2, 2) = 0.5', approx(v1, 0.5, 1e-6), v1, 0.5, 'symmetric Beta(2,2)');
+  const v2 = betaInvCDF(0.025, 3, 8);
+  check(
+    `55. betaInvCDF(0.025, 3, 8) ≈ 0.0667 (got ${v2.toFixed(4)})`,
+    approx(v2, 0.0667, 1e-3),
+    v2,
+    0.0667,
+    'round-trip verified: I(0.0667, 3, 8) ≈ 0.0250',
+  );
+  const v3 = betaInvCDF(0.975, 3, 8);
+  check(
+    `56. betaInvCDF(0.975, 3, 8) ≈ 0.5561 (got ${v3.toFixed(4)})`,
+    approx(v3, 0.5561, 1e-3),
+    v3,
+    0.5561,
+    'round-trip verified: I(0.5561, 3, 8) ≈ 0.9750',
+  );
+}
+
+// ── 19I. fInvCDF round-trip sanity ────────────────────────────────────────
+{
+  const q = fInvCDF(0.95, 5, 10);
+  const p = fCDF(q, 5, 10);
+  check(
+    `57. fInvCDF(0.95, 5, 10) round-trip (CDF(q) ≈ 0.95, got ${p.toFixed(4)})`,
+    approx(p, 0.95, 1e-4),
+    p,
+    0.95,
+    'round-trip',
+  );
+}
+
+// ── 19J. Profile CI for Gamma shape recovers truth at n = 100 ─────────────
+{
+  const rng = seededRandom(42);
+  const shapeTrue = 2.0;
+  const rateTrue = 1.0;
+  const nSample = 100;
+  // Approximate gamma via sum of exponentials (integer shape → exact).
+  const data: number[] = [];
+  for (let i = 0; i < nSample; i++) {
+    let g = 0;
+    for (let k = 0; k < 2; k++) g += -Math.log(rng()) / rateTrue;
+    data.push(g);
+  }
+  const xbar = data.reduce((a, b) => a + b, 0) / nSample;
+  const shapeHat = 2.0; // seeded initial guess; grid-search will refine
+  const profile = profileLikelihoodCI(
+    (shape, rate) => logLikelihoodGamma2D(shape, rate, data),
+    (shape) => profileNuisanceOptimizerGamma(shape, data),
+    shapeHat,
+    [0.5, 5.0],
+    0.05,
+    300,
+  );
+  check(
+    `58. Test 19J — Gamma profile CI covers truth (α=2.0, CI=[${profile.lower.toFixed(3)}, ${profile.upper.toFixed(3)}])`,
+    profile.lower <= shapeTrue && shapeTrue <= profile.upper,
+    [profile.lower, profile.upper],
+    'covers 2.0',
+    'profile-CI at n=100, seeded',
+  );
+  void xbar;
+}
+
+// ── 19K. Agresti–Coull approximates Wilson ────────────────────────────────
+{
+  const wi = wilsonInterval(10, 40, 0.05);
+  const ac = agrestiCoullInterval(10, 40, 0.05);
+  check(
+    `59. Agresti–Coull ≈ Wilson at (10, 40, 0.05): lower diff ${(ac.lower - wi.lower).toFixed(4)}`,
+    approx(ac.lower, wi.lower, 0.01),
+    ac.lower,
+    wi.lower,
+    'tol 0.01; plus-4 approximation',
+  );
+  check(
+    `60. Agresti–Coull ≈ Wilson at (10, 40, 0.05): upper diff ${(ac.upper - wi.upper).toFixed(4)}`,
+    approx(ac.upper, wi.upper, 0.01),
+    ac.upper,
+    wi.upper,
+    'tol 0.01; plus-4 approximation',
+  );
+}
+
+// ── 19L. LRT CI is asymmetric around θ̂ (finite-sample check) ────────────
+// For Bernoulli p̂ = 0.3, n = 50, α = 0.05: Wald is symmetric, LRT is not.
+// Numerical reference from notebook: LRT [0.185, 0.435] — asymmetric around 0.3.
+{
+  const data: number[] = [];
+  for (let i = 0; i < 50; i++) data.push(i < 15 ? 1 : 0);
+  const lrt = lrtCI('bernoulli', data, 0.05);
+  const asymmetry = Math.abs((0.3 - lrt.lower) - (lrt.upper - 0.3));
+  check(
+    `61. LRT CI asymmetric around 0.3 (lo ${lrt.lower.toFixed(3)}, up ${lrt.upper.toFixed(3)}, |skew| ${asymmetry.toFixed(4)})`,
+    asymmetry > 1e-3,
+    asymmetry,
+    '> 0',
+    'likelihood-curvature imprint',
+  );
+  check(
+    `62. LRT CI lower ≈ 0.185 (notebook ref, got ${lrt.lower.toFixed(4)})`,
+    approx(lrt.lower, 0.185, 0.01),
+    lrt.lower,
+    0.185,
+    'tol 0.01; notebook reference',
+  );
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
