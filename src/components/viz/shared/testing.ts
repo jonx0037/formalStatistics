@@ -1342,6 +1342,7 @@ export function fPDF(x: number, df1: number, df2: number): number {
 
 /** Snedecor's F CDF via I_{d1 x/(d1 x + d2)}(d1/2, d2/2). */
 export function fCDF(x: number, df1: number, df2: number): number {
+  if (df1 <= 0 || df2 <= 0) return NaN;
   if (x <= 0) return 0;
   const z = (df1 * x) / (df1 * x + df2);
   return regBetaI(z, df1 / 2, df2 / 2);
@@ -1349,9 +1350,12 @@ export function fCDF(x: number, df1: number, df2: number): number {
 
 /**
  * F inverse CDF via bisection on fCDF. The F range is [0, ∞); we bracket by
- * doubling until fCDF exceeds p, then bisect. Tolerance 1e-10.
+ * doubling until fCDF exceeds p, then bisect. Tolerance 1e-10. If the bracket
+ * cap is hit without reaching p (pathological df combinations), we return
+ * `Infinity` rather than a below-target value — consistent with `p → 1`.
  */
 export function fInvCDF(p: number, df1: number, df2: number): number {
+  if (df1 <= 0 || df2 <= 0) return NaN;
   if (p <= 0) return 0;
   if (p >= 1) return Infinity;
   // Bracket: start at the mode area, double upward.
@@ -1360,7 +1364,7 @@ export function fInvCDF(p: number, df1: number, df2: number): number {
   while (fCDF(hi, df1, df2) < p) {
     lo = hi;
     hi *= 2;
-    if (hi > 1e12) return hi;
+    if (hi > 1e12) return Infinity;
   }
   for (let i = 0; i < 80; i++) {
     const mid = 0.5 * (lo + hi);
@@ -1837,13 +1841,18 @@ export function exactDiscreteCI(
   // come from inverting the two-sided test via the gamma-Poisson duality.
   const k = observedStatistic;
   const n = sampleSize;
-  const lower = k === 0 ? 0 : gammaInvCDF(alpha / 2, k, 1) / n;
-  const upper = gammaInvCDF(1 - alpha / 2, k + 1, 1) / n;
+  const lower = k === 0 ? 0 : gammaInvCDF_unitRate(alpha / 2, k) / n;
+  const upper = gammaInvCDF_unitRate(1 - alpha / 2, k + 1) / n;
   return { lower, upper };
 }
 
-/** Inverse gamma CDF (shape a, rate 1) via bisection on regGammaP. */
-function gammaInvCDF(p: number, a: number, rate: number): number {
+/**
+ * Inverse CDF of Gamma(shape a, rate 1) via bisection on regGammaP.
+ * Unit-rate only — callers needing a different rate scale the result by 1/β
+ * themselves. (The previous signature exposed a `rate` parameter that was
+ * ignored in the bracketing logic, which was unsafe for non-unit rates.)
+ */
+function gammaInvCDF_unitRate(p: number, a: number): number {
   if (p <= 0) return 0;
   if (p >= 1) return Infinity;
   let lo = 0;
@@ -1851,7 +1860,7 @@ function gammaInvCDF(p: number, a: number, rate: number): number {
   while (regGammaP(a, hi) < p) {
     lo = hi;
     hi *= 2;
-    if (hi > 1e14) return hi / rate;
+    if (hi > 1e14) return Infinity;
   }
   for (let i = 0; i < 80; i++) {
     const mid = 0.5 * (lo + hi);
@@ -1859,7 +1868,7 @@ function gammaInvCDF(p: number, a: number, rate: number): number {
     else hi = mid;
     if (hi - lo < 1e-12 * Math.max(1, hi)) break;
   }
-  return (0.5 * (lo + hi)) / rate;
+  return 0.5 * (lo + hi);
 }
 
 // ── Profile likelihood CI (§19.7) ───────────────────────────────────────────
@@ -1945,33 +1954,61 @@ export function profileLikelihoodCI(
   thetaSearchRange: [number, number],
   alpha: number,
   gridPoints = 200,
-): CIEndpoints & { profileCurve: Array<[number, number]> } {
+): CIEndpoints & {
+  profileCurve: Array<[number, number]>;
+  lowerAtBoundary: boolean;
+  upperAtBoundary: boolean;
+} {
   const crit = chiSquaredInvCDF(1 - alpha, 1);
   const [tLo, tHi] = thetaSearchRange;
   const profileCurve: Array<[number, number]> = [];
   let maxLL = -Infinity;
+  let thetaArgMax = thetaHat;
   for (let i = 0; i < gridPoints; i++) {
     const theta = tLo + (i / (gridPoints - 1)) * (tHi - tLo);
     const psi = psiOptimize(theta);
     const ll = logLikelihood(theta, psi);
     profileCurve.push([theta, ll]);
-    if (ll > maxLL) maxLL = ll;
+    if (ll > maxLL) {
+      maxLL = ll;
+      thetaArgMax = theta;
+    }
   }
+  // Use the grid-argmax as the bisection split. The caller's `thetaHat` is
+  // often the MLE of the joint model or a preset value that may not coincide
+  // with the profile maximum (especially when the profile is evaluated on a
+  // bounded grid); splitting at thetaHat rather than the grid argmax is
+  // fragile — one side of the split can fail to bracket a root.
+  const split = thetaArgMax;
   const threshold = maxLL - crit / 2;
   const g = (theta: number): number => {
     const psi = psiOptimize(theta);
     return logLikelihood(theta, psi) - threshold;
   };
-  // Bracket and bisect on each side of thetaHat.
-  let leftLo = tLo;
-  let leftHi = thetaHat;
-  if (g(leftLo) > 0) {
-    // Threshold crosses below grid minimum — return grid edge.
-    // (Useful for small-sample profiles that stay above threshold on one side.)
+
+  // Left endpoint: the largest θ ≤ split with g(θ) = 0. If g(tLo) ≥ 0 the
+  // profile stays above threshold all the way to the search-range edge —
+  // return tLo and flag the boundary hit.
+  let lower: number;
+  let lowerAtBoundary = false;
+  if (g(tLo) >= 0) {
+    lower = tLo;
+    lowerAtBoundary = true;
+  } else {
+    lower = bisectRoot(g, tLo, split, 60);
   }
-  const lower = bisectRoot(g, leftLo, leftHi, 60);
-  const upper = bisectRoot(g, thetaHat, tHi, 60);
-  return { lower, upper, profileCurve };
+
+  // Right endpoint: symmetric on the other side.
+  let upper: number;
+  let upperAtBoundary = false;
+  if (g(tHi) >= 0) {
+    upper = tHi;
+    upperAtBoundary = true;
+  } else {
+    upper = bisectRoot(g, split, tHi, 60);
+  }
+
+  return { lower, upper, profileCurve, lowerAtBoundary, upperAtBoundary };
 }
 
 // ── TOST equivalence procedure (§19.9) ──────────────────────────────────────
@@ -2001,8 +2038,34 @@ export function tostTest(
   let pLow: number;
   let pHigh: number;
 
+  // At boundary observations the standard-error estimators collapse to 0 and
+  // the z/t statistics would be ±∞ or NaN. We treat this as a degenerate test
+  // that rejects iff the observed mean is strictly on the correct side of the
+  // equivalence margin — the normal-approximation p-value is 0 for a point
+  // mass strictly inside the acceptance region and 1 when on the boundary
+  // or beyond.
+  type TOSTResult = {
+    rejectLow: boolean;
+    rejectHigh: boolean;
+    equivalence: boolean;
+    pLow: number;
+    pHigh: number;
+  };
+  const degenerateTOST = (): TOSTResult => {
+    const pLow_ = mean > theta0 - delta ? 0 : 1;
+    const pHigh_ = mean < theta0 + delta ? 0 : 1;
+    return {
+      rejectLow: pLow_ <= alpha,
+      rejectHigh: pHigh_ <= alpha,
+      equivalence: pLow_ <= alpha && pHigh_ <= alpha,
+      pLow: pLow_,
+      pHigh: pHigh_,
+    };
+  };
+
   if (family === 'normal-mean') {
     const s = Math.sqrt(sampleVarUnbiased(data));
+    if (!(s > 0)) return degenerateTOST();
     const se = s / Math.sqrt(n);
     tLow = (mean - (theta0 - delta)) / se; // should reject if large positive
     tHigh = (mean - (theta0 + delta)) / se; // should reject if large negative
@@ -2010,13 +2073,16 @@ export function tostTest(
     pHigh = studentTCDF(tHigh, n - 1);
   } else if (family === 'bernoulli') {
     const p = mean;
-    const se = Math.sqrt((p * (1 - p)) / n);
+    const seSq = (p * (1 - p)) / n;
+    if (!(seSq > 0)) return degenerateTOST();
+    const se = Math.sqrt(seSq);
     tLow = (p - (theta0 - delta)) / se;
     tHigh = (p - (theta0 + delta)) / se;
     pLow = 1 - standardNormalCDF(tLow);
     pHigh = standardNormalCDF(tHigh);
   } else {
     // poisson
+    if (!(mean > 0)) return degenerateTOST();
     const se = Math.sqrt(mean / n);
     tLow = (mean - (theta0 - delta)) / se;
     tHigh = (mean - (theta0 + delta)) / se;

@@ -5,6 +5,7 @@ import {
   actualCoverageBinomial,
   wilsonInterval,
   clopperPearsonInterval,
+  standardNormalInvCDF,
 } from './shared/testing';
 import { coveragePresets } from '../../data/confidence-intervals-data';
 
@@ -33,30 +34,23 @@ const C = {
 
 type Procedure = 'all' | 'wald' | 'wilson' | 'cp';
 
-/** Wald binomial CI with clamping. Pulled out so we can pass it to the
- *  coverage evaluator without recomputing. */
+/**
+ * Wald binomial CI with endpoints clamped to [0, 1]. Uses the same
+ * standard-normal inverse CDF as Wilson/Clopper–Pearson so all three
+ * procedures share quantile implementation — important for coverage
+ * comparisons at non-standard α values.
+ */
 function waldBinomialCI(
   x: number,
   n: number,
   alpha: number,
 ): { lower: number; upper: number } {
-  const z = 1.959963984540054; // z_{0.025} default; will be scaled with alpha below
-  // Use actual z for the provided alpha.
-  const halfQ = alpha === 0.05 ? z : (function () {
-    // crude stdnorm inv via Beasley-Springer approximation
-    const p = 1 - alpha / 2;
-    const t = Math.sqrt(-2 * Math.log(Math.min(p, 1 - p)));
-    return (
-      t -
-      (2.515517 + 0.802853 * t + 0.010328 * t * t) /
-      (1 + 1.432788 * t + 0.189269 * t * t + 0.001308 * t * t * t)
-    ) * (p > 0.5 ? 1 : -1);
-  })();
+  const z = standardNormalInvCDF(1 - alpha / 2);
   const pHat = x / n;
   const se = Math.sqrt((pHat * (1 - pHat)) / n);
   return {
-    lower: Math.max(0, pHat - halfQ * se),
-    upper: Math.min(1, pHat + halfQ * se),
+    lower: Math.max(0, pHat - z * se),
+    upper: Math.min(1, pHat + z * se),
   };
 }
 

@@ -38,6 +38,45 @@ const C = {
   mark: '#475569',
 };
 
+/** Box–Muller standard-Normal draw from a uniform rng. */
+function normalDraw(rng: () => number): number {
+  // Reject u1 = 0 to keep log finite; extremely rare (probability 0 in theory).
+  let u1 = rng();
+  if (u1 <= 0) u1 = 1e-300;
+  const u2 = rng();
+  return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+}
+
+/**
+ * Marsaglia–Tsang Gamma(shape, rate) sampler — works for arbitrary shape > 0
+ * (not just integer "Erlang" shapes). For shape ≥ 1 uses the acceptance-
+ * rejection scheme from Marsaglia & Tsang 2000; for shape < 1 uses the
+ * Gamma(shape + 1) / U^{1/shape} trick (Ahrens–Dieter / Devroye §IX.3).
+ * Expected cost is O(1) draws per sample, independent of shape.
+ */
+function gammaDraw(shape: number, rate: number, rng: () => number): number {
+  if (shape < 1) {
+    const g = gammaDraw(shape + 1, rate, rng);
+    const u = Math.max(rng(), 1e-300);
+    return g * Math.pow(u, 1 / shape);
+  }
+  const d = shape - 1 / 3;
+  const c = 1 / Math.sqrt(9 * d);
+  for (;;) {
+    let z = normalDraw(rng);
+    let v = 1 + c * z;
+    while (v <= 0) {
+      z = normalDraw(rng);
+      v = 1 + c * z;
+    }
+    v = v * v * v;
+    const u = rng();
+    // Squeeze + exact test (Marsaglia–Tsang 2000, Eq. 3):
+    if (u < 1 - 0.0331 * z * z * z * z) return (d * v) / rate;
+    if (Math.log(u) < 0.5 * z * z + d * (1 - v + Math.log(v))) return (d * v) / rate;
+  }
+}
+
 /** Generate a synthetic sample for a preset. Deterministic via seededRandom. */
 function generateSample(preset: ProfilePreset): number[] {
   const rng = seededRandom(42 + preset.n + Math.round(preset.observedThetaHat * 10));
@@ -45,18 +84,13 @@ function generateSample(preset: ProfilePreset): number[] {
   if (preset.scenario === 'normal-2d') {
     // Normal(μ = θ_hat, σ = nuisance)
     for (let i = 0; i < preset.n; i++) {
-      const u1 = rng();
-      const u2 = rng();
-      const z = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
-      data.push(preset.observedThetaHat + preset.observedNuisance * z);
+      data.push(preset.observedThetaHat + preset.observedNuisance * normalDraw(rng));
     }
   } else {
-    // Gamma(shape = theta, rate = nuisance) via sum of exponentials for integer-ish shape
-    const shape = Math.max(1, Math.round(preset.observedThetaHat));
+    // Gamma(shape = θ_hat, rate = nuisance) via Marsaglia–Tsang — works for
+    // arbitrary shape > 0, unlike the previous Erlang-only sum-of-exponentials.
     for (let i = 0; i < preset.n; i++) {
-      let g = 0;
-      for (let k = 0; k < shape; k++) g += -Math.log(rng()) / preset.observedNuisance;
-      data.push(g);
+      data.push(gammaDraw(preset.observedThetaHat, preset.observedNuisance, rng));
     }
   }
   return data;
@@ -95,7 +129,10 @@ export default function ProfileLikelihoodExplorer() {
     return (theta: number): number => profileNuisanceOptimizerGamma(theta, data);
   }, [preset.scenario, data]);
 
-  // Grid + CI computation.
+  // Grid + CI computation. We pass a seed-`thetaHat` estimate to the CI
+  // helper, but the helper itself uses the grid-argmax as the bisection split
+  // (see profileLikelihoodCI), which is robust when `thetaHat` doesn't match
+  // the profile's peak on the current sample.
   const gridN = 220;
   const profileCI = useMemo(() => {
     const thetaHat = preset.scenario === 'normal-2d'
