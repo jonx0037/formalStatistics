@@ -21,7 +21,7 @@
     { "id": "sufficient-statistics", "label": "Sufficient Statistics & Rao-Blackwell", "domain": "statistical-estimation", "status": "published", "url": "/topics/sufficient-statistics" },
 
     { "id": "hypothesis-testing", "label": "Hypothesis Testing Framework", "domain": "hypothesis-testing-confidence", "status": "published", "url": "/topics/hypothesis-testing" },
-    { "id": "likelihood-ratio-tests", "label": "Likelihood Ratio Tests & Neyman-Pearson", "domain": "hypothesis-testing-confidence", "status": "planned", "url": "/topics/likelihood-ratio-tests" },
+    { "id": "likelihood-ratio-tests-and-np", "label": "Likelihood-Ratio Tests & Neyman-Pearson", "domain": "hypothesis-testing-confidence", "status": "published", "url": "/topics/likelihood-ratio-tests-and-np" },
     { "id": "confidence-intervals", "label": "Confidence Intervals & Duality", "domain": "hypothesis-testing-confidence", "status": "planned", "url": "/topics/confidence-intervals" },
     { "id": "multiple-testing", "label": "Multiple Testing & False Discovery", "domain": "hypothesis-testing-confidence", "status": "planned", "url": "/topics/multiple-testing" },
 
@@ -82,10 +82,15 @@
     { "source": "central-limit-theorem", "target": "hypothesis-testing" },
     { "source": "modes-of-convergence", "target": "hypothesis-testing" },
     { "source": "continuous-distributions", "target": "hypothesis-testing" },
-    { "source": "hypothesis-testing", "target": "likelihood-ratio-tests" },
-    { "source": "maximum-likelihood", "target": "likelihood-ratio-tests" },
+    { "source": "hypothesis-testing", "target": "likelihood-ratio-tests-and-np" },
+    { "source": "maximum-likelihood", "target": "likelihood-ratio-tests-and-np" },
+    { "source": "point-estimation", "target": "likelihood-ratio-tests-and-np" },
+    { "source": "modes-of-convergence", "target": "likelihood-ratio-tests-and-np" },
+    { "source": "sufficient-statistics", "target": "likelihood-ratio-tests-and-np" },
+    { "source": "exponential-families", "target": "likelihood-ratio-tests-and-np" },
+    { "source": "central-limit-theorem", "target": "likelihood-ratio-tests-and-np" },
     { "source": "hypothesis-testing", "target": "confidence-intervals" },
-    { "source": "likelihood-ratio-tests", "target": "confidence-intervals" },
+    { "source": "likelihood-ratio-tests-and-np", "target": "confidence-intervals" },
     { "source": "confidence-intervals", "target": "multiple-testing" },
     { "source": "hypothesis-testing", "target": "multiple-testing" },
 

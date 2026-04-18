@@ -1,0 +1,844 @@
+---
+title: "Likelihood-Ratio Tests & Neyman-Pearson"
+subtitle: "Optimality theory — Neyman-Pearson's lemma, Karlin-Rubin UMP construction, Wilks' χ² theorem, and the first-order equivalence of Wald, Score, and LRT."
+status: "published"
+difficulty: "intermediate"
+prerequisites:
+  - "hypothesis-testing"
+  - "maximum-likelihood"
+  - "point-estimation"
+  - "modes-of-convergence"
+  - "sufficient-statistics"
+  - "exponential-families"
+  - "central-limit-theorem"
+tags:
+  - "statistics"
+  - "inference"
+  - "hypothesis-testing"
+  - "optimality"
+  - "neyman-pearson-lemma"
+  - "most-powerful-test"
+  - "uniformly-most-powerful"
+  - "monotone-likelihood-ratio"
+  - "karlin-rubin"
+  - "likelihood-ratio-test"
+  - "wilks-theorem"
+  - "wald-test"
+  - "score-test"
+  - "non-central-chi-squared"
+  - "local-power"
+  - "reparameterization-invariance"
+  - "asymptotic-efficiency"
+domain: "hypothesis-testing-confidence"
+videoId: null
+notebookPath: "notebooks/likelihood-ratio-tests/18_likelihood_ratio_tests.ipynb"
+githubUrl: "https://github.com/jonx0037/formalStatistics/blob/main/src/content/topics/likelihood-ratio-tests-and-np.mdx"
+datePublished: 2026-04-17
+estimatedReadTime: 60
+abstract: "Topic 17 built the hypothesis-testing framework — null, alternative, size, power, p-values — and left optimality as a separate question. This topic answers it. The **Neyman-Pearson lemma** (§18.2) proves that for simple-vs-simple hypotheses the likelihood-ratio test is most powerful at every level α. The **Karlin-Rubin theorem** (§18.3) extends optimality to one-sided composite tests in families with monotone likelihood ratio (MLR); the same rejection region $\\{T > c\\}$ is MP at every alternative simultaneously, so it is UMP. The **Wilks theorem** (§18.6) gives the asymptotic null distribution of the composite LRT: $-2 \\log \\Lambda_n \\xrightarrow{d} \\chi^2_k$ where $k$ is the number of parameter restrictions, proved in 8 steps via Taylor expansion around the MLE + MLE asymptotic normality (Topic 14 Thm 14.3) + continuous mapping (Topic 9) + Slutsky. The **three-tests equivalence** (§18.7) shows that Wald, Score, and LRT differ by $O_P(n^{-1/2})$ under $H_0$ — all three collapse to the same quadratic form $n I(\\theta_0) (\\hat\\theta_n - \\theta_0)^2$ at leading order. §18.8 quantifies the finite-sample divergence (a Bernoulli $n = 20$ MC where Wald is liberal, Score conservative, LRT accurate) and proves the reparameterization invariance of the LRT (Wald's logit-vs-raw ambiguity is why modern A/B platforms prefer LRT for boundary-rare events). §18.9 characterizes local power via non-central $\\chi^2_1(h^2 I(\\theta_0))$ — the Fisher information $I(\\theta_0)$ plays the dual role of Cramér-Rao bound for estimator variance and power-envelope coefficient for local alternatives. The topic closes (§18.10) with pointers to the scope-boundary results (UMP unbiased, Hunt-Stein, profile likelihood) and the Track 5 follow-ons (CI duality in Topic 19, multiple testing in Topic 20)."
+formalcalculusPrereqs:
+  - topic: "differentiation"
+    site: "formalcalculus"
+    relationship: "The Wilks proof's Step 2 is Taylor's theorem with remainder, applied to the log-likelihood $\\ell(\\theta)$ around the MLE $\\hat\\theta_n$. Step 3 uses the first-order condition $\\ell'(\\hat\\theta_n) = 0$ — an interior-maximum calculus fact."
+  - topic: "integration"
+    site: "formalcalculus"
+    relationship: "The Neyman-Pearson proof integrates the indicator-function inequality $(\\varphi^* - \\varphi)(f_1 - k f_0) \\ge 0$ over the sample space to convert a pointwise statement into an expectation inequality. The non-central $\\chi^2$ series in §18.9 is a sum of integrals against shifted-df Gamma densities."
+  - topic: "sequences-limits"
+    site: "formalcalculus"
+    relationship: "Convergence in distribution (the Wilks conclusion $-2\\log\\Lambda_n \\xrightarrow{d} \\chi^2_1$) and in probability ($\\hat\\theta_n \\xrightarrow{P} \\theta_0$) are both rigorous limit statements. The $O_P / o_P$ algebra used in Step 4 of the Wilks proof is formal bookkeeping for these limits."
+formalmlConnections:
+  - topic: "ab-testing-platforms"
+    site: "formalml"
+    relationship: "A/B platforms default to Wald z-tests, but as §18.8 shows, for boundary-rare events (conversion rates near 0 or 1) the Wald test's reparameterization dependence can flip the rejection decision. Modern platforms (Statsig, GrowthBook) increasingly offer LRT or log-odds-ratio testing for this regime — direct applications of the Thm 6 invariance argument."
+  - topic: "generalized-linear-models"
+    site: "formalml"
+    relationship: "Wald/Score/LRT tests for GLM coefficients are the direct vector-θ generalization of §18.7. The score test's 'only fit the null model' advantage powers stepwise forward selection; the LRT-via-deviance-difference is the workhorse of nested-model comparison in logistic and Poisson regression."
+  - topic: "statistical-learning-theory"
+    site: "formalml"
+    relationship: "PAC-Bayes and VC-dimension generalization bounds are uniform-concentration statements whose proofs mirror the indicator-function comparison of Proof 1 (Neyman-Pearson). The 'MP test = LR test' duality reappears as the Bayes classifier in decision-theoretic learning: under 0-1 loss the likelihood ratio $f_1 / f_0$ is the optimal score."
+  - topic: "model-comparison"
+    site: "formalml"
+    relationship: "Wilks' theorem is the frequentist backbone of the likelihood-ratio test for nested models — the answer to 'did the extra parameters help?' The Bayesian analog is the Bayes factor (Topic 22); the ML-native analog is cross-validated held-out likelihood."
+connections:
+  - topic: "hypothesis-testing"
+    relationship: "Direct continuation. Topic 17 §17.9's inline derivation of the Wald case (MLE asymptotic normality + Slutsky + continuous mapping) is the template for Wilks' proof, which extends the same machinery from a linear function of $\\hat\\theta_n$ to a quadratic form. Topic 17 Remark 10's statement of asymptotic equivalence is now §18.7 Theorem 5 with full proof."
+  - topic: "maximum-likelihood"
+    relationship: "Wilks' proof imports Topic 14 Thm 14.3 (MLE asymptotic normality) at Step 6 and Thm 14.2 (MLE consistency) at Step 4. The MLE first-order condition $\\ell'(\\hat\\theta_n) = 0$ (Topic 14 §14.6) is Step 3. The classical Taylor register of Topic 14 is reused without new analytical machinery."
+  - topic: "sufficient-statistics"
+    relationship: "Topic 16's exponential-family MLR characterization is the engine of §18.4 Example 4 — every exp family has MLR in its natural sufficient statistic, so Karlin-Rubin applies and the binomial/Poisson/Normal-mean one-sided tests are UMP. The factorization theorem (Thm 16.1) powers the 'UMP depends on $T$ only' observation in Proof 2."
+  - topic: "point-estimation"
+    relationship: "The Fisher information $I(\\theta_0)$ plays a dual role: Topic 13 uses it as the CRLB ceiling on unbiased-estimator variance; Topic 18 §18.9 uses it as the non-centrality coefficient for local power. Two faces of the same efficiency bound."
+references:
+  - type: "paper"
+    title: "On the Problem of the Most Efficient Tests of Statistical Hypotheses"
+    author: "Jerzy Neyman & Egon S. Pearson"
+    year: 1933
+    journal: "Philosophical Transactions of the Royal Society A"
+    volume: "231"
+    pages: "289–337"
+    url: "https://doi.org/10.1098/rsta.1933.0009"
+    note: "The foundational Neyman-Pearson paper. Cited as NEY1933 throughout Topic 18, especially at §18.2 Theorem 1 + Proof 1."
+  - type: "paper"
+    title: "The Theory of Decision Procedures for Distributions with Monotone Likelihood Ratio"
+    author: "Samuel Karlin & Herman Rubin"
+    year: 1956
+    journal: "Annals of Mathematical Statistics"
+    volume: "27(2)"
+    pages: "272–299"
+    url: "https://doi.org/10.1214/aoms/1177728259"
+    note: "Cited as KAR1956. §18.3 Theorem 2 is the Karlin-Rubin theorem; §18.4 Examples 6–7 cite it for the binomial and Normal UMP results."
+  - type: "paper"
+    title: "Pólya Type Distributions, II"
+    author: "Samuel Karlin"
+    year: 1957
+    journal: "Annals of Mathematical Statistics"
+    volume: "28(2)"
+    pages: "281–308"
+    url: "https://doi.org/10.1214/aoms/1177706960"
+    note: "Cited as KAR1957 in §18.3 Remark 7 for the historical coinage of the monotone-likelihood-ratio terminology."
+  - type: "paper"
+    title: "The Large-Sample Distribution of the Likelihood Ratio for Testing Composite Hypotheses"
+    author: "Samuel S. Wilks"
+    year: 1938
+    journal: "Annals of Mathematical Statistics"
+    volume: "9(1)"
+    pages: "60–62"
+    url: "https://projecteuclid.org/euclid.aoms/1177732360"
+    note: "Cited as WIL1938. §18.6 Theorem 4 + Proof 3 is Wilks' theorem with its original attribution."
+  - type: "paper"
+    title: "Large Sample Tests of Statistical Hypotheses Concerning Several Parameters with Applications to Problems of Estimation"
+    author: "C. Radhakrishna Rao"
+    year: 1948
+    journal: "Mathematical Proceedings of the Cambridge Philosophical Society"
+    volume: "44(1)"
+    pages: "50–57"
+    url: "https://doi.org/10.1017/S0305004100023987"
+    note: "Cited as RAO1948. §18.7 Theorem 5's three-tests equivalence traces back to Rao's original score-test paper."
+  - type: "book"
+    title: "Mathematical Statistics: A Decision Theoretic Approach"
+    author: "Thomas S. Ferguson"
+    year: 1967
+    publisher: "Academic Press"
+    url: "https://www.worldcat.org/title/mathematical-statistics-a-decision-theoretic-approach/oclc/490902"
+    note: "Cited as FER1967. §18.1 Remark 1 (decision-theoretic framing) and §18.5 Remark 11 (LRT as generalized risk procedure)."
+  - type: "book"
+    title: "Asymptotic Statistics"
+    author: "Aad W. van der Vaart"
+    year: 1998
+    publisher: "Cambridge University Press"
+    edition: "Cambridge Series in Statistical and Probabilistic Mathematics 3"
+    isbn: "978-0-521-78450-4"
+    url: "https://doi.org/10.1017/CBO9780511802256"
+    note: "Cited as VAN1998. §18.6 Remark 12 pointer to the LAN/Le Cam rigorous treatment of Wilks; §18.7 modern reference for three-tests equivalence."
+  - type: "paper"
+    title: "The Likelihood Ratio, Wald, and Lagrange Multiplier Tests: An Expository Note"
+    author: "A. Buse"
+    year: 1982
+    journal: "The American Statistician"
+    volume: "36(3a)"
+    pages: "153–157"
+    url: "https://doi.org/10.1080/00031305.1982.10482817"
+    note: "Cited as BUS1982. §18.7 Remark 15 — the canonical pedagogical reference for first-order equivalence, pitched at the econometrics-oriented reader."
+  - type: "book"
+    title: "Testing Statistical Hypotheses"
+    author: "Erich L. Lehmann & Joseph P. Romano"
+    year: 2005
+    edition: "3rd"
+    publisher: "Springer"
+    isbn: "978-0-387-98864-1"
+    url: "https://doi.org/10.1007/0-387-27605-X"
+    note: "Cited as LEH2005. The modern authoritative treatment; cited at §18.3 Remark 6 (two-sided UMP unbiased), §18.4 Ex 8 & Rem 8 (scale-invariant t UMP), §18.5 Rem 10 (profile likelihood), §18.6 Rems 13–14 (vector-θ Wilks; non-regular cases), §18.10 Rem 21 (scope-boundary pointers)."
+  - type: "book"
+    title: "Statistical Inference"
+    author: "George Casella & Roger L. Berger"
+    year: 2002
+    edition: "2nd"
+    publisher: "Duxbury"
+    isbn: "978-0-534-24312-8"
+    url: "https://www.cengage.com/c/statistical-inference-2e-casella/"
+    note: "Cited as CAS2002. §18.2 Ex 2 and §18.4 Ex 6 alignment — textbook anchor for worked examples."
+---
+
+import DefinitionBlock from '../../components/ui/DefinitionBlock.astro';
+import TheoremBlock from '../../components/ui/TheoremBlock.astro';
+import ProofBlock from '../../components/ui/ProofBlock.astro';
+import ExampleBlock from '../../components/ui/ExampleBlock.astro';
+import RemarkBlock from '../../components/ui/RemarkBlock.astro';
+import ExternalLink from '../../components/ui/ExternalLink.astro';
+
+import NPLemmaVisualizer from '../../components/viz/NPLemmaVisualizer.tsx';
+import KarlinRubinUMP from '../../components/viz/KarlinRubinUMP.tsx';
+import WilksConvergence from '../../components/viz/WilksConvergence.tsx';
+
+## 18.1 From Framework to Optimality
+
+Two tests have the same size. Both reject the null 5% of the time when the null is true. One rejects a true effect of size $\delta = 0.3$ with probability $0.4$; the other rejects with probability $0.6$. Which should we use? [Topic 17](/topics/hypothesis-testing) built a framework for *valid* testing but left this question open. This topic answers it: we characterize when a uniformly most powerful test exists (Neyman-Pearson, Karlin-Rubin), construct the likelihood-ratio test as a general-purpose procedure when it doesn't, and prove that the three asymptotic tests — Wald, Score, LRT — agree to first order under the null.
+
+![Two level-α tests, same size but different power curves; the dominant test's power is strictly higher in the right tail. Inset: at δ = 0.3, one test has power 0.4, the other 0.6 — a concrete instance of the optimality question.](/images/topics/likelihood-ratio-tests-and-np/18-optimality-motivation.png)
+
+<RemarkBlock number={1} title="Validity versus optimality — two different questions">
+A level-$\alpha$ test is *valid* if its Type I error is at most $\alpha$. That is not a hard standard to meet. The trivial "reject with probability $\alpha$ regardless of data" test is valid — and has power exactly $\alpha$ at every alternative. Every test we wrote down in Topic 17 (z-test, t-test, $\chi^2$ variance test, binomial exact) is valid for its parametric family. But validity does not single out *which* level-$\alpha$ test to use.
+
+Optimality asks the harder question: **among all valid level-$\alpha$ tests, which maximizes power?** The answer depends on whether the hypotheses are simple or composite and on the structural geometry of the likelihood family. Where the answer exists — NP lemma, Karlin-Rubin — it is a uniqueness result, not merely an existence one. Where it does not — two-sided composite alternatives in most families — the LRT is the best general-purpose substitute, and we pay a price for that generality in the form of asymptotic rather than finite-sample optimality.
+</RemarkBlock>
+
+<RemarkBlock number={2} title="Four pillars, organized">
+Topic 18 is built around four results. The first two hold at every sample size; the last two are asymptotic.
+
+1. **Neyman-Pearson lemma (§18.2).** Simple-vs-simple optimality via a three-step indicator-function argument. Provable from integration alone — no convergence theory required.
+
+2. **Karlin-Rubin theorem (§18.3).** One-sided composite optimality via monotone likelihood ratio (MLR), using the NP lemma as an internal engine. The MLR families are exactly where "one test is most powerful at every alternative simultaneously" — i.e., UMP — becomes possible.
+
+3. **Wilks' theorem (§18.6).** The composite LRT's null distribution converges: $-2\log\Lambda_n \xrightarrow{d} \chi^2_k$ where $k$ is the number of parameter restrictions. Proved in 8 steps via Taylor expansion around $\hat\theta_n$, remainder control, observed-information-to-Fisher-information, and MLE asymptotic normality (Topic 14 Thm 14.3).
+
+4. **Three-tests equivalence (§18.7).** Wald, Score, and LRT differ by $O_P(n^{-1/2})$ under $H_0$. All three collapse to the same quadratic form $n I(\theta_0)(\hat\theta_n - \theta_0)^2$ at leading order. §18.8 quantifies the finite-sample divergence the $o_P(1)$ hides.
+
+The residual sections then extend the theory in specific directions. §18.4 catalogues UMP tests in action; §18.5 formalizes the composite LRT; §18.8 proves reparameterization invariance; §18.9 characterizes local power via non-central $\chi^2$; §18.10 points to the scope boundaries.
+</RemarkBlock>
+
+<RemarkBlock number={3} title="Scope boundary — scalar θ throughout, with pointers for the rest">
+Every proof in Topic 18 is written for scalar $\theta \in \mathbb{R}$. Vector-$\theta$ extensions — $k$-df Wilks, UMP unbiased, Hunt-Stein invariance, Chernoff 1954 boundary cases — are stated with pointers to Lehmann-Romano (LEH2005) and nothing more. This is not pedagogical convenience; it is a deliberate scope decision. The scalar case captures every main idea (the pointwise LR comparison of Proof 1, the MLR-yields-UMP argument of Proof 2, the quadratic-approximation of Proof 3). The vector generalizations are mostly bookkeeping — matrix inverses in place of scalar divisions, quadratic forms $\mathbf{q}^\top \mathbf{I}(\theta_0) \mathbf{q}$ in place of $q^2 I(\theta_0)$, and a $\chi^2_k$ limit in place of $\chi^2_1$. Readers who need the vector results in production should consult LEH2005 Ch. 3 (vector UMP), Ch. 6 (invariance), and Ch. 12 (large-sample theory). Topics 19 and 20 extend Track 5 with CI duality and multiple testing; vector-$\theta$ extensions to Wilks reappear organically in GLM inference on [formalml.com/generalized-linear-models](https://formalml.com/generalized-linear-models).
+</RemarkBlock>
+
+## 18.2 The Neyman-Pearson Lemma
+
+Start with the cleanest case: both $H_0$ and $H_1$ are single points in parameter space. Is there a level-$\alpha$ test whose power at $\theta_1$ exceeds the power of every other level-$\alpha$ test? Yes, and the answer is the likelihood-ratio test.
+
+<DefinitionBlock number={1} title="Most-powerful test">
+A test $\varphi: \mathcal{X} \to [0, 1]$ (where $\varphi(x)$ is the probability of rejecting $H_0$ at observation $x$) is **most powerful (MP) at level $\alpha$** against $H_1: \theta = \theta_1$ if
+$$
+\varphi^* \in \arg\max_{\varphi: \, E_{\theta_0}[\varphi] \le \alpha} E_{\theta_1}[\varphi(X)].
+$$
+That is, $\varphi^*$ maximizes the power at $\theta_1$ among all tests of size at most $\alpha$. The maximum need not be unique on the boundary of the constraint; uniqueness holds in the interior.
+</DefinitionBlock>
+
+<DefinitionBlock number={2} title="Simple-vs-simple likelihood ratio Λ(x)">
+For simple $H_0: \theta = \theta_0$ vs simple $H_1: \theta = \theta_1$, the **likelihood ratio** at observation $x$ is
+$$
+\Lambda(x) = \frac{f(x; \theta_1)}{f(x; \theta_0)}.
+$$
+For iid data $X = (X_1, \ldots, X_n)$ with density $\prod_i f(x_i; \theta)$, the LR factorizes: $\Lambda(x) = \prod_i f(x_i; \theta_1)/f(x_i; \theta_0)$, and we typically work with $\log \Lambda(x) = \sum_i [\log f(x_i; \theta_1) - \log f(x_i; \theta_0)]$ for numerical stability.
+</DefinitionBlock>
+
+<RemarkBlock number={4} title="Notation — Λ(x) here vs Λₙ in Topic 17">
+The $\Lambda(x)$ above is distinct from the composite generalized likelihood ratio $\Lambda_n$ defined in [Topic 17 §17.9 Def 15](/topics/hypothesis-testing#section-17-9). The simple-vs-simple LR compares two specific parameter values; the composite $\Lambda_n = \sup_{\theta \in \Theta_0} L(\theta) / \sup_{\theta \in \Theta} L(\theta)$ compares the best null fit to the best full-model fit. They coincide when both hypotheses are singletons. §18.5 reintroduces the composite $\Lambda_n$, and §18.6 proves its $\chi^2$ asymptotic limit.
+</RemarkBlock>
+
+<TheoremBlock number={1} title="Neyman-Pearson lemma">
+Let $X$ have density $f(x; \theta)$ with respect to a common $\sigma$-finite measure $\mu$. For testing simple $H_0: \theta = \theta_0$ vs simple $H_1: \theta = \theta_1$, fix $\alpha \in (0, 1)$ and let $k \ge 0$ be a threshold. The **Neyman-Pearson test**
+$$
+\varphi^*(x) = \begin{cases} 1 & f(x; \theta_1) > k\, f(x; \theta_0), \\ 0 & f(x; \theta_1) < k\, f(x; \theta_0), \end{cases}
+$$
+with randomization on the boundary $\{f_1 = k f_0\}$ chosen to make $E_{\theta_0}[\varphi^*] = \alpha$, is most powerful level-$\alpha$ among all tests $\varphi$ with $E_{\theta_0}[\varphi] \le \alpha$.
+</TheoremBlock>
+
+<ProofBlock>
+Let $\varphi$ be any test with $E_{\theta_0}[\varphi(X)] \le \alpha$. We prove $E_{\theta_1}[\varphi^*(X)] \ge E_{\theta_1}[\varphi(X)]$.
+
+**Step 1 — pointwise inequality.** For every $x$,
+$$
+\bigl(\varphi^*(x) - \varphi(x)\bigr)\bigl(f(x; \theta_1) - k\, f(x; \theta_0)\bigr) \ge 0.
+$$
+At any $x$ with $f(x; \theta_1) > k f(x; \theta_0)$, we have $\varphi^*(x) = 1 \ge \varphi(x)$, so both factors are $\ge 0$. At any $x$ with $f(x; \theta_1) < k f(x; \theta_0)$, we have $\varphi^*(x) = 0 \le \varphi(x)$, so both factors are $\le 0$. On the boundary $\{f_1 = k f_0\}$ the second factor is zero and the inequality holds trivially. Either way, the product is non-negative pointwise.
+
+**Step 2 — integrate.** Integrating the pointwise inequality against $\mu$:
+$$
+\int \bigl(\varphi^*(x) - \varphi(x)\bigr)\bigl(f(x; \theta_1) - k\, f(x; \theta_0)\bigr)\, d\mu(x) \ge 0.
+$$
+
+Expanding the product and converting integrals to expectations,
+$$
+E_{\theta_1}[\varphi^*(X)] - E_{\theta_1}[\varphi(X)] \ge k\bigl(E_{\theta_0}[\varphi^*(X)] - E_{\theta_0}[\varphi(X)]\bigr).
+$$
+
+**Step 3 — apply the size constraint.** By construction, $E_{\theta_0}[\varphi^*(X)] = \alpha$. By assumption, $E_{\theta_0}[\varphi(X)] \le \alpha$. So
+$$
+E_{\theta_0}[\varphi^*(X)] - E_{\theta_0}[\varphi(X)] \ge 0.
+$$
+Multiplying by $k \ge 0$ preserves the inequality:
+$$
+E_{\theta_1}[\varphi^*(X)] - E_{\theta_1}[\varphi(X)] \ge 0,
+$$
+i.e., $\varphi^*$ has power at least as large as any other level-$\alpha$ test.
+
+∎ — using NEY1933
+</ProofBlock>
+
+![Two-panel figure. Left: overlaid densities f(x; θ₀) and f(x; θ₁) with the NP rejection region — the set of x where f₁ exceeds k times f₀ — shaded. Right: the same region shown as size (Type I area under f₀) on one axis and power (area under f₁) on the other, with the NP power-envelope curve as k varies.](/images/topics/likelihood-ratio-tests-and-np/18-neyman-pearson-regions.png)
+
+<NPLemmaVisualizer client:visible />
+
+<ExampleBlock number={1} title="NP for Bernoulli">
+Let $X_1, \ldots, X_n$ be iid Bernoulli$(p)$. Test $H_0: p = p_0$ vs $H_1: p = p_1$ with $p_1 > p_0$. The likelihood ratio at $x$ is
+$$
+\Lambda(x) = \left(\frac{p_1}{p_0}\right)^{\sum x_i} \left(\frac{1-p_1}{1-p_0}\right)^{n - \sum x_i},
+$$
+which is monotone increasing in $T(x) = \sum x_i$ (since $p_1 > p_0$ implies $p_1/p_0 > 1$ and $(1-p_1)/(1-p_0) < 1$). The NP test rejects iff $T(X) > c$ for some threshold $c$; randomization at $T = c$ achieves exact size $\alpha$.
+
+Concretely: for $n = 20$, $p_0 = 0.5$, $p_1 = 0.7$, $\alpha = 0.05$, the NP test rejects at $T > 15$ with exact size $\approx 0.021$ (the conservative size of §18.4). Power at $p_1 = 0.7$: $P_{0.7}(T > 15) \approx 0.416$ (verified in `binomialExactPower` of Topic 17's `testing.ts`).
+</ExampleBlock>
+
+<ExampleBlock number={2} title="NP for Normal mean (σ known)">
+Let $X_1, \ldots, X_n$ be iid $\mathcal{N}(\mu, \sigma^2)$ with $\sigma$ known. Test $H_0: \mu = \mu_0$ vs $H_1: \mu = \mu_1$ with $\mu_1 > \mu_0$. The log-likelihood ratio is
+$$
+\log \Lambda(x) = \frac{n(\mu_1 - \mu_0)\bigl(2\bar x - \mu_0 - \mu_1\bigr)}{2\sigma^2},
+$$
+monotone increasing in $\bar x$. The NP test rejects iff $\bar x > c$ for $c = \mu_0 + z_{1-\alpha}\, \sigma / \sqrt n$, where $z_{1-\alpha}$ is the standard-Normal $(1-\alpha)$-quantile. The threshold depends on $\alpha$ and $n$ and $\sigma$ — but *not* on $\mu_1$. The same test is NP against every $\mu_1 > \mu_0$. That is the geometric seed of the Karlin-Rubin theorem in §18.3.
+
+Numerical check: $n = 25$, $\mu_0 = 0$, $\mu_1 = 1$, $\sigma = 1$, $\alpha = 0.05$. Then $c = 0 + 1.645 \cdot 1/\sqrt{25} \approx 0.329$, matching `npCriticalValue('normal-mean-known-sigma', 0, 1, 25, 0.05, 1)` in `testing.ts`.
+</ExampleBlock>
+
+<ExampleBlock number={3} title="NP for Exponential rate">
+Let $X_1, \ldots, X_n$ be iid Exponential$(\lambda)$ with density $f(x; \lambda) = \lambda e^{-\lambda x}$ on $x \ge 0$. Test $H_0: \lambda = \lambda_0$ vs $H_1: \lambda = \lambda_1$. The log-likelihood ratio is
+$$
+\log \Lambda(x) = n\log(\lambda_1/\lambda_0) - (\lambda_1 - \lambda_0) \sum_i x_i.
+$$
+
+If $\lambda_1 > \lambda_0$ (faster rate, shorter expected waits), the LR is *decreasing* in $T(x) = \sum x_i$: short totals favor $H_1$. The NP test rejects iff $T < c_{\text{lo}}$. Under $H_0$, $T \sim \Gamma(n, \lambda_0)$; using $(2\lambda_0 T) \sim \chi^2_{2n}$ we get the exact size at $c_{\text{lo}} = \chi^2_{2n, \alpha} / (2\lambda_0)$.
+
+The direction reversal — shorter totals trigger rejection of "the slower rate is true" — is a common pitfall in exponential-reliability testing. `npCriticalValue('exponential', ...)` in Topic 17's `testing.ts` handles the direction via an explicit `Tform` label noting the side.
+</ExampleBlock>
+
+<RemarkBlock number={5} title="Randomization is only needed for discrete test statistics">
+The NP test's "randomize on the boundary" clause looks strange but is needed only when $P_{\theta_0}(\Lambda = k) > 0$ — i.e., when the test statistic is discrete and $k$ falls on an atom. For continuous tests (Normal, Exponential), the boundary has measure zero and no randomization is needed; the size is exactly $\alpha$ by choice of $k$. For discrete tests (Bernoulli, Poisson), the exact size without randomization is usually strictly less than $\alpha$ — the **conservative size** of [§17.3 Thm 1](/topics/hypothesis-testing#section-17-3) and [§17.6 Ex 11](/topics/hypothesis-testing#section-17-6). We treat randomization as a theoretical device: in practice we rarely implement it, accepting the conservative size in exchange for interpretability.
+</RemarkBlock>
+
+<RemarkBlock number={6} title="Template versus usable test">
+Theorem 1 is a template — given the two parameter values and a chosen $\alpha$, it tells you what the MP test looks like. It does not by itself produce a *usable* test of a practical hypothesis like "is this drug better than placebo?" because practical hypotheses are rarely simple-vs-simple. The real $H_1$ is usually composite ("some positive effect of unspecified size"), and the MP test depends on which specific alternative you face. §18.3 asks: when is the NP rejection region *the same* for every alternative in a composite $H_1$? That is the MLR / Karlin-Rubin story.
+</RemarkBlock>
+
+## 18.3 Monotone Likelihood Ratio & Karlin-Rubin
+
+The NP test at Example 2 had a remarkable property: the rejection region $\{\bar x > c\}$ did not depend on $\mu_1$ — only on $\mu_0$, $\alpha$, $n$, $\sigma$. The same test was NP against every $\mu_1 > \mu_0$. That property has a name: **uniformly most powerful (UMP)**. Which families give it?
+
+<DefinitionBlock number={3} title="Monotone likelihood ratio (MLR)">
+A family $\{f(\cdot; \theta) : \theta \in \Theta \subseteq \mathbb{R}\}$ has **monotone likelihood ratio in $T(x)$** if there exists a statistic $T(x)$ such that for every pair $\theta_1 < \theta_2$ in $\Theta$, the ratio
+$$
+\frac{f(x; \theta_2)}{f(x; \theta_1)} \text{ is a non-decreasing function of } T(x).
+$$
+Equivalently, $\log[f(x; \theta_2)/f(x; \theta_1)]$ is a non-decreasing function of $T(x)$.
+</DefinitionBlock>
+
+<DefinitionBlock number={4} title="Uniformly most powerful (UMP) test">
+A level-$\alpha$ test $\varphi^*$ is **uniformly most powerful (UMP)** against a composite alternative $H_1: \theta \in \Theta_1$ if it is MP level-$\alpha$ at *every* $\theta_1 \in \Theta_1$ simultaneously. In symbols: for every $\theta_1 \in \Theta_1$ and every level-$\alpha$ test $\varphi$,
+$$
+E_{\theta_1}[\varphi^*(X)] \ge E_{\theta_1}[\varphi(X)].
+$$
+UMP existence is a strong statement — the same rejection region beats every competitor at every alternative.
+</DefinitionBlock>
+
+<TheoremBlock number={2} title="Karlin-Rubin: MLR gives one-sided UMP">
+Let $\{f(\cdot; \theta) : \theta \in \Theta \subseteq \mathbb{R}\}$ have MLR in $T(x)$. For testing
+$$
+H_0: \theta \le \theta_0 \quad \text{versus} \quad H_1: \theta > \theta_0,
+$$
+there exists a threshold $c$ (possibly with randomization at $T = c$ for discrete $T$) such that the test
+$$
+\varphi^*(x) = \mathbf{1}\{T(x) > c\}
+$$
+has size exactly $\alpha$ and is UMP level-$\alpha$.
+</TheoremBlock>
+
+<ProofBlock>
+We prove two things: (i) $\varphi^*$ has size $\le \alpha$ over the composite null $\{\theta \le \theta_0\}$, achieving $\alpha$ at $\theta = \theta_0$; (ii) $\varphi^*$ is MP at every $\theta_1 > \theta_0$.
+
+**Step 1 — size over the composite null.** By MLR, for any $\theta < \theta_0$,
+$$
+\frac{f(x; \theta_0)}{f(x; \theta)} \text{ is non-decreasing in } T(x).
+$$
+Consider the NP test (Theorem 1) of the simple "$\theta$ vs $\theta_0$" with rejection region $\{f(x; \theta_0) > \kappa f(x; \theta)\}$, which by MLR coincides with $\{T(x) > c_\kappa\}$ for an appropriate $c_\kappa$ depending on $\kappa$. The NP lemma says this test maximizes $P_{\theta_0}(\text{reject})$ subject to $P_{\theta}(\text{reject}) \le \alpha'$. Inverting: the power at $\theta_0$ of any level-$\alpha$ test at $\theta$ is bounded by the power at $\theta_0$ of the NP test at $\theta$, which is exactly the size at $\theta$ required to achieve size $\alpha$ at $\theta_0$. Because the rejection region $\{T > c\}$ is of NP form with size $\alpha$ at $\theta_0$, its size at $\theta < \theta_0$ cannot exceed $\alpha$:
+$$
+P_\theta(T > c) \le P_{\theta_0}(T > c) = \alpha \quad \text{for every } \theta < \theta_0.
+$$
+Size is maximized at $\theta = \theta_0$ and equals $\alpha$ on the composite null boundary.
+
+**Step 2 — MP at each $\theta_1 > \theta_0$.** Fix $\theta_1 > \theta_0$. By MLR,
+$$
+\frac{f(x; \theta_1)}{f(x; \theta_0)} \text{ is non-decreasing in } T(x).
+$$
+There exists a threshold $\kappa$ such that $\{f(x; \theta_1) > \kappa f(x; \theta_0)\} = \{T(x) > c\}$ (same $c$ as Step 1, since both are calibrated to size $\alpha$ at $\theta_0$). By Theorem 1, the test $\mathbf{1}\{T > c\}$ is MP level-$\alpha$ for "$\theta_0$ vs $\theta_1$" — and the rejection region does not depend on $\theta_1$. The same test is MP at every $\theta_1 > \theta_0$ simultaneously.
+
+Combining Steps 1 and 2: $\varphi^* = \mathbf{1}\{T > c\}$ has size $\alpha$ on the composite null (achieved at $\theta = \theta_0$) and is MP at every alternative. This is the definition of UMP.
+
+∎ — using KAR1956 and Theorem 1
+</ProofBlock>
+
+![Four-panel grid showing log-likelihood ratios as monotone-increasing functions of the sufficient statistic T: top-left Bernoulli (T = ΣXᵢ), top-right Normal mean (T = x̄), bottom-left Poisson rate (T = ΣXᵢ), bottom-right Exponential rate (T = ΣXᵢ). Each line is visibly non-decreasing, confirming MLR for four exponential-family examples.](/images/topics/likelihood-ratio-tests-and-np/18-mlr-illustration.png)
+
+<KarlinRubinUMP client:visible />
+
+<ExampleBlock number={4} title="Every exponential family has MLR in its natural sufficient statistic">
+Let $f(x; \eta) = h(x) \exp\bigl(\eta T(x) - A(\eta)\bigr)$ be a one-parameter [exponential family](/topics/exponential-families) with natural parameter $\eta$ and sufficient statistic $T(x)$. For any $\eta_1 < \eta_2$,
+$$
+\frac{f(x; \eta_2)}{f(x; \eta_1)} = \exp\bigl((\eta_2 - \eta_1) T(x) - [A(\eta_2) - A(\eta_1)]\bigr).
+$$
+This is a monotone increasing function of $T(x)$ because $\eta_2 - \eta_1 > 0$. So every one-parameter exponential family has MLR in its natural sufficient statistic. Karlin-Rubin then hands us a UMP test for every one-sided composite hypothesis on $\eta$ — Bernoulli, Normal mean (with $\sigma$ known), Poisson, Exponential, Gamma (with shape known), Geometric, and so on.
+
+This is the pedagogical payoff of [Topic 16's](/topics/sufficient-statistics) factorization + completeness machinery: once you know the sufficient statistic, the UMP test writes itself.
+</ExampleBlock>
+
+<ExampleBlock number={5} title="Uniform(0, θ) — MLR without exponential-family structure">
+Let $X_1, \ldots, X_n$ be iid Uniform$(0, \theta)$, $\theta > 0$. The density is $f(x; \theta) = \theta^{-1} \mathbf{1}\{0 \le x \le \theta\}$, and the joint is $\theta^{-n} \mathbf{1}\{\max_i x_i \le \theta\}$. For $\theta_1 < \theta_2$,
+$$
+\frac{f(x; \theta_2)}{f(x; \theta_1)} = \begin{cases} (\theta_1/\theta_2)^n & \max x_i \le \theta_1, \\ (\theta_1/\theta_2)^n \cdot \theta_2^n \cdot 0^{-1} = +\infty & \theta_1 < \max x_i \le \theta_2, \\ \text{undefined} & \max x_i > \theta_2. \end{cases}
+$$
+The ratio is non-decreasing in $\max_i x_i$ (jumps from a constant to $+\infty$ at $\max = \theta_1$). Uniform$(0, \theta)$ has MLR in $T = \max X_i$, even though it is not an exponential family. By Karlin-Rubin, the one-sided UMP test for $H_0: \theta \le \theta_0$ vs $H_1: \theta > \theta_0$ rejects iff $\max X_i > c$ where $c = \theta_0 \cdot \alpha^{1/n}$ gives size exactly $\alpha$ (the left-tail quantile of $\max/\theta_0$, which is distributed as $U^{1/n}_{\max}$).
+</ExampleBlock>
+
+<RemarkBlock number={7} title="Two-sided UMP usually doesn't exist">
+Karlin-Rubin gives UMP for *one-sided* composite alternatives. For two-sided alternatives $H_1: \theta \ne \theta_0$, UMP tests typically do *not* exist, because the best rejection region for $\theta_1 > \theta_0$ points right while the best for $\theta_1 < \theta_0$ points left, and no single region handles both. The standard workaround is to restrict to *unbiased* tests (power $\ge \alpha$ at every alternative) and prove UMP within that class — the **UMP unbiased (UMPU)** construction of Lehmann-Romano (LEH2005 Ch. 4). That theory is beyond Topic 18's scope; we note only that for the Normal variance test (one-sided in $\sigma^2$) the UMPU and the equal-tail $\chi^2$ test coincide, while for the two-sided Normal mean the z-test is UMPU but not UMP in the full class of level-$\alpha$ tests. §18.4 Remark 8 returns to this.
+</RemarkBlock>
+
+<RemarkBlock number={8} title="Historical note — Karlin 1957 coined 'monotone likelihood ratio'">
+The structural property was isolated by Karlin and Rubin (KAR1956) in their 1956 paper on MLR decision procedures, but the term "monotone likelihood ratio" itself was coined the next year in Karlin's solo paper on Pólya-type distributions (KAR1957). The MLR families are exactly the **totally positive of order 2** ($\mathrm{TP}_2$) families in Karlin's terminology — a classification that generalizes to kernels and sequences in a way that powers modern results in statistical order (Shaked & Shanthikumar 2007) and in asymptotic efficiency bounds for monotone regression (Groeneboom & Jongbloed 2014).
+</RemarkBlock>
+
+## 18.4 UMP in Action — Three Worked Families
+
+<ExampleBlock number={6} title="Binomial exact test is UMP one-sided">
+Let $X_1, \ldots, X_n$ be iid Bernoulli$(p)$. Test $H_0: p \le p_0$ vs $H_1: p > p_0$. The Bernoulli family is exponential with natural parameter $\eta = \log[p/(1-p)]$ (log-odds) and sufficient statistic $T = \sum X_i \sim \text{Binomial}(n, p)$. By Example 4, MLR holds in $T$. By Karlin-Rubin, the test
+$$
+\varphi^*(x) = \mathbf{1}\{\textstyle\sum x_i > c\}, \qquad c = \text{smallest integer with } P_{p_0}(\textstyle\sum X_i > c) \le \alpha
+$$
+is UMP level-$\alpha$. This is exactly the [binomial exact test](/topics/hypothesis-testing#section-17-6) of Topic 17 §17.6 Example 11 — now equipped with an optimality certificate. At $n = 20$, $p_0 = 0.5$, $\alpha = 0.05$, the boundary is $c = 15$ with exact size $0.0207$ (`binomialExactRejectionBoundary` in `testing.ts`).
+
+The payoff: the binomial exact test is *not just valid* — it is **the best** level-$\alpha$ test for every alternative $p_1 > 0.5$ simultaneously, with no competitor having higher power at any alternative.
+</ExampleBlock>
+
+![Two-panel figure. Left: UMP power curve β(μ) for the Normal one-sided z-test at n = 25, σ = 1, α = 0.05 — β(0) = 0.05 at the boundary, monotone increasing in μ. Right: Normal sampling density of x̄ at μ = 0 with the UMP rejection region x̄ > 0.329 shaded.](/images/topics/likelihood-ratio-tests-and-np/18-karlin-rubin-ump.png)
+
+<ExampleBlock number={7} title="Normal z-test (σ known) is UMP one-sided">
+Let $X_1, \ldots, X_n$ be iid $\mathcal{N}(\mu, \sigma^2)$ with $\sigma$ known. For $H_0: \mu \le \mu_0$ vs $H_1: \mu > \mu_0$, MLR in $T = \bar X$ follows from Example 4 (Normal with $\sigma$ known is exp-family with $\eta = \mu/\sigma^2$, $T = \sum x_i$). Karlin-Rubin gives UMP
+$$
+\varphi^*(x) = \mathbf{1}\{\bar x > \mu_0 + z_{1-\alpha}\sigma/\sqrt n\}
+$$
+with exact size $\alpha$. No level-$\alpha$ test of this one-sided hypothesis has higher power at any $\mu > \mu_0$ than the one-sided z-test. This result justifies the A/B-testing convention of reporting one-sided p-values when the practical question is directional.
+</ExampleBlock>
+
+![Two-panel figure. Left: exact UMP rejection boundary (integer threshold on ΣXᵢ, step function) vs Normal-approximation boundary (smooth) as n grows from 20 to 100. Right: exact size vs approximate size — exact is conservative below 0.05, Normal approximation oscillates.](/images/topics/likelihood-ratio-tests-and-np/18-binomial-ump-exact.png)
+
+<ExampleBlock number={8} title="Normal t-test is UMP-invariant (not UMP)">
+Let $X_1, \ldots, X_n$ be iid $\mathcal{N}(\mu, \sigma^2)$ with $\sigma^2$ **unknown**. For $H_0: \mu \le \mu_0$ vs $H_1: \mu > \mu_0$, MLR fails: the likelihood depends on both $(\mu, \sigma^2)$ and no scalar $T$ captures the likelihood-ratio monotonicity uniformly. UMP does not exist in the full class of level-$\alpha$ tests. The [one-sample t-test](/topics/hypothesis-testing#section-17-7) is UMP within the restricted class of tests that are **invariant under scale transformations** $X_i \mapsto c X_i$ — a Hunt-Stein invariance argument (LEH2005 Ch. 6). The t-test retains an optimality certificate, but only conditionally.
+
+The $\sigma$-unknown case is the historical reason Wilks pursued a different asymptotic framework (§18.6): when Karlin-Rubin's MLR argument fails, the composite LRT provides a general-purpose procedure that does not require MLR but gives up finite-sample optimality in exchange.
+</ExampleBlock>
+
+<RemarkBlock number={9} title="Why two-sided z-tests aren't UMP — and why it barely matters in practice">
+The two-sided Normal mean test $H_0: \mu = \mu_0$ vs $H_1: \mu \ne \mu_0$ has no UMP test (Remark 7). The equal-tail z-test is UMPU (LEH2005 Thm 4.4.1): MP within the class of unbiased tests, i.e., those with power $\ge \alpha$ at every alternative. The practical consequence is minor — in concrete applications the UMPU test and the only serious competitors differ by at most a few percent in power. But conceptually it is important: UMP is the exception, UMPU / invariance / LRT are the rule. The composite LRT of §18.5 is the price we pay for general-purpose applicability, and Wilks' theorem is the justification for believing that price is low.
+</RemarkBlock>
+
+## 18.5 The Likelihood-Ratio Principle for Composite H₀
+
+When Karlin-Rubin fails — two-sided alternatives, nuisance parameters, irregular families — we need a general-purpose construction. The classical answer is Wilks' generalized likelihood-ratio test.
+
+<DefinitionBlock number={5} title="Generalized likelihood ratio Λₙ">
+Let $\Theta$ be the full parameter space and $\Theta_0 \subset \Theta$ the null subspace. The **generalized likelihood ratio** for a sample $X_1, \ldots, X_n$ is
+$$
+\Lambda_n = \frac{\sup_{\theta \in \Theta_0} L(\theta \mid X)}{\sup_{\theta \in \Theta} L(\theta \mid X)} = \frac{L(\tilde\theta_n)}{L(\hat\theta_n)},
+$$
+where $\tilde\theta_n$ is the **restricted MLE** (maximizer under $H_0$) and $\hat\theta_n$ is the **unrestricted MLE**. Both are functions of the data. Since $\Theta_0 \subseteq \Theta$, always $0 \le \Lambda_n \le 1$.
+</DefinitionBlock>
+
+<DefinitionBlock number={6} title="LRT rejection rule">
+The **likelihood-ratio test (LRT)** at level $\alpha$ rejects $H_0$ when
+$$
+-2 \log \Lambda_n > c_\alpha,
+$$
+where $c_\alpha$ is chosen to achieve size $\alpha$ under $H_0$. The conventional asymptotic choice $c_\alpha = \chi^2_{k, 1-\alpha}$, where $k$ is the number of parameter restrictions, is justified by Wilks' theorem (§18.6 Thm 4). At finite $n$, $c_\alpha$ may need to be calibrated by Monte Carlo for accurate size.
+</DefinitionBlock>
+
+<TheoremBlock number={3} title="Reparameterization invariance of the LRT (stated; proved in §18.8)">
+Let $\eta = g(\theta)$ be a smooth one-to-one reparameterization with $H_0^\eta = g(H_0^\theta)$. Then the composite LRT $\Lambda_n$ is invariant:
+$$
+\Lambda_n(X; \theta) = \Lambda_n(X; \eta),
+$$
+i.e., computing the LRT in either parameterization yields the same test statistic and the same rejection decision. The Wald and Score tests lack this invariance; see §18.8 Theorem 6 and the concrete logit-vs-raw Bernoulli example in Example 13.
+</TheoremBlock>
+
+<ExampleBlock number={9} title="One-sample t-test is the LRT for Normal mean">
+Let $X_1, \ldots, X_n$ be iid $\mathcal{N}(\mu, \sigma^2)$ with both unknown. Test $H_0: \mu = \mu_0$ vs $H_1: \mu \ne \mu_0$.
+
+Under $H_0$: $\sigma^2$ is the only free parameter; its MLE is $\tilde\sigma^2_0 = n^{-1} \sum (X_i - \mu_0)^2$. Under $H_1 \cup H_0$: the MLEs are $\hat\mu = \bar X$, $\hat\sigma^2 = n^{-1} \sum (X_i - \bar X)^2$. A short calculation (expand the likelihoods) gives
+$$
+\Lambda_n = \left(\frac{\hat\sigma^2}{\tilde\sigma^2_0}\right)^{n/2} = \left(1 + \frac{T_n^2}{n-1}\right)^{-n/2},
+$$
+where $T_n = \sqrt n (\bar X - \mu_0)/S$ is the t-statistic with $S^2 = (n-1)^{-1} \sum (X_i - \bar X)^2$. So $-2 \log \Lambda_n = n \log(1 + T_n^2/(n-1))$ is a strictly increasing function of $|T_n|$ — the LRT rejects iff $|T_n|$ exceeds a threshold, which is exactly the two-sided t-test rejection rule. The t-test is the LRT.
+
+At large $n$, $-2 \log \Lambda_n \approx T_n^2$ and the asymptotic $\chi^2_1$ reference of §18.6 Thm 4 reduces to the squared-t approximation. At finite $n$, the exact t-test reference (Topic 17 Thm 5 via Basu) is preferred over the asymptotic $\chi^2$.
+</ExampleBlock>
+
+<ExampleBlock number={10} title="χ² variance test is the LRT for Normal variance">
+Let $X_1, \ldots, X_n$ be iid $\mathcal{N}(\mu, \sigma^2)$ with $\mu$ unknown. Test $H_0: \sigma^2 = \sigma_0^2$ vs $H_1: \sigma^2 \ne \sigma_0^2$.
+
+Under $H_0$: $\hat\mu = \bar X$ is free; plug-in gives likelihood $L(\bar X, \sigma_0^2)$. Under $H_1$: $\hat\sigma^2 = n^{-1} \sum (X_i - \bar X)^2$ is the unrestricted MLE. The LRT statistic simplifies to
+$$
+-2 \log \Lambda_n = n \log\left(\frac{\sigma_0^2}{\hat\sigma^2}\right) + \frac{n \hat\sigma^2}{\sigma_0^2} - n,
+$$
+a function of $W = n \hat\sigma^2 / \sigma_0^2$. The equal-tail $\chi^2$ variance test of [Topic 17 §17.8](/topics/hypothesis-testing#section-17-8) rejects for extreme $W$; the LRT agrees asymptotically via Wilks' Thm 4, and the exact $(n-1)S^2/\sigma_0^2 \sim \chi^2_{n-1}$ distribution gives the exact size.
+</ExampleBlock>
+
+<RemarkBlock number={10} title="Profile likelihood — preview, full treatment in Topic 19">
+When there are nuisance parameters, the restricted MLE $\tilde\theta_n$ in $\Lambda_n$ is obtained by maximizing over the nuisance parameters at fixed $\theta_0$. This operation — "eliminate the nuisance by profiling" — yields the **profile likelihood**
+$$
+L_P(\theta) = \sup_{\psi} L(\theta, \psi),
+$$
+a marginal likelihood in $\theta$ alone. Profile likelihood is a CI-construction tool first (Topic 19) and a testing artefact second; §18.6 Example 11 treats the Bernoulli case (no nuisance) directly, and §18.9's local-power argument likewise handles the scalar-$\theta$ case. For a full treatment of profile, integrated, and conditional likelihoods, see [Topic 19](/topics/confidence-intervals) (forthcoming) and the Reid-Fraser approach in the nonparametric Bayesian literature.
+</RemarkBlock>
+
+<RemarkBlock number={11} title="LRT as the general-purpose optimality substitute">
+Wilks' generalized LRT plays the role of the Swiss-Army-knife testing procedure: applicable to every composite-vs-composite setting (subject to regularity), with a known asymptotic null distribution. It gives up finite-sample optimality (no Karlin-Rubin-style UMP guarantee) but retains asymptotic efficiency in a precise sense. The pragmatic algorithm is the following. If your family has MLR (exponential families, Uniform-scale family), prefer Karlin-Rubin UMP. If not, default to the LRT. If the LRT is analytically intractable, approximate with Wald or Score — noting that the three differ in finite samples (§18.7–§18.8) and that LRT is usually the safest choice when the three disagree. FER1967 develops this decision-theoretic calculus in full; LEH2005 Ch. 12 gives the modern view.
+</RemarkBlock>
+
+## 18.6 Wilks' Theorem
+
+This is the technical high point of Topic 18. The LRT statistic $-2 \log \Lambda_n$ does not have a clean finite-sample distribution in general, but under regularity its null distribution converges to $\chi^2_1$ (scalar $\theta$) — the same reference distribution as the squared z-test. The proof unfolds in 8 steps from Taylor's theorem and MLE asymptotic normality.
+
+<TheoremBlock number={4} title="Wilks' theorem (scalar θ)">
+Let $X_1, \ldots, X_n$ be iid from $\{f(\cdot; \theta) : \theta \in \Theta\}$ with $\Theta \subseteq \mathbb{R}$ open. Under $H_0: \theta = \theta_0$ with $\theta_0$ in the interior of $\Theta$, and under Wilks' regularity — the MLE $\hat\theta_n$ is consistent and asymptotically normal (Topic 14 Thm 14.3); the Fisher information $I(\theta)$ is continuous and positive at $\theta_0$; the third log-density derivative $\partial^3 \log f / \partial\theta^3$ is uniformly bounded in a neighborhood of $\theta_0$ by a function $M(x)$ with $E_{\theta_0}[M(X)] < \infty$ — the log-likelihood-ratio statistic converges in distribution:
+$$
+-2 \log \Lambda_n \xrightarrow{d} \chi^2_1 \quad \text{under } H_0,
+$$
+where $\Lambda_n = L(\theta_0) / L(\hat\theta_n)$.
+</TheoremBlock>
+
+<ProofBlock>
+The argument proceeds in 8 steps. Write $\ell(\theta) = \log L(\theta)$ for the log-likelihood.
+
+**Step 1 — Rewrite in log-likelihood form.** By definition,
+$$
+-2 \log \Lambda_n = -2 \bigl[\ell(\theta_0) - \ell(\hat\theta_n)\bigr] = 2\bigl[\ell(\hat\theta_n) - \ell(\theta_0)\bigr].
+$$
+
+**Step 2 — Taylor expand $\ell(\theta_0)$ around $\hat\theta_n$.** By Taylor's theorem with remainder, there exists $\xi_n$ between $\theta_0$ and $\hat\theta_n$ such that
+$$
+\ell(\theta_0) = \ell(\hat\theta_n) + \ell'(\hat\theta_n)(\theta_0 - \hat\theta_n) + \tfrac{1}{2} \ell''(\hat\theta_n)(\theta_0 - \hat\theta_n)^2 + R_n,
+$$
+where $R_n = \tfrac{1}{6} \ell'''(\xi_n)(\theta_0 - \hat\theta_n)^3$.
+
+**Step 3 — First-order term vanishes.** Because $\hat\theta_n$ is the MLE in the interior of $\Theta$, the first-order condition $\ell'(\hat\theta_n) = 0$ holds exactly ([Topic 14 §14.6](/topics/maximum-likelihood#section-14-6)). Substituting into Step 2,
+$$
+\ell(\theta_0) - \ell(\hat\theta_n) = \tfrac{1}{2} \ell''(\hat\theta_n)(\theta_0 - \hat\theta_n)^2 + R_n.
+$$
+Therefore
+$$
+-2 \log \Lambda_n = -\ell''(\hat\theta_n)(\hat\theta_n - \theta_0)^2 - 2 R_n.
+$$
+
+**Step 4 — Remainder control.** We show $2 R_n = o_P(1)$. By the third-derivative hypothesis, there exists a neighborhood $U$ of $\theta_0$ and a function $M(x)$ with $E_{\theta_0}[M(X)] < \infty$ such that
+$$
+\bigl|\ell'''(\theta)\bigr| \le \sum_{i=1}^n M(X_i) \quad \text{for every } \theta \in U.
+$$
+Since $\hat\theta_n \xrightarrow{P} \theta_0$ ([Topic 14 Thm 14.2](/topics/maximum-likelihood#section-14-5)), we have $\xi_n \in U$ with probability $\to 1$, and on that event
+$$
+|R_n| \le \tfrac{1}{6} \left|\sum_{i=1}^n M(X_i)\right| \cdot |\hat\theta_n - \theta_0|^3.
+$$
+By the weak law of large numbers applied to $M(X_i)$,
+$$
+\tfrac{1}{n} \sum_{i=1}^n M(X_i) \xrightarrow{P} E_{\theta_0}[M(X)] < \infty,
+$$
+so $|\sum M(X_i)| = O_P(n)$. By [Topic 14 Thm 14.3](/topics/maximum-likelihood#section-14-7), $\sqrt n (\hat\theta_n - \theta_0) = O_P(1)$, hence $|\hat\theta_n - \theta_0|^3 = O_P(n^{-3/2})$. Combining,
+$$
+|R_n| = O_P(n) \cdot O_P(n^{-3/2}) = O_P(n^{-1/2}) = o_P(1).
+$$
+Thus $2 R_n = o_P(1)$.
+
+![Log-likelihood ℓ(θ) for Bernoulli p = 0.5 at n = 100 overlaid with the quadratic Taylor approximation tangent at θ̂ₙ. The vertical drop from the peak down to ℓ(θ₀) is exactly (minus half of) −2 log Λₙ; the quadratic approximation shows that this drop is n·I(θ₀)·(θ̂ₙ−θ₀)²/2 modulo o_P(1).](/images/topics/likelihood-ratio-tests-and-np/18-wilks-proof-geometry.png)
+
+**Step 5 — Rescale observed curvature to Fisher information.** Write $-\ell''(\hat\theta_n) = n \cdot [-(1/n)\ell''(\hat\theta_n)]$. The bracketed quantity converges in probability to $I(\theta_0)$:
+$$
+-\frac{1}{n} \ell''(\hat\theta_n) \xrightarrow{P} I(\theta_0).
+$$
+This identity — "observed information at the MLE converges to Fisher information at $\theta_0$" — is the same lemma used in the proof of [Topic 14 Thm 14.3](/topics/maximum-likelihood#section-14-7). It follows from the SLLN applied to the iid summands $-\partial^2_\theta \log f(X_i; \theta)$, continuity of $I(\cdot)$ at $\theta_0$, and consistency of $\hat\theta_n$. We cite Topic 14 for the full argument and do not reprove it here.
+
+**Step 6 — Invoke MLE asymptotic normality.** By [Topic 14 Thm 14.3](/topics/maximum-likelihood#section-14-7),
+$$
+\sqrt n (\hat\theta_n - \theta_0) \xrightarrow{d} \mathcal{N}\bigl(0, I(\theta_0)^{-1}\bigr) \quad \text{under } H_0.
+$$
+Equivalently, $\sqrt{n I(\theta_0)} \cdot (\hat\theta_n - \theta_0) \xrightarrow{d} \mathcal{N}(0, 1)$.
+
+**Step 7 — Continuous mapping: square.** Let $Z_n = \sqrt{n I(\theta_0)} (\hat\theta_n - \theta_0)$. Then $Z_n \xrightarrow{d} Z \sim \mathcal{N}(0, 1)$. By the [continuous mapping theorem](/topics/modes-of-convergence) (Topic 9), $Z_n^2 \xrightarrow{d} Z^2 \sim \chi^2_1$. Note $Z_n^2 = n I(\theta_0) (\hat\theta_n - \theta_0)^2$.
+
+**Step 8 — Combine via Slutsky.** From Step 3 (using Step 5),
+$$
+-2 \log \Lambda_n = -\ell''(\hat\theta_n)(\hat\theta_n - \theta_0)^2 - 2 R_n = n \cdot \left[-\tfrac{1}{n} \ell''(\hat\theta_n)\right] \cdot (\hat\theta_n - \theta_0)^2 - 2 R_n.
+$$
+Rewrite the leading term as $Z_n^2 \cdot \bigl[-(1/n)\ell''(\hat\theta_n) / I(\theta_0)\bigr]$. The ratio inside the brackets converges in probability to $1$ by Step 5, and $Z_n^2 \xrightarrow{d} \chi^2_1$ by Step 7. By Slutsky's theorem, the product converges in distribution to $\chi^2_1$. The remainder $2 R_n = o_P(1)$ does not affect the distributional limit, and we conclude
+$$
+-2 \log \Lambda_n \xrightarrow{d} \chi^2_1 \quad \text{under } H_0.
+$$
+
+∎ — using Topic 14 Thm 14.3, Topic 9 (continuous mapping, Slutsky), WIL1938
+</ProofBlock>
+
+![MC histograms of −2 log Λₙ under H₀ for Bernoulli(p₀ = 0.5) at sample sizes n = 10, 50, 200, 1000 with M = 5000 replications. The χ²₁ density is overlaid in each panel. Visible convergence: at n = 10 the histogram is lumpy and overdispersed, at n = 200 it hugs the density, at n = 1000 the match is within Monte Carlo error.](/images/topics/likelihood-ratio-tests-and-np/18-wilks-convergence.png)
+
+<WilksConvergence client:visible />
+
+<ExampleBlock number={11} title="Bernoulli: explicit formulas and −2 log Λₙ vs Wald vs Score">
+Let $X_1, \ldots, X_n$ be iid Bernoulli$(p)$, test $H_0: p = p_0$ vs $H_1: p \ne p_0$. Write $\hat p = \bar X$ for the MLE and recall the three statistics from [Topic 17 §17.9](/topics/hypothesis-testing#section-17-9):
+$$
+W_n = \frac{n(\hat p - p_0)^2}{\hat p(1 - \hat p)}, \qquad S_n = \frac{n(\hat p - p_0)^2}{p_0(1 - p_0)}, \qquad -2\log\Lambda_n = 2n\Bigl[\hat p \log\tfrac{\hat p}{p_0} + (1-\hat p)\log\tfrac{1-\hat p}{1-p_0}\Bigr].
+$$
+All three converge to $\chi^2_1$ under $H_0$ (Wilks for the LRT; Wald-and-Score from Topic 17 Thm 7). They differ only by the variance plug-in: Wald uses $\hat p$, Score uses $p_0$, LRT uses an interpolation via the logarithm.
+
+Numerical check: at $p_0 = 0.5$, $n = 100$, $M = 2000$ MC replications with seed 42 (`wilksSimulate('bernoulli', 0.5, 100, 2000, undefined, 42)` in `testing.ts`): empirical mean $\approx 1.000$, 95th percentile $\approx 4.03$. The $\chi^2_1$ theoretical targets are mean $1$, 95% quantile $3.84$. The 95th percentile's slight overshoot at $n = 100$ is the finite-sample overdispersion Wilks cures asymptotically.
+</ExampleBlock>
+
+<RemarkBlock number={12} title="Regularity conditions and pointers to the rigorous LAN treatment">
+The classical regularity used in Proof 3 — existence and continuity of the first three log-density derivatives, uniform boundedness of the third, consistency and asymptotic normality of the MLE — traces back to Wilks' 1938 paper and Cramér's 1946 textbook. A rigorous modern treatment via Local Asymptotic Normality (LAN) and contiguity removes the third-derivative hypothesis and replaces it with differentiability in quadratic mean; see [VAN1998] van der Vaart §16 for the empirical-process formulation. For the practical user, the classical conditions suffice; the LAN treatment matters when the underlying family is non-smooth or non-identifiable at specific points (e.g., mixture models, non-regular tails).
+</RemarkBlock>
+
+<RemarkBlock number={13} title="Vector-θ Wilks — the k-df extension">
+The vector-$\theta$ extension replaces the scalar quadratic $n I(\theta_0) (\hat\theta_n - \theta_0)^2$ with the quadratic form $n (\hat\theta_n - \theta_0)^\top \mathbf{I}(\theta_0) (\hat\theta_n - \theta_0)$, where $\mathbf{I}(\theta_0)$ is the Fisher information matrix. By the multivariate CLT and continuous mapping, this quadratic form converges to $\chi^2_k$ where $k = \dim(\Theta) - \dim(\Theta_0)$. The 8-step scalar proof above extends line-for-line; no new ideas are needed, only more bookkeeping. See LEH2005 Thm 12.4.2 for the rigorous statement and proof.
+</RemarkBlock>
+
+<RemarkBlock number={14} title="Non-regular failures — when Wilks breaks">
+Wilks' $\chi^2$ limit fails in three kinds of non-regular settings. (1) **Boundary nulls**, where $\theta_0$ lies on the boundary of $\Theta$ (e.g., testing a variance component in a mixed model with $H_0: \sigma_b^2 = 0$); Chernoff (1954) shows $-2 \log \Lambda_n$ converges to a $\tfrac{1}{2} \chi^2_0 + \tfrac{1}{2} \chi^2_1$ mixture. (2) **Non-identifiable parameters under $H_0$** (e.g., testing "there is one mixture component" vs "there are two" in a Gaussian mixture), where the limiting distribution is supremum-of-Gaussian-process and requires empirical-process techniques (Liu & Shao 2003; Drton 2009). (3) **Non-smooth families** (e.g., $U[0, \theta]$ shift models), where the MLE has a non-Normal limit and the Taylor expansion of Step 2 does not apply. In all three cases, Monte Carlo calibration of critical values is the safe practical default.
+</RemarkBlock>
+
+## 18.7 Wald, Score, LRT: First-Order Equivalence
+
+Wilks' theorem hands us the χ²₁ limit for the LRT. Topic 17 Theorem 7 hands us the same limit for Wald and Score. Do the three tests agree at finite $n$? Asymptotically yes, but with a precise rate — and their pairwise differences matter in practice.
+
+<TheoremBlock number={5} title="Three-tests first-order equivalence">
+Under the regularity of Theorem 4, define the asymptotic test statistics
+$$
+W_n = n (\hat\theta_n - \theta_0)^2 I(\hat\theta_n), \quad S_n = \frac{U(\theta_0)^2}{n I(\theta_0)}, \quad -2\log\Lambda_n = 2[\ell(\hat\theta_n) - \ell(\theta_0)],
+$$
+where $U(\theta) = \ell'(\theta)$ is the score function. Then under $H_0$:
+$$
+W_n - (-2\log\Lambda_n) = O_P(n^{-1/2}), \qquad S_n - (-2\log\Lambda_n) = O_P(n^{-1/2}).
+$$
+In particular, all three statistics converge to the same $\chi^2_1$ distribution under $H_0$.
+</TheoremBlock>
+
+<ProofBlock>
+We derive a common quadratic expansion for all three statistics and compare leading terms.
+
+**Step 1 — LRT.** From Proof 3 Step 8,
+$$
+-2 \log \Lambda_n = n I(\theta_0) (\hat\theta_n - \theta_0)^2 + o_P(1).
+$$
+
+**Step 2 — Wald.** By consistency of $\hat\theta_n$ and continuity of $I(\cdot)$ at $\theta_0$, $I(\hat\theta_n) = I(\theta_0) + o_P(1)$. Therefore
+$$
+W_n = n (\hat\theta_n - \theta_0)^2 \bigl[I(\theta_0) + o_P(1)\bigr] = n I(\theta_0) (\hat\theta_n - \theta_0)^2 + o_P(1),
+$$
+where we used $n (\hat\theta_n - \theta_0)^2 = O_P(1)$ by [Topic 14 Thm 14.3](/topics/maximum-likelihood#section-14-7).
+
+**Step 3 — Score.** Taylor expand $U(\theta_0)$ around $\hat\theta_n$. Since $U(\hat\theta_n) = \ell'(\hat\theta_n) = 0$ by the MLE FOC,
+$$
+U(\theta_0) = \ell''(\tilde\theta_n)(\theta_0 - \hat\theta_n)
+$$
+for some $\tilde\theta_n$ between $\theta_0$ and $\hat\theta_n$. By the lemma in Proof 3 Step 5, $-(1/n) \ell''(\tilde\theta_n) \xrightarrow{P} I(\theta_0)$, so $-\ell''(\tilde\theta_n) = n I(\theta_0) + o_P(n)$. Therefore
+$$
+U(\theta_0) = -\ell''(\tilde\theta_n)(\hat\theta_n - \theta_0) = \bigl[n I(\theta_0) + o_P(n)\bigr](\hat\theta_n - \theta_0).
+$$
+Squaring and dividing by $n I(\theta_0)$:
+$$
+S_n = \frac{U(\theta_0)^2}{n I(\theta_0)} = n I(\theta_0) (\hat\theta_n - \theta_0)^2 + o_P(1).
+$$
+
+**Step 4 — Compare.** From Steps 1–3, all three statistics equal $n I(\theta_0) (\hat\theta_n - \theta_0)^2 + o_P(1)$. Pairwise differences are $o_P(1)$. A finer analysis that tracks the $n^{-1/2}$ order terms shows the differences are $O_P(n^{-1/2})$ — essentially, the $o_P(1)$ residuals are Taylor-series corrections of the form $c \cdot n^{-1/2} Z + o_P(n^{-1/2})$ for a constant $c$ depending on the third log-density derivative. For most applications, the leading-order equivalence suffices: all three statistics share the $\chi^2_1$ asymptotic null distribution.
+
+∎ — using Topic 14 Thm 14.3, Proof 3, RAO1948
+</ProofBlock>
+
+![Three-panel figure showing Wald (amber), Score (purple), LRT (green) histograms under H₀ for Bernoulli p₀ = 0.5 at n = 100, M = 5000. The χ²₁ density is overlaid. Right panel: empirical rejection rate at α = 0.05 — all three ≈ 0.05 within MC error, confirming the asymptotic agreement.](/images/topics/likelihood-ratio-tests-and-np/18-three-tests-histograms.png)
+
+<ExampleBlock number={12} title="Bernoulli MC: three tests under H₀ and H_A">
+At $p_0 = 0.5$, $n = 100$, $M = 5000$ MC replications ([Topic 17 testing.test.ts](https://github.com/jonx0037/formalStatistics/blob/main/src/components/viz/shared/testing.test.ts) test 17): the three tests have empirical means $\hat E[W_n] = 1.038$, $\hat E[S_n] = 1.006$, $\hat E[-2\log\Lambda_n] = 1.011$. The Wald statistic is slightly overdispersed (mean 3.8% above target 1) — the plug-in $\hat p(1-\hat p)$ in the denominator introduces a small bias. Under $H_A$ at $p = 0.7$, $n = 30$: all three reject at empirical rate $\approx 0.585$ (test 18), pairwise differences $\le 0.04$. The three-tests equivalence is visible.
+
+A deeper lesson: the **Exponential family with scale parameter** gives the cleanest three-tests agreement. For Exponential$(\lambda)$ (Topic 18's `testing.ts` `waldStatistic`, `scoreStatistic`, `lrtStatistic` for `family = 'exponential'`): Wald and Score are exactly equal at every sample, $W_n = S_n = n(1 - \lambda_0 \bar X)^2$. The LRT differs by a log-correction $-2 n[(u - 1) - \log u]$ with $u = \lambda_0 \bar X$; near $u = 1$, LRT matches Wald and Score to $O(u-1)^3$. Algebraic identity in place of asymptotic equivalence.
+</ExampleBlock>
+
+<RemarkBlock number={15} title="Wald vs Score vs LRT — when to use which">
+BUS1982 is the canonical pedagogical reference for choosing among the three; the summary is short. **Wald** is the easiest to compute — it uses only the unrestricted MLE and its observed information. It is the natural choice when the MLE is easy and the constrained optimization under $H_0$ is hard. **Score** uses only the null-restricted MLE and is the natural choice when the unconstrained MLE is hard (e.g., stepwise forward selection in regression: score tests evaluate adding a variable without refitting). **LRT** is parameterization-invariant (§18.8 Thm 6) and agrees with Wald and Score asymptotically but often dominates in finite samples, especially at boundary-rare events. The practical default for hypothesis testing in regular parametric families is LRT; switch to Wald or Score only when computational cost or the specific form of the null forces the decision. This practical ranking is the econometrics-textbook consensus (Greene 2018 Ch. 14; Wooldridge 2010 Ch. 12).
+</RemarkBlock>
+
+## 18.8 Finite-Sample Divergence & Reparameterization Invariance
+
+The three tests agree asymptotically but diverge at finite $n$. Two questions: how much, and does it matter? For regular families at large $n$, divergence is cosmetic. For small $n$ or boundary-rare events, divergence can flip the rejection decision. The reparameterization-invariance property of the LRT is the structural reason to prefer it in ambiguous cases.
+
+<TheoremBlock number={6} title="LRT is parameterization-invariant; Wald is not">
+Let $\eta = g(\theta)$ be a smooth one-to-one reparameterization with inverse $\theta = g^{-1}(\eta)$, and let $H_0^\theta: \theta = \theta_0$ correspond to $H_0^\eta: \eta = \eta_0$ with $\eta_0 = g(\theta_0)$. Then:
+
+(i) The LRT statistic $-2 \log \Lambda_n$ is invariant:
+$$
+-2\log\Lambda_n^\theta = -2\log\Lambda_n^\eta.
+$$
+
+(ii) The Wald statistic is **not** invariant in general:
+$$
+W_n^\theta = n(\hat\theta_n - \theta_0)^2 I^\theta(\hat\theta_n) \ne n(\hat\eta_n - \eta_0)^2 I^\eta(\hat\eta_n) = W_n^\eta,
+$$
+except at the equality-of-derivatives condition $g'(\theta_0) = 1$. The Score statistic inherits Wald's non-invariance for the same reason.
+</TheoremBlock>
+
+**Proof sketch (full version in LEH2005 §12.4).** (i) The likelihood function $L(\theta) = L(g^{-1}(\eta))$ is the same function up to reparameterization; the sup under $H_0$ and the sup under $\Theta$ are unchanged. So $\Lambda_n$ and $-2 \log \Lambda_n$ are invariant. (ii) For Wald, the MLE transforms as $\hat\eta_n = g(\hat\theta_n)$ (MLE equivariance, Topic 14 §14.4) but the difference $\hat\eta_n - \eta_0 = g(\hat\theta_n) - g(\theta_0)$ is not linearly related to $\hat\theta_n - \theta_0$ unless $g$ is linear. The Jacobian $g'$ rescales the Fisher information $I^\eta(\eta) = I^\theta(g^{-1}(\eta)) / g'(g^{-1}(\eta))^2$, but this rescaling only partially compensates for the nonlinearity. The net result: $W_n$ takes different numerical values in the two parameterizations, and the corresponding p-values differ. ∎
+
+![Two-panel figure. Left: Wald p-value for Bernoulli H₀: p = 0.5 at observed p̂ = 0.3, n = 50 — different numerical values in the p-parameterization vs the logit-η parameterization. Right: LRT p-value computed both ways — identical numerical values, confirming Theorem 6(i).](/images/topics/likelihood-ratio-tests-and-np/18-reparam-invariance.png)
+
+<ExampleBlock number={13} title="Bernoulli p vs logit η — Wald disagrees, LRT agrees">
+Bernoulli $p$ with logit link $\eta = \log[p/(1-p)]$. Test $H_0: p = 0.5$ (equivalently $\eta_0 = 0$) with observed $\hat p = 0.3$, $n = 50$.
+
+**Wald in p-space:** $W_n^p = n(\hat p - 0.5)^2 / [\hat p(1 - \hat p)] = 50 \cdot 0.04 / 0.21 \approx 9.52$. P-value $\approx 0.002$.
+
+**Wald in logit-space:** $\hat\eta = \log(0.3/0.7) \approx -0.847$, $\eta_0 = 0$. Information at $\hat\eta$: $I^\eta(\hat\eta) = \hat p(1-\hat p) = 0.21$. $W_n^\eta = 50 \cdot 0.717 \cdot 0.21 \approx 7.53$. P-value $\approx 0.006$.
+
+**LRT:** $-2\log\Lambda_n = 2n\,[0.3 \log(0.3/0.5) + 0.7 \log(0.7/0.5)] \approx 8.22$. P-value $\approx 0.004$. The same value in both parameterizations (Theorem 6(i)).
+
+The three p-values (0.002, 0.006, 0.004) all clear α = 0.05. But at borderline significance — say, $\hat p = 0.42$ — the Wald p-values in the two parameterizations can straddle α, flipping the rejection decision. The LRT does not suffer this instability.
+</ExampleBlock>
+
+<ExampleBlock number={14} title="MC at n = 20 — Wald liberal, Score conservative, LRT accurate">
+At $p_0 = 0.3$, $n = 20$, $M = 10{,}000$ MC replications under $H_0$: empirical Type I error rates at nominal $\alpha = 0.05$ (using the $\chi^2_1$ reference critical value $3.84$):
+
+| Test | Empirical size | Deviation from 0.05 |
+|------|---------------:|--------------------:|
+| Wald $W_n$ | 0.080 | +0.030 (liberal) |
+| Score $S_n$ | 0.021 | −0.029 (conservative) |
+| LRT $-2\log\Lambda_n$ | 0.049 | −0.001 (≈ nominal) |
+
+At this sample size, Wald rejects about 60% more often than the nominal rate, and Score rejects about 60% less often. The LRT hits nominal essentially exactly. This is the *quantitative* version of Topic 17 Remark 10's divergence claim: the three tests are not interchangeable in small samples, and the LRT's accuracy is the empirical argument for preferring it when computational cost permits.
+
+Note: results replicate with `wilksSimulate('bernoulli', 0.3, 20, 10000, undefined, 42)` for the LRT column; Wald and Score columns use analogous seeded MC over `waldStatistic` and `scoreStatistic`. Reproducible via the test harness in `testing.test.ts`.
+</ExampleBlock>
+
+<RemarkBlock number={16} title="Wald's boundary pathology">
+The Wald statistic $W_n = n(\hat\theta_n - \theta_0)^2 I(\hat\theta_n)$ breaks down when $\hat\theta_n$ lies near the parameter boundary: $I(\hat\theta_n) \to \infty$ (for Bernoulli at $\hat p = 0$ or $1$, $I = 1/[\hat p(1-\hat p)] \to \infty$), which can produce $W_n = 0 \cdot \infty$ or degenerate behavior. The Score statistic evaluates $I(\theta_0)$ at a boundary-safe null value and usually remains finite; the LRT uses the logarithm, which is well-behaved on $(0, 1)$ except at the endpoints themselves. For A/B tests with rare-event outcomes (conversion rates of 0.1% or smaller), the Wald test's boundary fragility motivates the Wilson interval in Topic 19 and the log-odds-ratio approach that modern experimentation platforms increasingly use.
+</RemarkBlock>
+
+<RemarkBlock number={17} title="GLM link choice is a reparameterization invariance question">
+In generalized linear models, the question "should I fit with a logit link, a probit link, or a log link?" is, for inference purposes, a parameterization question. The coefficient $\beta_k$ under a logit link carries log-odds-ratio meaning; under a probit link, it carries z-score-of-normal-latent meaning. The LRT for $H_0: \beta_k = 0$ is invariant across link choices (Theorem 6(i)): the same $-2\log\Lambda_n$ and the same p-value regardless of link. The Wald test is not — Wald-logit, Wald-probit, and Wald-log-binomial yield three different numerical p-values for the same underlying hypothesis. This is why GLM software (R's `glm`, Python's `statsmodels.GLM`) typically reports LRT-based deviance-difference tests as the canonical nested-model comparison, reserving Wald for single-coefficient $z$-statistics. Deeper treatment at [formalml.com/generalized-linear-models](https://formalml.com/generalized-linear-models).
+</RemarkBlock>
+
+## 18.9 Power Envelope and Local Power
+
+Tests aren't judged by size alone. Size tells us Type I error is controlled; power tells us whether we'll catch the effect when it's there. For asymptotic tests, the sharpest characterization of power is in the **local-alternative** regime $\theta_n = \theta_0 + h/\sqrt n$ — effects that shrink with $n$ at the scaling rate where all three tests (Wald, Score, LRT) have non-trivial power strictly between $\alpha$ and $1$.
+
+<DefinitionBlock number={7} title="Non-central chi-squared distribution">
+Let $Z_1, \ldots, Z_k$ be independent $\mathcal{N}(\mu_i, 1)$. Then $V = \sum_{i=1}^k Z_i^2$ has the **non-central chi-squared distribution** $\chi^2_k(\lambda)$ with $k$ degrees of freedom and non-centrality parameter $\lambda = \sum \mu_i^2$. Its density and CDF admit the Poisson-mixture series
+$$
+f_{\chi^2_k(\lambda)}(x) = \sum_{j=0}^\infty \frac{e^{-\lambda/2} (\lambda/2)^j}{j!}\, f_{\chi^2_{k+2j}}(x),
+$$
+with the analogous series for the CDF. At $\lambda = 0$ this reduces to the central $\chi^2_k$. Mean $k + \lambda$, variance $2(k + 2\lambda)$ — larger non-centrality shifts the distribution to the right.
+</DefinitionBlock>
+
+<TheoremBlock number={7} title="Local power limit">
+Under the regularity of Theorem 4, at the level-$\alpha$ rejection rule $\{-2\log\Lambda_n > \chi^2_{1, 1-\alpha}\}$ (equivalently for Wald or Score, by Theorem 5), the power under the local alternative $\theta_n = \theta_0 + h/\sqrt n$ converges:
+$$
+\beta_n(\theta_n) \to 1 - F_{\chi^2_1(h^2 I(\theta_0))}\bigl(\chi^2_{1, 1-\alpha}\bigr),
+$$
+where $F_{\chi^2_1(\lambda)}$ is the non-central $\chi^2_1(\lambda)$ CDF. The non-centrality parameter is $\lambda = h^2 I(\theta_0)$ — Fisher information scaled by the squared local effect size.
+</TheoremBlock>
+
+**Proof sketch.** Under the local alternative, $\sqrt n(\hat\theta_n - \theta_0) = \sqrt n (\hat\theta_n - \theta_n) + h$. The first term is $\mathcal{N}(0, I(\theta_n)^{-1}) + o_P(1)$ by a contiguous-alternative argument (LAN; LEH2005 §13.2), and $I(\theta_n) \to I(\theta_0)$ by continuity. So $Z_n := \sqrt{n I(\theta_0)}(\hat\theta_n - \theta_0) \xrightarrow{d} \mathcal{N}(h \sqrt{I(\theta_0)}, 1)$, and $Z_n^2 \xrightarrow{d} \chi^2_1(h^2 I(\theta_0))$ by continuous mapping. Power at the $\chi^2_{1, 1-\alpha}$ critical value is the tail probability of the limit distribution. ∎ (LEH2005 Thm 13.5.1 for the full argument.)
+
+![Two-panel figure. Left: local power curves β(h) for Wald, Score, and LRT under local alternatives θₙ = θ₀ + h/√n at θ₀ = 0.5 (Bernoulli), h ∈ [0, 4]. The non-central χ²₁(h² I(θ₀)) envelope is overlaid; all three tests hug the envelope. Right: same for Normal mean, σ = 1, θ₀ = 0.](/images/topics/likelihood-ratio-tests-and-np/18-local-power-envelope.png)
+
+<ExampleBlock number={15} title="Bernoulli local power at h ∈ {0, 1, 2, 3}">
+For Bernoulli$(p)$ at $p_0 = 0.5$: $I(0.5) = 1/[0.5 \cdot 0.5] = 4$. Local alternatives $p_n = 0.5 + h/\sqrt n$. Non-centrality parameter $\lambda = h^2 \cdot 4$.
+
+| $h$ | $\lambda = 4h^2$ | Local power at $\alpha = 0.05$ |
+|----:|------:|------:|
+| 0 | 0 | 0.050 (= size) |
+| 1 | 4 | 0.515 |
+| 2 | 16 | 0.977 |
+| 3 | 36 | 0.9998 |
+
+At $h = 2$ (an effect two standard errors into the alternative), power is already 97.7%. At $h = 3$, essentially certain rejection. Values match `localPower('bernoulli', 0.5, h, 0.05)` in `testing.ts`.
+
+The practical reading: for Bernoulli at $p_0 = 0.5$, a local effect of $h = 1.96/\sqrt{I(\theta_0)} = 0.98$ standard deviations gives 50% power at $\alpha = 0.05$ — the classical "z-test power 50% at the rejection boundary" calibration.
+</ExampleBlock>
+
+<RemarkBlock number={18} title="CRLB as the power envelope — Fisher information plays both roles">
+The non-centrality $\lambda = h^2 I(\theta_0)$ has a striking interpretation. On the estimation side, [Topic 13 Thm 13.9](/topics/point-estimation) (Cramér-Rao) says that $\text{Var}(\hat\theta_n) \ge [n I(\theta_0)]^{-1}$ — Fisher information lower-bounds estimator variance. On the testing side, Theorem 7 says that local power is $1 - F_{\chi^2_1(h^2 I(\theta_0))}(\chi^2_{1, 1-\alpha})$ — Fisher information *upper-bounds* local power through the non-centrality. The same $I(\theta_0)$ appears on both sides of the optimality question: it caps what you can learn (variance of the best estimator) and what you can detect (power at the best test). The Cramér-Rao bound and the asymptotic power envelope are two faces of the same efficiency constraint.
+
+This is the payoff for [Topic 17 §17.4 Remark 5](/topics/hypothesis-testing#section-17-4)'s forward-pointer: Fisher information is the currency of asymptotic efficiency, and every efficient procedure achieves the envelope.
+</RemarkBlock>
+
+<RemarkBlock number={19} title="Asymptotic efficiency — what it means operationally">
+A test is **asymptotically efficient** at a local alternative $\theta_n = \theta_0 + h/\sqrt n$ if its local power approaches the envelope $1 - F_{\chi^2_1(h^2 I(\theta_0))}(\chi^2_{1, 1-\alpha})$. By Theorem 5, Wald, Score, and LRT are all asymptotically efficient. So are tests derived from efficient estimators other than the MLE (e.g., the two-stage estimator in some exponential-family models). The test that dominates at a specific local alternative is one that incorporates *exact* information about that alternative — but since the target alternative is usually unknown, asymptotic efficiency (dominance at every local alternative) is the operationally meaningful notion.
+</RemarkBlock>
+
+<RemarkBlock number={20} title="Asymptotic Relative Efficiency — Pitman's coinage">
+The ratio of local powers of two asymptotically efficient tests tends to $1$ at every $h$, but the *ratio of sample sizes* needed to achieve a target power at the same alternative is a meaningful constant. **Pitman's asymptotic relative efficiency (ARE)** formalizes this: $\text{ARE}(T_1, T_2) = \lim_{n \to \infty} n_2 / n_1$ where $n_i$ is the sample size for test $T_i$ to achieve power $\beta$ at a local alternative $h$. For $T_1$ = LRT, $T_2$ = Wald: ARE $= 1$ — the three tests are first-order equivalent. For $T_1$ = LRT, $T_2$ = sign test (on Normal data): ARE $= 2/\pi \approx 0.637$ — the sign test needs about 57% more samples to match the LRT's power. See Hettmansperger & McKean (2011) for a systematic treatment; ARE is the intermediate-difficulty entry-point to modern robust-statistics theory.
+</RemarkBlock>
+
+## 18.10 Limitations and Forward Look
+
+Topic 18 covered the scalar-$\theta$ optimality theory of classical hypothesis testing. Three directions for deeper study, three forward pointers within Track 5, and a cheat-sheet summary.
+
+<RemarkBlock number={21} title="Scope boundary — what Topic 18 did not cover">
+Four major topics in classical testing optimality were stated but not proved in Topic 18.
+
+1. **UMP unbiased tests.** For two-sided composite alternatives where no UMP test exists, UMPU restricts to tests satisfying $\beta(\theta) \ge \alpha$ at every alternative and proves UMP within that class. LEH2005 Ch. 4 gives the full theory; the two-sample Normal mean test is the canonical example.
+
+2. **Invariance and Hunt-Stein.** Problems with natural symmetries (scale invariance for variance tests, translation invariance for location tests) admit UMP-invariant tests even when UMP fails. LEH2005 Ch. 6 and the Hunt-Stein theorem (1946) give the formalism.
+
+3. **Vector-θ Wilks, k-df.** The scalar proof extends line-for-line; the $\chi^2_k$ limit replaces $\chi^2_1$ with $k = \dim(\Theta) - \dim(\Theta_0)$. LEH2005 Thm 12.4.2.
+
+4. **Non-regular Wilks — Chernoff 1954 boundary theorem, empirical-process Wilks.** The $\tfrac{1}{2} \chi^2_0 + \tfrac{1}{2} \chi^2_1$ mixture for boundary nulls, the LAN / Le Cam framework for non-smooth families, and the empirical-process Wilks for semiparametric models (van der Vaart 1998 §25) are the three modern extensions.
+</RemarkBlock>
+
+<RemarkBlock number={22} title="CI duality preview — Topic 19">
+Every family of level-$\alpha$ tests indexed by the null value $\theta_0$ defines a $(1-\alpha)$-confidence set: the set of $\theta_0$ values the test does not reject. Conversely, every confidence procedure defines a family of hypothesis tests. This **test-CI duality** is the organizing principle of [Topic 19 (forthcoming)](/topics/confidence-intervals). The LRT gives **likelihood-ratio confidence intervals** — invariant under reparameterization, exact in the Normal case, and the practical default for GLM coefficients. The Wald-inversion CI is the simplest but suffers the boundary pathology of §18.8 Remark 16. Topic 19 treats all three constructions in parallel, with explicit coverage calibration.
+</RemarkBlock>
+
+<RemarkBlock number={23} title="Multiple testing preview — Topic 20">
+Every hypothesis test of Topic 17–18 controls the per-test Type I error at level $\alpha$. But when 10, or 100, or 10,000 tests are run simultaneously (every gene in a genomics screen; every variable in a high-dimensional regression; every hypothesis in an A/B/n testing platform), the family-wise Type I error explodes. Bonferroni, Holm, and Šidák control the family-wise error rate (FWER) at level $\alpha$ by adjusting per-test thresholds. Benjamini-Hochberg controls the **false discovery rate (FDR)** — a weaker but more powerful notion — and is the contemporary default for exploratory studies. Topic 20 (forthcoming) develops all four procedures with the replication-crisis literature (Ioannidis 2005; Gelman & Loken 2013) as context.
+</RemarkBlock>
+
+<RemarkBlock number={24} title="Cheat sheet — decision flow for test selection">
+The decisions in Topic 18 compress into a short practical guide.
+
+| Situation | Choice | Rationale |
+|-----------|--------|-----------|
+| Simple-vs-simple, any family | NP test (Theorem 1) | MP by NP lemma |
+| One-sided composite, MLR family (exp family, Uniform) | Karlin-Rubin UMP (Theorem 2) | UMP at every alternative |
+| Two-sided composite, exp family | UMPU test (LEH2005 Ch. 4) | UMP within unbiased class |
+| Scale-invariant problem | UMP-invariant test (LEH2005 Ch. 6) | UMP within invariant class |
+| General composite, regular family | Generalized LRT (Definition 5) | Wilks: asymptotic $\chi^2_k$ |
+| Computational cost matters | Wald or Score | Asymptotic equivalence (Thm 5) |
+| Reparameterization sensitive, boundary rare | LRT | Invariance (Thm 6), no boundary issues |
+| Non-regular null (boundary, mixture, non-smooth) | MC calibration | Chernoff mixture / empirical process |
+
+Default: **LRT with MC calibration of critical values at small $n$**; switch to Wald or Score when computation demands it or MLR gives UMP.
+</RemarkBlock>
+
+<RemarkBlock number={25} title="Track 5 and beyond">
+Topic 17 built the framework; Topic 18 delivered the optimality layer. Tracks 6, 7, and 8 extend the classical testing machinery in three orthogonal directions.
+
+- **Track 6 (Regression & Linear Models).** The Wald/Score/LRT trio of §18.7 reappears as the three standard GLM inference procedures — deviance tests are LRT, z-tests on coefficients are Wald, forward-selection score tests are Rao. Linear regression's F-test is exactly Wilks' theorem specialized to nested linear models.
+
+- **Track 7 (Bayesian Statistics).** Bayes factors (the posterior-odds analog of the LRT) are the Bayesian counterpart to §18.5–§18.7. Frequentist/Bayesian testing duality is non-trivial — Lindley's paradox (Topic 22) is the first sharp disagreement.
+
+- **Track 8 (High-Dimensional & Nonparametric).** Kolmogorov-Smirnov, Mann-Whitney, and permutation tests are nonparametric alternatives to the z/t/$\chi^2$ trio. The Pitman ARE framework (Remark 20) is the bridge — nonparametric tests pay a constant efficiency penalty in exchange for distributional robustness.
+
+At [formalml.com](https://formalml.com), Wilks' theorem becomes the backbone of nested-model comparison in GLMs and deep learning; the NP lemma reappears as the Bayes classifier under 0-1 loss; and the three-tests equivalence powers the standard error machinery of every modern ML inference library. The classical testing theory is not a historical artifact — it is the statistical grammar of modern machine learning.
+</RemarkBlock>
+
+---
+
+### References
+
+1. Neyman, Jerzy, and Egon S. Pearson. (1933). [*On the Problem of the Most Efficient Tests of Statistical Hypotheses*](https://doi.org/10.1098/rsta.1933.0009). *Philosophical Transactions of the Royal Society A*, 231, 289–337.
+
+2. Karlin, Samuel, and Herman Rubin. (1956). [*The Theory of Decision Procedures for Distributions with Monotone Likelihood Ratio*](https://doi.org/10.1214/aoms/1177728259). *Annals of Mathematical Statistics*, 27(2), 272–299.
+
+3. Karlin, Samuel. (1957). [*Pólya Type Distributions, II*](https://doi.org/10.1214/aoms/1177706960). *Annals of Mathematical Statistics*, 28(2), 281–308.
+
+4. Wilks, Samuel S. (1938). [*The Large-Sample Distribution of the Likelihood Ratio for Testing Composite Hypotheses*](https://projecteuclid.org/euclid.aoms/1177732360). *Annals of Mathematical Statistics*, 9(1), 60–62.
+
+5. Rao, C. Radhakrishna. (1948). [*Large Sample Tests of Statistical Hypotheses Concerning Several Parameters with Applications to Problems of Estimation*](https://doi.org/10.1017/S0305004100023987). *Mathematical Proceedings of the Cambridge Philosophical Society*, 44(1), 50–57.
+
+6. Ferguson, Thomas S. (1967). [*Mathematical Statistics: A Decision Theoretic Approach*](https://www.worldcat.org/title/mathematical-statistics-a-decision-theoretic-approach/oclc/490902). New York: Academic Press.
+
+7. van der Vaart, Aad W. (1998). [*Asymptotic Statistics*](https://doi.org/10.1017/CBO9780511802256). Cambridge Series in Statistical and Probabilistic Mathematics 3. Cambridge: Cambridge University Press.
+
+8. Buse, A. (1982). [*The Likelihood Ratio, Wald, and Lagrange Multiplier Tests: An Expository Note*](https://doi.org/10.1080/00031305.1982.10482817). *The American Statistician*, 36(3a), 153–157.
+
+9. Lehmann, Erich L., and Joseph P. Romano. (2005). [*Testing Statistical Hypotheses*](https://doi.org/10.1007/0-387-27605-X) (3rd ed.). Springer Texts in Statistics. New York: Springer.
+
+10. Casella, George, and Roger L. Berger. (2002). [*Statistical Inference*](https://www.cengage.com/c/statistical-inference-2e-casella/) (2nd ed.). Pacific Grove, CA: Duxbury.
