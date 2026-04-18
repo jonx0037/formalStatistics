@@ -196,7 +196,7 @@ import WaldScoreLRTComparison from '../../components/viz/WaldScoreLRTComparison.
 
 ## 17.1 From Estimation to Decisions
 
-Track 4 built the classical estimation toolkit — point estimation, maximum likelihood, method of moments, sufficient statistics, Rao-Blackwell, UMVUE. Track 5 opens a different question. Estimation asks: *given the data, what is our best guess for $\theta$?* Testing asks: *is the evidence strong enough to act against the status-quo claim $H_0$?* The distinction is not cosmetic. Estimation optimizes one quantity (MSE, say); testing trades off two — the risk of rejecting $H_0$ when it is true, and the risk of failing to reject when it is false. This topic builds the framework for that trade-off and applies it to the three canonical parametric families (z, t, $\chi^2$), the binomial exact test, and the asymptotic trio (Wald, score, LRT). Topic 18 will extend it with optimality theory (Neyman-Pearson, UMP, Wilks); Topic 19 with confidence intervals via the duality previewed in §17.10; Topic 20 with the multiple-testing correction needed once we admit that a single test rarely stands alone.
+Track 4 built the classical estimation toolkit — point estimation, maximum likelihood, method of moments, sufficient statistics, Rao-Blackwell, UMVUE. Track 5 opens a different question. Estimation asks: *given the data, what is our best guess for $\theta$?* Testing asks: *is the evidence strong enough to act against the status-quo claim $H_0$?* The distinction is not cosmetic. Estimation optimizes one quantity (MSE, say); testing trades off two — the risk of rejecting $H_0$ when it is true, and the risk of failing to reject when it is false. This topic builds the framework for that trade-off and applies it to the three canonical parametric families (z, t, $\chi^2$), the binomial exact test, and the asymptotic trio (Wald, score, LRT). [Topic 18](/topics/likelihood-ratio-tests-and-np) extends it with optimality theory (Neyman-Pearson, UMP, Wilks); Topic 19 with confidence intervals via the duality previewed in §17.10; Topic 20 with the multiple-testing correction needed once we admit that a single test rarely stands alone.
 
 ![Two-panel opener. Left: conceptual diagram contrasting Fisher 1922 significance testing (single hypothesis, continuous evidence) with Neyman-Pearson 1933 decision theory (two hypotheses, two error types). Right: A/B testing cartoon — variants A (p_A = 0.10) and B (p_B = 0.11) with n = 1000 each; Monte Carlo histogram of p̂_B − p̂_A under H₀ overlaid with the shaded rejection region at α = 0.05, showing how "A/B testing is hypothesis testing".](/images/topics/hypothesis-testing/hypothesis-testing-motivation.png)
 
@@ -209,7 +209,7 @@ The running example throughout Topic 17 is the two-variant A/B test. Variant A h
 </RemarkBlock>
 
 <RemarkBlock number={3} title="Why testing is harder than estimation — two risks, not one">
-In estimation, we minimize a single risk (mean squared error, say). In testing, we manage two competing risks simultaneously: Type I error (rejecting a true $H_0$) and Type II error (failing to reject a false $H_0$). These pull in opposite directions — shrinking the rejection region reduces Type I error but increases Type II, and vice versa. No test can drive both to zero at fixed $n$; the entire Neyman-Pearson framework is built around this trade-off. The pragmatic convention is to fix $\alpha$ (Type I rate) at a conventional level (0.05, 0.01, or 0.001) and then maximize power (1 − Type II rate) subject to that constraint. Topic 18 formalizes "maximize power" via the uniformly-most-powerful (UMP) property; here we set up the framework.
+In estimation, we minimize a single risk (mean squared error, say). In testing, we manage two competing risks simultaneously: Type I error (rejecting a true $H_0$) and Type II error (failing to reject a false $H_0$). These pull in opposite directions — shrinking the rejection region reduces Type I error but increases Type II, and vice versa. No test can drive both to zero at fixed $n$; the entire Neyman-Pearson framework is built around this trade-off. The pragmatic convention is to fix $\alpha$ (Type I rate) at a conventional level (0.05, 0.01, or 0.001) and then maximize power (1 − Type II rate) subject to that constraint. [Topic 18](/topics/likelihood-ratio-tests-and-np#section-18-3) formalizes "maximize power" via the uniformly-most-powerful (UMP) property; here we set up the framework.
 </RemarkBlock>
 
 ## 17.2 The Hypothesis-Testing Setup
@@ -226,7 +226,7 @@ A test is a decision rule that accepts one of $H_0$ or $H_1$ on the basis of the
 </DefinitionBlock>
 
 <DefinitionBlock number={2} title="Simple vs composite hypotheses">
-A hypothesis $H_i: \theta \in \Theta_i$ is **simple** if $\Theta_i$ is a singleton (one parameter value) and **composite** otherwise. A test with simple $H_0$ and simple $H_1$ is the cleanest case — Topic 18's Neyman-Pearson lemma gives a uniformly most powerful test for it. Most real-world tests are composite on at least one side: $H_0: \mu = 0$ (simple) vs $H_1: \mu \ne 0$ (composite two-sided) is typical.
+A hypothesis $H_i: \theta \in \Theta_i$ is **simple** if $\Theta_i$ is a singleton (one parameter value) and **composite** otherwise. A test with simple $H_0$ and simple $H_1$ is the cleanest case — [Topic 18's Neyman-Pearson lemma](/topics/likelihood-ratio-tests-and-np#section-18-2) gives a uniformly most powerful test for it. Most real-world tests are composite on at least one side: $H_0: \mu = 0$ (simple) vs $H_1: \mu \ne 0$ (composite two-sided) is typical.
 </DefinitionBlock>
 
 <DefinitionBlock number={3} title="One-sided vs two-sided alternatives">
@@ -328,7 +328,7 @@ Evaluated at $\theta \in \Theta_0$, $\beta(\theta)$ is the Type I error rate at 
 For a one-parameter exponential family with monotone likelihood ratio (MLR) in the sufficient statistic $T$, the one-sided right-tail test $\{T > c\}$ has power $\beta(\theta)$ that is *non-decreasing* in $\theta$. In particular, for any $\theta_1 > \theta_0$, $\beta(\theta_1) \ge \beta(\theta_0) = \alpha$.
 </TheoremBlock>
 
-The proof uses the MLR property to show that the likelihood ratio $L(\theta_1)/L(\theta_0)$ is monotone in $T$, so the event $\{T > c\}$ has higher probability at $\theta_1$. The full argument uses Topic 18's optimality machinery; we cite the result here and use it in power calculations that follow.
+The proof uses the MLR property to show that the likelihood ratio $L(\theta_1)/L(\theta_0)$ is monotone in $T$, so the event $\{T > c\}$ has higher probability at $\theta_1$. The full argument uses [Topic 18's optimality machinery](/topics/likelihood-ratio-tests-and-np#section-18-3); we cite the result here and use it in power calculations that follow.
 
 <ExampleBlock number={5} title="Power of the one-sample z-test against a Normal mean">
 For iid $\mathcal{N}(\mu, \sigma^2)$ data with $\sigma^2$ known, consider the right-tailed z-test of $H_0: \mu = \mu_0$ vs $H_1: \mu > \mu_0$ at level $\alpha$. The test rejects when $Z = \sqrt n(\bar X - \mu_0)/\sigma > z_\alpha$, where $z_\alpha = \Phi^{-1}(1 - \alpha)$ is the $(1 - \alpha)$-quantile of the standard Normal. Under $\mu$, $Z \sim \mathcal{N}(\sqrt n(\mu - \mu_0)/\sigma,\, 1)$, so
@@ -351,7 +351,7 @@ the textbook sample-size formula. The `PowerCurveExplorer` (§17.4 component) im
 </ExampleBlock>
 
 <RemarkBlock number={5} title="Power and the CRLB — Fisher information bounds achievable power">
-In a regular parametric family, the Cramér-Rao lower bound (Thm 13.9) says any unbiased estimator $\hat\theta$ satisfies $\mathrm{Var}(\hat\theta) \ge 1/[n I(\theta)]$, where $I(\theta)$ is the Fisher information at $\theta$. This translates directly into an *upper bound* on achievable power for any asymptotically-Normal-based test: the smaller the estimator variance, the more concentrated its sampling distribution, and the larger the separation between $H_0$ and $H_1$ sampling distributions — hence higher power. Topic 18 will formalize this as the CRLB giving a "power envelope" that UMP tests achieve. At intermediate level, the intuition is: *power is to the estimator's variance what accuracy is to its bias*, and both are bounded below by Fisher information.
+In a regular parametric family, the Cramér-Rao lower bound (Thm 13.9) says any unbiased estimator $\hat\theta$ satisfies $\mathrm{Var}(\hat\theta) \ge 1/[n I(\theta)]$, where $I(\theta)$ is the Fisher information at $\theta$. This translates directly into an *upper bound* on achievable power for any asymptotically-Normal-based test: the smaller the estimator variance, the more concentrated its sampling distribution, and the larger the separation between $H_0$ and $H_1$ sampling distributions — hence higher power. [Topic 18 formalizes this](/topics/likelihood-ratio-tests-and-np#section-18-9) as the CRLB giving a "power envelope" that UMP tests achieve. At intermediate level, the intuition is: *power is to the estimator's variance what accuracy is to its bias*, and both are bounded below by Fisher information.
 </RemarkBlock>
 
 ![Three panels. Left: H₀ (green) and H_A (red) sampling distributions of X̄ under μ = 0 vs μ = 0.5 at n = 30, σ = 1; Type I area shaded under H₀ right of c, Type II area shaded under H_A left of c. Center: power curve β(μ) as a sigmoid rising from α to 1. Right: sample-size envelope — power vs n at fixed effect size, with horizontal line at 1 − β = 0.8 crossing at n ≈ 25.](/images/topics/hypothesis-testing/type-I-type-II-power.png)
@@ -491,7 +491,7 @@ At $\alpha = 0.05$, we reject. The rejection region $\{X \ge 15\}$ has exact siz
 
 **Normal approximation.** Under $H_0$, $X \approx \mathcal{N}(10, 5)$; the standardized observed value is $z = (15 - 10)/\sqrt 5 \approx 2.236$, giving p-value $\approx 0.0127$. With a continuity correction (using $14.5$ instead of $15$), the p-value becomes $\approx 0.0207$ — close to the exact. Without continuity correction, the Normal approximation overstates significance.
 
-**Why this matters.** At $n = 20$, the Normal approximation p-value can be 30-40% off the exact p-value at moderate thresholds. At $n = 200$ it is typically within a few percent. The notebook figure (right panel) shows the size comparison across $n \in [10, 200]$: exact size stays below $\alpha$ by a discrete jump; Normal-approximation size oscillates above and below $\alpha$, converging as $n \to \infty$. The binomial exact test has the additional property — covered in Topic 18 — of being UMP one-sided for the Bernoulli family.
+**Why this matters.** At $n = 20$, the Normal approximation p-value can be 30-40% off the exact p-value at moderate thresholds. At $n = 200$ it is typically within a few percent. The notebook figure (right panel) shows the size comparison across $n \in [10, 200]$: exact size stays below $\alpha$ by a discrete jump; Normal-approximation size oscillates above and below $\alpha$, converging as $n \to \infty$. The binomial exact test has the additional property — [covered in Topic 18](/topics/likelihood-ratio-tests-and-np#section-18-4) — of being UMP one-sided for the Bernoulli family.
 </ExampleBlock>
 
 <RemarkBlock number={7} title="Why exact tests matter at small n">
@@ -676,7 +676,7 @@ For two independent iid Normal samples with possibly different variances, the ra
 
 ## 17.9 Asymptotic Tests: Wald, Score, LRT
 
-The z-test, t-test, and $\chi^2$-test all rely on special distributional assumptions (Normality and known families) to give exact null distributions. For general parametric models, three asymptotic tests built directly from the likelihood are the workhorses. They agree to first order under $H_0$ and diverge in finite-sample power — a divergence that Topic 18 treats in full.
+The z-test, t-test, and $\chi^2$-test all rely on special distributional assumptions (Normality and known families) to give exact null distributions. For general parametric models, three asymptotic tests built directly from the likelihood are the workhorses. They agree to first order under $H_0$ and diverge in finite-sample power — a divergence that [Topic 18 §18.8](/topics/likelihood-ratio-tests-and-np#section-18-8) treats in full.
 
 <DefinitionBlock number={13} title="Wald test">
 For a scalar parameter $\theta$ with MLE $\hat\theta_n$ and Fisher information $I(\theta)$ (Topic 13 Def 13.6), the **Wald test** statistic for $H_0: \theta = \theta_0$ is
@@ -701,7 +701,7 @@ The **likelihood-ratio statistic** is
 
 $$-2\log\Lambda_n = -2\bigl[\ell(\theta_0) - \ell(\hat\theta_n)\bigr] = 2\bigl[\ell(\hat\theta_n) - \ell(\theta_0)\bigr].$$
 
-It is the log-likelihood difference between the restricted fit (at $\theta_0$) and the unrestricted fit (at the MLE $\hat\theta_n$). Under $H_0$ and Wilks' regularity conditions, $-2\log\Lambda_n \xrightarrow{d} \chi^2_k$ where $k$ is the number of restricted parameters (Wilks 1938; full proof in Topic 18).
+It is the log-likelihood difference between the restricted fit (at $\theta_0$) and the unrestricted fit (at the MLE $\hat\theta_n$). Under $H_0$ and Wilks' regularity conditions, $-2\log\Lambda_n \xrightarrow{d} \chi^2_k$ where $k$ is the number of restricted parameters (Wilks 1938; [full proof in Topic 18](/topics/likelihood-ratio-tests-and-np#section-18-6)).
 </DefinitionBlock>
 
 <TheoremBlock number={7} title="Asymptotic null distribution of Wald, score, LRT">
@@ -709,7 +709,7 @@ Under standard regularity conditions (the MLE is consistent and asymptotically N
 
 $$W_n, \; S_n, \; -2\log\Lambda_n \;\xrightarrow{d}\; \chi^2_1 \quad \text{under } H_0.$$
 
-The Wald case follows inline from Topic 14 Thm 14.3 (MLE asymptotic normality) by Slutsky and continuous mapping — derived below. The score and LRT cases are stated; Wilks' full proof of the LRT case is Topic 18's territory.
+The Wald case follows inline from Topic 14 Thm 14.3 (MLE asymptotic normality) by Slutsky and continuous mapping — derived below. The score and LRT cases are stated; Wilks' full proof of the LRT case is [Topic 18's territory](/topics/likelihood-ratio-tests-and-np#section-18-6).
 </TheoremBlock>
 
 **Derivation of the Wald case (inline).** By Topic 14 Thm 14.3, under $H_0$,
@@ -728,7 +728,7 @@ Squaring and applying the continuous mapping theorem (Topic 9):
 
 $$W_n = n\,(\hat\theta_n - \theta_0)^2\,I(\hat\theta_n) \;\xrightarrow{d}\; \chi^2_1 \quad \text{under } H_0.$$
 
-This two-line argument from Topic 14 is all that's needed for the Wald case. The score case uses a similar argument applied to the score function (one Taylor expansion at $\theta_0$); the LRT case (Wilks) requires a more delicate quadratic-approximation argument that Topic 18 develops in full.
+This two-line argument from Topic 14 is all that's needed for the Wald case. The score case uses a similar argument applied to the score function (one Taylor expansion at $\theta_0$); the LRT case (Wilks) requires a more delicate quadratic-approximation argument that [Topic 18 develops in full](/topics/likelihood-ratio-tests-and-np#section-18-6).
 
 <ExampleBlock number={16} title="Wald, score, and LRT for the Bernoulli H₀: p = p₀">
 Let $X_1, \ldots, X_n$ iid Bernoulli$(p)$, $\hat p = \bar X$. For $H_0: p = p_0$:
@@ -757,7 +757,7 @@ A short Taylor expansion of the log-likelihood around $\hat\theta_n$ reveals tha
 
 $$W_n - (-2\log\Lambda_n) = O_P(n^{-1/2}), \qquad S_n - (-2\log\Lambda_n) = O_P(n^{-1/2}).$$
 
-At finite $n$ they differ, and the differences matter for power at alternatives close to the null; they can also matter for finite-sample Type I error in small samples. Topic 18 treats the finite-sample divergence quantitatively.
+At finite $n$ they differ, and the differences matter for power at alternatives close to the null; they can also matter for finite-sample Type I error in small samples. [Topic 18](/topics/likelihood-ratio-tests-and-np#section-18-8) treats the finite-sample divergence quantitatively.
 </RemarkBlock>
 
 <RemarkBlock number={11} title="LRT is parameterization-invariant; Wald is not">
@@ -766,6 +766,8 @@ One practical advantage of the LRT is that it is *invariant* under reparameteriz
 The Wald statistic, by contrast, is *not* invariant: $W_n^\theta = n\,(\hat\theta - \theta_0)^2 I(\hat\theta)$ and $W_n^\eta = n\,(\hat\eta - \eta_0)^2 I^\eta(\hat\eta)$ can differ substantially when $g$ is nonlinear — and their asymptotic $\chi^2_1$ distribution is only approximately right at either end. This is a common source of confusion in practice; for logistic regression (natural parameter $\theta = \logit p$ vs original parameter $p$), Wald statistics on $p$ and on $\logit p$ can give meaningfully different p-values. Practitioners often prefer the LRT for this reason.
 
 The score test is parameterization-invariant when the MLE is computed on the same parameterization in which $\theta_0$ is specified — in practice, it behaves similarly to the LRT.
+
+The concrete logit-vs-raw Bernoulli example — where Wald p-values differ between parameterizations while the LRT's p-value is identical — is worked out in [Topic 18 §18.8](/topics/likelihood-ratio-tests-and-np#section-18-8).
 </RemarkBlock>
 
 ![Three panels. Left: overlaid null-distribution histograms of W_n (Wald, amber), S_n (Score, purple), −2log Λ_n (LRT, green) for Bernoulli H₀: p = 0.5 at n = 30, 10000 MC runs, common χ²_1 density overlaid. Center: algebraic formulas with Bernoulli specializations. Right: under H_A (true p = 0.65), overlay of the three alternative distributions — similar means, slightly different spreads, the first glimpse of finite-sample power differences.](/images/topics/hypothesis-testing/wald-score-lrt.png)
@@ -862,7 +864,7 @@ The two "exact" entries (z-test with $\sigma$ known; t-test and $\chi^2$ varianc
 <RemarkBlock number={19} title="Where Track 5 goes next">
 Topic 17 set up the framework. The next three topics complete Track 5:
 
-- **Likelihood-Ratio Tests & Neyman-Pearson (coming soon, Topic 18)** — the optimality theory. Neyman-Pearson's lemma: the LRT is UMP for simple-vs-simple. Uniformly most powerful tests, monotone likelihood ratio families, Wilks' theorem proved in full, the three asymptotic tests' finite-sample power compared.
+- **[Likelihood-Ratio Tests & Neyman-Pearson (Topic 18)](/topics/likelihood-ratio-tests-and-np)** — the optimality theory. Neyman-Pearson's lemma: the LRT is UMP for simple-vs-simple. Uniformly most powerful tests, monotone likelihood ratio families, Wilks' theorem proved in full, the three asymptotic tests' finite-sample power compared.
 - **Confidence Intervals (coming soon, Topic 19)** — the duality previewed in §17.10 becomes the construction. Pivotal quantities, Wald / score / LRT intervals, coverage diagnostics, the Wilson interval for binomial proportions (which fixes the Wald boundary problem from Remark 13).
 - **Multiple Testing (coming soon, Topic 20)** — family-wise error (Bonferroni, Holm, Šidák), false discovery rate (Benjamini-Hochberg, adaptive FDR), the replication crisis in quantitative terms.
 
