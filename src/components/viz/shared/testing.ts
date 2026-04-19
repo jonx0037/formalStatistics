@@ -2290,17 +2290,18 @@ export function hochberg(pvals: number[], alpha = 0.05): boolean[] {
  *
  * Strong FWER control ≤ α under any joint dependence structure. Uniformly
  * more powerful than Bonferroni and requires no independence assumption.
- *
- * TODO (Jonathan): fill in the step-down logic. Hint:
- *   1. order = argsortAscending(pvals)
- *   2. Walk k = 1..m; threshold = α/(m − k + 1).
- *   3. On first p_(k) > threshold, stop. Reject the original indices of
- *      p_(1)..p_(k − 1); the rest stay accepted.
  */
 export function holm(pvals: number[], alpha = 0.05): boolean[] {
-  // TODO (Jonathan): implement step-down loop.
-  void alpha;
-  return new Array(pvals.length).fill(false);
+  const m = pvals.length;
+  if (m === 0) return [];
+  const order = argsortAscending(pvals);
+  const rejected = new Array(m).fill(false);
+  for (let k = 1; k <= m; k++) {
+    const pSorted = pvals[order[k - 1]];
+    if (pSorted > alpha / (m - k + 1)) break;
+    rejected[order[k - 1]] = true;
+  }
+  return rejected;
 }
 
 /**
@@ -2326,18 +2327,19 @@ export function sidak(pvals: number[], alpha = 0.05): boolean[] {
  *
  * FDR control: E[V / max(R, 1)] ≤ α · π₀ ≤ α under independence (BH 1995
  * Thm 1; independence lemma is BEN2001 Lemma 2.1, not BH 1995 directly).
- *
- * TODO (Jonathan): fill in the step-up logic. Hint:
- *   1. order = argsortAscending(pvals)
- *   2. Walk k = m down to 1; threshold = k·α/m.
- *   3. Return on first p_(k) ≤ threshold. Reject original indices of the
- *      k smallest p-values.
- *   4. If no rank satisfies the bound, reject none (return all false).
  */
 export function benjaminiHochberg(pvals: number[], alpha = 0.05): boolean[] {
-  // TODO (Jonathan): implement step-up loop.
-  void alpha;
-  return new Array(pvals.length).fill(false);
+  const m = pvals.length;
+  if (m === 0) return [];
+  const order = argsortAscending(pvals);
+  const rejected = new Array(m).fill(false);
+  for (let k = m; k >= 1; k--) {
+    if (pvals[order[k - 1]] <= (k * alpha) / m) {
+      for (let j = 0; j < k; j++) rejected[order[j]] = true;
+      break;
+    }
+  }
+  return rejected;
 }
 
 /**
@@ -2553,19 +2555,9 @@ export interface MCStat {
  *   • R_t = total rejections = V_t + S_t
  *   • FDP_t = V_t / max(R_t, 1) (per-trial false-discovery proportion)
  *
- * Return (each stat as MCStat = {mean, stderr}):
- *   • fdr   — mean(FDP_t), stderr via sample SD of FDP_t / sqrt(nTrials)
- *   • fwer  — fraction of trials with V_t ≥ 1 (Bernoulli, stderr = √p(1-p)/n)
- *   • power — mean(S_t / max(m1, 1)), where m1 = m − m0
- *
- * TODO (Jonathan): implement the accumulator loop. Hints:
- *   • Build a dispatch map from `MultiTestingProcedure` → function.
- *   • Maintain running sums of x and x² per statistic; convert to stderr
- *     at the end via  stderr = sqrt((Σx² − (Σx)²/n) / (n(n−1)))  for the
- *     sample-SD-based SE of the mean.
- *   • R_t = 0 contributes FDP_t = 0 (not NaN) — guard with max(R_t, 1).
- *   • When π₀ = 1 (no alternatives), power.mean = 0, power.stderr = 0.
- *   • When π₀ = 0 (no nulls), fdr.mean = fwer.mean = 0 by definition.
+ * Each statistic is returned as MCStat = {mean, stderr}, computed via
+ * Welford's online algorithm for numerical stability. The stderr field is
+ * the standard error of the MC mean (sample SD / √nTrials).
  */
 export function multiTestingMonteCarlo(
   procedure: MultiTestingProcedure,
@@ -2576,14 +2568,65 @@ export function multiTestingMonteCarlo(
   nTrials: number,
   seed: number,
 ): { fdr: MCStat; fwer: MCStat; power: MCStat } {
-  // TODO (Jonathan): implement accumulator loop over nTrials.
-  void procedure;
-  void m;
-  void pi0;
-  void signalStrength;
-  void alpha;
-  void nTrials;
-  void seed;
   const zero: MCStat = { mean: 0, stderr: 0 };
-  return { fdr: zero, fwer: zero, power: zero };
+  if (nTrials <= 0 || m <= 0) return { fdr: zero, fwer: zero, power: zero };
+
+  const dispatch: Record<
+    MultiTestingProcedure,
+    (p: number[], a: number) => boolean[]
+  > = {
+    bonferroni,
+    holm,
+    sidak,
+    hochberg,
+    bh: benjaminiHochberg,
+    by: benjaminiYekutieli,
+    storey: storeyBH,
+  };
+  const procFn = dispatch[procedure];
+
+  const m0 = Math.max(0, Math.min(m, Math.round(m * pi0)));
+  const m1 = Math.max(0, m - m0);
+
+  // Welford's online algorithm per statistic: (n, mean, M2) where
+  // M2 is the sum of squared deviations from the running mean.
+  interface Running { n: number; mean: number; m2: number; }
+  const make = (): Running => ({ n: 0, mean: 0, m2: 0 });
+  const update = (s: Running, x: number): void => {
+    s.n += 1;
+    const delta = x - s.mean;
+    s.mean += delta / s.n;
+    s.m2 += delta * (x - s.mean);
+  };
+  const finalize = (s: Running): MCStat => {
+    if (s.n <= 1) return { mean: s.mean, stderr: 0 };
+    const sampleVar = s.m2 / (s.n - 1);
+    return { mean: s.mean, stderr: Math.sqrt(sampleVar / s.n) };
+  };
+
+  const fdrStat = make();
+  const fwerStat = make();
+  const powerStat = make();
+
+  for (let trial = 0; trial < nTrials; trial++) {
+    const pvals = simulatePValues(m, pi0, signalStrength, seed + trial);
+    const rejected = procFn(pvals, alpha);
+    let V = 0;
+    let S = 0;
+    for (let i = 0; i < m; i++) {
+      if (!rejected[i]) continue;
+      if (i < m0) V++;
+      else S++;
+    }
+    const R = V + S;
+    update(fdrStat, R > 0 ? V / R : 0);
+    update(fwerStat, V >= 1 ? 1 : 0);
+    update(powerStat, m1 > 0 ? S / m1 : 0);
+  }
+
+  return {
+    fdr: finalize(fdrStat),
+    fwer: finalize(fwerStat),
+    power: finalize(powerStat),
+  };
 }

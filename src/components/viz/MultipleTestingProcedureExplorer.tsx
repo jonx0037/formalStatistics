@@ -43,9 +43,11 @@ const C = {
   axis: '#64748B',
   grid: '#E2E8F0',
   text: '#1E293B',
-  nullBoundary: '#94A3B8',
-  rejectHalo: '#10B981',
-  nonrejectHalo: '#CBD5E1',
+  // Dedicated rejection-outcome colors so `altMixture` / `nullMixture` stay
+  // reserved for their literal §20.4 mixture-figure use.
+  falseReject: '#DC2626', // red — a rejected null (false discovery)
+  trueReject: multipleTestingColors.bh, // green — a rejected alternative
+  missedAlt: '#FDE68A', // pale amber — alt that no procedure rejected (power loss)
 };
 
 type ProcedureKey = 'bonferroni' | 'holm' | 'sidak' | 'hochberg' | 'bh' | 'by' | 'storey';
@@ -67,18 +69,56 @@ const PROCEDURES: ProcedureEntry[] = [
   { key: 'storey', label: 'Storey (adaptive)', color: C.storey, fn: storeyBH },
 ];
 
-/** For strip-chart threshold lines — per-procedure rejection cutoff at this p. */
-function thresholdForProcedure(key: ProcedureKey, m: number, alpha: number): number {
+/**
+ * Per-rank rejection threshold for each procedure. Returns the threshold a
+ * p-value at rank k (1-based, ascending order) must fall at or below for the
+ * procedure to reject the hypothesis corresponding to that rank.
+ *
+ * Bonferroni and Šidák are rank-independent (flat lines). Holm / Hochberg
+ * share the step-up / step-down threshold $\alpha / (m - k + 1)$. BH rises
+ * linearly as $k \alpha / m$; BY is BH scaled by $1/c_m$; Storey is BH
+ * scaled by $1/\hat\pi_0$.
+ */
+function thresholdAtRank(
+  key: ProcedureKey,
+  k: number,
+  m: number,
+  alpha: number,
+  cm: number,
+  pi0Hat: number,
+): number {
   switch (key) {
     case 'bonferroni':
       return alpha / m;
     case 'sidak':
       return 1 - Math.pow(1 - alpha, 1 / m);
-    // Step-down / step-up procedures have rank-dependent thresholds; show the
-    // single-step equivalent (α/m) as a visual reference.
-    default:
-      return alpha / m;
+    case 'holm':
+    case 'hochberg':
+      return alpha / (m - k + 1);
+    case 'bh':
+      return (k * alpha) / m;
+    case 'by':
+      return (k * alpha) / (m * cm);
+    case 'storey':
+      return (k * alpha) / (m * Math.max(pi0Hat, 1 / m));
   }
+}
+
+/** Storey's π̂₀ estimate at λ = 0.5, clipped to [1/m, 1]. */
+function estimatePi0(pvals: number[]): number {
+  const m = pvals.length;
+  if (m === 0) return 1;
+  const lambda = 0.5;
+  const nAboveLambda = pvals.filter((p) => p > lambda).length;
+  const raw = nAboveLambda / (m * (1 - lambda));
+  return Math.min(Math.max(raw, 1 / m), 1);
+}
+
+/** Harmonic number c_m = Σ 1/k, used by BY's normalizer. */
+function harmonicNumber(m: number): number {
+  let s = 0;
+  for (let k = 1; k <= m; k++) s += 1 / k;
+  return s;
 }
 
 function formatPct(x: number): string {
@@ -131,6 +171,18 @@ export default function MultipleTestingProcedureExplorer(): React.ReactElement {
     [m, pi0, delta, seedCounter],
   );
   const m0 = Math.round(m * pi0); // nulls at [0, m0); alternatives at [m0, m).
+  const cm = useMemo(() => harmonicNumber(m), [m]);
+  const pi0Hat = useMemo(() => estimatePi0(pvals), [pvals]);
+
+  // Sorted p-values with back-pointer to original index. Ranks are 1-based.
+  // The strip chart plots p-value vs. rank (per brief §5 Component 1), which
+  // is what makes the rank-dependent threshold curves (BH diagonal, Holm
+  // staircase, …) meaningful on the same axes as the p-values themselves.
+  const sortedEntries = useMemo(() => {
+    const entries = pvals.map((p, i) => ({ p, originalIndex: i, isNull: i < m0 }));
+    entries.sort((a, b) => a.p - b.p);
+    return entries;
+  }, [pvals, m0]);
 
   // For each selected procedure, compute rejections + statistics.
   const perProcedure = useMemo(() => {
@@ -174,15 +226,31 @@ export default function MultipleTestingProcedureExplorer(): React.ReactElement {
     [plotH],
   );
 
-  // X: hypothesis index 0..m-1.
+  // X: rank 1..m (1-based, ascending by p-value). Pad ½ on each side so the
+  // extreme dots don't abut the axes.
   const xScale = useMemo(
     () =>
       d3
         .scaleLinear()
-        .domain([0, m])
+        .domain([0.5, m + 0.5])
         .range([MARGIN.left, MARGIN.left + innerW]),
     [m, innerW],
   );
+
+  // Per-procedure threshold curve as an SVG path over ranks 1..m.
+  const thresholdPaths = useMemo(() => {
+    const line = d3
+      .line<{ k: number; t: number }>()
+      .x((d) => xScale(d.k))
+      .y((d) => yScale(Math.min(Math.max(d.t, pMin), 1)));
+    return perProcedure.map((proc) => {
+      const pts: Array<{ k: number; t: number }> = [];
+      for (let k = 1; k <= m; k++) {
+        pts.push({ k, t: thresholdAtRank(proc.key, k, m, alpha, cm, pi0Hat) });
+      }
+      return { key: proc.key, color: proc.color, path: line(pts) ?? '' };
+    });
+  }, [perProcedure, m, alpha, cm, pi0Hat, xScale, yScale]);
 
   const yTicks = useMemo(
     () => [1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1],
@@ -307,57 +375,45 @@ export default function MultipleTestingProcedureExplorer(): React.ReactElement {
             />
           ))}
 
-          {/* Vertical divider between nulls and alternatives */}
-          {m0 > 0 && m0 < m && (
-            <line
-              x1={xScale(m0)}
-              x2={xScale(m0)}
-              y1={MARGIN.top}
-              y2={plotH - MARGIN.bottom}
-              stroke={C.nullBoundary}
-              strokeWidth={1.4}
-              strokeDasharray="4 3"
+          {/* Per-procedure threshold curves over rank. Bonferroni / Šidák are
+              flat; Holm / Hochberg are a staircase; BH / BY / Storey rise
+              linearly. */}
+          {thresholdPaths.map(({ key, color, path }) => (
+            <path
+              key={`thr-${key}`}
+              d={path}
+              stroke={color}
+              strokeWidth={1.6}
+              fill="none"
+              strokeDasharray="5 3"
+              opacity={0.85}
             />
-          )}
+          ))}
 
-          {/* Per-procedure threshold lines */}
-          {perProcedure.map((p) => {
-            const thr = thresholdForProcedure(p.key, m, alpha);
-            if (thr <= pMin || thr > 1) return null;
-            return (
-              <line
-                key={`thr-${p.key}`}
-                x1={MARGIN.left}
-                x2={MARGIN.left + innerW}
-                y1={yScale(thr)}
-                y2={yScale(thr)}
-                stroke={p.color}
-                strokeWidth={1.5}
-                strokeDasharray="6 4"
-                opacity={0.8}
-              />
+          {/* P-value dots plotted at (rank, p). Fill encodes truth × rejection:
+              • Non-rejected null  → slate
+              • Non-rejected alt   → amber-muted (missed-alternative semantics)
+              • Rejected null      → falseReject (false-positive warning)
+              • Rejected alt       → trueReject (true-positive green) */}
+          {sortedEntries.map((entry, idx) => {
+            const rank = idx + 1;
+            const clamped = Math.max(entry.p, pMin);
+            const anyReject = perProcedure.some(
+              (proc) => proc.rejected[entry.originalIndex],
             );
-          })}
-
-          {/* P-value dots — coloured by first-procedure rejection if any */}
-          {pvals.map((p, i) => {
-            const clamped = Math.max(p, pMin);
-            const anyReject = perProcedure.some((proc) => proc.rejected[i]);
-            const isNull = i < m0;
+            let fill: string;
+            if (anyReject && entry.isNull) fill = C.falseReject;
+            else if (anyReject && !entry.isNull) fill = C.trueReject;
+            else if (!anyReject && entry.isNull) fill = C.nullMixture;
+            else fill = C.missedAlt;
             return (
               <circle
-                key={`p-${i}`}
-                cx={xScale(i + 0.5)}
+                key={`p-${entry.originalIndex}`}
+                cx={xScale(rank)}
                 cy={yScale(clamped)}
                 r={rDot}
-                fill={
-                  anyReject
-                    ? isNull
-                      ? C.altMixture
-                      : C.rejectHalo
-                    : C.nullMixture
-                }
-                opacity={m > 200 ? 0.55 : 0.85}
+                fill={fill}
+                opacity={m > 200 ? 0.6 : 0.9}
               />
             );
           })}
@@ -404,9 +460,8 @@ export default function MultipleTestingProcedureExplorer(): React.ReactElement {
             fontSize={12}
             fill={C.text}
           >
-            hypothesis index (0 …{' '}
-            <tspan style={{ fontStyle: 'italic' }}>m₀</tspan> = {m0} nulls |{' '}
-            {m - m0} alternatives … m − 1)
+            rank <tspan style={{ fontStyle: 'italic' }}>k</tspan> (p-values in
+            ascending order; m₀ = {m0} nulls, m₁ = {m - m0} alternatives)
           </text>
           <text
             x={14}
@@ -447,7 +502,7 @@ export default function MultipleTestingProcedureExplorer(): React.ReactElement {
                   <td className="py-1 text-right font-mono">{p.R}</td>
                   <td
                     className="py-1 text-right font-mono"
-                    style={{ color: p.V > 0 ? C.altMixture : undefined }}
+                    style={{ color: p.V > 0 ? C.falseReject : undefined }}
                   >
                     {p.V}
                   </td>
@@ -472,14 +527,6 @@ export default function MultipleTestingProcedureExplorer(): React.ReactElement {
             rejections (from alternatives). FDP = V/R; power = S/m₁.
           </p>
           <p className="mt-2 text-slate-500">{preset.description}</p>
-          {perProcedure.some((p) => p.key === 'bh' || p.key === 'holm') &&
-            perProcedure.every((p) => p.R === 0) && (
-              <p className="mt-2 font-medium text-amber-700">
-                Note: `holm` and `benjaminiHochberg` are currently stubs that
-                always return &ldquo;no rejection.&rdquo; Fill in their bodies
-                in <code>testing.ts</code> to see real decisions.
-              </p>
-            )}
         </div>
       </div>
 

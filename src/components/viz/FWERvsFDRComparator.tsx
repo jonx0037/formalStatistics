@@ -114,8 +114,6 @@ export default function FWERvsFDRComparator(): React.ReactElement {
     }, 30);
   };
 
-  const allZero = rows.length > 0 && rows.every((r) => r.fdr === 0 && r.fwer === 0 && r.power === 0);
-
   const plotW = isWide ? Math.max(380, (w - 28) / 2) : w - 16;
   const plotH = H;
   const innerW = plotW - MARGIN.left - MARGIN.right;
@@ -266,16 +264,7 @@ export default function FWERvsFDRComparator(): React.ReactElement {
         </div>
       )}
 
-      {allZero && (
-        <div className="rounded border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900">
-          <strong>All results are 0 — </strong>
-          <code>multiTestingMonteCarlo</code> is currently a stub that returns
-          zeros. Fill in the accumulator loop in{' '}
-          <code>src/components/viz/shared/testing.ts</code> to see real curves.
-        </div>
-      )}
-
-      {rows.length > 0 && !allZero && (
+      {rows.length > 0 && (
         <div className={isWide ? 'flex gap-4' : 'flex flex-col gap-4'}>
           {/* LEFT — FDR + FWER */}
           <svg

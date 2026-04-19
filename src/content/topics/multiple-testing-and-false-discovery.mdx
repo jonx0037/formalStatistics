@@ -157,7 +157,7 @@ A GWAS tests $m \approx 10^6$ common variants against a trait. The union-bound c
 <DefinitionBlock number={1} title="Multiple-testing problem (setup)">
 A **multiple-testing problem** consists of $m$ hypotheses $H_1, \ldots, H_m$ with null distributions $P_1^{(0)}, \ldots, P_m^{(0)}$ and test statistics $T_1, \ldots, T_m$ producing p-values $p_1, \ldots, p_m$. Let $H_0 \subseteq \{1, \ldots, m\}$ denote the subset of indices where $H_i$ is true (the **true nulls**), with $m_0 = |H_0|$ and $m_1 = m - m_0 = |H_0^c|$ the count of **true alternatives**. Write $\pi_0 = m_0 / m$ for the **true null fraction**.
 
-A **multiple-testing procedure** is a function $(p_1, \ldots, p_m) \mapsto R \subseteq \{1, \ldots, m\}$ returning the set of **rejected** hypotheses. Counts of interest: $R = |R|$ (total rejections), $V = |R \cap H_0|$ (false rejections), $S = |R \cap H_0^c|$ (true rejections), $R = V + S$.
+A **multiple-testing procedure** is a function $(p_1, \ldots, p_m) \mapsto \mathcal{R} \subseteq \{1, \ldots, m\}$ returning the set of **rejected** hypotheses. Counts of interest: $R = |\mathcal{R}|$ (total rejections), $V = |\mathcal{R} \cap H_0|$ (false rejections), $S = |\mathcal{R} \cap H_0^c|$ (true rejections); by construction $R = V + S$. Throughout the topic, $\mathcal{R}$ denotes the rejection *set* and $R$ its *cardinality*.
 </DefinitionBlock>
 
 <RemarkBlock number={1} title="Why not just use $\\alpha/m$ everywhere and move on?">
@@ -195,9 +195,9 @@ The full proof machinery — proving strong control *and* showing Holm is the cl
 ## 20.3 Family-Wise Error Rate: The FWER Paradigm
 
 <DefinitionBlock number={2} title="Family-wise error rate (FWER)">
-For a multiple-testing procedure producing rejection set $R$ on data with true-null configuration $H_0$, the **family-wise error rate at $H_0$** is
+For a multiple-testing procedure producing rejection set $\mathcal{R}$ on data with true-null configuration $H_0$, the **family-wise error rate at $H_0$** is
 
-$$\text{FWER}(H_0) \;=\; \Pr_{H_0}(V \ge 1) \;=\; \Pr_{H_0}(R \cap H_0 \ne \emptyset).$$
+$$\text{FWER}(H_0) \;=\; \Pr_{H_0}(V \ge 1) \;=\; \Pr_{H_0}(\mathcal{R} \cap H_0 \ne \emptyset).$$
 
 A procedure **controls FWER at level $\alpha$** if $\text{FWER}(H_0) \le \alpha$ for every configuration $H_0$.
 </DefinitionBlock>
@@ -250,7 +250,7 @@ Per-test threshold $\alpha/m = 0.0025$. A test with a $p$-value of $0.04$ — si
 For essentially every routine application, the two give numerically indistinguishable thresholds. The deciding factor is the dependence story: Bonferroni is correct under any dependence, Šidák is exact under independence and conservative-then-liberal under positive-then-negative dependence. Textbook tables default to Bonferroni; the software outputs often default to Šidák (e.g., R's `p.adjust(method = 'bonferroni')` vs the closely-related Šidák implementations). The practical answer is almost always the same hypothesis-level decisions.
 </RemarkBlock>
 
-<RemarkBlock number={8} title="Hom on: Bonferroni as a level-$\\alpha$ test of the global null">
+<RemarkBlock number={8} title="Bonferroni as a level-$\\alpha$ test of the global null">
 The Bonferroni intersection test — "reject $H_I$ iff $\min_{i \in I} p_i \le \alpha / |I|$" — is itself a valid level-$\alpha$ test of the intersection hypothesis $\bigcap_{i \in I} H_i$. Applying closed testing with Bonferroni intersection tests produces exactly the Holm step-down procedure of §20.5 (LEH2005 §9.1). This is the cleanest way to see *why* Holm strictly dominates Bonferroni: the closed procedure exploits the fact that once a hypothesis is rejected, the remaining intersections shrink, and subsequent Bonferroni thresholds become less stringent.
 </RemarkBlock>
 
@@ -321,7 +321,7 @@ No. Holm is *admissible* among step-down procedures that control FWER under arbi
 Benjamini and Hochberg (1995) observed that FWER control is often overkill. In a genome-wide association study with $10{,}000$ tested SNPs, a practitioner flags $50$ as significant. They are content if $5$ of those $50$ are false positives (10% FDP) — that is the rate at which follow-up experiments will fail. They do *not* specifically want $\Pr(\text{any of the 10{,}000 is a false positive}) \le 0.05$; that is an unreasonably stringent target that would shrink the flagged set to perhaps $5$ SNPs, most of which the practitioner already knew. The **false discovery rate** is the error metric that aligns with this reasoning: control the *expected fraction* of false rejections among all rejections, not the probability of any false rejection.
 
 <DefinitionBlock number={4} title="False discovery proportion (FDP) and false discovery rate (FDR)">
-For a multiple-testing procedure with rejection set $R$ of size $R$ and false-rejection count $V$, the **false discovery proportion** is
+For a multiple-testing procedure with rejection set $\mathcal{R}$ of cardinality $R = |\mathcal{R}|$ and false-rejection count $V$, the **false discovery proportion** is
 
 $$\mathrm{FDP} \;=\; \begin{cases} V/R & \text{if } R \ge 1, \\ 0 & \text{if } R = 0. \end{cases}$$
 
@@ -375,17 +375,17 @@ $$\mathrm{FDR} \;=\; \sum_{i \in H_0} \mathbb{E}_{H_0}\!\left[\frac{\mathbf{1}\{
 
 Here $p_{-i}$ denotes the vector of $p$-values excluding $p_i$, and both $k^*$ and $R$ are written as functions of the full $p$-value vector to emphasize that they depend on $p_i$ via the step-up search.
 
-**Step 3 — Apply the BEN2001 Lemma 2.1 independence lemma.** Under independence, the conditional distribution of $k^*$ given $p_i \le k \alpha/m$ — restricted to the event that BH stops at a rank $k$ such that null $i$ is included in the rejection set — is the same as the distribution of the step-up procedure applied to the *other* $p$-values at a modified threshold. Concretely (<ExternalLink href="https://doi.org/10.1214/aos/1013699998">BEN2001</ExternalLink> Lemma 2.1):
+**Step 3 — Apply the BEN2001 Lemma 2.1 independence identity.** Under independence of the null $p$-values from the rest, Lemma 2.1 of BEN2001 gives, for each $i \in H_0$,
 
-$$\mathbb{E}_{H_0}\!\left[\frac{\mathbf{1}\{p_i \le k^* \alpha / m\}}{R \vee 1}\right] \;=\; \frac{\alpha/m}{1} \cdot \Pr_{H_0}\!\left(p_i \le \tfrac{k^* \alpha}{m}\right) \cdot \frac{1}{\alpha/m} \;=\; \frac{\alpha}{m}.$$
+$$\mathbb{E}_{H_0}\!\left[\frac{\mathbf{1}\{p_i \le R \alpha / m\}}{R \vee 1}\right] \;\le\; \frac{\alpha}{m},$$
 
-The key cancellation is that the increment $\alpha/m$ in threshold per rank matches the increment $1/(R \vee 1)$ in denominator per rejection — this is exactly why the BH threshold is *linear* in $k$ rather than Bonferroni's constant $\alpha/m$. The lemma is where independence enters.
+with equality in the continuous independent case. The content of the lemma is that the event $\{p_i \le R \alpha / m\}$ and the random denominator $R \vee 1$ are coupled in exactly the way BH's *linear-in-$k$* threshold $k \alpha / m$ is designed to exploit — each unit increment in $R$ brings in $\alpha/m$ more null-rejection mass in the numerator while adding $1/(R(R+1))$ worth of dilution in the denominator, and the two balance. See <ExternalLink href="https://doi.org/10.1214/aos/1013699998">BEN2001</ExternalLink> §§3–4 for the full conditional-expectation expansion; we use the stated bound as a black box.
 
-**Step 4 — Sum over the $m_0$ true nulls.** Each of the $m_0$ per-null contributions equals $\alpha/m$, so
+**Step 4 — Sum over the $m_0$ true nulls.** Summing the per-null bound from Step 3 over all $i \in H_0$:
 
-$$\mathrm{FDR} \;=\; \sum_{i \in H_0} \frac{\alpha}{m} \;=\; \frac{m_0 \cdot \alpha}{m} \;=\; \pi_0 \cdot \alpha \;\le\; \alpha. \quad\blacksquare$$
+$$\mathrm{FDR} \;=\; \sum_{i \in H_0} \mathbb{E}_{H_0}\!\left[\frac{\mathbf{1}\{p_i \le R \alpha / m\}}{R \vee 1}\right] \;\le\; \sum_{i \in H_0} \frac{\alpha}{m} \;=\; \frac{m_0 \cdot \alpha}{m} \;=\; \pi_0 \cdot \alpha \;\le\; \alpha. \quad\blacksquare$$
 
-∎ — using linearity of expectation (Step 1–2) and the BEN2001 Lemma 2.1 independence identity (Step 3); BEN1995 original; BEN2001 for the modern cleaner argument.
+∎ — using linearity of expectation (Step 1–2) and the BEN2001 Lemma 2.1 independence bound (Step 3); BEN1995 original; BEN2001 for the modern formalization.
 </ProofBlock>
 
 The proof's most striking feature is that BH's FDR control is *exactly* $\pi_0 \alpha$, not just $\le \alpha$. The procedure leaves power on the table when $\pi_0 < 1$ — hence Storey's adaptive correction in §20.8, which estimates $\pi_0$ from the data and applies BH at level $\alpha / \hat{\pi}_0$ to recover that slack.
