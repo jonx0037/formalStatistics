@@ -22,10 +22,14 @@ Successor site: https://formalml.com
 ## Commands
 
 ```bash
-pnpm dev        # Dev server at localhost:4321
-pnpm build      # Production build (runs pagefind post-build)
-pnpm preview    # Preview production build
+pnpm dev            # Dev server at localhost:4321
+pnpm build          # Production build (runs pagefind post-build)
+pnpm preview        # Preview production build
+pnpm test:testing   # Run the Track 5 testing.ts regression harness
+pnpm astro check    # TypeScript + Astro frontmatter check (no `lint` script exists)
 ```
+
+**Build heap:** `build` is prefixed with `cross-env NODE_OPTIONS=--max-old-space-size=8192`. KaTeX SSR on topic MDX of ~9,000+ words exceeds the default 4 GB Node heap; don't strip the prefix. Vercel's build tiers all have ≥ 8 GB.
 
 ## Project Structure
 
@@ -36,16 +40,23 @@ src/
 ├── components/
 │   ├── ui/             # Astro structural components (Nav, TopicCard, TheoremBlock, etc.)
 │   └── viz/            # React + D3 interactive visualizations
-│       └── shared/     # Shared hooks, types, color scales, utility modules
+│       └── shared/     # Shared hooks, palettes, and per-track utility modules
+│                       # (non-exhaustive — read the directory for the current set):
+│                       #   - probability.ts, distributions.ts, convergence.ts,
+│                       #     estimation.ts, moments.ts
+│                       #   - testing.ts (Track 5 — the largest shared module;
+│                       #     always extend, never duplicate)
+│                       #   - useD3.ts, useResizeObserver.ts, colorScales.ts, types.ts
 ├── data/               # Curriculum graph, sample datasets
 ├── layouts/            # Page layout templates
-├── lib/                # Utility modules
 └── styles/             # Global CSS, design tokens
 
 docs/plans/             # Planning & handoff documents
 notebooks/              # Research notebooks (Jupyter, not tracked in git)
 public/images/          # Static images organized by topic
 ```
+
+*(`src/lib/` does not exist. Some handoff briefs reference `src/lib/stat/…` aspirationally — trust the repo, not the brief.)*
 
 ## Commits
 
@@ -79,15 +90,23 @@ Each topic in `src/content/topics/` is an MDX file with YAML frontmatter definin
 - `formalmlConnections` — array of formalml.com topic slugs, this topic feeds into
 - Interactive viz components are imported and embedded inline
 
+**KaTeX constraints (Track 5 hard rule, propagating forward):**
+- No `\begin{aligned}` blocks — multi-line derivations use separate `$$...$$` blocks connected by prose. Grep-verify before committing: `grep -nF '\begin{aligned}' <file>.mdx` (the `-F` fixed-string flag avoids regex-escaping the backslash / braces) must return zero hits.
+- Escape `\{` / `\}` in prose MDX — bare `{` and `}` are JSX expression boundaries.
+
+**Cross-reference anchors use `#section-N-X`** (lowercase, single hyphen, no dots — e.g., `/topics/hypothesis-testing#section-17-7`). No rehype-slug plugin is installed; this is a repeated editorial convention, not an auto-generated slug.
+
 ### Visualization components
 
-- All viz components live in `src/components/viz/`
-- Use D3.js via the `useD3` hook in `viz/shared/useD3.ts`
-- Use `useResizeObserver` for responsive sizing
-- Shared color scales in `viz/shared/colorScales.ts`
-- Shared types in `viz/shared/types.ts`
-- Shared statistics utilities in track-specific modules (e.g., `viz/shared/distributions.ts`, `viz/shared/sampling.ts`, `viz/shared/estimation.ts`)
-- Use `.style()` for CSS custom properties in D3 SVG elements (not `.attr("style", ...)`)
+- All viz components live in `src/components/viz/` (flat — no per-topic subdirectories).
+- Two D3 integration patterns coexist: early topics use the `useD3` hook in `viz/shared/useD3.ts`; Track 5 components use direct React refs with `d3.line` / `d3.scaleLog` / manual SVG primitives (see `CITestDualityVisualizer.tsx`, `MultipleTestingProcedureExplorer.tsx`). Pick the pattern that matches neighboring components.
+- Use `useResizeObserver` for responsive sizing.
+- Shared color scales in `viz/shared/colorScales.ts`.
+- Shared types in `viz/shared/types.ts`.
+- Shared statistics utilities in track-specific modules — `viz/shared/probability.ts`, `distributions.ts`, `convergence.ts`, `estimation.ts`, `moments.ts`, and Track 5's `testing.ts` (non-exhaustive — read the directory for the current set). **Append, don't create siblings:** Topics 17–20 all extend `testing.ts` rather than adding new test modules.
+- Use `.style()` for CSS custom properties in D3 SVG elements (not `.attr("style", ...)`).
+- MDX import paths are **relative** (`'../../components/viz/Name.tsx'`), not `@viz/` or `@components/viz/`. The TS path aliases exist in `tsconfig.json` but MDX topics have never used them.
+- Components embed in MDX as `<Name client:visible />` — never `client:load` (which blocks page hydration for below-the-fold components).
 
 ### Statistics-specific visualization conventions
 
@@ -151,6 +170,12 @@ formalCalculus → formalStatistics → formalML
 - Assume the reader already knows statistics rigorously — that's what this site teaches
 - Assume knowledge from formalml.com topics — only formalcalculus.com topics may be prerequisites
 - Link to formalml.com topics as prerequisites — only as forward references
+
+## Gotchas
+
+- **Phantom PNG deletions in `git status`:** Hundreds of PNGs from Topics 1–16 (and earlier) recurrently show as deleted in the working tree due to an iCloud sync artifact on the local filesystem. Files exist in `HEAD` and on the deployed site. **Never** `git add -A` (or `--all`) or `git commit -a` — stage explicit paths only. Before branch switches, stash the tracked-deletions set (`git stash push -m "expected PNG deletions"`) and continue.
+- **Test harness is `tsx`-based, not Jest:** `pnpm test:testing` invokes `tsx src/components/viz/shared/testing.test.ts`. Tests use `check(id, ok, got, want, note)` with `approx(x, y, tol)` for floats. Hand-off briefs sometimes request "Jest tests" — use the existing `check()` pattern instead; the file already has 90+ tests.
+- **References schema gap:** `src/content.config.ts` does not declare `url` / `isbn` / `journal` / `pages` on the references subschema. Astro strips them from `entry.data` — so MDX topics render the `### References` section as a **hand-rolled numbered Markdown list** at the end of the file, matching Topics 17–20. Fixing the schema + building a `References.astro` renderer is deferred tech-debt; until then, hand-roll.
 
 ## Editorial Voice
 
