@@ -231,6 +231,8 @@ Before 1972, statisticians had logistic regression (Bliss 1935, Berkson 1944), p
 Topic 22 reproduces the unification mathematically. §22.2 lays out the framework; §22.3 proves the canonical-link score identity that drives the unified algorithm; §22.4 / §22.5 / §22.6 fit logistic / Poisson / Gamma regression as worked examples; §22.7 introduces the deviance as the universal goodness-of-fit statistic; §22.8 / §22.9 handle inference and misspecification.
 </RemarkBlock>
 
+<a id="section-22-2"></a>
+
 ## 22.2 The GLM Framework
 
 A generalized linear model has three ingredients: a **linear predictor** $\eta = \mathbf{x}^\top\boldsymbol\beta$, a **link function** $g$ mapping the conditional mean $\mu = E[Y \mid \mathbf{x}]$ to $\eta$, and a **response distribution** from an exponential family with mean $\mu$ and dispersion $\phi$. We commit each ingredient in turn.
@@ -316,6 +318,8 @@ $$
 
 When $\phi$ is estimated rather than known, the deviance test (§22.7) uses an $F$-reference instead of $\chi^2$, exactly as in Topic 21 §21.8 where $\hat\sigma^2$ replaced $\sigma^2$ in the $F$-statistic. The §22.9 sandwich estimator generalizes this further: when the variance specification $\phi V(\mu_i)$ is wrong (overdispersed Poisson, misspecified Gamma scale, clustered Bernoulli), the QMLE is still consistent for $\boldsymbol\beta$ as long as the *mean* specification $\mu_i = g^{-1}(\mathbf{x}_i^\top\boldsymbol\beta)$ is correct; only the variance estimate needs adjustment.
 </RemarkBlock>
+
+<a id="section-22-3"></a>
 
 ## 22.3 Featured: The Canonical-Link Score Identity and IRLS
 
@@ -501,6 +505,8 @@ On a synthetic logistic dataset with $n = 60$, $p = 1$ predictor, and true $\bol
 Five iterations to convergence at $\|\Delta\boldsymbol\beta\| < 10^{-8}$. The error $\|\boldsymbol\beta^{(t)} - \hat{\boldsymbol\beta}\|$ shrinks roughly *quadratically* per step ($1.51 \to 0.39 \to 0.026 \to \cdots$, each step squaring the previous gap up to a constant) — the signature of Newton-method convergence in a neighborhood of the optimum (Topic 14 Thm 6). The right-panel readout of `IRLSVisualizer` reproduces this trajectory live.
 </ExampleBlock>
 
+<a id="section-22-4"></a>
+
 ## 22.4 Logistic Regression
 
 The Bernoulli response with logit link is the binary-classification workhorse. Every binary predictor — credit default vs. repayment, click vs. no-click, treatment success vs. failure — fits naturally into this framework, and the canonical-link score identity Thm 1 gives the fitting algorithm directly: minimize $\sum_i (y_i - p_i)\mathbf{x}_i$ via IRLS with weights $W_{ii} = p_i(1-p_i)$.
@@ -574,6 +580,8 @@ The `GLMExplorer` component lets you fit any of the four GLM families on six pre
 
 <GLMExplorer client:visible />
 
+<a id="section-22-5"></a>
+
 ## 22.5 Poisson Regression
 
 The Poisson response with log link is the workhorse for **count outcomes**: claim frequencies, page-view rates, photons per pixel, gene-read counts. The log link enforces $\mu > 0$ (counts are non-negative), and the multiplicative coefficient interpretation ($e^{\hat\beta_j}$ = rate ratio per unit increase in $x_j$) is more useful in practice than the additive interpretation an identity link would give.
@@ -625,6 +633,8 @@ Poisson regression assumes $\text{Var}(Y_i) = E[Y_i] = \mu_i$. Real count data o
 The §22.9 `SandwichCoverageSimulator` shows the coverage gap visually: under overdispersion ratio $r = 1.8$, naive Wald CIs cover at $79\%$ vs the nominal $95\%$; HC3 sandwich CIs cover at $91.5\%$, much closer to nominal.
 </RemarkBlock>
 
+<a id="section-22-6"></a>
+
 ## 22.6 Gamma Regression
 
 The Gamma response with inverse or log link is the third workhorse — for **positive-skewed continuous outcomes**: insurance claim *amounts* (as opposed to frequencies), waiting times, healthcare costs, gene-expression intensities. The Gamma allows a shape parameter $\nu$ that controls skewness, and the variance scales as $\mu^2$ (multiplicative noise on the mean rather than additive), which matches the "log-Normal-ish" empirical behavior of these outcomes.
@@ -670,6 +680,8 @@ $$
 
 The estimate $\hat\phi$ enters all coefficient SEs as a scalar multiplier: $\widehat{\text{Cov}}(\hat{\boldsymbol\beta}) = \hat\phi (\mathbf{X}^\top\hat{\mathbf{W}}\mathbf{X})^{-1}$. For nested-model deviance tests (§22.7), $\hat\phi$ also enters: when $\phi$ is estimated, the deviance test uses an $F_{k, n - p - 1}$ reference instead of $\chi^2_k$, exactly as in Topic 21 §21.8 where $\hat\sigma^2$ replaced $\sigma^2$. The notebook fit in Ex 8 produced $\hat\phi = 0.444$ vs true $0.5$ — within $13\%$ at $n = 250$, which is good enough for inference.
 </RemarkBlock>
+
+<a id="section-22-7"></a>
 
 ## 22.7 Deviance and the Deviance Likelihood-Ratio Test
 
@@ -770,6 +782,8 @@ The `DevianceTestExplorer` component lets you explore the deviance LRT across fa
 
 <DevianceTestExplorer client:visible />
 
+<a id="section-22-8"></a>
+
 ## 22.8 Coefficient Inference: Wald, Score, Profile-Likelihood
 
 Topic 17 §17.9 introduced the asymptotic-equivalence trio — Wald, Score, and Likelihood-Ratio tests — as three flavors of the same $\chi^2$ inference machinery, each with its own computational and finite-sample tradeoffs. §22.8 specializes the trio to GLM coefficient inference: Wald-z for fast per-coefficient $z$-statistics, Score for "only fit the null" forward-selection contexts, and profile-LRT for the high-fidelity CIs that respect the likelihood's curvature near the boundary. Topic 19 §19.6 forward-promised that profile-LRT is the GLM default; Rem 17 below discharges that promise.
@@ -828,6 +842,8 @@ Topic 19 §19.6 forward-promised that **profile-likelihood CIs are the workhorse
 
 The cost is computational: profile-LRT requires $\sim 30 \times 2 = 60$ constrained refits per coefficient (for bisection on each side). For a $p = 10$ GLM on $n = 10{,}000$ data, that is $\sim 600$ IRLS solves — not cheap but very tractable. The `coefCIProfileGLM` function in `regression.ts` implements the bisection; the `DevianceTestExplorer` right panel renders profile-LRT and Wald-z side-by-side for visual comparison.
 </RemarkBlock>
+
+<a id="section-22-9"></a>
 
 ## 22.9 Misspecification and the Sandwich Estimator
 
@@ -911,6 +927,8 @@ The quasi-likelihood framework is older than the sandwich SE: Wedderburn (1974) 
 The `SandwichCoverageSimulator` lets you watch the coverage gap close in real time. Pick a family (overdispersed Poisson / misspecified Gamma / clustered Bernoulli), set the misspecification magnitude with the slider, and click "Run 500" — each simulation contributes a CI bar to the top panel and updates the running coverage in the bottom panel. The naive bars consistently undercover; the HC3 bars consistently approach the nominal $1 - \alpha$ line.
 
 <SandwichCoverageSimulator client:visible />
+
+<a id="section-22-10"></a>
 
 ## 22.10 Forward Map: Where GLMs Lead
 
