@@ -40,10 +40,13 @@ src/
 ├── components/
 │   ├── ui/             # Astro structural components (Nav, TopicCard, TheoremBlock, etc.)
 │   └── viz/            # React + D3 interactive visualizations
-│       └── shared/     # Shared hooks, palettes, and per-track utility modules:
-│                       #   - distributions.ts, convergence.ts, estimation.ts, moments.ts
-│                       #   - testing.ts (Track 5, 2,700+ lines — do not duplicate)
-│                       #   - useD3.ts, useResizeObserver.ts, colorScales.ts
+│       └── shared/     # Shared hooks, palettes, and per-track utility modules
+│                       # (non-exhaustive — read the directory for the current set):
+│                       #   - probability.ts, distributions.ts, convergence.ts,
+│                       #     estimation.ts, moments.ts
+│                       #   - testing.ts (Track 5 — the largest shared module;
+│                       #     always extend, never duplicate)
+│                       #   - useD3.ts, useResizeObserver.ts, colorScales.ts, types.ts
 ├── data/               # Curriculum graph, sample datasets
 ├── layouts/            # Page layout templates
 └── styles/             # Global CSS, design tokens
@@ -88,7 +91,7 @@ Each topic in `src/content/topics/` is an MDX file with YAML frontmatter definin
 - Interactive viz components are imported and embedded inline
 
 **KaTeX constraints (Track 5 hard rule, propagating forward):**
-- No `\begin{aligned}` blocks — multi-line derivations use separate `$$...$$` blocks connected by prose. Grep-verify before committing: `grep -n 'aligned' <file>.mdx` must return zero hits.
+- No `\begin{aligned}` blocks — multi-line derivations use separate `$$...$$` blocks connected by prose. Grep-verify before committing: `grep -nF '\begin{aligned}' <file>.mdx` (the `-F` fixed-string flag avoids regex-escaping the backslash / braces) must return zero hits.
 - Escape `\{` / `\}` in prose MDX — bare `{` and `}` are JSX expression boundaries.
 
 **Cross-reference anchors use `#section-N-X`** (lowercase, single hyphen, no dots — e.g., `/topics/hypothesis-testing#section-17-7`). No rehype-slug plugin is installed; this is a repeated editorial convention, not an auto-generated slug.
@@ -100,7 +103,7 @@ Each topic in `src/content/topics/` is an MDX file with YAML frontmatter definin
 - Use `useResizeObserver` for responsive sizing.
 - Shared color scales in `viz/shared/colorScales.ts`.
 - Shared types in `viz/shared/types.ts`.
-- Shared statistics utilities in track-specific modules — `viz/shared/distributions.ts`, `convergence.ts`, `estimation.ts`, `moments.ts`, and Track 5's `testing.ts`. **Append, don't create siblings:** Topics 17–20 all extend `testing.ts` rather than adding new test modules.
+- Shared statistics utilities in track-specific modules — `viz/shared/probability.ts`, `distributions.ts`, `convergence.ts`, `estimation.ts`, `moments.ts`, and Track 5's `testing.ts` (non-exhaustive — read the directory for the current set). **Append, don't create siblings:** Topics 17–20 all extend `testing.ts` rather than adding new test modules.
 - Use `.style()` for CSS custom properties in D3 SVG elements (not `.attr("style", ...)`).
 - MDX import paths are **relative** (`'../../components/viz/Name.tsx'`), not `@viz/` or `@components/viz/`. The TS path aliases exist in `tsconfig.json` but MDX topics have never used them.
 - Components embed in MDX as `<Name client:visible />` — never `client:load` (which blocks page hydration for below-the-fold components).
@@ -170,7 +173,7 @@ formalCalculus → formalStatistics → formalML
 
 ## Gotchas
 
-- **Phantom PNG deletions in `git status`:** Hundreds of PNGs from Topics 1–16 (and earlier) recurrently show as deleted in the working tree due to an iCloud sync artifact on the local filesystem. Files exist in `HEAD` and on the deployed site. **Never** `git add -a` or `git commit -a` — stage explicit paths only. Before branch switches, stash the tracked-deletions set (`git stash push -m "expected PNG deletions"`) and continue.
+- **Phantom PNG deletions in `git status`:** Hundreds of PNGs from Topics 1–16 (and earlier) recurrently show as deleted in the working tree due to an iCloud sync artifact on the local filesystem. Files exist in `HEAD` and on the deployed site. **Never** `git add -A` (or `--all`) or `git commit -a` — stage explicit paths only. Before branch switches, stash the tracked-deletions set (`git stash push -m "expected PNG deletions"`) and continue.
 - **Test harness is `tsx`-based, not Jest:** `pnpm test:testing` invokes `tsx src/components/viz/shared/testing.test.ts`. Tests use `check(id, ok, got, want, note)` with `approx(x, y, tol)` for floats. Hand-off briefs sometimes request "Jest tests" — use the existing `check()` pattern instead; the file already has 90+ tests.
 - **References schema gap:** `src/content.config.ts` does not declare `url` / `isbn` / `journal` / `pages` on the references subschema. Astro strips them from `entry.data` — so MDX topics render the `### References` section as a **hand-rolled numbered Markdown list** at the end of the file, matching Topics 17–20. Fixing the schema + building a `References.astro` renderer is deferred tech-debt; until then, hand-roll.
 
