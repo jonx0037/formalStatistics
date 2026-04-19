@@ -23,7 +23,7 @@ import { simulateLinearModel } from '../components/viz/shared/regression';
 
 /**
  * Example 2 (§21.2): 5-point worked example for OLS hand-computation.
- * Hand-computable slope ≈ 0.96, intercept ≈ 0.27.
+ * Hand-computable slope = 0.96, intercept = 0.22 (ȳ = 3.1, x̄ = 3).
  */
 export const EXAMPLE_2_DATA = {
   x: [1, 2, 3, 4, 5],
@@ -297,6 +297,25 @@ export function generateLinearModelData(dgp: LinearModelDGP): {
   const rng = seededRandom(dgp.seed);
   const { n, p, beta, sigma, designKind } = dgp;
 
+  // Invariants: fail loud rather than silently fitting a wrong-length β.
+  if (beta.length !== p + 1) {
+    throw new Error(
+      `generateLinearModelData: beta.length (${beta.length}) must equal p + 1 (${p + 1}) for designKind="${designKind}"`,
+    );
+  }
+  const diagnosticKinds: Array<LinearModelDGP['designKind']> = [
+    'ideal',
+    'heteroscedastic',
+    'outlier',
+    'nonLinear',
+    'highLeverage',
+  ];
+  if (diagnosticKinds.includes(designKind) && p !== 1) {
+    throw new Error(
+      `generateLinearModelData: diagnostic designKind="${designKind}" requires p === 1 (got p=${p})`,
+    );
+  }
+
   // Build X.
   const X: number[][] = [];
   if (designKind === 'wellConditioned') {
@@ -326,11 +345,11 @@ export function generateLinearModelData(dgp: LinearModelDGP): {
   }
 
   // Compute noise-free fitted values (with possible hidden-quadratic).
+  // beta.length === X[i].length by the invariants above.
   const y: number[] = new Array(n);
   for (let i = 0; i < n; i++) {
     let mu = 0;
-    const usedBeta = Math.min(beta.length, X[i].length);
-    for (let j = 0; j < usedBeta; j++) mu += X[i][j] * beta[j];
+    for (let j = 0; j < beta.length; j++) mu += X[i][j] * beta[j];
 
     // Inject any structural pathology from designKind.
     if (designKind === 'nonLinear') {

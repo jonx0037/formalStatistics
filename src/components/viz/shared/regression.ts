@@ -52,11 +52,11 @@ function copyMatrix(A: number[][]): number[][] {
  */
 function thinQR(X: number[][]): { Q1: number[][]; R: number[][] } {
   const n = X.length;
-  if (n === 0) throw new Error('qrSolve: empty design matrix');
+  if (n === 0) throw new Error('thinQR: empty design matrix');
   const m = X[0].length;
-  if (m === 0) throw new Error('qrSolve: zero-column design matrix');
+  if (m === 0) throw new Error('thinQR: zero-column design matrix');
   if (n < m) {
-    throw new Error(`qrSolve: underdetermined system (n=${n} < p+1=${m})`);
+    throw new Error(`thinQR: underdetermined system (n=${n} < p+1=${m})`);
   }
 
   // Working copy of X — becomes R (upper m×m block) after reflections.
@@ -70,7 +70,7 @@ function thinQR(X: number[][]): { Q1: number[][]; R: number[][] } {
     const norm = Math.sqrt(normSq);
     if (norm < 1e-12) {
       throw new Error(
-        `qrSolve: rank-deficient design matrix (column ${k} has near-zero norm)`,
+        `thinQR: rank-deficient design matrix (column ${k} has near-zero norm)`,
       );
     }
 
@@ -395,10 +395,24 @@ export function leverage(X: number[][]): number[] {
   return h;
 }
 
-/** Internally studentized residuals: e_i / (σ̂ √(1 - h_ii)). */
+/**
+ * Internally studentized residuals: e_i / (σ̂ √(1 - h_ii)). When the model
+ * fits perfectly (σ̂² = 0), numerator and denominator are both zero — return
+ * 0 (the limit of the ratio along the residuals-are-zero line) rather than
+ * propagating NaN into the UI. Also guards h_ii → 1 (leverage-one observations).
+ */
 export function studentizedResiduals(fit: OLSFit, X: number[][]): number[] {
-  const h = leverage(X);
+  return studentizedResidualsFromLeverage(fit, leverage(X));
+}
+
+/**
+ * Lower-level variant that accepts a precomputed leverage vector — lets
+ * Cook's distance avoid recomputing the thin-QR. Shape matches
+ * `studentizedResiduals(fit, X)` for the same `(fit, X)` pair.
+ */
+function studentizedResidualsFromLeverage(fit: OLSFit, h: number[]): number[] {
   const sigma = Math.sqrt(fit.sigmaSquared);
+  if (sigma === 0) return fit.residuals.map(() => 0);
   return fit.residuals.map((ei, i) => {
     const denom = sigma * Math.sqrt(Math.max(1 - h[i], 1e-12));
     return ei / denom;
@@ -408,11 +422,12 @@ export function studentizedResiduals(fit: OLSFit, X: number[][]): number[] {
 /**
  * Cook's distance: D_i = (r_i² / (p+1)) * (h_ii / (1 - h_ii)), where r_i is
  * the internally studentized residual. Flags observations whose removal would
- * substantially shift the fit.
+ * substantially shift the fit. Computes the thin-QR exactly once by sharing
+ * the leverage vector with the studentized-residual helper.
  */
 export function cooksDistance(fit: OLSFit, X: number[][]): number[] {
   const h = leverage(X);
-  const r = studentizedResiduals(fit, X);
+  const r = studentizedResidualsFromLeverage(fit, h);
   const pPlusOne = fit.p + 1;
   return r.map((ri, i) => {
     const denom = Math.max(1 - h[i], 1e-12);
@@ -463,14 +478,64 @@ export function fQuantile(p: number, df1: number, df2: number): number {
 }
 
 /**
- * Non-central F_{df1, df2}(λ) density at x via Poisson-mixture series:
- *   f(x; df1, df2, λ) = Σ_j Poisson(λ/2; j) · (df1 / (df1 + 2j))
- *                       · f_F(x df1/(df1+2j); df1 + 2j, df2)
- * Truncates when the running Poisson weight drops below 1e-12 (plus a hard
- * cap at j = 10⁴). For large λ the mode of the Poisson is near λ/2, so
- * centering the truncation window there would be faster, but the naive
- * forward sweep is adequate for λ ≤ 200 which covers every application in
- * Topic 21's components.
+ * Shared Poisson(λ/2)-mixture summer for the non-central F representations.
+ *
+ *   result(x; df1, df2, λ) = Σ_j P(j; λ/2) · term(j, df1 + 2j, x·df1/(df1+2j))
+ *
+ * Mode-centered summation: the naive forward sweep starting at
+ * weight₀ = exp(−λ/2) underflows to 0 for λ ≳ 1490 (since exp(−745) ≈ 5e−324,
+ * the subnormal floor), after which the whole series silently returns zero.
+ * Starting at the Poisson mode j* = ⌊λ/2⌋ with unnormalized weight 1 and
+ * iterating outward — upward via wₖ₊₁ = wₖ · (λ/2)/(k+1), downward via
+ * wₖ₋₁ = wₖ · k/(λ/2) — keeps every intermediate weight bounded near 1 in
+ * the region where terms matter. Normalizing by the sum of visited weights
+ * recovers the true Poisson probabilities without ever materializing exp(−λ/2).
+ */
+function poissonFMixtureSum(
+  lambda: number,
+  df1: number,
+  x: number,
+  term: (df1Eff: number, xEff: number) => number,
+): number {
+  const halfLambda = lambda / 2;
+  const mode = Math.floor(halfLambda);
+  const maxJ = 10000;
+  const eps = 1e-12;
+
+  const addTerm = (j: number, w: number): number => {
+    const df1Eff = df1 + 2 * j;
+    const xEff = (x * df1) / df1Eff;
+    return w * term(df1Eff, xEff);
+  };
+
+  let numer = addTerm(mode, 1);
+  let denom = 1;
+
+  // Upward: j = mode+1, mode+2, …
+  let w = 1;
+  for (let j = mode; j < mode + maxJ; j++) {
+    w *= halfLambda / (j + 1);
+    if (w < eps) break;
+    numer += addTerm(j + 1, w);
+    denom += w;
+  }
+
+  // Downward: j = mode−1, mode−2, …, 0
+  w = 1;
+  for (let j = mode; j > 0; j--) {
+    w *= j / halfLambda;
+    if (w < eps) break;
+    numer += addTerm(j - 1, w);
+    denom += w;
+  }
+
+  return numer / denom;
+}
+
+/**
+ * Non-central F_{df1, df2}(λ) density at x via the Poisson-mixture series
+ *   f(x; df1, df2, λ) = Σ_j P(j; λ/2) · (df1 / (df1+2j)) · f_F(x·df1/(df1+2j); df1+2j, df2).
+ * See `poissonFMixtureSum` for the mode-centered summation rationale.
  */
 export function noncentralFDensity(
   x: number,
@@ -480,29 +545,17 @@ export function noncentralFDensity(
 ): number {
   if (x <= 0 || df1 <= 0 || df2 <= 0 || lambda < 0) return 0;
   if (lambda === 0) return fPDF(x, df1, df2);
-
-  const halfLambda = lambda / 2;
-  let weight = Math.exp(-halfLambda); // Poisson(λ/2; 0)
-  let total = 0;
-  const maxJ = 10000;
-  const eps = 1e-12;
-  for (let j = 0; j < maxJ; j++) {
-    const df1Eff = df1 + 2 * j;
-    const xEff = (x * df1) / df1Eff;
-    const term = weight * (df1 / df1Eff) * fPDF(xEff, df1Eff, df2);
-    total += term;
-    // Forward recursion: Poisson(λ/2; j+1) = Poisson(λ/2; j) · (λ/2) / (j+1).
-    weight *= halfLambda / (j + 1);
-    // Break once the remaining Poisson tail is negligible AND we've passed the mode.
-    if (weight < eps && j > halfLambda) break;
-  }
-  return total;
+  return poissonFMixtureSum(
+    lambda,
+    df1,
+    x,
+    (df1Eff, xEff) => (df1 / df1Eff) * fPDF(xEff, df1Eff, df2),
+  );
 }
 
 /**
- * Non-central F CDF at x via the same Poisson-mixture representation —
- *   F(x; df1, df2, λ) = Σ_j Poisson(λ/2; j) · F_F(x df1/(df1+2j); df1 + 2j, df2)
- * Truncation rule matches noncentralFDensity.
+ * Non-central F CDF at x via the Poisson-mixture representation
+ *   F(x; df1, df2, λ) = Σ_j P(j; λ/2) · F_F(x·df1/(df1+2j); df1+2j, df2).
  */
 function noncentralFCDF(
   x: number,
@@ -512,20 +565,12 @@ function noncentralFCDF(
 ): number {
   if (x <= 0 || df1 <= 0 || df2 <= 0 || lambda < 0) return 0;
   if (lambda === 0) return fCDF(x, df1, df2);
-
-  const halfLambda = lambda / 2;
-  let weight = Math.exp(-halfLambda);
-  let total = 0;
-  const maxJ = 10000;
-  const eps = 1e-12;
-  for (let j = 0; j < maxJ; j++) {
-    const df1Eff = df1 + 2 * j;
-    const xEff = (x * df1) / df1Eff;
-    total += weight * fCDF(xEff, df1Eff, df2);
-    weight *= halfLambda / (j + 1);
-    if (weight < eps && j > halfLambda) break;
-  }
-  return total;
+  return poissonFMixtureSum(
+    lambda,
+    df1,
+    x,
+    (df1Eff, xEff) => fCDF(xEff, df1Eff, df2),
+  );
 }
 
 /**
@@ -736,8 +781,11 @@ export function oneWayANOVA(
 
 /**
  * Simulate y from the Normal linear model y = X β + ε, ε_i ~ iid N(0, σ²).
- * Uses the Topic-17 seeded Mersenne Twister (`seededRandom`) and Box–Muller
- * normal sampling (`normalSample`) for reproducibility.
+ * Uses the Topic-17 seeded RNG (`seededRandom` in shared/probability.ts, a
+ * 32-bit linear-congruential generator) composed with Box–Muller normal
+ * sampling (`normalSample`) for reproducibility. The LCG has known
+ * low-dimensional correlation between nearby seeds — use well-separated
+ * seeds (differ by ≥ 10⁵) when testing stream independence.
  */
 export function simulateLinearModel(
   X: number[][],
