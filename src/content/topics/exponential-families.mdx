@@ -841,7 +841,7 @@ The **canonical link function** for a GLM is $g(\mu) = (A')^{-1}(\mu) = \eta$, w
 
 **Poisson regression** is the Poisson GLM with log link: $\log E[Y \mid \boldsymbol{x}] = \boldsymbol{x}^T \boldsymbol{\beta}$. The log-mean is the linear predictor.
 
-In each case, the canonical link emerges directly from the exponential family structure — it is the function $\eta(\mu) = (A')^{-1}(\mu)$ that maps from the mean parameterization to the natural parameterization. Generalized Linear Models (coming soon) will develop the full theory, including non-canonical links, iteratively reweighted least squares, and deviance analysis.
+In each case, the canonical link emerges directly from the exponential family structure — it is the function $\eta(\mu) = (A')^{-1}(\mu)$ that maps from the mean parameterization to the natural parameterization. [Generalized Linear Models](/topics/generalized-linear-models#section-22-3) develops the full theory, including non-canonical links, iteratively reweighted least squares, and deviance analysis.
 </ExampleBlock>
 
 <ExampleBlock number={11} title="Variance Functions and Their Implications">
@@ -932,7 +932,7 @@ The exponential family is the single most important structural concept in parame
 - [Sufficient Statistics](/topics/sufficient-statistics) develops the full theory of data reduction, including the Rao-Blackwell theorem, completeness, Lehmann-Scheffé UMVUE, Basu's independence theorem, and the Pitman-Koopman-Darmois converse, building directly on the sufficient statistic $T(x)$ identified here
 - [Maximum Likelihood Estimation](/topics/maximum-likelihood) develops the asymptotic theory of MLE — consistency, asymptotic normality, efficiency — using the exponential family as the primary example class
 - Bayesian Foundations (coming soon) develops the full Bayesian framework, with the conjugate prior theorem from Section 7.7 as the starting point for conjugate inference
-- Generalized Linear Models (coming soon) develops the complete GLM framework — estimation via IRLS, deviance, model diagnostics — requiring the exponential family response distribution established here
+- [Generalized Linear Models](/topics/generalized-linear-models) develops the complete GLM framework — estimation via IRLS, deviance, model diagnostics — requiring the exponential family response distribution established here
 
 For the connections to machine learning at scale, see <ExternalLink href="https://formalml.com/topics/information-geometry" site="formalml">Information Geometry</ExternalLink> (Fisher information as Riemannian metric, natural gradient descent), <ExternalLink href="https://formalml.com/topics/generalized-linear-models" site="formalml">Generalized Linear Models</ExternalLink> (logistic, Poisson, and Gamma regression), and <ExternalLink href="https://formalml.com/topics/variational-inference" site="formalml">Variational Inference</ExternalLink> (exponential family variational distributions and natural gradient VI).
 

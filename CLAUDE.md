@@ -170,6 +170,26 @@ formalCalculus → formalStatistics → formalML
 - Assume the reader already knows statistics rigorously — that's what this site teaches
 - Assume knowledge from formalml.com topics — only formalcalculus.com topics may be prerequisites
 - Link to formalml.com topics as prerequisites — only as forward references
+- **Do not commit, push, or open a PR before visually inspecting the change in the local preview server. See "Visual Inspection Workflow" below.**
+
+## Visual Inspection Workflow (HARD RULE)
+
+For any change that affects something a browser would render — MDX topic, React component, Astro page, CSS, figure embed, cross-reference link — visual inspection in the local preview is **mandatory before** `git commit`, `git push`, or `gh pr create`. No exceptions. Build success ≠ visual correctness — KaTeX errors, imports that resolve at build but render broken, components that mount but throw on interaction, link anchors that don't resolve, mobile breaks, and 404s on figures all pass `pnpm build` but fail visual inspection.
+
+**Workflow before every Topic-N commit:**
+
+1. Confirm the dev server is running (preview MCP tools or `pnpm dev`).
+2. Navigate to the new/edited topic page (e.g. `localhost:4321/topics/<slug>`).
+3. Pull console errors — must be zero. Pull dev-server logs — must be zero new errors.
+4. Snapshot the page; verify all formal-element blocks render, all 4 components mount, all 10 figures load (no broken-image icons), and the References section renders at the end.
+5. Click through every interactive component — verify Step / Run / preset selectors / family selectors all respond without crashing.
+6. Resize to mobile viewport (375px); confirm components stack and remain readable.
+7. Navigate from each cross-ref-edited predecessor MDX (e.g. `/topics/maximum-likelihood`, `/topics/linear-regression`) and click each newly-activated link — confirm it resolves to the right `#section-N-X` anchor on Topic N.
+8. Take one or two screenshots as proof; share them inline with the user when reporting completion.
+
+**Only then** stage paths, commit, push, and open the PR. The user — a 30-year web developer — has been clear that shipping without inspection is bad practice and not negotiable.
+
+**When this rule does not apply:** TypeScript-only modules not yet wired into a page, test-harness-only changes, build-script tweaks, .gitignore edits. State explicitly when skipping ("not previewable").
 
 ## Gotchas
 

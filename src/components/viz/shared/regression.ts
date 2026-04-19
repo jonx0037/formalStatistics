@@ -26,9 +26,18 @@ import {
   fCDF,
   fInvCDF,
   studentTInvCDF,
+  standardNormalCDF,
+  standardNormalInvCDF,
+  chiSquaredCDF,
+  chiSquaredInvCDF,
 } from './testing';
 import { seededRandom } from './probability';
-import { normalSample } from './convergence';
+import {
+  normalSample,
+  bernoulliSample,
+  poissonSample,
+  gammaSample,
+} from './convergence';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // §6.1.A — Linear-algebra primitives
@@ -828,4 +837,1167 @@ export function coverageSimulator(
     }
   }
   return hits.map((h) => h / iterations);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// §6.1.H — Link function / variance function / GLM family catalog (Topic 22)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * A link function bundles g, g^{-1}, and g'(μ) — all three are needed for IRLS
+ * (g for evaluation, g^{-1} for the inverse-link μ = g^{-1}(η), g'(μ) for the
+ * adjusted-response weighting).
+ */
+export interface LinkFunction {
+  name: 'logit' | 'probit' | 'cloglog' | 'log' | 'identity' | 'inverse' | 'sqrt';
+  g: (mu: number) => number;
+  gInv: (eta: number) => number;
+  gPrime: (mu: number) => number;
+}
+
+/**
+ * Exponential-family variance function V(μ). Bernoulli: μ(1-μ); Poisson: μ;
+ * Gamma: μ²; Normal: 1.
+ */
+export interface VarianceFunction {
+  name: 'bernoulli' | 'poisson' | 'gamma' | 'normal';
+  V: (mu: number) => number;
+}
+
+/**
+ * A GLM family bundles the canonical link, the variance function, the
+ * log-likelihood contribution, the saturated-model log-likelihood contribution
+ * (for deviance), an initial-μ heuristic for IRLS, and a flag for whether the
+ * dispersion φ is fixed at 1 (Bernoulli, Poisson) or estimated (Gamma, Normal).
+ */
+export interface GLMFamily {
+  name: 'bernoulli' | 'poisson' | 'gamma' | 'normal';
+  canonicalLink: LinkFunction;
+  variance: VarianceFunction;
+  /** ℓ_i(μ; y, φ) — pointwise log-likelihood contribution. */
+  logLik: (y: number, mu: number, phi: number) => number;
+  /** ℓ_i(y; y, φ) — saturated-model contribution (used in deviance). */
+  logLikSaturated: (y: number, phi: number) => number;
+  /** Per-observation deviance contribution d_i = 2[ℓ_sat - ℓ_i] / φ. */
+  devianceContribution: (y: number, mu: number) => number;
+  /** Family-specific initial μ for IRLS (smoothed-y for Bernoulli/Poisson). */
+  initMu: (y: number[]) => number[];
+  /** φ ≡ 1 for Bernoulli/Poisson; estimated for Gamma/Normal. */
+  fixedDispersion: boolean;
+}
+
+// ── Numerical clip constants (per §22 brief Topic-22 gotcha G5) ─────────────
+const PROB_CLIP_LO = 1e-12;
+const PROB_CLIP_HI = 1 - 1e-12;
+const POSITIVE_CLIP = 1e-12;
+const HC3_LEVERAGE_CAP = 0.9999;
+const WEIGHT_CLIP_LO = 1e-12;
+
+const sigmoid = (x: number): number => {
+  // Stable variant: avoid overflow on very negative x.
+  if (x >= 0) {
+    const e = Math.exp(-x);
+    return 1 / (1 + e);
+  }
+  const e = Math.exp(x);
+  return e / (1 + e);
+};
+
+const clip = (x: number, lo: number, hi: number): number =>
+  Math.min(hi, Math.max(lo, x));
+
+// ── Link functions ──────────────────────────────────────────────────────────
+
+const logitLink: LinkFunction = {
+  name: 'logit',
+  g: (mu) => {
+    const m = clip(mu, PROB_CLIP_LO, PROB_CLIP_HI);
+    return Math.log(m / (1 - m));
+  },
+  gInv: (eta) => sigmoid(eta),
+  gPrime: (mu) => {
+    const m = clip(mu, PROB_CLIP_LO, PROB_CLIP_HI);
+    return 1 / (m * (1 - m));
+  },
+};
+
+const probitLink: LinkFunction = {
+  name: 'probit',
+  g: (mu) => standardNormalInvCDF(clip(mu, PROB_CLIP_LO, PROB_CLIP_HI)),
+  gInv: (eta) => standardNormalCDF(eta),
+  gPrime: (mu) => {
+    const m = clip(mu, PROB_CLIP_LO, PROB_CLIP_HI);
+    const eta = standardNormalInvCDF(m);
+    const phiEta = Math.exp(-0.5 * eta * eta) / Math.sqrt(2 * Math.PI);
+    return 1 / Math.max(phiEta, PROB_CLIP_LO);
+  },
+};
+
+const cloglogLink: LinkFunction = {
+  name: 'cloglog',
+  g: (mu) => {
+    const m = clip(mu, PROB_CLIP_LO, PROB_CLIP_HI);
+    return Math.log(-Math.log(1 - m));
+  },
+  gInv: (eta) => 1 - Math.exp(-Math.exp(eta)),
+  gPrime: (mu) => {
+    const m = clip(mu, PROB_CLIP_LO, PROB_CLIP_HI);
+    return -1 / ((1 - m) * Math.log(1 - m));
+  },
+};
+
+const logLink: LinkFunction = {
+  name: 'log',
+  g: (mu) => Math.log(Math.max(mu, POSITIVE_CLIP)),
+  gInv: (eta) => Math.exp(eta),
+  gPrime: (mu) => 1 / Math.max(mu, POSITIVE_CLIP),
+};
+
+const identityLink: LinkFunction = {
+  name: 'identity',
+  g: (mu) => mu,
+  gInv: (eta) => eta,
+  gPrime: () => 1,
+};
+
+const inverseLink: LinkFunction = {
+  name: 'inverse',
+  g: (mu) => 1 / Math.max(mu, POSITIVE_CLIP),
+  gInv: (eta) => 1 / Math.max(eta, POSITIVE_CLIP),
+  gPrime: (mu) => -1 / (mu * mu),
+};
+
+const sqrtLink: LinkFunction = {
+  name: 'sqrt',
+  g: (mu) => Math.sqrt(Math.max(mu, POSITIVE_CLIP)),
+  gInv: (eta) => eta * eta,
+  gPrime: (mu) => 0.5 / Math.sqrt(Math.max(mu, POSITIVE_CLIP)),
+};
+
+export const LINKS: Record<string, LinkFunction> = {
+  logit: logitLink,
+  probit: probitLink,
+  cloglog: cloglogLink,
+  log: logLink,
+  identity: identityLink,
+  inverse: inverseLink,
+  sqrt: sqrtLink,
+};
+
+// ── Variance functions ──────────────────────────────────────────────────────
+
+const bernoulliVar: VarianceFunction = {
+  name: 'bernoulli',
+  V: (mu) => {
+    const m = clip(mu, PROB_CLIP_LO, PROB_CLIP_HI);
+    return m * (1 - m);
+  },
+};
+const poissonVar: VarianceFunction = {
+  name: 'poisson',
+  V: (mu) => Math.max(mu, POSITIVE_CLIP),
+};
+const gammaVar: VarianceFunction = {
+  name: 'gamma',
+  V: (mu) => {
+    const m = Math.max(mu, POSITIVE_CLIP);
+    return m * m;
+  },
+};
+const normalVar: VarianceFunction = { name: 'normal', V: () => 1 };
+
+export const VARIANCES: Record<string, VarianceFunction> = {
+  bernoulli: bernoulliVar,
+  poisson: poissonVar,
+  gamma: gammaVar,
+  normal: normalVar,
+};
+
+// ── Family catalog ──────────────────────────────────────────────────────────
+
+/** y log(y) with the convention 0 log 0 = 0. */
+const yLogY = (y: number): number => (y > 0 ? y * Math.log(y) : 0);
+
+const bernoulliFamily: GLMFamily = {
+  name: 'bernoulli',
+  canonicalLink: logitLink,
+  variance: bernoulliVar,
+  logLik: (y, mu) => {
+    const p = clip(mu, PROB_CLIP_LO, PROB_CLIP_HI);
+    return y * Math.log(p) + (1 - y) * Math.log(1 - p);
+  },
+  logLikSaturated: () => 0, // y∈{0,1} ⇒ y log(y) + (1-y) log(1-y) = 0
+  devianceContribution: (y, mu) => {
+    const p = clip(mu, PROB_CLIP_LO, PROB_CLIP_HI);
+    const a = y > 0 ? y * Math.log(y / p) : 0;
+    const b = y < 1 ? (1 - y) * Math.log((1 - y) / (1 - p)) : 0;
+    return 2 * (a + b);
+  },
+  initMu: (y) => {
+    // Smooth toward 0.5 to avoid logit(0) / logit(1) on first iteration.
+    return y.map((yi) => (yi + 0.5) / 2);
+  },
+  fixedDispersion: true,
+};
+
+const poissonFamily: GLMFamily = {
+  name: 'poisson',
+  canonicalLink: logLink,
+  variance: poissonVar,
+  logLik: (y, mu) => {
+    const m = Math.max(mu, POSITIVE_CLIP);
+    return y * Math.log(m) - m; // drop log Γ(y+1) — cancels in deviance
+  },
+  logLikSaturated: (y) => yLogY(y) - y,
+  devianceContribution: (y, mu) => {
+    const m = Math.max(mu, POSITIVE_CLIP);
+    const term1 = y > 0 ? y * Math.log(y / m) : 0;
+    return 2 * (term1 - (y - m));
+  },
+  initMu: (y) => y.map((yi) => yi + 0.1),
+  fixedDispersion: true,
+};
+
+const gammaFamily: GLMFamily = {
+  name: 'gamma',
+  canonicalLink: inverseLink,
+  variance: gammaVar,
+  logLik: (y, mu, phi) => {
+    // Up to dispersion-only constants; ν = 1/φ.
+    const m = Math.max(mu, POSITIVE_CLIP);
+    const yClip = Math.max(y, POSITIVE_CLIP);
+    return -Math.log(m) - yClip / m + (Math.log(yClip) - 1) / Math.max(phi, POSITIVE_CLIP);
+  },
+  logLikSaturated: (y) => {
+    const yClip = Math.max(y, POSITIVE_CLIP);
+    return -Math.log(yClip) - 1; // matches logLik with mu = y
+  },
+  devianceContribution: (y, mu) => {
+    const m = Math.max(mu, POSITIVE_CLIP);
+    // y clipped only inside the deviance-term log, NOT in the fit (G5).
+    const yLog = Math.max(y, POSITIVE_CLIP);
+    return 2 * (-Math.log(yLog / m) + (y - m) / m);
+  },
+  initMu: (y) => y.map((yi) => Math.max(yi, POSITIVE_CLIP)),
+  fixedDispersion: false,
+};
+
+const normalFamily: GLMFamily = {
+  name: 'normal',
+  canonicalLink: identityLink,
+  variance: normalVar,
+  logLik: (y, mu, phi) => {
+    const sigmaSq = Math.max(phi, POSITIVE_CLIP);
+    const r = y - mu;
+    return -0.5 * (Math.log(2 * Math.PI * sigmaSq) + (r * r) / sigmaSq);
+  },
+  logLikSaturated: (_y, phi) => {
+    const sigmaSq = Math.max(phi, POSITIVE_CLIP);
+    return -0.5 * Math.log(2 * Math.PI * sigmaSq);
+  },
+  devianceContribution: (y, mu) => {
+    const r = y - mu;
+    return r * r;
+  },
+  initMu: (y) => y.slice(),
+  fixedDispersion: false,
+};
+
+export const FAMILIES: Record<string, GLMFamily> = {
+  bernoulli: bernoulliFamily,
+  poisson: poissonFamily,
+  gamma: gammaFamily,
+  normal: normalFamily,
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// §6.1.I — IRLS solver (glmFit, irlsStep, predictGLM) (Topic 22)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface GLMFit {
+  beta: number[];
+  mu: number[];
+  eta: number[];
+  weights: number[];
+  deviance: number;
+  nullDeviance: number;
+  phi: number;
+  nIter: number;
+  converged: boolean;
+  X: number[][];
+  y: number[];
+  family: GLMFamily;
+  link: LinkFunction;
+  /** Asymptotic variance-covariance: φ · (X^T W X)^{-1} */
+  vcov: number[][];
+  offset: number[] | null;
+}
+
+/** Solve A β = b for symmetric positive-definite A via Cholesky. */
+function choleskySolve(A: number[][], b: number[]): number[] {
+  const n = A.length;
+  // L is the lower-triangular Cholesky factor: A = L L^T.
+  const L: number[][] = Array.from({ length: n }, () => new Array(n).fill(0));
+  for (let i = 0; i < n; i++) {
+    for (let j = 0; j <= i; j++) {
+      let s = A[i][j];
+      for (let k = 0; k < j; k++) s -= L[i][k] * L[j][k];
+      if (i === j) {
+        if (s <= 0) {
+          throw new Error(
+            `choleskySolve: matrix not positive-definite at pivot ${i} (diagonal=${s.toExponential(3)})`,
+          );
+        }
+        L[i][j] = Math.sqrt(s);
+      } else {
+        L[i][j] = s / L[j][j];
+      }
+    }
+  }
+  // Forward solve L u = b.
+  const u: number[] = new Array(n).fill(0);
+  for (let i = 0; i < n; i++) {
+    let s = b[i];
+    for (let k = 0; k < i; k++) s -= L[i][k] * u[k];
+    u[i] = s / L[i][i];
+  }
+  // Backward solve L^T x = u.
+  const x: number[] = new Array(n).fill(0);
+  for (let i = n - 1; i >= 0; i--) {
+    let s = u[i];
+    for (let k = i + 1; k < n; k++) s -= L[k][i] * x[k];
+    x[i] = s / L[i][i];
+  }
+  return x;
+}
+
+/** Compute X^T diag(w) X (symmetric). */
+function xtwx(X: number[][], w: number[]): number[][] {
+  const n = X.length;
+  const m = X[0].length;
+  const out: number[][] = Array.from({ length: m }, () => new Array(m).fill(0));
+  for (let i = 0; i < n; i++) {
+    const wi = w[i];
+    const xi = X[i];
+    for (let j = 0; j < m; j++) {
+      const xij = xi[j];
+      for (let k = j; k < m; k++) {
+        out[j][k] += wi * xij * xi[k];
+      }
+    }
+  }
+  // Mirror upper triangle into lower.
+  for (let j = 0; j < m; j++) {
+    for (let k = 0; k < j; k++) out[j][k] = out[k][j];
+  }
+  return out;
+}
+
+/** Compute X^T diag(w) z. */
+function xtwz(X: number[][], w: number[], z: number[]): number[] {
+  const n = X.length;
+  const m = X[0].length;
+  const out: number[] = new Array(m).fill(0);
+  for (let i = 0; i < n; i++) {
+    const wzi = w[i] * z[i];
+    const xi = X[i];
+    for (let j = 0; j < m; j++) out[j] += xi[j] * wzi;
+  }
+  return out;
+}
+
+/**
+ * Single IRLS iteration step. Exposed so `IRLSVisualizer` can animate one step
+ * at a time. Returns the next β plus per-observation diagnostics needed for
+ * the right panel of the visualizer (current μ, η, weights, adjusted response).
+ *
+ * Uses the general-link IRLS form W_ii = 1/[V(μ_i) · g'(μ_i)²], which collapses
+ * to W_ii = V(μ_i) under the canonical link.
+ */
+export function irlsStep(
+  X: number[][],
+  y: number[],
+  betaCurrent: number[],
+  family: GLMFamily,
+  link: LinkFunction,
+  offset?: number[],
+): {
+  betaNext: number[];
+  mu: number[];
+  eta: number[];
+  weights: number[];
+  adjustedResponse: number[];
+  logLik: number;
+} {
+  const n = X.length;
+  const off = offset ?? new Array<number>(n).fill(0);
+  // Current η, μ.
+  const linPred = matVec(X, betaCurrent);
+  const eta = new Array<number>(n);
+  const mu = new Array<number>(n);
+  for (let i = 0; i < n; i++) {
+    eta[i] = linPred[i] + off[i];
+    mu[i] = link.gInv(eta[i]);
+  }
+  // IRLS weights and adjusted response.
+  const weights = new Array<number>(n);
+  const z = new Array<number>(n);
+  for (let i = 0; i < n; i++) {
+    const gp = link.gPrime(mu[i]);
+    const V = family.variance.V(mu[i]);
+    const denom = V * gp * gp;
+    weights[i] = 1 / Math.max(denom, WEIGHT_CLIP_LO);
+    // Adjusted response in the predictor scale; remove offset before the WLS solve.
+    z[i] = (eta[i] - off[i]) + gp * (y[i] - mu[i]);
+  }
+  const A = xtwx(X, weights);
+  const b = xtwz(X, weights, z);
+  const betaNext = choleskySolve(A, b);
+
+  let ll = 0;
+  // φ for Gamma/Normal not yet known at this iteration; pass 1 (deviance is
+  // φ-independent for Bernoulli/Poisson, and for Gamma/Normal the per-step
+  // log-lik is only used for the IRLSVisualizer readout).
+  for (let i = 0; i < n; i++) ll += family.logLik(y[i], mu[i], 1);
+
+  return { betaNext, mu, eta, weights, adjustedResponse: z, logLik: ll };
+}
+
+/**
+ * IRLS / Fisher scoring solver for a GLM. Returns the full GLMFit object.
+ *
+ * Convergence is declared when ‖β^(t+1) - β^(t)‖_2 < tol. On non-convergence
+ * (max-iter reached), returns a GLMFit with converged=false and a console
+ * warning — does NOT throw. This is critical for `IRLSVisualizer` near-
+ * separation preset (Bernoulli MLE diverges to ±∞ under quasi-complete
+ * separation).
+ */
+export function glmFit(
+  X: number[][],
+  y: number[],
+  family: GLMFamily,
+  link?: LinkFunction,
+  options?: {
+    offset?: number[];
+    maxIter?: number;
+    tol?: number;
+    startBeta?: number[];
+    /**
+     * Skip the intercept-only null-deviance refit. Off by default. Set true
+     * inside loops (e.g. profile-CI bisection, simulators) where the
+     * intercept-only model would otherwise be re-solved on every call. When
+     * skipped, `nullDeviance` is set equal to `deviance`.
+     */
+    skipNullDeviance?: boolean;
+  },
+): GLMFit {
+  const n = X.length;
+  const m = X[0].length;
+  const linkFn = link ?? family.canonicalLink;
+  const maxIter = options?.maxIter ?? 25;
+  const tol = options?.tol ?? 1e-8;
+  const off = options?.offset ?? new Array<number>(n).fill(0);
+  const skipNullDeviance = options?.skipNullDeviance ?? false;
+
+  // Start: either user-provided β^(0), or g(initMu(y)) − offset projected onto X.
+  let beta: number[];
+  if (options?.startBeta && options.startBeta.length === m) {
+    beta = options.startBeta.slice();
+  } else {
+    const mu0 = family.initMu(y);
+    const eta0 = mu0.map((mi, i) => linkFn.g(mi) - off[i]);
+    // Initial OLS-style solve to land β^(0) in the right neighborhood.
+    try {
+      const A0 = xtx(X);
+      const b0 = xty(X, eta0);
+      beta = choleskySolve(A0, b0);
+    } catch {
+      beta = new Array<number>(m).fill(0);
+    }
+  }
+
+  let nIter = 0;
+  let converged = false;
+
+  for (let iter = 0; iter < maxIter; iter++) {
+    nIter = iter + 1;
+    let step;
+    try {
+      step = irlsStep(X, y, beta, family, linkFn, off);
+    } catch (err) {
+      // Cholesky failure → singular X^T W X (e.g. near separation). Bail with
+      // converged=false rather than throw.
+      // eslint-disable-next-line no-console
+      console.warn(
+        `glmFit: IRLS Cholesky failure at iter ${iter} (likely separation or rank-deficient design). Returning unconverged fit.`,
+        err,
+      );
+      converged = false;
+      break;
+    }
+
+    let diffSq = 0;
+    for (let j = 0; j < m; j++) {
+      const d = step.betaNext[j] - beta[j];
+      diffSq += d * d;
+    }
+    beta = step.betaNext;
+
+    if (Math.sqrt(diffSq) < tol) {
+      converged = true;
+      break;
+    }
+  }
+
+  if (!converged) {
+    // eslint-disable-next-line no-console
+    console.warn(
+      `glmFit: did not converge in ${maxIter} iterations (family=${family.name}, link=${linkFn.name}). ` +
+        `Returning best-effort fit with converged=false.`,
+    );
+  }
+
+  // Final μ, η at the converged β.
+  const eta = new Array<number>(n);
+  const mu = new Array<number>(n);
+  for (let i = 0; i < n; i++) {
+    eta[i] = matVec([X[i]], beta)[0] + off[i];
+    mu[i] = linkFn.gInv(eta[i]);
+  }
+  // Refresh weights at converged β.
+  const weights = new Array<number>(n);
+  for (let i = 0; i < n; i++) {
+    const gp = linkFn.gPrime(mu[i]);
+    const V = family.variance.V(mu[i]);
+    weights[i] = 1 / Math.max(V * gp * gp, WEIGHT_CLIP_LO);
+  }
+
+  // Deviance (φ-free), phi (estimated for Gamma/Normal via Pearson statistic),
+  // and null deviance (intercept-only refit).
+  let dev = 0;
+  for (let i = 0; i < n; i++) dev += family.devianceContribution(y[i], mu[i]);
+
+  let phi = 1;
+  if (!family.fixedDispersion) {
+    let ssr = 0;
+    for (let i = 0; i < n; i++) {
+      const r = y[i] - mu[i];
+      ssr += (r * r) / Math.max(family.variance.V(mu[i]), POSITIVE_CLIP);
+    }
+    phi = ssr / Math.max(n - m, 1);
+  }
+
+  // Null deviance: refit intercept-only model. The recursive call passes
+  // skipNullDeviance=true so the intercept-only fit doesn't itself trigger
+  // another null-deviance refit (avoids unbounded recursion on Xnull = [[1]]
+  // and the redundant work flagged in PR #25 review).
+  let nullDeviance = dev;
+  if (!skipNullDeviance && m > 1) {
+    const Xnull = X.map(() => [1]);
+    try {
+      const nullFit = glmFit(Xnull, y, family, linkFn, {
+        offset: off.slice(),
+        maxIter,
+        tol,
+        skipNullDeviance: true,
+      });
+      nullDeviance = nullFit.deviance;
+    } catch {
+      // Intercept-only refit can rarely fail; fall back to NaN-safe value.
+      nullDeviance = NaN;
+    }
+  }
+
+  // Asymptotic variance-covariance: φ · (X^T W X)^{-1}.
+  let vcov: number[][];
+  try {
+    const A = xtwx(X, weights);
+    const Ainv = choleskyInverse(A);
+    vcov = Ainv.map((row) => row.map((v) => v * phi));
+  } catch {
+    vcov = Array.from({ length: m }, () => new Array<number>(m).fill(NaN));
+  }
+
+  return {
+    beta,
+    mu,
+    eta,
+    weights,
+    deviance: dev,
+    nullDeviance,
+    phi,
+    nIter,
+    converged,
+    X,
+    y,
+    family,
+    link: linkFn,
+    vcov,
+    offset: options?.offset ?? null,
+  };
+}
+
+/** Predict μ (or η, with returnEta=true) at new x via the fitted link. */
+export function predictGLM(
+  fit: GLMFit,
+  Xnew: number[][],
+  options?: { offsetNew?: number[]; returnEta?: boolean },
+): number[] {
+  const n = Xnew.length;
+  const off = options?.offsetNew ?? new Array<number>(n).fill(0);
+  const out = new Array<number>(n);
+  for (let i = 0; i < n; i++) {
+    const eta = matVec([Xnew[i]], fit.beta)[0] + off[i];
+    out[i] = options?.returnEta ? eta : fit.link.gInv(eta);
+  }
+  return out;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// §6.1.J — Deviance and residuals (Topic 22)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** D = 2φ[ℓ_sat - ℓ(β̂)]. Stored on the fit; this getter exists for API
+ *  symmetry with `pearsonResiduals` / `devianceResiduals`. */
+export function deviance(fit: GLMFit): number {
+  return fit.deviance;
+}
+
+/** Pearson residuals: r_i^P = (y_i - μ_i) / sqrt(V(μ_i) · φ). */
+export function pearsonResiduals(fit: GLMFit): number[] {
+  return fit.y.map((yi, i) => {
+    const V = fit.family.variance.V(fit.mu[i]);
+    return (yi - fit.mu[i]) / Math.sqrt(Math.max(V * fit.phi, POSITIVE_CLIP));
+  });
+}
+
+/** Deviance residuals: r_i^D = sign(y - μ) · sqrt(d_i). */
+export function devianceResiduals(fit: GLMFit): number[] {
+  return fit.y.map((yi, i) => {
+    const di = Math.max(0, fit.family.devianceContribution(yi, fit.mu[i]));
+    return Math.sign(yi - fit.mu[i]) * Math.sqrt(di);
+  });
+}
+
+export interface DevianceTestResult {
+  devianceFull: number;
+  devianceReduced: number;
+  diff: number;
+  df: number;
+  pValue: number;
+  reject: boolean;
+  dispersionEstimated: boolean;
+}
+
+/**
+ * Nested-model deviance test. Fits both models, returns (D_0 - D_1), df=k,
+ * p-value. For fixed-φ families (Bernoulli, Poisson) uses χ²_k reference.
+ * For estimated-φ families (Gamma, Normal), divides by the full-model φ̂ and
+ * uses an F_{k, n-p-1} reference.
+ */
+export function devianceTestNested(
+  Xfull: number[][],
+  Xreduced: number[][],
+  y: number[],
+  family: GLMFamily,
+  link: LinkFunction,
+  alpha: number,
+  options?: { offset?: number[] },
+): DevianceTestResult {
+  const k = Xfull[0].length - Xreduced[0].length;
+  if (k <= 0) {
+    throw new Error(
+      `devianceTestNested: requires Xfull to have strictly more columns than Xreduced (got ${Xfull[0].length} vs ${Xreduced[0].length}, k=${k}). The reduced model must be nested in the full model.`,
+    );
+  }
+  const fitFull = glmFit(Xfull, y, family, link, {
+    offset: options?.offset,
+    skipNullDeviance: true,
+  });
+  const fitRed = glmFit(Xreduced, y, family, link, {
+    offset: options?.offset,
+    skipNullDeviance: true,
+  });
+  const diff = fitRed.deviance - fitFull.deviance;
+
+  let pValue: number;
+  if (family.fixedDispersion) {
+    pValue = 1 - chiSquaredCDF(diff, k);
+  } else {
+    const phi = fitFull.phi;
+    const fStat = diff / k / phi;
+    const df1 = k;
+    const df2 = y.length - Xfull[0].length;
+    pValue = 1 - fCDF(fStat, df1, df2);
+  }
+
+  return {
+    devianceFull: fitFull.deviance,
+    devianceReduced: fitRed.deviance,
+    diff,
+    df: k,
+    pValue,
+    reject: pValue < alpha,
+    dispersionEstimated: !family.fixedDispersion,
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// §6.1.K — Sandwich variance + profile-likelihood CI (Topic 22)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type SandwichType = 'HC0' | 'HC1' | 'HC2' | 'HC3';
+
+/**
+ * Sandwich variance estimator A^{-1} B A^{-1} for a fitted GLM.
+ *
+ * - **HC0** (White 1980): B_HC0 = X^T diag(r_i²) X with r_i = y_i - μ_i.
+ * - **HC1** (MacKinnon-White 1985): scale HC0 by n/(n-p-1).
+ * - **HC2**: divide r_i² by (1 - h_ii).
+ * - **HC3**: divide r_i² by (1 - h_ii)². Leverage h_ii capped at 0.9999 with
+ *   a console warning (G5 numerical stability).
+ *
+ * A is the GLM information matrix X^T W X (Fisher), so A^{-1} is the inverse
+ * of the φ-free vcov. Under correct mean-specification + arbitrary variance
+ * misspecification, this is consistent for the QMLE asymptotic variance
+ * (Huber 1967, White 1980, Wedderburn 1974).
+ */
+export function sandwichVCov(fit: GLMFit, type: SandwichType = 'HC3'): number[][] {
+  const n = fit.X.length;
+  const m = fit.X[0].length;
+
+  // A = X^T W X (φ-free), Ainv from the stored vcov by un-scaling.
+  // Catch Cholesky failure (rank-deficient design, separation, unconverged
+  // fit) and return an all-NaN covariance matrix so callers don't crash.
+  const A = xtwx(fit.X, fit.weights);
+  let Ainv: number[][];
+  try {
+    Ainv = choleskyInverse(A);
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn(
+      `sandwichVCov(${type}): X^T W X is not positive-definite (rank deficiency, separation, or unconverged fit). Returning NaN matrix.`,
+      err,
+    );
+    return Array.from({ length: m }, () => new Array<number>(m).fill(NaN));
+  }
+
+  // Hat-equivalent leverages h_ii = (W^{1/2} X (X^T W X)^{-1} X^T W^{1/2})_{ii}.
+  // For HC2/HC3 we need them; HC0/HC1 do not.
+  let hatDiag: number[] = [];
+  if (type === 'HC2' || type === 'HC3') {
+    hatDiag = new Array(n).fill(0);
+    let cappedCount = 0;
+    for (let i = 0; i < n; i++) {
+      const xi = fit.X[i];
+      // h_ii = w_i · x_i^T A^{-1} x_i.
+      let q = 0;
+      for (let j = 0; j < m; j++) {
+        let s = 0;
+        for (let k = 0; k < m; k++) s += Ainv[j][k] * xi[k];
+        q += xi[j] * s;
+      }
+      let hi = fit.weights[i] * q;
+      if (hi > HC3_LEVERAGE_CAP) {
+        hi = HC3_LEVERAGE_CAP;
+        cappedCount++;
+      }
+      if (hi < 0) hi = 0;
+      hatDiag[i] = hi;
+    }
+    if (cappedCount > 0) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        `sandwichVCov(${type}): clipped ${cappedCount} leverage values at ${HC3_LEVERAGE_CAP} (G5 numerical stability).`,
+      );
+    }
+  }
+
+  // B = X^T diag(s_i² · score_i²) X where score_i = w_i · (y_i - μ_i) · g'(μ_i)^{-1}
+  // For canonical link the per-observation score becomes x_i (y_i - μ_i), and
+  // we collect B = X^T diag((y_i - μ_i)² × adjustment) X.
+  // For non-canonical, the working residual is r_i^W = (y_i - μ_i)/g'(μ_i),
+  // i.e. the score per-obs contribution is x_i · w_i · g'(μ_i) · (y_i - μ_i).
+  // Equivalent compact form for the empirical estimate: weight by
+  // w_i² · g'(μ_i)² · (y_i - μ_i)² = (since w_i = 1/[V·g'²]) (y - μ)² / V².
+  // Matching standard software (R `sandwich`), we use the working-residual form.
+  const sScore = new Array<number>(n);
+  for (let i = 0; i < n; i++) {
+    const r = fit.y[i] - fit.mu[i];
+    const gp = fit.link.gPrime(fit.mu[i]);
+    // u_i = w_i · g'(μ_i) · r_i  is the per-observation score in β-space (up to x_i).
+    const ui = fit.weights[i] * gp * r;
+    sScore[i] = ui;
+  }
+
+  // Apply HC adjustment to s_i² then form B = X^T diag(s_i² adj) X.
+  const adj = new Array<number>(n);
+  for (let i = 0; i < n; i++) {
+    let a = sScore[i] * sScore[i];
+    if (type === 'HC2') a /= 1 - hatDiag[i];
+    else if (type === 'HC3') {
+      const denom = 1 - hatDiag[i];
+      a /= denom * denom;
+    }
+    adj[i] = a;
+  }
+  const B: number[][] = Array.from({ length: m }, () => new Array(m).fill(0));
+  for (let i = 0; i < n; i++) {
+    const xi = fit.X[i];
+    const ai = adj[i];
+    for (let j = 0; j < m; j++) {
+      const xij = xi[j];
+      for (let k = j; k < m; k++) B[j][k] += ai * xij * xi[k];
+    }
+  }
+  for (let j = 0; j < m; j++) for (let k = 0; k < j; k++) B[j][k] = B[k][j];
+
+  // Sandwich = Ainv · B · Ainv.
+  const tmp: number[][] = Array.from({ length: m }, () => new Array(m).fill(0));
+  for (let i = 0; i < m; i++) {
+    for (let j = 0; j < m; j++) {
+      let s = 0;
+      for (let k = 0; k < m; k++) s += Ainv[i][k] * B[k][j];
+      tmp[i][j] = s;
+    }
+  }
+  const out: number[][] = Array.from({ length: m }, () => new Array(m).fill(0));
+  for (let i = 0; i < m; i++) {
+    for (let j = 0; j < m; j++) {
+      let s = 0;
+      for (let k = 0; k < m; k++) s += tmp[i][k] * Ainv[k][j];
+      out[i][j] = s;
+    }
+  }
+  // HC1 small-sample scale.
+  if (type === 'HC1') {
+    const scale = n / Math.max(n - m, 1);
+    for (let i = 0; i < m; i++) for (let j = 0; j < m; j++) out[i][j] *= scale;
+  }
+  return out;
+}
+
+/** Per-coefficient sandwich SE. Convenience for CI-drawing. */
+export function sandwichSE(fit: GLMFit, type: SandwichType = 'HC3'): number[] {
+  const V = sandwichVCov(fit, type);
+  return V.map((row, j) => Math.sqrt(Math.max(row[j], 0)));
+}
+
+/** Sandwich-Wald CI for each coefficient at level 1-α. */
+export function coefCIWaldSandwich(
+  fit: GLMFit,
+  alpha: number,
+  type: SandwichType = 'HC3',
+): Array<{ lower: number; upper: number; center: number }> {
+  const ses = sandwichSE(fit, type);
+  const z = standardNormalInvCDF(1 - alpha / 2);
+  return fit.beta.map((b, j) => ({
+    lower: b - z * ses[j],
+    upper: b + z * ses[j],
+    center: b,
+  }));
+}
+
+/**
+ * Profile-likelihood CI for a single coefficient β_j. The constrained-fit
+ * trick: move β_j · X[:,j] into the offset, drop column j from X, refit. This
+ * is exact (the constrained MLE on the reduced design with the right offset
+ * IS the profile MLE). Solve for the two β_j values where
+ *   D(β_j^0) - D(β̂) = c × cutoff,
+ * where the cutoff/scaling depends on whether the family has a fixed
+ * dispersion (Bernoulli, Poisson — χ²_1 cutoff, c=1) or estimated dispersion
+ * (Gamma, Normal — F_{1, n-p-1} cutoff via the Wilks-extension; we use the
+ * scaled deviance D/φ̂ against χ²_1 as the asymptotic equivalent and emit a
+ * console warning that the F reference would be more accurate at finite n).
+ * Bisection bracketed by ±gridBracket × Wald-SE around β̂_j.
+ *
+ * Loop-invariants `Xred`, `baseOff`, and `startBeta` are computed once
+ * outside `profileDeviance` (PR #25 review).
+ *
+ * Renamed from the brief's `coefCIProfile` to avoid colliding with Topic 21's
+ * existing OLS `coefCIProfile(fit, alpha): CIEntry[]` at line 641.
+ */
+export function coefCIProfileGLM(
+  fit: GLMFit,
+  j: number,
+  alpha: number,
+  options?: { maxBisect?: number; gridBracket?: number },
+): { lower: number; upper: number; center: number } {
+  const maxBisect = options?.maxBisect ?? 50;
+  const gridBracket = options?.gridBracket ?? 8;
+  const center = fit.beta[j];
+  const seWald = Math.sqrt(Math.max(fit.vcov[j][j], POSITIVE_CLIP));
+
+  // Choose cutoff: χ²_1 for fixed-dispersion families; for estimated
+  // dispersion the asymptotic-equivalent reference is still χ²_1 on the
+  // *scaled* deviance D/φ̂ (Wilks via Lehmann–Romano §12.4). The F_{1, n-p-1}
+  // refinement matches Topic 21's exact-distribution treatment under Normal
+  // errors but is not implemented here — we'd need to solve a per-bj F-cutoff
+  // equation. Topic 23 (penalized GLMs) revisits.
+  const chiCutoff = chiSquaredInvCDF(1 - alpha, 1);
+  const dispScale = fit.family.fixedDispersion ? 1 : Math.max(fit.phi, POSITIVE_CLIP);
+  const target = dispScale * chiCutoff;
+
+  // Loop-invariants — pulled out of profileDeviance for the up to 50 ×
+  // bisection iterations per CI bound (PR #25 perf review).
+  const Xred = fit.X.map((row) => row.filter((_, k) => k !== j));
+  const baseOff = fit.offset ?? new Array<number>(fit.X.length).fill(0);
+  const startBeta = fit.beta.filter((_, k) => k !== j);
+
+  const profileDeviance = (bjFixed: number): number => {
+    const newOff = baseOff.map((o, i) => o + bjFixed * fit.X[i][j]);
+    const refit = glmFit(Xred, fit.y, fit.family, fit.link, {
+      offset: newOff,
+      startBeta,
+      skipNullDeviance: true,
+    });
+    return refit.deviance;
+  };
+
+  const baseDev = fit.deviance;
+  const objective = (bj: number): number => profileDeviance(bj) - baseDev - target;
+
+  // Bisect on the upper side: find b ∈ [center, center + gridBracket·seWald] where objective changes sign.
+  const bisect = (lo: number, hi: number): number => {
+    let a = lo;
+    let b = hi;
+    let fa = objective(a);
+    let fb = objective(b);
+    if (fa * fb > 0) {
+      // Bracket failed — Wald-SE-based bracket too tight. Widen geometrically.
+      for (let k = 0; k < 5 && fa * fb > 0; k++) {
+        b = center + (b - center) * 2;
+        fb = objective(b);
+      }
+      if (fa * fb > 0) {
+        // Couldn't find sign change — return the widest bracket as fallback.
+        return b;
+      }
+    }
+    for (let it = 0; it < maxBisect; it++) {
+      const mid = (a + b) / 2;
+      const fm = objective(mid);
+      if (Math.abs(fm) < 1e-6 || (b - a) / 2 < 1e-8) return mid;
+      if (fa * fm < 0) {
+        b = mid;
+        fb = fm;
+      } else {
+        a = mid;
+        fa = fm;
+      }
+    }
+    return (a + b) / 2;
+  };
+
+  const upper = bisect(center, center + gridBracket * seWald);
+  const lower = (() => {
+    const a0 = center - gridBracket * seWald;
+    const b0 = center;
+    let a = a0;
+    let b = b0;
+    let fa = objective(a);
+    let fb = objective(b);
+    for (let k = 0; k < 5 && fa * fb > 0; k++) {
+      a = center - (center - a) * 2;
+      fa = objective(a);
+    }
+    if (fa * fb > 0) return a;
+    for (let it = 0; it < maxBisect; it++) {
+      const mid = (a + b) / 2;
+      const fm = objective(mid);
+      if (Math.abs(fm) < 1e-6 || (b - a) / 2 < 1e-8) return mid;
+      if (fa * fm < 0) {
+        b = mid;
+        fb = fm;
+      } else {
+        a = mid;
+        fa = fm;
+      }
+    }
+    return (a + b) / 2;
+  })();
+
+  return { lower, upper, center };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// §6.1.L — Simulation harness for GLM DGPs (Topic 22)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Simulate a response vector from a given GLM family, link, and coefficient.
+ * Bernoulli / Poisson / Gamma / Normal supported via the convergence.ts
+ * sampler primitives (bernoulliSample, poissonSample, gammaSample,
+ * normalSample). The Gamma sampler uses a shape ν = 1/dispersion; pass
+ * dispersion ∈ (0, ∞) (default 1).
+ */
+export function simulateGLM(
+  X: number[][],
+  beta: number[],
+  family: GLMFamily,
+  link: LinkFunction,
+  seed: number,
+  options?: { offset?: number[]; dispersion?: number },
+): number[] {
+  const n = X.length;
+  const off = options?.offset ?? new Array<number>(n).fill(0);
+  const phi = options?.dispersion ?? 1;
+  const rng = seededRandom(seed);
+  const eta = matVec(X, beta).map((v, i) => v + off[i]);
+  const mu = eta.map((e) => link.gInv(e));
+  const out = new Array<number>(n);
+  switch (family.name) {
+    case 'bernoulli':
+      for (let i = 0; i < n; i++) out[i] = bernoulliSample(clip(mu[i], 0, 1), rng);
+      break;
+    case 'poisson':
+      for (let i = 0; i < n; i++) out[i] = poissonSample(Math.max(mu[i], POSITIVE_CLIP), rng);
+      break;
+    case 'gamma': {
+      const nu = 1 / Math.max(phi, POSITIVE_CLIP); // shape parameter
+      for (let i = 0; i < n; i++) {
+        const m = Math.max(mu[i], POSITIVE_CLIP);
+        // Gamma(shape=ν, rate=ν/μ) ⇒ E = μ, Var = μ²/ν = μ²·φ.
+        out[i] = gammaSample(nu, nu / m, rng);
+      }
+      break;
+    }
+    case 'normal':
+      for (let i = 0; i < n; i++) out[i] = normalSample(mu[i], Math.sqrt(phi), rng);
+      break;
+  }
+  return out;
+}
+
+/**
+ * Simulate overdispersed Poisson via a Negative-Binomial-equivalent trick:
+ * Y_i | λ_i ~ Poisson(λ_i), λ_i ~ Gamma(shape=μ_i/(r-1), rate=1/(r-1))
+ * gives E[Y_i] = μ_i and Var(Y_i) = μ_i + μ_i²·(r-1)/μ_i = μ_i · r.
+ *
+ * For r = 1 (no overdispersion), reduces to plain Poisson. **Hardcodes the
+ * log link** — the linear predictor η = X β + offset is exponentiated to
+ * give the Poisson mean μ. Underdispersion (r < 1) is not representable by
+ * this Gamma-mixture trick and throws.
+ */
+export function simulateOverdispersedPoisson(
+  X: number[][],
+  beta: number[],
+  dispersionRatio: number,
+  seed: number,
+  options?: { offset?: number[] },
+): number[] {
+  if (dispersionRatio < 1) {
+    throw new Error(
+      `simulateOverdispersedPoisson: dispersionRatio must be ≥ 1 (got ${dispersionRatio}). The Gamma-mixture overdispersion trick cannot represent underdispersion; use simulateGLM with a different family for that.`,
+    );
+  }
+  const n = X.length;
+  const off = options?.offset ?? new Array<number>(n).fill(0);
+  const rng = seededRandom(seed);
+  const eta = matVec(X, beta).map((v, i) => v + off[i]);
+  const mu = eta.map((e) => Math.exp(e));
+  const out = new Array<number>(n);
+  if (Math.abs(dispersionRatio - 1) < 1e-10) {
+    for (let i = 0; i < n; i++) out[i] = poissonSample(Math.max(mu[i], POSITIVE_CLIP), rng);
+    return out;
+  }
+  // Negative-Binomial-style mixture.
+  const k = dispersionRatio - 1;
+  for (let i = 0; i < n; i++) {
+    const m = Math.max(mu[i], POSITIVE_CLIP);
+    const shape = m / k;
+    const rate = 1 / k;
+    const lambda = gammaSample(shape, rate, rng);
+    out[i] = poissonSample(Math.max(lambda, POSITIVE_CLIP), rng);
+  }
+  return out;
+}
+
+/**
+ * Simulate clustered-Bernoulli responses with within-cluster latent-variable
+ * correlation ρ. Used by SandwichCoverageSimulator's clustered-Binomial
+ * scenario, which needs a true clustered DGP per iteration (not an i.i.d.
+ * Bernoulli draw via simulateGLM).
+ *
+ * Model: y_i = 𝟙[η_i + u_g(i) + ε_i > 0] where u_g ~ N(0, ρ) is a per-cluster
+ * latent shock and ε_i ~ N(0, 1-ρ) is the per-observation idiosyncratic
+ * shock. Marginally each y_i is roughly Bernoulli(Φ(η_i)), but observations
+ * within the same cluster are positively correlated.
+ */
+export function simulateClusteredBernoulli(
+  X: number[][],
+  beta: number[],
+  seed: number,
+  options?: { clusterSize?: number; rho?: number },
+): number[] {
+  const clusterSize = options?.clusterSize ?? 5;
+  const rho = options?.rho ?? 0.3;
+  const rng = seededRandom(seed);
+  const eta = matVec(X, beta);
+  const n = X.length;
+  const y = new Array<number>(n);
+  const sigU = Math.sqrt(rho);
+  const sigE = Math.sqrt(1 - rho);
+  for (let g = 0; g < Math.ceil(n / clusterSize); g++) {
+    const u = normalSample(0, sigU, rng);
+    for (let k = 0; k < clusterSize && g * clusterSize + k < n; k++) {
+      const i = g * clusterSize + k;
+      const eps = normalSample(0, sigE, rng);
+      y[i] = eta[i] + u + eps > 0 ? 1 : 0;
+    }
+  }
+  return y;
+}
+
+/**
+ * Monte-Carlo coverage estimator for a GLM CI constructor under either the
+ * correctly-specified DGP (default) or an arbitrary user-supplied
+ * `misspecify` simulator. Returns per-coefficient empirical coverage.
+ */
+export function coverageSimulatorGLM(
+  X: number[][],
+  betaTrue: number[],
+  family: GLMFamily,
+  link: LinkFunction,
+  iterations: number,
+  ciConstructor: (
+    fit: GLMFit,
+    alpha: number,
+  ) => Array<{ lower: number; upper: number }>,
+  alpha: number,
+  seed: number,
+  options?: {
+    misspecify?: (X: number[][], beta: number[], seed: number) => number[];
+    offset?: number[];
+  },
+): number[] {
+  const m = betaTrue.length;
+  const hits = new Array<number>(m).fill(0);
+  let nValid = 0;
+  for (let iter = 0; iter < iterations; iter++) {
+    const y = options?.misspecify
+      ? options.misspecify(X, betaTrue, seed + iter)
+      : simulateGLM(X, betaTrue, family, link, seed + iter, { offset: options?.offset });
+    let fit: GLMFit;
+    try {
+      fit = glmFit(X, y, family, link, {
+        offset: options?.offset,
+        skipNullDeviance: true,
+      });
+    } catch {
+      continue; // fit failure → don't count toward iteration total
+    }
+    if (!fit.converged) continue;
+    nValid++;
+    const cis = ciConstructor(fit, alpha);
+    for (let j = 0; j < m; j++) {
+      if (cis[j].lower <= betaTrue[j] && betaTrue[j] <= cis[j].upper) hits[j]++;
+    }
+  }
+  // Divide by the count of *valid* fits (PR #25 review: previously divided
+  // by `iterations`, which underreported coverage when any iteration failed
+  // or didn't converge). Returns NaN if no fits succeeded so callers can
+  // detect the degenerate case.
+  if (nValid === 0) return new Array<number>(m).fill(NaN);
+  return hits.map((h) => h / nValid);
 }

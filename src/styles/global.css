@@ -51,6 +51,12 @@
   --color-viz-bg: #FFFFFF;
   --color-viz-grid: #F3F4F6;
 
+  /* GLM response-family palette (Topic 22) — matches notebook Cell 2 'F' dict */
+  --color-bernoulli: #db2777;
+  --color-poisson:   #2563eb;
+  --color-gamma:     #d97706;
+  --color-normal:    #6b7280;
+
   /* Typography */
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
   --font-serif: 'Merriweather', 'Georgia', serif;
