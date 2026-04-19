@@ -832,7 +832,7 @@ Every distribution in this topic appears in machine learning — not as an abstr
 
 **A/B testing** (Binomial): The sample proportion $\hat{p} = X/n$ is the MLE of the Binomial parameter. Confidence intervals use $\text{Var}(\hat{p}) = pq/n$. Power calculations for determining sample sizes reduce to Binomial tail probabilities.
 
-**Count regression** (Poisson, NegBin): Poisson regression models $Y \mid X \sim \text{Poisson}(\exp(\beta^T X))$ via the log link. When data are overdispersed ($\text{Var}(Y) > E[Y]$), Negative Binomial regression provides the fix. The variance function $\text{Var}(Y) = \mu + \mu^2/r$ interpolates between Poisson ($r \to \infty$) and pure quadratic variance ($r$ finite) — see <ExternalLink href="https://formalml.com/topics/generalized-linear-models" site="formalml" topic="Generalized Linear Models" />.
+**Count regression** (Poisson, NegBin): Poisson regression models $Y \mid X \sim \text{Poisson}(\exp(\beta^T X))$ via the log link. When data are overdispersed ($\text{Var}(Y) > E[Y]$), Negative Binomial regression provides the fix. The variance function $\text{Var}(Y) = \mu + \mu^2/r$ interpolates between Poisson ($r \to \infty$) and pure quadratic variance ($r$ finite) — see [Topic 22 §22.5 (Poisson regression)](/topics/generalized-linear-models#section-22-5) for the worked Poisson treatment and §22.9 Rem 20 for the Negative Binomial overdispersion fix.
 
 **Sampling and exact tests** (Hypergeometric): Fisher's exact test uses the Hypergeometric to compute exact p-values for $2 \times 2$ tables. Gene set enrichment analysis (GSEA) asks whether a gene set is overrepresented in a ranked list — a Hypergeometric calculation.
 

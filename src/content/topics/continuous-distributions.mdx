@@ -384,7 +384,7 @@ $$
 \ell(\theta) = -\frac{n}{2}\ln(2\pi\sigma^2) - \frac{1}{2\sigma^2} \sum_{i=1}^n (y_i - f(x_i))^2
 $$
 
-Maximizing $\ell(\theta)$ with respect to $\theta$ (the parameters of $f$) is equivalent to minimizing $\sum_{i=1}^n (y_i - f(x_i))^2$. This is why **least squares = MLE under Gaussian noise**. The assumption of Normal errors is baked into every ordinary least squares regression — and when that assumption fails, the MLE changes (e.g., to Laplace errors for $\ell_1$ loss). See <ExternalLink href="https://formalml.com/topics/generalized-linear-models" site="formalml">Generalized Linear Models</ExternalLink> for the general framework.
+Maximizing $\ell(\theta)$ with respect to $\theta$ (the parameters of $f$) is equivalent to minimizing $\sum_{i=1}^n (y_i - f(x_i))^2$. This is why **least squares = MLE under Gaussian noise**. The assumption of Normal errors is baked into every ordinary least squares regression — and when that assumption fails, the MLE changes (e.g., to Laplace errors for $\ell_1$ loss). See [Topic 22 (Generalized Linear Models)](/topics/generalized-linear-models) for the general framework.
 </ExampleBlock>
 
 ---
@@ -600,7 +600,7 @@ The Gamma belongs to the exponential family with natural parameters $\eta_1 = \a
 <GammaFamilyExplorer client:visible />
 
 <ExampleBlock number={4} title="Gamma GLM: Insurance Claim Amounts">
-Insurance claim amounts are positive and right-skewed — large claims are rare but impactful. The Gamma distribution is a natural model: the shape parameter $\alpha$ controls the skewness, and the rate $\beta$ controls the scale. In a **Gamma GLM**, we model claim amounts $Y_i \sim \text{Gamma}(\alpha, \beta_i)$ with $\ln E[Y_i] = \beta_0 + \beta_1 x_{i1} + \cdots$ (log link), allowing covariates (driver age, vehicle type, region) to affect the expected claim size while maintaining the Gamma's positive support and right skew. See <ExternalLink href="https://formalml.com/topics/generalized-linear-models" site="formalml">Generalized Linear Models</ExternalLink> for the full GLM framework.
+Insurance claim amounts are positive and right-skewed — large claims are rare but impactful. The Gamma distribution is a natural model: the shape parameter $\alpha$ controls the skewness, and the rate $\beta$ controls the scale. In a **Gamma GLM**, we model claim amounts $Y_i \sim \text{Gamma}(\alpha, \beta_i)$ with $\ln E[Y_i] = \beta_0 + \beta_1 x_{i1} + \cdots$ (log link), allowing covariates (driver age, vehicle type, region) to affect the expected claim size while maintaining the Gamma's positive support and right skew. See [Topic 22 §22.6 (Gamma regression)](/topics/generalized-linear-models#section-22-6) for the full GLM framework and the worked insurance-amounts example.
 </ExampleBlock>
 
 ---

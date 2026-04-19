@@ -14,8 +14,20 @@
  */
 
 import { seededRandom } from '../components/viz/shared/probability';
-import { normalSample } from '../components/viz/shared/convergence';
-import { simulateLinearModel } from '../components/viz/shared/regression';
+import {
+  normalSample,
+  bernoulliSample,
+  uniformSample,
+} from '../components/viz/shared/convergence';
+import {
+  simulateLinearModel,
+  simulateGLM,
+  simulateOverdispersedPoisson,
+  FAMILIES,
+  LINKS,
+  type GLMFamily,
+  type LinkFunction,
+} from '../components/viz/shared/regression';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // §7.A — Canonical small datasets for MDX examples
@@ -376,3 +388,329 @@ export function generateLinearModelData(dgp: LinearModelDGP): {
 
   return { X, y };
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// §7.C — GLM preset datasets (Topic 22)
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// Each dataset is generated at module-load time from a fixed seed via
+// `simulateGLM` (or a small DGP-specific helper). Reproducible across
+// sessions and components: the array references are stable for the lifetime
+// of the module instance.
+//
+// **Note on reference values.** The reference β̂ printed in the §22.4–§22.6
+// MDX (e.g. β̂_logistic ≈ [-0.972, 1.319, 1.869]) come from the notebook's
+// numpy/statsmodels run on numpy-RNG-generated data. The TypeScript datasets
+// below use the convergence.ts samplers on a different (LCG) RNG — same DGP
+// recipe, different sample. The internal-consistency tests (T8.x) verify that
+// glmFit recovers the true β to within asymptotic tolerance and matches
+// closed-form formulas where applicable.
+
+interface GLMDataset {
+  X: number[][];
+  y: number[];
+  betaTrue: number[];
+}
+
+function buildLogisticCreditDefault(seed: number, n: number): GLMDataset {
+  // X = [intercept, age_z, income_z]; β_true = (-0.5, 1.0, 2.0)
+  const rng = seededRandom(seed);
+  const X: number[][] = new Array(n);
+  for (let i = 0; i < n; i++) {
+    X[i] = [1, normalSample(0, 1, rng), normalSample(0, 1, rng)];
+  }
+  const betaTrue = [-0.5, 1.0, 2.0];
+  const y = simulateGLM(X, betaTrue, FAMILIES.bernoulli, LINKS.logit, seed + 1);
+  return { X, y, betaTrue };
+}
+
+function buildPoissonInsuranceFreq(
+  seed: number,
+  n: number,
+): GLMDataset & { offset: number[] } {
+  // X = [intercept, age_z, region_indicator]; offset = log(policy-years)
+  const rng = seededRandom(seed);
+  const X: number[][] = new Array(n);
+  const offset = new Array<number>(n);
+  for (let i = 0; i < n; i++) {
+    X[i] = [
+      1,
+      normalSample(0, 1, rng),
+      bernoulliSample(0.45, rng), // 45% in region 1
+    ];
+    const py = uniformSample(1, 10, rng);
+    offset[i] = Math.log(py);
+  }
+  const betaTrue = [-1.2, 0.6, 0.5];
+  const y = simulateGLM(X, betaTrue, FAMILIES.poisson, LINKS.log, seed + 1, {
+    offset,
+  });
+  return { X, y, betaTrue, offset };
+}
+
+function buildGammaInsuranceAmount(
+  seed: number,
+  n: number,
+): GLMDataset & { dispersion: number } {
+  // X = [intercept, severity_z]; log link; shape ν = 2 ⇒ φ = 0.5
+  const rng = seededRandom(seed);
+  const X: number[][] = new Array(n);
+  for (let i = 0; i < n; i++) {
+    X[i] = [1, normalSample(0, 1, rng)];
+  }
+  const betaTrue = [1.0, 0.5];
+  const phi = 0.5;
+  const y = simulateGLM(X, betaTrue, FAMILIES.gamma, LINKS.log, seed + 1, {
+    dispersion: phi,
+  });
+  return { X, y, betaTrue, dispersion: phi };
+}
+
+function buildNestedPoisson(
+  seed: number,
+  n: number,
+): {
+  Xfull: number[][];
+  Xreduced: number[][];
+  y: number[];
+  offset: number[];
+  betaTrue: number[];
+} {
+  // Full: [intercept, x1, x2, x3] with offset; Reduced drops x2, x3.
+  const rng = seededRandom(seed);
+  const Xfull: number[][] = new Array(n);
+  const Xreduced: number[][] = new Array(n);
+  const offset = new Array<number>(n);
+  for (let i = 0; i < n; i++) {
+    const x1 = normalSample(0, 1, rng);
+    const x2 = normalSample(0, 1, rng);
+    const x3 = normalSample(0, 1, rng);
+    Xfull[i] = [1, x1, x2, x3];
+    Xreduced[i] = [1, x1];
+    offset[i] = Math.log(uniformSample(1, 5, rng));
+  }
+  const betaTrue = [-1.0, 0.5, 0.7, 0.3];
+  const y = simulateGLM(Xfull, betaTrue, FAMILIES.poisson, LINKS.log, seed + 1, {
+    offset,
+  });
+  return { Xfull, Xreduced, y, offset, betaTrue };
+}
+
+function buildNearSeparationLogistic(
+  seed: number,
+  n: number,
+): GLMDataset {
+  // Quasi-complete separation: very strong slope, moderate sample.
+  const rng = seededRandom(seed);
+  const X: number[][] = new Array(n);
+  for (let i = 0; i < n; i++) {
+    X[i] = [1, normalSample(0, 1, rng)];
+  }
+  const betaTrue = [0.0, 5.0];
+  const y = simulateGLM(X, betaTrue, FAMILIES.bernoulli, LINKS.logit, seed + 1);
+  return { X, y, betaTrue };
+}
+
+function buildOverdispersedPoisson(
+  seed: number,
+  n: number,
+  dispersionRatio: number,
+): {
+  X: number[][];
+  y: number[];
+  betaTrue: number[];
+  dispersionRatio: number;
+} {
+  const rng = seededRandom(seed);
+  const X: number[][] = new Array(n);
+  for (let i = 0; i < n; i++) {
+    X[i] = [1, normalSample(0, 1, rng)];
+  }
+  const betaTrue = [-0.3, 0.9];
+  const y = simulateOverdispersedPoisson(X, betaTrue, dispersionRatio, seed + 1);
+  return { X, y, betaTrue, dispersionRatio };
+}
+
+/**
+ * Example 6 (§22.4): synthetic credit-default logistic regression.
+ * n = 200, predictors = [intercept, age_z, income_z], β_true = (-0.5, 1.0, 2.0).
+ */
+export const EXAMPLE_6_GLM_DATA = buildLogisticCreditDefault(2222, 200);
+
+/**
+ * Example 7 (§22.5): synthetic insurance claim-frequency Poisson regression.
+ * n = 300, β_true = (-1.2, 0.6, 0.5), offset = log(policy-years ∈ [1, 10]).
+ */
+export const EXAMPLE_7_GLM_DATA = buildPoissonInsuranceFreq(2223, 300);
+
+/**
+ * Example 8 (§22.6): synthetic insurance claim-amount Gamma GLM (log link).
+ * n = 250, β_true = (1.0, 0.5), shape ν = 2 ⇒ dispersion φ = 0.5.
+ */
+export const EXAMPLE_8_GLM_DATA = buildGammaInsuranceAmount(2224, 250);
+
+/**
+ * Example 9 (§22.7): nested Poisson deviance test.
+ * Full model: intercept + 3 predictors + log-offset.
+ * Reduced model: intercept + 1 predictor + log-offset.
+ */
+export const EXAMPLE_9_GLM_DATA = buildNestedPoisson(2225, 150);
+
+/**
+ * Example 10 (§22.8): near-separation logistic (n=80) where Wald-z fails and
+ * profile-LRT recovers an asymmetric, conservative CI.
+ */
+export const EXAMPLE_10_GLM_DATA = buildNearSeparationLogistic(2226, 80);
+
+/**
+ * Example 12 (§22.9): overdispersed-Poisson DGP (Var/E ≈ 1.8) for the
+ * sandwich-coverage simulation.
+ */
+export const EXAMPLE_12_GLM_DATA = buildOverdispersedPoisson(2232, 200, 1.8);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// §7.D — Component presets (Topic 22)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * IRLSVisualizer presets — toy 2-predictor logistic datasets covering three
+ * convergence regimes.
+ */
+function buildIRLSPreset(
+  seed: number,
+  n: number,
+  betaTrue: number[],
+): GLMDataset {
+  const rng = seededRandom(seed);
+  const X: number[][] = new Array(n);
+  for (let i = 0; i < n; i++) {
+    X[i] = [1, normalSample(0, 1, rng)];
+  }
+  const y = simulateGLM(X, betaTrue, FAMILIES.bernoulli, LINKS.logit, seed + 1);
+  return { X, y, betaTrue };
+}
+
+export const IRLS_VISUALIZER_PRESETS = {
+  wellSeparated: buildIRLSPreset(3001, 60, [-1.0, 2.0]),
+  noisy: buildIRLSPreset(3002, 60, [0.0, 0.8]),
+  nearSeparation: buildIRLSPreset(3003, 40, [0.0, 4.5]),
+};
+
+/**
+ * GLMExplorer presets — six datasets covering the three response families
+ * with both "real-scale" and "toy-fast-demo" sizes.
+ */
+function buildToyBernoulli(seed: number, n: number): GLMDataset {
+  const rng = seededRandom(seed);
+  const X: number[][] = new Array(n);
+  for (let i = 0; i < n; i++) X[i] = [1, normalSample(0, 1, rng)];
+  const betaTrue = [0.2, 1.5];
+  const y = simulateGLM(X, betaTrue, FAMILIES.bernoulli, LINKS.logit, seed + 1);
+  return { X, y, betaTrue };
+}
+
+function buildToyPoisson(seed: number, n: number): GLMDataset {
+  const rng = seededRandom(seed);
+  const X: number[][] = new Array(n);
+  for (let i = 0; i < n; i++) X[i] = [1, normalSample(0, 1, rng)];
+  const betaTrue = [0.5, 0.4];
+  const y = simulateGLM(X, betaTrue, FAMILIES.poisson, LINKS.log, seed + 1);
+  return { X, y, betaTrue };
+}
+
+function buildToyGamma(seed: number, n: number): GLMDataset {
+  const rng = seededRandom(seed);
+  const X: number[][] = new Array(n);
+  for (let i = 0; i < n; i++) X[i] = [1, normalSample(0, 1, rng)];
+  const betaTrue = [0.5, 0.3];
+  const y = simulateGLM(X, betaTrue, FAMILIES.gamma, LINKS.log, seed + 1, {
+    dispersion: 0.5,
+  });
+  return { X, y, betaTrue };
+}
+
+export const GLM_EXPLORER_PRESETS = {
+  creditDefault: EXAMPLE_6_GLM_DATA,
+  insuranceFrequency: EXAMPLE_7_GLM_DATA,
+  insuranceAmounts: EXAMPLE_8_GLM_DATA,
+  toyBernoulli: buildToyBernoulli(4001, 30),
+  toyPoisson: buildToyPoisson(4002, 30),
+  toyGamma: buildToyGamma(4003, 30),
+};
+
+/**
+ * DevianceTestExplorer presets — H₀ true through large effect.
+ * Each preset returns the full and reduced design matrices, the response, and
+ * the offset (zero-vector for those without an offset).
+ */
+function buildDevianceTestPreset(
+  seed: number,
+  n: number,
+  betaFull: number[],
+): {
+  Xfull: number[][];
+  Xreduced: number[][];
+  y: number[];
+  offset: number[];
+  betaTrue: number[];
+} {
+  const rng = seededRandom(seed);
+  const Xfull: number[][] = new Array(n);
+  const Xreduced: number[][] = new Array(n);
+  for (let i = 0; i < n; i++) {
+    const x1 = normalSample(0, 1, rng);
+    const x2 = normalSample(0, 1, rng);
+    Xfull[i] = [1, x1, x2];
+    Xreduced[i] = [1, x1];
+  }
+  const offset = new Array<number>(n).fill(0);
+  const y = simulateGLM(Xfull, betaFull, FAMILIES.poisson, LINKS.log, seed + 1);
+  return { Xfull, Xreduced, y, offset, betaTrue: betaFull };
+}
+
+export const DEVIANCE_TEST_EXPLORER_PRESETS = {
+  nullTrue: buildDevianceTestPreset(5001, 100, [0.5, 0.4, 0.0]),
+  smallEffect: buildDevianceTestPreset(5002, 100, [0.5, 0.4, 0.2]),
+  mediumEffect: buildDevianceTestPreset(5003, 100, [0.5, 0.4, 0.5]),
+  largeEffect: buildDevianceTestPreset(5004, 100, [0.5, 0.4, 1.0]),
+};
+
+/**
+ * SandwichCoverageSimulator presets — three misspecification flavors.
+ * The DGP function is captured as a closure so the simulator can re-invoke
+ * with different seeds.
+ */
+function buildClusteredBinomial(
+  seed: number,
+  n: number,
+): { X: number[][]; y: number[]; betaTrue: number[] } {
+  // Cluster Bernoulli into groups of 5 with within-cluster correlation.
+  const rng = seededRandom(seed);
+  const X: number[][] = new Array(n);
+  for (let i = 0; i < n; i++) X[i] = [1, normalSample(0, 1, rng)];
+  const betaTrue = [0.0, 1.0];
+  const y = new Array<number>(n);
+  const eta = X.map((row) => row[0] * betaTrue[0] + row[1] * betaTrue[1]);
+  const clusterSize = 5;
+  const rho = 0.3;
+  for (let g = 0; g < n / clusterSize; g++) {
+    const u = normalSample(0, Math.sqrt(rho), rng);
+    for (let k = 0; k < clusterSize && g * clusterSize + k < n; k++) {
+      const i = g * clusterSize + k;
+      const indiv = normalSample(0, Math.sqrt(1 - rho), rng);
+      const latent = eta[i] + u + indiv;
+      y[i] = latent > 0 ? 1 : 0;
+    }
+  }
+  return { X, y, betaTrue };
+}
+
+export const SANDWICH_COVERAGE_PRESETS = {
+  overdispersedPoisson: EXAMPLE_12_GLM_DATA,
+  misspecifiedGamma: buildGammaInsuranceAmount(2241, 200),
+  clusteredBinomial: buildClusteredBinomial(2242, 200),
+};
+
+/** Re-export the catalogs so component code can import everything from one place. */
+export { FAMILIES, LINKS };
+export type { GLMFamily, LinkFunction };

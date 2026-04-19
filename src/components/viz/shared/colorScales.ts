@@ -75,3 +75,23 @@ export const multipleTestingColors = {
 } as const;
 
 export type MultipleTestingColorKey = keyof typeof multipleTestingColors;
+
+/**
+ * Topic 22 — GLM response-family palette. Mirrors notebook Cell 2's `F` dict
+ * and the CSS variables `--color-bernoulli` / `--color-poisson` /
+ * `--color-gamma` / `--color-normal` defined in `src/styles/global.css`.
+ *
+ * Used by:
+ *   - GLMExplorer (response-family selector indicator)
+ *   - IRLSVisualizer (point coloring under Bernoulli "near-separation" preset)
+ *   - DevianceTestExplorer (family selector)
+ *   - SandwichCoverageSimulator (DGP family indicator)
+ */
+export const glmFamilyColors = {
+  bernoulli: '#db2777', // pink — binary
+  poisson: '#2563eb',   // blue — count
+  gamma: '#d97706',     // amber — positive-skewed
+  normal: '#6b7280',    // grey — baseline / reduction to §21
+} as const;
+
+export type GLMFamilyColorKey = keyof typeof glmFamilyColors;

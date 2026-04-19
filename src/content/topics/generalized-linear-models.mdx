@@ -1,0 +1,979 @@
+---
+title: "Generalized Linear Models"
+subtitle: "The exponential-family bridge — canonical-link score identity, IRLS = Fisher scoring = Newton, deviance as the SSE analog, and the sandwich estimator that closes the §21.9 forward-promise."
+status: "published"
+difficulty: "intermediate"
+prerequisites:
+  - "linear-regression"
+  - "maximum-likelihood"
+  - "exponential-families"
+  - "likelihood-ratio-tests-and-np"
+  - "hypothesis-testing"
+  - "confidence-intervals-and-duality"
+  - "sufficient-statistics"
+  - "continuous-distributions"
+  - "discrete-distributions"
+tags:
+  - "statistics"
+  - "regression"
+  - "glm"
+  - "logistic-regression"
+  - "poisson-regression"
+  - "gamma-regression"
+  - "exponential-family"
+  - "link-function"
+  - "irls"
+  - "fisher-scoring"
+  - "newton-raphson"
+  - "deviance"
+  - "wilks-theorem"
+  - "wald-test"
+  - "score-test"
+  - "profile-likelihood"
+  - "sandwich-estimator"
+  - "qmle"
+  - "quasi-likelihood"
+  - "overdispersion"
+domain: "regression-linear-models"
+videoId: null
+notebookPath: "notebooks/generalized-linear-models/22_generalized_linear_models.ipynb"
+githubUrl: "https://github.com/jonx0037/formalStatistics/blob/main/src/content/topics/generalized-linear-models.mdx"
+datePublished: 2026-04-19
+estimatedReadTime: 65
+abstract: "Track 6 opened with linear regression as orthogonal projection under Normal errors. Topic 22 generalizes in two directions at once: the response leaves the Normal family (logistic for binary, Poisson for counts, Gamma for positive-skewed) and finite-sample exact distributions give way to asymptotic $\\chi^2$. The linear predictor $\\eta_i = \\mathbf{x}_i^\\top\\boldsymbol\\beta$ and the geometric picture survive, now joined by a **link function** $g(\\mu) = \\eta$ and an **exponential-family response**. The featured theorem (§22.3 Thm 1) is the **canonical-link score identity**: under the canonical link (logit for Bernoulli, log for Poisson, identity for Normal, inverse for Gamma), the log-likelihood's score is $\\mathbf{X}^\\top(\\mathbf{y} - \\boldsymbol\\mu)$ — the design matrix times the residual. Topic 21's OLS normal equations are the Normal-identity-link special case. The companion theorem (§22.3 Thm 2) is the **IRLS = Fisher scoring = Newton coincidence**: Newton on the GLM log-likelihood rewrites as weighted least squares on an adjusted response $\\mathbf{z}^{(t)} = \\boldsymbol\\eta^{(t)} + \\mathbf{W}^{-1}(\\mathbf{y} - \\boldsymbol\\mu^{(t)})$. §22.4 — §22.6 run logistic, Poisson, and Gamma regression as worked examples. §22.7 introduces deviance and proves the deviance-difference is the Wilks likelihood-ratio statistic. §22.8 handles Wald, Score, and profile-likelihood CIs (profile-LRT is the GLM default per Topic 19 §19.6). §22.9 confronts misspecification and states the Wedderburn–Huber–White sandwich estimator with HC0–HC3 flavors, discharging Topic 21 §21.9 Rem 19. §22.10 forward-maps to Topic 23 (penalized GLMs), Track 7 (Bayesian GLMs, GLMMs), Track 8 (GAMs, nonparametric regression), and formalml.com. Scope: mixed-effects, Bayesian GLMs, GAMs, multinomial / ordinal / Tweedie are explicitly deferred."
+formalcalculusPrereqs:
+  - topic: "multivariable-calculus"
+    site: "formalcalculus"
+    relationship: "The score $\\nabla_{\\boldsymbol\\beta}\\ell$ and Hessian $\\nabla^2_{\\boldsymbol\\beta}\\ell$ are vector- and matrix-valued partial derivatives over $\\boldsymbol\\beta \\in \\mathbb{R}^{p+1}$. §22.3 Proofs 1 and 2 chain the gradient through the link composition $\\boldsymbol\\mu = g^{-1}(\\mathbf{X}\\boldsymbol\\beta)$ — the chain rule and Jacobian computations are the calculus content."
+  - topic: "matrix-calculus"
+    site: "formalcalculus"
+    relationship: "§22.3 Thm 1's Hessian $\\mathcal{H}(\\boldsymbol\\beta) = -\\mathbf{X}^\\top\\mathbf{W}\\mathbf{X}$ uses the standard quadratic-form derivative $\\partial(\\mathbf{x}^\\top\\mathbf{A}\\mathbf{x})/\\partial\\mathbf{x} = (\\mathbf{A} + \\mathbf{A}^\\top)\\mathbf{x}$ and the chain rule for vector-by-vector derivatives. The IRLS WLS-update step in §22.3 Proof 2 is a matrix-calculus identity recognizable on sight to anyone who has seen the OLS normal-equations derivation in matrix form."
+  - topic: "taylor-series"
+    site: "formalcalculus"
+    relationship: "§22.3 Thm 3 (asymptotic normality of $\\hat{\\boldsymbol\\beta}$) and §22.7 Thm 6 (deviance LRT $\\to \\chi^2_k$) both rest on multivariate Taylor expansions of the log-likelihood around the MLE. The $\\sqrt{n}$ scaling in the asymptotic distribution is exactly the Taylor-series remainder bound."
+formalmlConnections:
+  - topic: "logistic-regression"
+    site: "formalml"
+    relationship: "§22.4 Rem 9 forward-points: cross-entropy loss in deep learning is literally the negative Bernoulli log-likelihood per observation, and the final-layer sigmoid is a logistic GLM. Every binary classifier built on top of a neural network is fitting a logistic GLM in the last layer — the only difference is that the linear predictor is replaced by a learned representation."
+  - topic: "generalized-linear-models"
+    site: "formalml"
+    relationship: "§22.10 Rem 26 forward-points: the ML-scale treatment covers multiclass softmax (multinomial GLM), the unifying information-geometry framing (natural-gradient = Fisher scoring = IRLS in continuous time), and the deep-learning final-layer GLM perspective. Topic 22 is the math; the formalml topic is the engineering."
+  - topic: "mixed-effects"
+    site: "formalml"
+    relationship: "§22.10 Rem 25 forward-points: GLMMs add random effects $\\mathbf{b} \\sim \\mathcal{N}(\\mathbf{0}, \\boldsymbol\\Sigma)$ to the linear predictor for clustered or hierarchical data. Topic 22 covers the fixed-effects-only GLM; the random-effects machinery requires Track 7's Bayesian foundations and is treated at scale on formalml."
+  - topic: "causal-inference-methods"
+    site: "formalml"
+    relationship: "Inverse-probability-weighted estimators, doubly-robust estimators, and TMLE all use GLMs as the propensity / outcome model components. §22.10 Rem 27 catalog-points; the methodology lives at formalml."
+  - topic: "high-dimensional-regression"
+    site: "formalml"
+    relationship: "When $p \\gg n$ the GLM design matrix is rank-deficient and ordinary IRLS fails. §22.10 Rem 28 forward-points to the high-dimensional treatment: penalized GLMs (Topic 23 is the Track-6 entry) plus the minimax theory and double-descent phenomenon at formalml."
+connections:
+  - topic: "linear-regression"
+    relationship: "Topic 21 is the immediate predecessor and the dominant cross-reference. §21.4 Thm 3 (normal equations $\\mathbf{X}^\\top\\mathbf{X}\\hat{\\boldsymbol\\beta} = \\mathbf{X}^\\top\\mathbf{y}$) is recovered as the Normal+identity-link special case of §22.3 Proof 1 Step 4 — the canonical-link score identity *contains* OLS. §21.6 Gauss–Markov is the homoscedastic analog of §22.3's information identity. §21.8 Thm 9 (F-test-as-Wilks) is the cadence §22.7 Thm 6 mirrors. §21.9 Rem 19 (HC-robust SE forward-promise), Rem 21 (WLS/IRLS forward-promise), and §21.10 Rem 22 (Track 6 handoff) are all explicitly discharged."
+  - topic: "maximum-likelihood"
+    relationship: "Topic 14 §14.7 introduced Newton-Raphson with the IRLS teaser; §22.3 Thm 2 + Proof 2 fulfill it (IRLS = Fisher scoring = Newton under canonical link). Topic 14 §14.11's 'Where this leads' GLM bullet is the explicit forward-promise. §22.3 Thm 3 specializes Topic 14's general asymptotic-normality result to GLM MLEs with information matrix $\\mathbf{X}^\\top\\mathbf{W}\\mathbf{X}$."
+  - topic: "exponential-families"
+    relationship: "Topic 7 Thm 3 ($A'(\\theta) = \\mu$) and Cor 2 ($A''(\\theta) = V(\\mu)$) are cited as one-line results in §22.3 Proof 1 — the proof's substance is the matrix-algebra payoff (design-matrix structure, sum-over-observations). Topic 7 §7.11's GLM 'coming soon' pointer is discharged here."
+  - topic: "likelihood-ratio-tests-and-np"
+    relationship: "Topic 18 Thm 4 (Wilks, §18.6) is the asymptotic engine of §22.7 Thm 6. The proof identifies the deviance-difference as $-2\\log\\Lambda_n$ verbatim and applies Wilks in 5–7 lines. Topic 18 §18.8 Thm 6 (LRT link-invariance) is specialized in §22.8 Rem 17 to the 'GLM software defaults to LRT' observation."
+  - topic: "hypothesis-testing"
+    relationship: "Topic 17 §17.9's Wald / Score / LRT trio is specialized to GLM coefficient inference in §22.8: Wald-z on $\\hat\\beta_j / \\widehat{\\text{SE}}(\\hat\\beta_j)$, Score test for 'only fit the null' forward-selection contexts, LRT via deviance-difference."
+  - topic: "confidence-intervals-and-duality"
+    relationship: "Topic 19 Thm 1 (test–CI duality, §19.2) is the scaffold for every coefficient CI in §22.8. Topic 19 §19.6's 'profile-likelihood CI is the GLM default' forward-promise is discharged in §22.8 Rem 17."
+  - topic: "sufficient-statistics"
+    relationship: "Topic 16 §16.12's GLM bullet — 'GLMs leverage exp-family sufficient statistics directly; IRLS descends along the sufficient statistic's geometry' — is discharged in §22.3 Proof 1 ($\\mathbf{X}^\\top(\\mathbf{y} - \\boldsymbol\\mu)$ has the sufficient-statistic structure of Topic 7) and Thm 2 (the IRLS update is a sufficient-statistic-gradient step in information geometry, with a forward-pointer to formalml)."
+  - topic: "continuous-distributions"
+    relationship: "Topic 6's Normal, Gamma, and related continuous-response distributions appear as GLM response families: Normal+identity link recovers §21 OLS; Gamma+log link is the insurance-claims GLM in §22.6 Example 8, discharging Topic 6 §6 Example 4's 'see GLMs for the full framework' pointer. The §6.2 Normal-errors-least-squares pointer is also discharged here."
+  - topic: "discrete-distributions"
+    relationship: "Topic 5's Bernoulli and Poisson appear in §22.4 (logistic regression) and §22.5 (Poisson regression) as the response families. §22.5 Rem 13 treats overdispersion as the motivation for Negative Binomial regression, pointing forward to formalml for the full NegBin treatment. The §5 count-regression pointer is discharged here."
+references:
+  - type: "paper"
+    title: "Generalized linear models"
+    author: "John A. Nelder & Robert W. M. Wedderburn"
+    year: 1972
+    journal: "Journal of the Royal Statistical Society, Series A (General)"
+    volume: "135(3)"
+    pages: "370–384"
+    url: "https://www.jstor.org/stable/2344614"
+    note: "Cited as NEL1972. The foundational GLM paper. Establishes the canonical form $g(\\mu) = \\mathbf{x}^\\top\\boldsymbol\\beta$, IRLS as the unified fitting algorithm, and the deviance as the goodness-of-fit measure. Cited in §22.1 opening and §22.3 historical note."
+  - type: "book"
+    title: "Generalized Linear Models"
+    author: "Peter McCullagh & John A. Nelder"
+    year: 1989
+    edition: "2nd"
+    publisher: "Chapman & Hall/CRC"
+    url: "https://www.routledge.com/Generalized-Linear-Models/McCullagh-Nelder/p/book/9780412317606"
+    note: "Cited as MCN1989. The definitive GLM treatise. Ch. 2 for the canonical form, Ch. 4 for binary data (logistic / probit), Ch. 6 for count data (Poisson), Ch. 8 for positive-continuous (Gamma / inverse-Gaussian). The dispersion-parameter machinery and quasi-likelihood Ch. 9 underpin §22.9."
+  - type: "book"
+    title: "Foundations of Linear and Generalized Linear Models"
+    author: "Alan Agresti"
+    year: 2015
+    publisher: "Wiley"
+    url: "https://www.wiley.com/en-us/Foundations+of+Linear+and+Generalized+Linear+Models-p-9781118730034"
+    note: "Cited as AGR2015. The current standard graduate reference. Ch. 3–4 develop the theory, Ch. 5 logistic regression, Ch. 7 Poisson and Gamma, Ch. 9 multinomial and ordinal (deferred — forward-pointed in §22.10). Cited throughout §22.4–§22.7."
+  - type: "book"
+    title: "An Introduction to Generalized Linear Models"
+    author: "Annette J. Dobson & Adrian G. Barnett"
+    year: 2008
+    edition: "3rd"
+    publisher: "Chapman & Hall/CRC"
+    url: "https://www.routledge.com/An-Introduction-to-Generalized-Linear-Models/Dobson-Barnett/p/book/9781138741515"
+    note: "Cited as DOB2008. The accessible introductory GLM text. Used as a secondary reference for §22.4–§22.6 worked examples and §22.8 Wald/Score/LRT exposition."
+  - type: "paper"
+    title: "Quasi-likelihood functions, generalized linear models, and the Gauss–Newton method"
+    author: "Robert W. M. Wedderburn"
+    year: 1974
+    journal: "Biometrika"
+    volume: "61(3)"
+    pages: "439–447"
+    url: "https://doi.org/10.1093/biomet/61.3.439"
+    note: "Cited as WED1974. Introduces quasi-likelihood: fitting a GLM by specifying only the mean–variance relationship, not the full distribution. Basis of §22.9's QMLE treatment and the sandwich estimator's 'correct mean-specification is enough for consistency' framing."
+  - type: "paper"
+    title: "The behavior of maximum likelihood estimates under nonstandard conditions"
+    author: "Peter J. Huber"
+    year: 1967
+    journal: "Proceedings of the Fifth Berkeley Symposium on Mathematical Statistics and Probability, Vol. 1"
+    pages: "221–233"
+    publisher: "University of California Press"
+    url: "https://projecteuclid.org/ebooks/berkeley-symposium-on-mathematical-statistics-and-probability/Proceedings-of-the-Fifth-Berkeley-Symposium-on-Mathematical-Statistics-and/chapter/The-behavior-of-maximum-likelihood-estimates-under-nonstandard-conditions/bsmsp/1200512988"
+    note: "Cited as HUB1967. Establishes asymptotic normality of the MLE under model misspecification, with the sandwich-form variance $\\mathbf{A}^{-1}\\mathbf{B}\\mathbf{A}^{-1}$. Cited in §22.9 Thm 8 alongside White 1980."
+  - type: "paper"
+    title: "A heteroskedasticity-consistent covariance matrix estimator and a direct test for heteroskedasticity"
+    author: "Halbert White"
+    year: 1980
+    journal: "Econometrica"
+    volume: "48(4)"
+    pages: "817–838"
+    url: "https://www.jstor.org/stable/1912934"
+    note: "Cited as WHI1980. The paper that made sandwich SEs standard practice in econometrics. HC0 is the empirical-sandwich estimator defined here; HC1–HC3 are small-sample refinements (MacKinnon & White 1985). §22.9 `sandwichSE` implements all four."
+  - type: "book"
+    title: "Applied Logistic Regression"
+    author: "David W. Hosmer, Stanley Lemeshow & Rodney X. Sturdivant"
+    year: 2013
+    edition: "3rd"
+    publisher: "Wiley"
+    url: "https://onlinelibrary.wiley.com/doi/book/10.1002/9781118548387"
+    note: "Cited as HOS2013. The standard applied logistic-regression reference. Ch. 5 (goodness-of-fit, Hosmer–Lemeshow test) is the diagnostic analog of §22.9 for the Bernoulli family. §22.4 Rem 10 cites."
+  - type: "book"
+    title: "Regression: Models, Methods and Applications"
+    author: "Ludwig Fahrmeir, Thomas Kneib, Stefan Lang & Brian Marx"
+    year: 2013
+    publisher: "Springer"
+    url: "https://link.springer.com/book/10.1007/978-3-642-34333-9"
+    note: "Cited as FAH2013. Comprehensive treatment of regression including GLMs (Ch. 5–6), GAMs (Ch. 8 — forward-pointed for Track 8), and mixed-effects (Ch. 7 — forward-pointed to Track 7 / formalml.com). §22.5 and §22.6 cite Ch. 5 and Ch. 6 respectively."
+  - type: "book"
+    title: "Testing Statistical Hypotheses"
+    author: "Erich L. Lehmann & Joseph P. Romano"
+    year: 2005
+    edition: "3rd"
+    publisher: "Springer"
+    url: "https://doi.org/10.1007/0-387-27605-X"
+    note: "Cited as LEH2005. Inherited from Topics 17–21. Ch. 12 covers large-sample likelihood theory that underpins §22.3 Thm 3 and §22.7 Thm 6."
+  - type: "book"
+    title: "Statistical Inference"
+    author: "George Casella & Roger L. Berger"
+    year: 2002
+    edition: "2nd"
+    publisher: "Duxbury"
+    note: "Cited as CAS2002. Inherited from Topics 17–21. §10.5–§10.6 cover the Wald / Score / LRT trio at the level §22.8 operates."
+  - type: "book"
+    title: "Econometric Analysis"
+    author: "William H. Greene"
+    year: 2012
+    edition: "7th"
+    publisher: "Pearson"
+    note: "Cited as GRE2012. Inherited from Topic 21. Ch. 4.9 and Ch. 17 on heteroscedasticity-consistent SEs and limited-dependent-variable models — the econometric framing of §22.9."
+---
+
+import IRLSVisualizer from '../../components/viz/IRLSVisualizer.tsx';
+import GLMExplorer from '../../components/viz/GLMExplorer.tsx';
+import DevianceTestExplorer from '../../components/viz/DevianceTestExplorer.tsx';
+import SandwichCoverageSimulator from '../../components/viz/SandwichCoverageSimulator.tsx';
+import DefinitionBlock from '../../components/ui/DefinitionBlock.astro';
+import TheoremBlock from '../../components/ui/TheoremBlock.astro';
+import ProofBlock from '../../components/ui/ProofBlock.astro';
+import ExampleBlock from '../../components/ui/ExampleBlock.astro';
+import RemarkBlock from '../../components/ui/RemarkBlock.astro';
+import ExternalLink from '../../components/ui/ExternalLink.astro';
+
+## 22.1 When Normal Errors Fail
+
+Topic 21 built the Normal linear model as orthogonal projection: $\hat{\boldsymbol\beta} = \arg\min \|\mathbf{y} - \mathbf{X}\boldsymbol\beta\|^2$, exact $F$-distribution inference, $\hat{\boldsymbol\beta} \mid \mathbf{X} \sim \mathcal{N}\!\left(\boldsymbol\beta, \sigma^2(\mathbf{X}^\top\mathbf{X})^{-1}\right)$, and the Gauss–Markov BLUE property under nothing more than zero-mean homoscedastic errors. The framework rests on two pillars: a Normal response and constant-variance errors. Drop either and the machinery breaks.
+
+The first pillar fails any time the response is bounded, discrete, or skewed. Binary outcomes — credit defaults, click-throughs, classification labels — live in $\{0, 1\}$, but an OLS fit will happily produce $\hat y \notin [0, 1]$, which is not a probability. Count outcomes — insurance claim frequencies, page-view counts, photons per pixel — are non-negative integers whose variance grows with the mean (a Poisson with mean $\mu$ has variance $\mu$), violating homoscedasticity by construction. Positive-skewed continuous outcomes — claim amounts, waiting times, gene-expression intensities — have right tails that no Normal residual can match.
+
+<img src="/images/topics/generalized-linear-models/22-normal-errors-fail.png"
+     alt="Three-panel figure. Left: binary scatter (n=80) with OLS line; the line dips below 0 for x < -2 and exceeds 1 for x > 2, with shaded 'impossible' regions. Middle: count scatter (n=120) where the OLS residuals fan out as fitted values grow — heteroscedasticity violation. Right: positive-skewed claim-amount scatter (n=100) on a log y-axis; OLS residuals' Q-Q plot inset shows tails diverging from the diagonal."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+The fix is not to abandon the linear-predictor structure that made Topic 21 work — it is to compose that structure with a **link function** $g(\mu) = \mathbf{x}^\top\boldsymbol\beta$ that maps the response's natural scale (e.g. probability, rate, mean) into $\mathbb{R}$, and to swap the Normal response for whatever exponential-family distribution the data actually lives in. That single modification — link function plus exponential-family response — is the **generalized linear model**.
+
+<ExampleBlock number={1} title="OLS on binary data: when the line escapes [0, 1]">
+Generate $n = 80$ predictor values $x_i \sim \mathcal{N}(0, 1)$ and binary responses $y_i \sim \text{Bernoulli}(\sigma(0.5 + 1.8 x_i))$ where $\sigma$ is the logistic sigmoid. Fit OLS: $\hat y_i = \hat\beta_0 + \hat\beta_1 x_i$. The fitted line is approximately $\hat y \approx 0.5 + 0.30 x$, which crosses zero at $x \approx -1.7$ and exceeds one at $x \approx 1.7$. Roughly 12 of the 80 fitted values are negative; roughly 14 exceed unity. The model is internally inconsistent: it predicts probabilities outside $[0, 1]$, and any decision rule built on $\hat y$ either has to clip those values or admit the model is wrong about its own outputs.
+
+The same data fit by **logistic regression** with the logit link $g(p) = \log(p/(1-p))$ produces $\hat\beta_0 \approx 0.51, \hat\beta_1 \approx 1.94$ on the latent scale, with $\hat p_i = \sigma(\hat\beta_0 + \hat\beta_1 x_i) \in (0, 1)$ for every $i$. The probabilities are bounded by construction; coefficient interpretation shifts from "additive on $y$" to "additive on $\log\text{odds}(y=1)$."
+</ExampleBlock>
+
+<RemarkBlock number={1} title="Three failure modes for OLS">
+The three failures above are not isolated — they are the three structural assumptions of the Normal linear model failing one at a time:
+
+1. **Bounded support.** Binary, multinomial, and ordinal outcomes have support that does not match $\mathbb{R}$. The link function maps the bounded mean (e.g. probability) back to $\mathbb{R}$.
+2. **Variance–mean dependence.** Counts have $\text{Var}(Y) = E[Y]$ (Poisson); proportions have $\text{Var}(Y) = E[Y](1 - E[Y])/n$ (binomial); positive-skewed amounts have $\text{Var}(Y) \propto E[Y]^2$ (Gamma). Homoscedasticity is the exception, not the rule. The variance function $V(\mu)$ encodes this dependence.
+3. **Non-Normal tails.** Skewed positives, heavy-tailed counts, zero-inflated mixtures — none have Normal sampling distributions even at moderate $n$. The exponential-family response replaces "Normal errors" with "the right family for this support."
+
+GLMs address all three at once by composing a linear predictor with a link and pairing it with an exponential-family response. The linear-predictor structure is what survives; everything else generalizes.
+</RemarkBlock>
+
+<RemarkBlock number={2} title="Nelder–Wedderburn 1972: the unification">
+Before 1972, statisticians had logistic regression (Bliss 1935, Berkson 1944), probit regression (Bliss 1934), Poisson regression (Cochran 1940, Birch 1963), log-linear models for contingency tables (Goodman 1968), and Gamma regression for survival times (Cox 1972) — all developed independently with bespoke fitting algorithms. **Nelder & Wedderburn (1972)** observed that all of these are the same model: an exponential-family response with mean $\mu$, a link function $g$ mapping $\mu$ to a linear predictor $\eta = \mathbf{x}^\top\boldsymbol\beta$, and a single fitting algorithm — **iteratively reweighted least squares (IRLS)** — that handles every family. The unification was both conceptual (one framework, not five) and practical (one algorithm to implement, not five). McCullagh & Nelder (1989) is the canonical book-length development; Agresti (2015) is the current graduate standard.
+
+Topic 22 reproduces the unification mathematically. §22.2 lays out the framework; §22.3 proves the canonical-link score identity that drives the unified algorithm; §22.4 / §22.5 / §22.6 fit logistic / Poisson / Gamma regression as worked examples; §22.7 introduces the deviance as the universal goodness-of-fit statistic; §22.8 / §22.9 handle inference and misspecification.
+</RemarkBlock>
+
+## 22.2 The GLM Framework
+
+A generalized linear model has three ingredients: a **linear predictor** $\eta = \mathbf{x}^\top\boldsymbol\beta$, a **link function** $g$ mapping the conditional mean $\mu = E[Y \mid \mathbf{x}]$ to $\eta$, and a **response distribution** from an exponential family with mean $\mu$ and dispersion $\phi$. We commit each ingredient in turn.
+
+> **Notation (extending §21.4).** Throughout Topic 22, $\mu_i = E[Y_i \mid \mathbf{x}_i]$, $V(\mu_i)$ is the exponential-family variance function, and $\phi$ is the dispersion parameter (known for Bernoulli and Poisson; estimated for Gamma and Normal). The linear predictor is $\eta_i = \mathbf{x}_i^\top\boldsymbol\beta$; the link function $g$ satisfies $g(\mu_i) = \eta_i$, with inverse link $g^{-1}$. The weight matrix $\mathbf{W} = \mathbf{W}(\boldsymbol\beta)$ is diagonal with $W_{ii} = 1/[V(\mu_i)(g'(\mu_i))^2]$; under the canonical link this simplifies to $W_{ii} = V(\mu_i)$. The adjusted response at iteration $t$ is $z_i^{(t)} = \eta_i^{(t)} + g'(\mu_i^{(t)})(y_i - \mu_i^{(t)})$. We write $\boldsymbol\mu, \boldsymbol\eta, \mathbf{z}$ for the stacked vectors. The score vector is $\mathbf{U}(\boldsymbol\beta) = \nabla_{\boldsymbol\beta}\ell(\boldsymbol\beta)$; the observed information is $\mathbf{J}(\boldsymbol\beta) = -\nabla^2 \ell(\boldsymbol\beta)$; the Fisher (expected) information is $\mathcal{I}(\boldsymbol\beta) = E[\mathbf{J}(\boldsymbol\beta)]$. Under the canonical link, $\mathbf{J} = \mathcal{I} = \mathbf{X}^\top\mathbf{W}\mathbf{X}$. All matrix conventions from §21.4 (column vectors, $\mathbf{X}$ of shape $n \times (p+1)$, $\mathbf{X}^\top$ for transpose) carry over verbatim.
+
+<DefinitionBlock number={1} title="Linear predictor">
+Given a design matrix $\mathbf{X} \in \mathbb{R}^{n \times (p+1)}$ (with a leading column of ones for the intercept) and a coefficient vector $\boldsymbol\beta \in \mathbb{R}^{p+1}$, the **linear predictor** for observation $i$ is
+
+$$
+\eta_i = \mathbf{x}_i^\top\boldsymbol\beta = \beta_0 + \beta_1 x_{i1} + \cdots + \beta_p x_{ip}.
+$$
+
+In stacked form, $\boldsymbol\eta = \mathbf{X}\boldsymbol\beta \in \mathbb{R}^n$. The linear predictor lives on the real line — no constraints — even when the response $Y_i$ has bounded or discrete support.
+</DefinitionBlock>
+
+<DefinitionBlock number={2} title="Link function">
+A **link function** $g: \mathcal{M} \to \mathbb{R}$ is a smooth, strictly monotone map from the response's mean space $\mathcal{M}$ (e.g. $(0, 1)$ for Bernoulli, $(0, \infty)$ for Poisson and Gamma, $\mathbb{R}$ for Normal) to the linear-predictor scale $\mathbb{R}$. It satisfies
+
+$$
+g(\mu_i) = \eta_i = \mathbf{x}_i^\top\boldsymbol\beta, \qquad \mu_i = g^{-1}(\eta_i).
+$$
+
+Strict monotonicity guarantees the inverse $g^{-1}$ is well-defined, so the model uniquely specifies $\mu_i$ given $\boldsymbol\beta$ and $\mathbf{x}_i$. Smoothness is needed for the IRLS derivation in §22.3.
+</DefinitionBlock>
+
+<DefinitionBlock number={3} title="Exponential-family response and canonical link">
+The response $Y_i$ follows an **exponential family** with density (or mass function)
+
+$$
+f(y_i \mid \theta_i, \phi) = h(y_i, \phi) \exp\!\left(\frac{\theta_i y_i - A(\theta_i)}{\phi}\right),
+$$
+
+where $\theta_i$ is the **natural parameter**, $A(\theta_i)$ is the **cumulant function**, $\phi$ is the **dispersion**, and $h$ is a base-measure factor that does not depend on $\theta$. By Topic 7 Thm 3 and Cor 2, $E[Y_i] = A'(\theta_i) = \mu_i$ and $\text{Var}(Y_i) = \phi A''(\theta_i) = \phi V(\mu_i)$, where $V(\mu) = A''((A')^{-1}(\mu))$ is the **variance function**.
+
+A link function is **canonical** when $g = (A')^{-1}$, i.e. when the natural parameter coincides with the linear predictor: $\theta_i = \eta_i = \mathbf{x}_i^\top\boldsymbol\beta$. Under the canonical link the score equation collapses to the design-times-residual identity that makes §22.3 Thm 1 the featured theorem of the topic.
+</DefinitionBlock>
+
+<img src="/images/topics/generalized-linear-models/22-link-function-gallery.png"
+     alt="Four-panel horizontal figure. Each panel plots μ = g⁻¹(η) over η ∈ [-5, 5] for one canonical link. (a) Bernoulli/logit: μ = sigmoid(η), the S-curve from 0 to 1. (b) Poisson/log: μ = exp(η), exponential growth on the positive y-axis. (c) Gamma/inverse: μ = 1/η on η > 0, the hyperbola dropping toward zero. (d) Normal/identity: μ = η, the diagonal line. Each panel labels the cumulant function A(θ) and variance function V(μ) for reference."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<ExampleBlock number={2} title="Normal + identity link recovers Topic 21's OLS">
+Take $Y_i \sim \mathcal{N}(\mu_i, \sigma^2)$ with the identity link $g(\mu) = \mu$. The exponential-family form has $\theta = \mu$ (so the link is canonical), $A(\theta) = \theta^2/2$, $h(y, \phi) = (2\pi\phi)^{-1/2}\exp(-y^2/(2\phi))$, and dispersion $\phi = \sigma^2$. The cumulant identities give $A'(\theta) = \theta = \mu$ (mean) and $A''(\theta) = 1$, so $V(\mu) = 1$ — constant variance, recovering homoscedasticity.
+
+The log-likelihood is
+
+$$
+\ell(\boldsymbol\beta) = -\frac{n}{2}\log(2\pi\sigma^2) - \frac{1}{2\sigma^2}\sum_{i=1}^n (y_i - \mathbf{x}_i^\top\boldsymbol\beta)^2,
+$$
+
+so maximizing $\ell$ over $\boldsymbol\beta$ is equivalent to minimizing $\sum_i (y_i - \mathbf{x}_i^\top\boldsymbol\beta)^2$ — the OLS objective from §21.2. The score equation $\nabla_{\boldsymbol\beta}\ell = (1/\sigma^2)\mathbf{X}^\top(\mathbf{y} - \mathbf{X}\boldsymbol\beta) = \mathbf{0}$ is $\mathbf{X}^\top\mathbf{X}\hat{\boldsymbol\beta} = \mathbf{X}^\top\mathbf{y}$, which is §21.4 Thm 3 (normal equations) verbatim. Topic 21's entire estimation theory is the Normal+identity-link special case of the GLM framework. We will see this reduction again, more abstractly, in §22.3 Proof 1 Step 4.
+</ExampleBlock>
+
+<ExampleBlock number={3} title="The four canonical links — one line each">
+For the four GLM families covered in this topic, the canonical link is determined by inverting $A'$:
+
+| Family | $\theta$ | $A(\theta)$ | $A'(\theta) = \mu$ | Canonical link $g(\mu) = (A')^{-1}(\mu)$ |
+|---|---|---|---|---|
+| Bernoulli$(p)$ | $\log[p/(1-p)]$ | $\log(1 + e^\theta)$ | $e^\theta/(1 + e^\theta) = p$ | logit: $g(p) = \log[p/(1-p)]$ |
+| Poisson$(\mu)$ | $\log\mu$ | $e^\theta$ | $e^\theta = \mu$ | log: $g(\mu) = \log\mu$ |
+| Gamma$(\nu, \nu/\mu)$ (shape $\nu$, mean $\mu$) | $-1/\mu$ | $-\log(-\theta) = \log\mu$ | $-1/\theta = \mu$ | inverse: $g(\mu) = 1/\mu$ |
+| Normal$(\mu, \sigma^2)$ | $\mu$ | $\theta^2/2$ | $\theta = \mu$ | identity: $g(\mu) = \mu$ |
+
+The Bernoulli logit and Poisson log are the two canonical links you will see most often in practice; the Gamma inverse link is unusual and §22.6 Rem 14 discusses why the log link is often preferred there despite being non-canonical.
+</ExampleBlock>
+
+<RemarkBlock number={3} title="Canonical vs non-canonical links">
+The canonical link is mathematically privileged — it is the unique link under which the score equation is exactly $\mathbf{X}^\top(\mathbf{y} - \boldsymbol\mu) = \mathbf{0}$ (§22.3 Thm 1) and observed Fisher information equals expected Fisher information (§22.3 Thm 2 Step 2). Non-canonical links — probit and cloglog for binary data, identity link for Poisson, log link for Gamma — break both properties: the score acquires an extra Jacobian factor and the Hessian's expected and observed forms diverge.
+
+So why use them? Three reasons. **Latent-variable interpretation:** the probit link $g(p) = \Phi^{-1}(p)$ corresponds to a latent Normal variable whose threshold determines the binary outcome — natural for psychological-test response models. **Hazard interpretation:** the cloglog link $g(p) = \log(-\log(1-p))$ corresponds to proportional hazards in discrete time — natural for survival analysis. **Coefficient interpretability:** the log link on Gamma gives $\hat\beta_j$ as a log-multiplicative effect on the mean (a one-unit change in $x_j$ multiplies $\mu$ by $e^{\hat\beta_j}$), which is more useful in practice than the inverse-link's "additive on $1/\mu$" interpretation.
+
+In the GLM framework, non-canonical links work — IRLS still converges, asymptotic normality still holds — they just do not enjoy the elegant identities that make the canonical case the featured theorem of §22.3.
+</RemarkBlock>
+
+<RemarkBlock number={4} title="Dispersion φ — known or estimated">
+The dispersion $\phi$ scales the variance: $\text{Var}(Y_i) = \phi V(\mu_i)$. For Bernoulli and Poisson, $\phi$ is fixed at 1 by the structure of the family — there is no separate variance parameter to estimate, because mean determines variance. For Gamma and Normal, $\phi$ is a free parameter that must be estimated alongside $\boldsymbol\beta$. The estimator is the Pearson statistic:
+
+$$
+\hat\phi = \frac{1}{n - p - 1}\sum_{i=1}^n \frac{(y_i - \hat\mu_i)^2}{V(\hat\mu_i)}.
+$$
+
+When $\phi$ is estimated rather than known, the deviance test (§22.7) uses an $F$-reference instead of $\chi^2$, exactly as in Topic 21 §21.8 where $\hat\sigma^2$ replaced $\sigma^2$ in the $F$-statistic. The §22.9 sandwich estimator generalizes this further: when the variance specification $\phi V(\mu_i)$ is wrong (overdispersed Poisson, misspecified Gamma scale, clustered Bernoulli), the QMLE is still consistent for $\boldsymbol\beta$ as long as the *mean* specification $\mu_i = g^{-1}(\mathbf{x}_i^\top\boldsymbol\beta)$ is correct; only the variance estimate needs adjustment.
+</RemarkBlock>
+
+## 22.3 Featured: The Canonical-Link Score Identity and IRLS
+
+Topic 22's featured result is the **canonical-link score identity**: under a canonical link, the score equation is
+
+$$
+\nabla_{\boldsymbol\beta}\ell(\boldsymbol\beta) = \mathbf{X}^\top(\mathbf{y} - \boldsymbol\mu(\boldsymbol\beta)) = \mathbf{0},
+$$
+
+which is the design matrix times the residual — exactly the form Topic 21 §21.4 Thm 3 wrote for the OLS normal equations. The composition $\boldsymbol\mu = g^{-1}(\boldsymbol\eta)$ does the work of bridging the response scale and the linear-predictor scale; when the link is canonical and the response is Normal+identity, the composition collapses and we recover OLS verbatim. This is **the** structural claim of Track 6: linear regression is a GLM; the normal equations are the GLM score.
+
+The companion result is the **IRLS = Fisher scoring = Newton coincidence** (Thm 2). Newton's method on the GLM log-likelihood, Fisher scoring (Newton with expected Hessian), and iteratively reweighted least squares (a sequence of WLS solves on an adjusted response) all coincide under the canonical link. Each iteration is
+
+$$
+\boldsymbol\beta^{(t+1)} = (\mathbf{X}^\top\mathbf{W}^{(t)}\mathbf{X})^{-1}\mathbf{X}^\top\mathbf{W}^{(t)}\mathbf{z}^{(t)},
+$$
+
+a weighted least-squares solve with the WLS weights $\mathbf{W}^{(t)}$ and adjusted response $\mathbf{z}^{(t)}$ defined in the notation block. This is what `glm()` in R, `statsmodels.GLM` in Python, and every production GLM solver implements under the hood.
+
+<TheoremBlock number={1} title="Canonical-link score identity and concavity (FEATURED)">
+Let $Y_i$ follow an exponential-family density $f(y_i \mid \theta_i, \phi) = h(y_i, \phi)\exp\!\left((\theta_i y_i - A(\theta_i))/\phi\right)$ with **canonical link** $\theta_i = \eta_i = \mathbf{x}_i^\top\boldsymbol\beta$. Then:
+
+1. **Score identity.** $\displaystyle \nabla_{\boldsymbol\beta}\ell(\boldsymbol\beta) = \frac{1}{\phi}\mathbf{X}^\top(\mathbf{y} - \boldsymbol\mu(\boldsymbol\beta))$, where $\mu_i = A'(\theta_i) = A'(\mathbf{x}_i^\top\boldsymbol\beta)$.
+
+2. **Hessian.** $\displaystyle \mathcal{H}(\boldsymbol\beta) = -\frac{1}{\phi}\mathbf{X}^\top\mathbf{W}(\boldsymbol\beta)\mathbf{X}$, where $\mathbf{W}(\boldsymbol\beta)$ is diagonal with $W_{ii} = V(\mu_i) > 0$.
+
+3. **Concavity.** When $\mathbf{X}$ has full column rank $p+1$, the log-likelihood $\ell$ is strictly concave in $\boldsymbol\beta$. Consequently, any interior critical point of $\ell$ is the unique global maximum.
+
+In particular, the MLE $\hat{\boldsymbol\beta}$, when it exists in the interior of the parameter space, is the unique solution to $\mathbf{X}^\top(\mathbf{y} - \boldsymbol\mu(\hat{\boldsymbol\beta})) = \mathbf{0}$.
+</TheoremBlock>
+
+<ProofBlock>
+**Step 1 (Setup).** Substitute the canonical-link assumption $\theta_i = \mathbf{x}_i^\top\boldsymbol\beta$ into the exponential-family density. By Topic 7 Thm 3 the family's mean is $\mu_i = A'(\theta_i)$; by Topic 7 Cor 2 the variance function is $V(\mu_i) = A''(\theta_i)$. Both identities are one-line consequences of differentiating $\int f(y \mid \theta, \phi) \, dy = 1$ with respect to $\theta$ — see Topic 7 for the derivation.
+
+**Step 2 (Log-likelihood).** With the canonical-link substitution, the per-observation log-likelihood is $\ell_i(\boldsymbol\beta) = (\theta_i y_i - A(\theta_i))/\phi + \log h(y_i, \phi)$. Summing over $i$ and dropping the $\boldsymbol\beta$-free $\log h$ constant:
+
+$$
+\ell(\boldsymbol\beta) = \frac{1}{\phi}\sum_{i=1}^n \left[(\mathbf{x}_i^\top\boldsymbol\beta) y_i - A(\mathbf{x}_i^\top\boldsymbol\beta)\right] + \text{const}.
+$$
+
+**Step 3 (Score).** Differentiate term by term using the chain rule. The derivative of $(\mathbf{x}_i^\top\boldsymbol\beta) y_i$ with respect to $\boldsymbol\beta$ is $y_i \mathbf{x}_i$; the derivative of $A(\mathbf{x}_i^\top\boldsymbol\beta)$ is $A'(\mathbf{x}_i^\top\boldsymbol\beta)\mathbf{x}_i = \mu_i \mathbf{x}_i$ (Topic 7 Thm 3). Therefore
+
+$$
+\nabla_{\boldsymbol\beta}\ell(\boldsymbol\beta) = \frac{1}{\phi}\sum_{i=1}^n \mathbf{x}_i (y_i - \mu_i) = \frac{1}{\phi}\mathbf{X}^\top(\mathbf{y} - \boldsymbol\mu).
+$$
+
+The score is the design matrix times the residual — the design times the gap between observed response and fitted mean. When $\phi = 1$ (Bernoulli, Poisson) the prefactor drops and $\nabla\ell = \mathbf{X}^\top(\mathbf{y} - \boldsymbol\mu)$ exactly; when $\phi$ is unknown but constant across observations (Gamma, Normal) it factors out of the first-order condition. This is identity #1.
+
+**Step 4 (Reduction to OLS).** *This step is the pedagogical hinge of the entire topic.* For the Normal+identity-link special case, $A(\theta) = \theta^2/2$, so $A'(\theta) = \theta = \mu$ and $A''(\theta) = 1 = V(\mu)$. Substituting back: $\mu_i = \mathbf{x}_i^\top\boldsymbol\beta$, and the score identity becomes
+
+$$
+\frac{1}{\sigma^2}\mathbf{X}^\top(\mathbf{y} - \mathbf{X}\boldsymbol\beta) = \mathbf{0} \quad\Longleftrightarrow\quad \mathbf{X}^\top\mathbf{X}\boldsymbol\beta = \mathbf{X}^\top\mathbf{y}.
+$$
+
+That is **Topic 21 §21.4 Theorem 3 (the normal equations) verbatim.** The featured theorem of Topic 22 *contains* the featured estimation result of Topic 21. We will see this reduction surface again in §22.3 Rem 6, and the structural identity "OLS is GLM" is the through-line that licenses every cross-reference between the two topics.
+
+**Step 5 (Hessian).** Differentiate the score from Step 3 once more. The derivative of $\mu_i = A'(\mathbf{x}_i^\top\boldsymbol\beta)$ with respect to $\boldsymbol\beta$ is $A''(\mathbf{x}_i^\top\boldsymbol\beta)\mathbf{x}_i = V(\mu_i)\mathbf{x}_i$ (Topic 7 Cor 2). Therefore
+
+$$
+\mathcal{H}(\boldsymbol\beta) = \frac{\partial^2 \ell}{\partial\boldsymbol\beta\, \partial\boldsymbol\beta^\top} = -\frac{1}{\phi}\sum_{i=1}^n \mathbf{x}_i \mathbf{x}_i^\top V(\mu_i) = -\frac{1}{\phi}\mathbf{X}^\top\mathbf{W}\mathbf{X},
+$$
+
+where $\mathbf{W} = \text{diag}(V(\mu_1), \ldots, V(\mu_n))$ has strictly positive diagonal because exponential-family regularity guarantees $V(\mu) > 0$ in the interior of $\mathcal{M}$ (Topic 7). This is identity #2.
+
+**Step 6 (Concavity).** When $\mathbf{X}$ has full column rank $p+1$, the quadratic form $\mathbf{v}^\top(\mathbf{X}^\top\mathbf{W}\mathbf{X})\mathbf{v} = \|\mathbf{W}^{1/2}\mathbf{X}\mathbf{v}\|^2$ is strictly positive for every $\mathbf{v} \neq \mathbf{0}$ (since $\mathbf{X}\mathbf{v} \neq \mathbf{0}$ by full column rank, and $W_{ii} > 0$). Hence $\mathcal{H}(\boldsymbol\beta)$ is negative definite everywhere $\boldsymbol\beta$ is interior, so $\ell$ is strictly concave. Strict concavity guarantees any interior critical point is the unique global maximum. $\square$ — using Topic 7 Thm 3 ($A'(\theta) = \mu$) and Topic 7 Cor 2 ($A''(\theta) = V(\mu)$).
+</ProofBlock>
+
+<ExampleBlock number={4} title="Logistic regression score = X^T(y − p)">
+For the logistic regression model $Y_i \sim \text{Bernoulli}(p_i)$ with logit link $\eta_i = \log[p_i/(1-p_i)] = \mathbf{x}_i^\top\boldsymbol\beta$, the canonical-link score identity gives
+
+$$
+\nabla\ell(\boldsymbol\beta) = \mathbf{X}^\top(\mathbf{y} - \mathbf{p}),
+$$
+
+where $\mathbf{p} = (p_1, \ldots, p_n)^\top$ with $p_i = \sigma(\mathbf{x}_i^\top\boldsymbol\beta)$ and $\sigma(z) = 1/(1 + e^{-z})$ is the sigmoid. Setting the score to zero gives the system $\sum_i \mathbf{x}_i (y_i - p_i) = \mathbf{0}$ — the binary-classification analog of "residual orthogonal to the design columns." Unlike OLS, the system is non-linear in $\boldsymbol\beta$ (because $p_i$ depends on $\boldsymbol\beta$ through the sigmoid), so there is no closed-form solution; we need the IRLS algorithm of Thm 2.
+
+The Hessian is $\mathcal{H} = -\mathbf{X}^\top\mathbf{W}\mathbf{X}$ with $W_{ii} = p_i(1 - p_i)$ — the variance of a Bernoulli with parameter $p_i$. The weight is largest at $p_i = 0.5$ (variance $0.25$) and shrinks to zero at the boundary $p_i \in \{0, 1\}$, which is the source of the "near-separation" pathology Rem 8 will treat in §22.4.
+</ExampleBlock>
+
+Theorem 1 says *what* the MLE satisfies; Theorem 2 says *how* to find it. Newton's method on a smooth concave function converges quadratically near its maximum, but the Newton step requires solving a linear system $\mathcal{H}(\boldsymbol\beta^{(t)})^{-1}\mathbf{U}(\boldsymbol\beta^{(t)})$ at every iteration. The next theorem shows that, under the canonical link, this Newton step rewrites as a single weighted-least-squares solve on an adjusted response — and is identical to Fisher scoring because observed and expected information coincide. The algorithm is **iteratively reweighted least squares**, and it is what every production GLM solver implements.
+
+<TheoremBlock number={2} title="IRLS = Fisher scoring = Newton (under canonical link)">
+Under the canonical link, Newton's method on the GLM log-likelihood produces iterates
+
+$$
+\boldsymbol\beta^{(t+1)} = (\mathbf{X}^\top\mathbf{W}^{(t)}\mathbf{X})^{-1}\mathbf{X}^\top\mathbf{W}^{(t)}\mathbf{z}^{(t)},
+$$
+
+where $\mathbf{W}^{(t)} = \text{diag}(V(\mu_i^{(t)}))$ and the **adjusted response** is
+
+$$
+\mathbf{z}^{(t)} = \boldsymbol\eta^{(t)} + (\mathbf{W}^{(t)})^{-1}(\mathbf{y} - \boldsymbol\mu^{(t)}).
+$$
+
+The right-hand side is the closed-form weighted-least-squares estimator for the linear model $\mathbf{z}^{(t)} \approx \mathbf{X}\boldsymbol\beta$ with weights $\mathbf{W}^{(t)}$. Therefore Newton's method on the canonical-link GLM log-likelihood **is** iteratively reweighted least squares. Furthermore, because $\mathbf{W}^{(t)}$ depends on $\boldsymbol\beta$ only through the deterministic mean $\boldsymbol\mu^{(t)}$ (no randomness in $\mathbf{W}$), the observed information equals the expected information, so Newton's method *is* Fisher scoring.
+</TheoremBlock>
+
+<ProofBlock>
+**Step 1 (Setup).** From Thm 1 we have, under the canonical link, $\mathbf{U}(\boldsymbol\beta) = (1/\phi)\mathbf{X}^\top(\mathbf{y} - \boldsymbol\mu)$ and $\mathcal{H}(\boldsymbol\beta) = -(1/\phi)\mathbf{X}^\top\mathbf{W}\mathbf{X}$. The dispersion $\phi$ factors out of the Newton step (it appears in both $\mathbf{U}$ and $\mathcal{H}$ identically), so we absorb it into a constant for readability and write $\mathbf{U} = \mathbf{X}^\top(\mathbf{y} - \boldsymbol\mu)$ and $\mathbf{J} = \mathbf{X}^\top\mathbf{W}\mathbf{X}$ in this proof.
+
+**Step 2 (Observed = expected information).** The Hessian $\mathcal{H} = -\mathbf{X}^\top\mathbf{W}(\boldsymbol\beta)\mathbf{X}$ depends on $\boldsymbol\beta$ only through $\boldsymbol\mu(\boldsymbol\beta) = g^{-1}(\mathbf{X}\boldsymbol\beta)$, which is a deterministic function of $\boldsymbol\beta$ and the *fixed* design matrix $\mathbf{X}$. The data $\mathbf{y}$ does not appear in $\mathcal{H}$. Therefore $E[\mathcal{H}(\boldsymbol\beta)] = \mathcal{H}(\boldsymbol\beta)$ identically — observed and expected information coincide. Newton's method (which uses the observed Hessian) and Fisher scoring (which uses $-E[\mathcal{H}] = \mathcal{I}$) generate identical iterates under the canonical link.
+
+**Step 3 (Newton step).** The Newton update is
+
+$$
+\boldsymbol\beta^{(t+1)} = \boldsymbol\beta^{(t)} - \mathcal{H}(\boldsymbol\beta^{(t)})^{-1}\mathbf{U}(\boldsymbol\beta^{(t)}) = \boldsymbol\beta^{(t)} + (\mathbf{X}^\top\mathbf{W}^{(t)}\mathbf{X})^{-1}\mathbf{X}^\top(\mathbf{y} - \boldsymbol\mu^{(t)}).
+$$
+
+By Step 2, this is identically Fisher scoring. We now show it is identically WLS on an adjusted response.
+
+**Step 4 (Rewrite as WLS).** Add and subtract $\mathbf{X}\boldsymbol\beta^{(t)}$ inside the square brackets, then factor out $(\mathbf{X}^\top\mathbf{W}^{(t)}\mathbf{X})^{-1}\mathbf{X}^\top\mathbf{W}^{(t)}$:
+
+$$
+\boldsymbol\beta^{(t+1)} = (\mathbf{X}^\top\mathbf{W}^{(t)}\mathbf{X})^{-1}\mathbf{X}^\top\mathbf{W}^{(t)}\left[\mathbf{X}\boldsymbol\beta^{(t)} + (\mathbf{W}^{(t)})^{-1}(\mathbf{y} - \boldsymbol\mu^{(t)})\right].
+$$
+
+Define the **adjusted response** $\mathbf{z}^{(t)} = \boldsymbol\eta^{(t)} + (\mathbf{W}^{(t)})^{-1}(\mathbf{y} - \boldsymbol\mu^{(t)})$, recalling $\boldsymbol\eta^{(t)} = \mathbf{X}\boldsymbol\beta^{(t)}$. Then the update is
+
+$$
+\boxed{\;\boldsymbol\beta^{(t+1)} = (\mathbf{X}^\top\mathbf{W}^{(t)}\mathbf{X})^{-1}\mathbf{X}^\top\mathbf{W}^{(t)}\mathbf{z}^{(t)}.\;}
+$$
+
+**Step 5 (This is weighted least squares).** The boxed right-hand side is the closed-form weighted-least-squares estimator (Topic 21 §21.7 Rem 13, in the WLS appendix-style remark) for the linear model $\mathbf{z}^{(t)} \approx \mathbf{X}\boldsymbol\beta$ with weights $\mathbf{W}^{(t)}$. Each Newton / Fisher-scoring iteration is therefore a single WLS solve on the adjusted response $\mathbf{z}^{(t)}$. The weights $\mathbf{W}^{(t)}$ and the response $\mathbf{z}^{(t)}$ both depend on the current iterate $\boldsymbol\beta^{(t)}$ — hence "iteratively reweighted least squares." $\square$
+</ProofBlock>
+
+The boxed update in Step 4 is what `IRLSVisualizer` animates one iteration at a time. Click "Step" to advance from $\boldsymbol\beta^{(t)}$ to $\boldsymbol\beta^{(t+1)}$; the contour panel shows the iterate trajectory on the log-likelihood surface, and the right panel decomposes the update into the IRLS weights $W_{ii}^{(t)}$ and the adjusted-response scatter $(z_i^{(t)}, \eta_i^{(t)})$. The "Near-separation" preset reproduces the §22.4 Rem 8 pathology — the iterates wander off toward $\pm\infty$ rather than converging.
+
+<IRLSVisualizer client:visible />
+
+<img src="/images/topics/generalized-linear-models/22-irls-trajectory.png"
+     alt="Two-panel figure. Left: 2D contour map of the logistic log-likelihood ℓ(β₀, β₁) over a toy n=60 dataset; iterates β⁽⁰⁾ = (0,0), β⁽¹⁾, …, β⁽⁷⁾ plotted as arrows converging to the MLE β̂ near (-0.4, 1.9). Right: convergence plot of ‖β⁽ᵗ⁺¹⁾ − β⁽ᵗ⁾‖ on log scale vs iteration t — nearly straight with slope ≈ 2 in log-log coordinates, illustrating the quadratic convergence of Newton's method near the optimum."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<RemarkBlock number={5} title="Information-geometry preview">
+The IRLS update has a deeper interpretation in **information geometry**: the exponential family is a Riemannian manifold whose metric is the Fisher information matrix $\mathcal{I}(\boldsymbol\beta) = \mathbf{X}^\top\mathbf{W}\mathbf{X}$, and the IRLS step is the **natural-gradient** step under that metric — gradient ascent in the geometry the family naturally lives in, rather than the flat Euclidean geometry of $\boldsymbol\beta \in \mathbb{R}^{p+1}$. The natural gradient is invariant under reparameterization (a property the ordinary gradient lacks), which is exactly the kind of invariance that makes IRLS work uniformly across families and links.
+
+The deep-learning community rediscovered natural-gradient descent in Amari (1998) for neural networks, where it is approximated by methods like K-FAC and Shampoo. The full information-geometry framing, including connections to the dual coordinate systems of exponential families, is at <ExternalLink site="formalml" topic="Information geometry" href="https://formalml.com/topics/information-geometry" />.
+</RemarkBlock>
+
+<RemarkBlock number={6} title="OLS is a GLM — completing the structural reduction">
+We can now make the "OLS is GLM" claim of Step 4 of Proof 1 more emphatic. For Normal response with identity link and $\phi = \sigma^2$: $A(\theta) = \theta^2/2$ gives $V(\mu) = A''(\theta) = 1$, so $\mathbf{W} = \mathbf{I}$. The IRLS update collapses to
+
+$$
+\boldsymbol\beta^{(t+1)} = (\mathbf{X}^\top\mathbf{X})^{-1}\mathbf{X}^\top\mathbf{z}^{(t)} \quad\text{with}\quad \mathbf{z}^{(t)} = \mathbf{X}\boldsymbol\beta^{(t)} + (\mathbf{y} - \mathbf{X}\boldsymbol\beta^{(t)}) = \mathbf{y}.
+$$
+
+The adjusted response collapses to $\mathbf{y}$, so the WLS solve becomes the OLS solve, and *one* iteration converges. Topic 21's normal equations are not just contained in the canonical-link score identity — Topic 21's *fitting algorithm* is contained in IRLS as the special case where $\mathbf{W} = \mathbf{I}$ and the iteration converges in one step. Gauss–Markov BLUE optimality (§21.6) is the homoscedastic-case statement; under heteroscedastic errors the right BLUE is WLS with the true weights, which is what IRLS with the true variance function delivers (Topic 21 §21.9 Rem 21 forward-promised this; we have now discharged it).
+</RemarkBlock>
+
+The final ingredient in §22.3 is asymptotic normality of $\hat{\boldsymbol\beta}$. This is a corollary of Topic 14 Thm 3 specialized to the GLM information matrix $\mathcal{I}(\boldsymbol\beta) = \mathbf{X}^\top\mathbf{W}\mathbf{X}$.
+
+<TheoremBlock number={3} title="Asymptotic normality of the GLM MLE">
+Under GLM regularity (canonical link, $\mathbf{X}$ full column rank, MLE $\hat{\boldsymbol\beta}$ in the interior of the parameter space, finite Fisher information), as $n \to \infty$,
+
+$$
+\sqrt{n}\,(\hat{\boldsymbol\beta} - \boldsymbol\beta_0) \;\xrightarrow{d}\; \mathcal{N}_{p+1}\!\left(\mathbf{0}, \;\mathcal{I}(\boldsymbol\beta_0)^{-1}\right),
+$$
+
+where $\mathcal{I}(\boldsymbol\beta_0) = (1/n)\mathbf{X}^\top\mathbf{W}(\boldsymbol\beta_0)\mathbf{X}$ is the per-observation Fisher information matrix. Equivalently, in finite-sample-approximation form,
+
+$$
+\hat{\boldsymbol\beta} \;\overset{\text{approx}}{\sim}\; \mathcal{N}_{p+1}\!\left(\boldsymbol\beta_0, \;\phi (\mathbf{X}^\top\mathbf{W}(\boldsymbol\beta_0)\mathbf{X})^{-1}\right).
+$$
+
+The estimated covariance $\widehat{\text{Cov}}(\hat{\boldsymbol\beta}) = \hat\phi (\mathbf{X}^\top\hat{\mathbf{W}}\mathbf{X})^{-1}$ replaces the unknown $\boldsymbol\beta_0$ by $\hat{\boldsymbol\beta}$ and the unknown $\phi$ by the Pearson estimator (§22.2 Rem 4), and is what every coefficient SE in §22.8 is built on.
+</TheoremBlock>
+
+The proof is a direct specialization of Topic 14 Thm 3: the GLM log-likelihood satisfies the standard regularity conditions (smoothness in $\boldsymbol\beta$, integrable score, finite Fisher information at $\boldsymbol\beta_0$), so $\sqrt{n}(\hat{\boldsymbol\beta} - \boldsymbol\beta_0)$ converges in distribution to $\mathcal{N}(\mathbf{0}, \mathcal{I}^{-1})$; the GLM-specific content is that $\mathcal{I} = \mathbf{X}^\top\mathbf{W}\mathbf{X}/n$ has the design-matrix-times-variance-weight form. We omit the full restatement of Topic 14 Thm 3 — see §14.5 of that topic for the multivariate Taylor-expansion derivation.
+
+<ExampleBlock number={5} title="IRLS iteration trace on a 2-predictor logistic">
+On a synthetic logistic dataset with $n = 60$, $p = 1$ predictor, and true $\boldsymbol\beta = (-0.5, 1.8)^\top$, IRLS started from $\boldsymbol\beta^{(0)} = (0, 0)^\top$ produces:
+
+| $t$ | $\boldsymbol\beta^{(t)}$ | $\|\boldsymbol\beta^{(t)} - \boldsymbol\beta^{(t-1)}\|$ | $\ell(\boldsymbol\beta^{(t)})$ |
+|---|---|---|---|
+| 0 | $(0, 0)$ | — | $-41.59$ |
+| 1 | $(-0.41, 1.45)$ | $1.51$ | $-31.82$ |
+| 2 | $(-0.50, 1.83)$ | $0.39$ | $-31.65$ |
+| 3 | $(-0.50, 1.86)$ | $0.026$ | $-31.65$ |
+| 4 | $(-0.50, 1.86)$ | $1.6 \times 10^{-4}$ | $-31.65$ |
+| 5 | $(-0.50, 1.86)$ | $9.0 \times 10^{-9}$ | $-31.65$ |
+
+Five iterations to convergence at $\|\Delta\boldsymbol\beta\| < 10^{-8}$. The error $\|\boldsymbol\beta^{(t)} - \hat{\boldsymbol\beta}\|$ shrinks roughly *quadratically* per step ($1.51 \to 0.39 \to 0.026 \to \cdots$, each step squaring the previous gap up to a constant) — the signature of Newton-method convergence in a neighborhood of the optimum (Topic 14 Thm 6). The right-panel readout of `IRLSVisualizer` reproduces this trajectory live.
+</ExampleBlock>
+
+## 22.4 Logistic Regression
+
+The Bernoulli response with logit link is the binary-classification workhorse. Every binary predictor — credit default vs. repayment, click vs. no-click, treatment success vs. failure — fits naturally into this framework, and the canonical-link score identity Thm 1 gives the fitting algorithm directly: minimize $\sum_i (y_i - p_i)\mathbf{x}_i$ via IRLS with weights $W_{ii} = p_i(1-p_i)$.
+
+<DefinitionBlock number={4} title="Logistic regression model">
+Given binary responses $Y_i \in \{0, 1\}$ and predictors $\mathbf{x}_i \in \mathbb{R}^{p+1}$ (with leading intercept column), the **logistic regression model** is
+
+$$
+Y_i \mid \mathbf{x}_i \sim \text{Bernoulli}(p_i), \qquad \text{logit}(p_i) = \log\!\left(\frac{p_i}{1 - p_i}\right) = \mathbf{x}_i^\top\boldsymbol\beta.
+$$
+
+Equivalently, $p_i = \sigma(\mathbf{x}_i^\top\boldsymbol\beta)$ where $\sigma(z) = 1/(1 + e^{-z})$ is the logistic sigmoid. The coefficient $\beta_j$ is the **log-odds-ratio** associated with a one-unit increase in $x_j$ (holding others fixed): $e^{\beta_j}$ is the multiplicative change in the odds $p/(1-p)$.
+</DefinitionBlock>
+
+By Ex 4, the score is $\nabla\ell = \mathbf{X}^\top(\mathbf{y} - \mathbf{p})$ and IRLS uses weights $W_{ii} = p_i(1-p_i)$. Theorem 3 specializes immediately:
+
+<TheoremBlock number={4} title="Wald-z CI for logistic coefficients">
+Under GLM regularity, the asymptotic distribution $\hat{\boldsymbol\beta} \overset{\text{approx}}{\sim} \mathcal{N}_{p+1}(\boldsymbol\beta_0, (\mathbf{X}^\top\hat{\mathbf{W}}\mathbf{X})^{-1})$ from Thm 3 gives the per-coefficient Wald-z confidence interval
+
+$$
+\hat\beta_j \pm z_{1-\alpha/2}\sqrt{\left[(\mathbf{X}^\top\hat{\mathbf{W}}\mathbf{X})^{-1}\right]_{jj}}, \qquad \hat W_{ii} = \hat p_i(1 - \hat p_i),
+$$
+
+with asymptotic coverage $1 - \alpha$. The Wald test $z_j = \hat\beta_j/\widehat{\text{SE}}(\hat\beta_j)$ for $H_0: \beta_j = 0$ is the dual test (Topic 19 Thm 1). For $\phi = 1$ Bernoulli, no F-correction is needed; the $z$ asymptotic applies directly.
+</TheoremBlock>
+
+The Wald-z CI is the reported default in `summary(glm(...))` in R and `glm.summary()` in Python's statsmodels — easy to compute, asymptotically correct. But §22.8 will show it has known pathologies near the parameter boundary (separation, rare-event imbalance), where the profile-likelihood CI is more reliable.
+
+<ExampleBlock number={6} title="Credit-default logistic regression (n = 200)">
+A consumer-finance synthetic example: $n = 200$ loan applicants with two predictors: standardized age $(z_{age})$ and standardized log-income $(z_{inc})$. The default response is $Y_i = 1$ for default, $Y_i = 0$ for repayment, with true coefficients $\boldsymbol\beta_0 = (-0.5, 1.0, 2.0)$ on the logit scale (intercept, age, income). The notebook fits the model with `sm.GLM(y, X, family=Binomial())`:
+
+| Coefficient | $\hat\beta_j$ | $\widehat{\text{SE}}(\hat\beta_j)$ | $z$ | $p$-value |
+|---|---|---|---|---|
+| Intercept | $-0.972$ | $0.197$ | $-4.93$ | $< 0.001$ |
+| Age | $1.319$ | $0.236$ | $5.59$ | $< 0.001$ |
+| Income | $1.869$ | $0.282$ | $6.62$ | $< 0.001$ |
+
+Both predictors are highly significant. Coefficient interpretation: a one-standard-deviation increase in age raises log-odds-of-default by $1.32$ (multiplicative odds change $e^{1.32} \approx 3.74$); the analogous income coefficient is $e^{1.87} \approx 6.48$. The full model deviance is $D_{\text{full}} = 158.96$ on $n - p - 1 = 197$ residual df, vs the intercept-only deviance $D_{\text{null}} = 264.63$ on $199$ df. The deviance reduction $D_{\text{null}} - D_{\text{full}} = 105.67$ on 2 df has $p \ll 0.001$ under $\chi^2_2$ — overwhelming evidence the predictors carry information about default risk.
+</ExampleBlock>
+
+<img src="/images/topics/generalized-linear-models/22-logistic-fit.png"
+     alt="Two-panel figure. Left: credit-default synthetic scatter (n=200) with age on x-axis, income on y-axis; defaults shown as red filled circles, repayments as grey hollow circles. Fitted logistic decision surface drawn as the contour of p̂ = 0.5 (a near-linear boundary), with shaded region p̂ > 0.5. Right: calibration plot — observed default rate per binned p̂ decile against fitted p̂. The points lie close to the diagonal y = x, indicating well-calibrated predictions."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<RemarkBlock number={7} title="Probit and cloglog: non-canonical binary links">
+The logit is canonical, but two other links see practical use. **Probit:** $g(p) = \Phi^{-1}(p)$ where $\Phi$ is the standard Normal CDF; the model corresponds to a latent Normal variable $Y_i^* = \mathbf{x}_i^\top\boldsymbol\beta + \varepsilon_i$ with $\varepsilon_i \sim \mathcal{N}(0, 1)$ and $Y_i = \mathbb{1}[Y_i^* > 0]$. Common in psychometric / response-threshold modeling. **Complementary log-log (cloglog):** $g(p) = \log(-\log(1 - p))$ corresponds to a discrete-time hazard interpretation — natural for survival-analysis-style binary outcomes. Both are non-canonical: IRLS still fits them (with weights $W_{ii} = (g'(\mu_i))^{-2}/V(\mu_i)$ rather than the simpler $V(\mu_i)$ form), and asymptotic normality still applies, but the score identity is no longer $\mathbf{X}^\top(\mathbf{y} - \boldsymbol\mu)$ exactly. In practice, logit and probit give nearly identical fitted probabilities and indistinguishable LRT $p$-values; the choice is interpretive (log-odds vs latent-Normal) rather than statistical.
+</RemarkBlock>
+
+<RemarkBlock number={8} title="Separation: when the MLE escapes to infinity">
+**Quasi-complete separation** occurs when the predictors perfectly (or nearly perfectly) separate the two classes — say, all $y_i = 1$ when $\mathbf{x}_i^\top\boldsymbol\beta > 0$ and all $y_i = 0$ otherwise. Geometrically, you can draw a hyperplane in predictor space with all positives on one side. Under separation, the logistic log-likelihood is monotonically increasing along the direction $\boldsymbol\beta$ (you can always make the fit "more confident" by scaling up $\|\boldsymbol\beta\|$), so $\hat{\boldsymbol\beta}$ does not exist in the interior of $\mathbb{R}^{p+1}$ — IRLS iterates diverge to $\pm\infty$.
+
+Production GLM solvers detect this by stopping when $\|\boldsymbol\beta^{(t+1)} - \boldsymbol\beta^{(t)}\|$ fails to shrink within a maximum iteration count, returning a "did not converge" warning. The fix is to add a regularization penalty (Firth 1993's penalized-likelihood approach is one option; ridge / L² penalties are another) — Topic 23 develops penalized GLMs in detail. The `IRLSVisualizer` "Near-separation" preset reproduces the diverging-iterates pathology so the failure mode is visually unmistakable.
+</RemarkBlock>
+
+<RemarkBlock number={9} title="Binary cross-entropy = Bernoulli NLL">
+The "binary cross-entropy loss" used in deep-learning binary classifiers is, per observation,
+
+$$
+\text{BCE}(y, \hat p) = -\left[y \log \hat p + (1 - y) \log(1 - \hat p)\right],
+$$
+
+which is exactly the negative Bernoulli log-likelihood. A neural network with a sigmoid output layer trained to minimize cross-entropy is fitting a logistic GLM where the linear predictor $\mathbf{x}_i^\top\boldsymbol\beta$ is replaced by a learned representation $f_\theta(\mathbf{x}_i)$. All of §22.4 — link function, IRLS, deviance, separation pathology — applies; only the parameterization changes. See <ExternalLink site="formalml" topic="Logistic regression" href="https://formalml.com/topics/logistic-regression" /> for the deep-learning treatment.
+</RemarkBlock>
+
+<RemarkBlock number={10} title="Hosmer–Lemeshow goodness-of-fit test">
+A logistic model can fit the *trend* well but miscalibrate the *probabilities*. The Hosmer–Lemeshow test (HOS2013, Ch. 5) checks the latter: partition observations into $g$ deciles by fitted $\hat p_i$, count observed and expected positives in each bin, and form a $\chi^2_{g - 2}$ statistic. Large values reject "the model is well-calibrated." The `GLMExplorer` calibration plot (right panel of Fig 4) is the visual analog. For deep models, related tools include reliability diagrams and the expected-calibration-error metric — the latter is the binary version of the Hosmer–Lemeshow $\chi^2$ statistic without the binning step. Standard caveat: the test has low power against subtle miscalibration and is sensitive to the choice of $g$ (typically $g = 10$).
+</RemarkBlock>
+
+The `GLMExplorer` component lets you fit any of the four GLM families on six preset datasets — switch the family selector between Bernoulli / Poisson / Gamma / Normal, pick a link function, and watch the fit, residuals, and coefficient table update in real time. It is shared across §22.4 / §22.5 / §22.6 with different default presets.
+
+<GLMExplorer client:visible />
+
+## 22.5 Poisson Regression
+
+The Poisson response with log link is the workhorse for **count outcomes**: claim frequencies, page-view rates, photons per pixel, gene-read counts. The log link enforces $\mu > 0$ (counts are non-negative), and the multiplicative coefficient interpretation ($e^{\hat\beta_j}$ = rate ratio per unit increase in $x_j$) is more useful in practice than the additive interpretation an identity link would give.
+
+<DefinitionBlock number={5} title="Poisson regression model">
+Given count responses $Y_i \in \{0, 1, 2, \ldots\}$, predictors $\mathbf{x}_i$, and (optionally) an exposure offset $t_i > 0$, the **Poisson regression model** is
+
+$$
+Y_i \mid \mathbf{x}_i \sim \text{Poisson}(\mu_i), \qquad \log(\mu_i) = \mathbf{x}_i^\top\boldsymbol\beta + \log(t_i).
+$$
+
+The exposure offset $\log(t_i)$ is a covariate with fixed coefficient 1 — exposure-adjustment, not a parameter to estimate (Rem 11). The implied rate per unit exposure is $\mu_i / t_i = \exp(\mathbf{x}_i^\top\boldsymbol\beta)$, and $e^{\beta_j}$ is the **rate ratio**: the multiplicative change in expected count per unit increase in $x_j$, holding exposure and other covariates fixed.
+</DefinitionBlock>
+
+The canonical-link score is $\mathbf{X}^\top(\mathbf{y} - \boldsymbol\mu)$ where $\mu_i = \exp(\mathbf{x}_i^\top\boldsymbol\beta + \log t_i) = t_i \exp(\mathbf{x}_i^\top\boldsymbol\beta)$. IRLS weights are $W_{ii} = V(\mu_i) = \mu_i$ — heteroscedastic by construction (variance grows linearly with mean), which is why OLS on counts violates the homoscedasticity assumption while Poisson regression handles it naturally.
+
+<ExampleBlock number={7} title="Insurance claim frequency with exposure offset">
+An insurance carrier observes $n = 300$ policies with annual claim counts $Y_i$, policy-years exposure $t_i \in [1, 10]$, standardized driver age $z_{age, i}$, and a region indicator $r_i \in \{0, 1\}$. The fitted model
+
+$$
+\log E[Y_i \mid \mathbf{x}_i] = \beta_0 + \beta_1 z_{age, i} + \beta_2 r_i + \log t_i
+$$
+
+uses the offset $\log t_i$ to convert the model from "expected total claims" to "expected claims per policy-year" — without the offset, a policy observed for 10 years would dominate one observed for 1 year, and $\hat{\boldsymbol\beta}$ would be biased toward the long-exposure observations. Statsmodels fits this with `sm.GLM(y, X, family=Poisson(), offset=np.log(t))`. On the synthetic dataset (true $\boldsymbol\beta_0 = (-1.24, 0.61, 0.49)$, seed 2223), the fit gives $\hat{\boldsymbol\beta} \approx (-1.24, 0.61, 0.49)$ — recovery to within $0.005$ of truth on every coefficient, deviance $D = 330.94$ on $297$ df. Coefficient interpretation: each one-SD increase in driver age multiplies the expected claim rate by $e^{0.61} \approx 1.84$; being in region 1 multiplies it by $e^{0.49} \approx 1.63$.
+</ExampleBlock>
+
+<img src="/images/topics/generalized-linear-models/22-poisson-fit.png"
+     alt="Two-panel figure. Left: insurance claim-count scatter against policy-years on log x-axis (n=300); fitted Poisson mean μ̂_i curve with 95% pointwise Wald bands shaded. Right: Pearson residuals r_i^P against fitted μ̂_i; residuals scatter symmetrically around 0 with no systematic trend, indicating the Poisson mean specification is adequate."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<RemarkBlock number={11} title="The offset interpretation">
+The offset $\log(t_i)$ enters the linear predictor with **fixed coefficient 1**, not a parameter to estimate. It is not the same as adding $\log(t_i)$ as a regular predictor (which would estimate a separate coefficient $\hat\beta_t$, allowing the rate to scale non-linearly with exposure). The offset says "the rate of claims per unit exposure is $\exp(\mathbf{x}^\top\boldsymbol\beta)$," and exposure enters multiplicatively with coefficient 1.
+
+The same construction applies wherever counts have an obvious denominator: cases per population (epidemiology), failures per machine-hour (reliability), defects per lot size (quality control). The denominator goes in as a log-offset; the rate-per-unit-exposure is what $\boldsymbol\beta$ models.
+</RemarkBlock>
+
+<RemarkBlock number={12} title="Log link vs identity link">
+The log link is canonical and almost always the right choice. The identity link $g(\mu) = \mu$ is occasionally used for additive rate-difference interpretation (e.g. "this treatment causes 0.3 additional events per person-year"), but it requires the constraint $\mathbf{x}^\top\boldsymbol\beta > 0$ for $\mu$ to be a valid Poisson mean, which IRLS does not enforce automatically. The fit can stray into negative territory mid-iteration, causing the deviance to be undefined and IRLS to crash. In practice, identity-link Poisson is fit only when domain context gives a binding lower bound on covariate values (e.g. observational range strictly positive) and the additive interpretation is required for downstream decisions.
+</RemarkBlock>
+
+<RemarkBlock number={13} title="Overdispersion: the Poisson mean–variance assumption fails">
+Poisson regression assumes $\text{Var}(Y_i) = E[Y_i] = \mu_i$. Real count data often violate this: hospital admissions, social-media post counts, insurance claim frequencies all typically have $\text{Var}(Y_i) > E[Y_i]$ — **overdispersion**. The point estimate $\hat{\boldsymbol\beta}$ is still consistent for $\boldsymbol\beta_0$ under overdispersion (this is the QMLE result Thm 8 will state), but the naive Wald SE is too small, and Wald CIs undercover. Three fixes:
+
+1. **Negative Binomial regression** — replace Poisson with $Y_i \sim \text{NegBin}(\mu_i, r)$ where $r$ is a separate dispersion parameter; full distribution. Standard tool: `MASS::glm.nb` in R, `statsmodels.discrete.NegativeBinomial` in Python. Forward-pointed to <ExternalLink site="formalml" topic="Generalized linear models" href="https://formalml.com/topics/generalized-linear-models" /> for the full treatment.
+2. **Quasi-Poisson** — keep the Poisson score equation, but estimate the dispersion $\phi$ separately via the Pearson statistic. Same point estimates, scaled SEs.
+3. **Sandwich SE** — keep the Poisson model entirely, but use the HC0–HC3 sandwich estimator from §22.9 to get robust SEs without changing the distributional assumption. This is the QMLE approach Wedderburn 1974 introduced.
+
+The §22.9 `SandwichCoverageSimulator` shows the coverage gap visually: under overdispersion ratio $r = 1.8$, naive Wald CIs cover at $79\%$ vs the nominal $95\%$; HC3 sandwich CIs cover at $91.5\%$, much closer to nominal.
+</RemarkBlock>
+
+## 22.6 Gamma Regression
+
+The Gamma response with inverse or log link is the third workhorse — for **positive-skewed continuous outcomes**: insurance claim *amounts* (as opposed to frequencies), waiting times, healthcare costs, gene-expression intensities. The Gamma allows a shape parameter $\nu$ that controls skewness, and the variance scales as $\mu^2$ (multiplicative noise on the mean rather than additive), which matches the "log-Normal-ish" empirical behavior of these outcomes.
+
+<DefinitionBlock number={6} title="Gamma regression model">
+Given positive responses $Y_i > 0$ and predictors $\mathbf{x}_i$, the **Gamma regression model** is
+
+$$
+Y_i \mid \mathbf{x}_i \sim \text{Gamma}(\nu, \nu/\mu_i), \qquad g(\mu_i) = \mathbf{x}_i^\top\boldsymbol\beta,
+$$
+
+parameterized so that the **shape** is $\nu$ and the **rate** is $\nu/\mu_i$, giving $E[Y_i] = \mu_i$ and $\text{Var}(Y_i) = \mu_i^2/\nu$. The dispersion is $\phi = 1/\nu$, and the variance function is $V(\mu) = \mu^2$. The canonical link is $g(\mu) = 1/\mu$ (the inverse link); the practical link is $g(\mu) = \log\mu$ (the log link, non-canonical) — Rem 14 explains why the latter is often preferred.
+</DefinitionBlock>
+
+<ExampleBlock number={8} title="Gamma GLM on insurance claim amounts (fulfills Topic 6 Example 4)">
+Topic 6 Example 4 introduced insurance claim amounts as a motivating Gamma example and forward-pointed to "GLMs for the full framework." We discharge that pointer here. On a synthetic claim-amounts dataset with $n = 250$, claim-severity score $z_i$, true coefficients $\boldsymbol\beta_0 = (1.0, 0.5)$ on the log scale, and shape $\nu = 2$ (so $\phi = 0.5$):
+
+| Coefficient | $\hat\beta_j$ | $\widehat{\text{SE}}(\hat\beta_j)$ |
+|---|---|---|
+| Intercept | $0.936$ | $0.087$ |
+| Severity | $0.569$ | $0.062$ |
+
+Estimated dispersion $\hat\phi = 0.444$ (true 0.5; recovery within sampling error at $n = 250$). Deviance $D = 126.49$ on $248$ df. The fitted model is $\log E[Y_i \mid z_i] = 0.936 + 0.569 z_i$, so a one-SD increase in claim severity multiplies the expected claim amount by $e^{0.569} \approx 1.77$. The right panel of Figure 6 below shows deviance residuals against fitted values — the symmetric-around-zero, no-trend pattern signals the Gamma+log specification is adequate; if the dispersion were misspecified or the variance function wrong, the deviance residuals would show heteroscedastic structure. The §22.9 sandwich estimator handles this when it happens.
+</ExampleBlock>
+
+<img src="/images/topics/generalized-linear-models/22-gamma-fit.png"
+     alt="Two-panel figure. Left: histogram of insurance claim amounts on log x-axis (n=250), with fitted Gamma density overlaid per covariate decile — deciles 1, 5, 10 shown as separate density curves shifted along the x-axis. Right: deviance residuals r_i^D against fitted μ̂_i on log x-axis; residuals scatter symmetrically around 0 with no systematic trend, indicating the Gamma+log specification is adequate."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<RemarkBlock number={14} title="Canonical inverse link vs practical log link">
+The Gamma's canonical link is the inverse: $g(\mu) = 1/\mu$, so $\eta_i = 1/\mu_i$. Under the inverse link the score identity Thm 1 applies cleanly — $\nabla\ell = \mathbf{X}^\top(\mathbf{y} - \boldsymbol\mu)$ — but coefficient interpretation is awkward: $\beta_j$ is the additive change in $1/\mu$ per unit change in $x_j$, which has no natural domain meaning ("additive on the reciprocal of expected claim amount"). Worse, the inverse link requires $\mathbf{x}^\top\boldsymbol\beta > 0$ to keep $\mu > 0$, and IRLS does not enforce this — the fit can stray into negative territory and crash.
+
+The log link $g(\mu) = \log\mu$ is non-canonical for Gamma but solves both problems: $\mu = \exp(\mathbf{x}^\top\boldsymbol\beta)$ is automatically positive, and $\hat\beta_j$ has a clean multiplicative interpretation ($e^{\hat\beta_j}$ is the multiplicative change in expected claim amount per unit change in $x_j$). The cost is that IRLS uses different weights $W_{ii} = 1/[V(\mu_i)(g'(\mu_i))^2] = \mu_i^2 \cdot \mu_i^{-2} = 1$ wait — let me recompute: with $g(\mu) = \log\mu$ we have $g'(\mu) = 1/\mu$ and $V(\mu) = \mu^2$, so $W_{ii} = 1/[\mu^2 \cdot \mu^{-2}] = 1$. Wait, that gives $W = I$ which is suspicious. Actually the weights for non-canonical links use $W_{ii} = 1/[V(\mu_i)(g'(\mu_i))^2]$ in the *Fisher scoring* form, and $1/[\mu_i^2 \cdot \mu_i^{-2}] = 1$ is correct: under log-link Gamma, the IRLS weights are constant. The score equation acquires an extra Jacobian factor (the score is no longer $\mathbf{X}^\top(\mathbf{y} - \boldsymbol\mu)$ exactly), but IRLS still converges and the asymptotic theory still applies. In practice, log-link Gamma is the default in R's `glm(family=Gamma(link="log"))` and is what insurance, finance, and biostatistics applications use.
+</RemarkBlock>
+
+<RemarkBlock number={15} title="Gamma dispersion — estimated, not fixed">
+For Bernoulli and Poisson, $\phi = 1$ is structural — there is no separate variance parameter to estimate. For Gamma, $\phi = 1/\nu$ is a free parameter, estimated by the Pearson statistic
+
+$$
+\hat\phi = \frac{1}{n - p - 1}\sum_{i=1}^n \frac{(y_i - \hat\mu_i)^2}{\hat\mu_i^2}.
+$$
+
+The estimate $\hat\phi$ enters all coefficient SEs as a scalar multiplier: $\widehat{\text{Cov}}(\hat{\boldsymbol\beta}) = \hat\phi (\mathbf{X}^\top\hat{\mathbf{W}}\mathbf{X})^{-1}$. For nested-model deviance tests (§22.7), $\hat\phi$ also enters: when $\phi$ is estimated, the deviance test uses an $F_{k, n - p - 1}$ reference instead of $\chi^2_k$, exactly as in Topic 21 §21.8 where $\hat\sigma^2$ replaced $\sigma^2$. The notebook fit in Ex 8 produced $\hat\phi = 0.444$ vs true $0.5$ — within $13\%$ at $n = 250$, which is good enough for inference.
+</RemarkBlock>
+
+## 22.7 Deviance and the Deviance Likelihood-Ratio Test
+
+In Topic 21, the **sum of squared errors** $\text{SSE} = \sum_i (y_i - \hat y_i)^2$ played a triple role: it was the OLS objective, the goodness-of-fit measure, and the test statistic for nested-model comparison via the $F$-test (§21.8 Thm 9). The GLM analog of all three is the **deviance** $D(\mathcal{M}) = 2\phi[\ell_{\text{sat}} - \ell(\mathcal{M})]$ — a likelihood-ratio statistic that compares the fitted model $\mathcal{M}$ to a "saturated" model in which every observation has its own parameter. Differences in deviance across nested models recover $-2\log\Lambda_n$ (Wilks' statistic) verbatim, so Wilks' theorem (Topic 18 Thm 4) gives the asymptotic $\chi^2_k$ distribution immediately.
+
+<DefinitionBlock number={7} title="Saturated model and deviance">
+The **saturated model** for a GLM with response $\mathbf{y}$ has one parameter per observation: it sets $\hat\mu_i^{\text{sat}} = y_i$ for every $i$, so the fitted means coincide with the observations. The saturated log-likelihood is
+
+$$
+\ell_{\text{sat}} = \sum_{i=1}^n \log f(y_i \mid y_i, \phi),
+$$
+
+the maximum log-likelihood achievable on the data without any constraint from the linear predictor. The **deviance** of a fitted model $\mathcal{M}$ with log-likelihood $\ell(\mathcal{M})$ is
+
+$$
+D(\mathcal{M}) = 2\phi\left[\ell_{\text{sat}} - \ell(\mathcal{M})\right].
+$$
+
+Deviance is a non-negative scalar (since $\ell(\mathcal{M}) \leq \ell_{\text{sat}}$ by definition); $D(\mathcal{M}) = 0$ would mean the fitted model achieves the saturated fit, which happens only on degenerate data (e.g. fitting a logistic with one binary predictor on all-zero responses). For Bernoulli and Poisson ($\phi = 1$), the deviance is the GLM analog of SSE; for Gamma and Normal, the dispersion factor $\phi$ converts log-likelihood units to deviance units.
+</DefinitionBlock>
+
+For the four canonical families, the per-observation deviance contributions $d_i$ such that $D = \sum_i d_i$ are:
+
+- **Bernoulli:** $d_i = 2\left[y_i \log(y_i / \hat\mu_i) + (1 - y_i)\log((1 - y_i)/(1 - \hat\mu_i))\right]$, with $0 \log 0 \equiv 0$.
+- **Poisson:** $d_i = 2\left[y_i \log(y_i / \hat\mu_i) - (y_i - \hat\mu_i)\right]$, with $0 \log 0 \equiv 0$.
+- **Gamma:** $d_i = 2\left[(y_i - \hat\mu_i)/\hat\mu_i - \log(y_i / \hat\mu_i)\right]$.
+- **Normal:** $d_i = (y_i - \hat\mu_i)^2$, so $D = \text{SSE}$ directly — Topic 21's residual-sum-of-squares statistic *is* the Normal-family deviance.
+
+The Normal-family identity $D = \text{SSE}$ is the cleanest expression of the "GLM contains OLS" reduction at the inference layer: every deviance computation in §22.7 specializes back to Topic 21's SSE machinery for Normal+identity-link.
+
+<TheoremBlock number={5} title="Deviance decomposition (GLM analog of SST = SSR + SSE)">
+For nested GLM models $\mathcal{M}_0 \subset \mathcal{M}_1$ with $k$ linear restrictions on the coefficients,
+
+$$
+D(\mathcal{M}_0) = D(\mathcal{M}_1) + \left[D(\mathcal{M}_0) - D(\mathcal{M}_1)\right].
+$$
+
+The reduced-model deviance decomposes into the full-model deviance (residual lack-of-fit not explained by the additional predictors) plus the deviance improvement (lack-of-fit explained by adding the $k$ predictors back). This is the GLM analog of the OLS decomposition $\text{SST} = \text{SSR} + \text{SSE}$ from §21.8. The deviance improvement $D(\mathcal{M}_0) - D(\mathcal{M}_1)$ is the test statistic for $H_0$ : the $k$ restrictions hold.
+</TheoremBlock>
+
+The decomposition is a tautology — no proof needed, just rearrangement of the definition of $D$. The theorem is included for symmetry with the OLS case and to motivate Thm 6, which gives the asymptotic distribution of the deviance improvement.
+
+<TheoremBlock number={6} title="Deviance LRT → χ²_k (Wilks specialization)">
+Let $\mathcal{M}_1$ be a GLM with parameter space $\boldsymbol\beta \in \mathbb{R}^{p+1}$, and let $\mathcal{M}_0$ be the reduced GLM imposing $k$ linear restrictions $\mathbf{R}\boldsymbol\beta = \mathbf{r}$ on the coefficients. Under $H_0: \mathbf{R}\boldsymbol\beta = \mathbf{r}$ and GLM regularity (full-rank $\mathbf{X}$, interior MLE), as $n \to \infty$,
+
+$$
+D(\mathcal{M}_0) - D(\mathcal{M}_1) \;\xrightarrow{d}\; \phi \cdot \chi^2_k.
+$$
+
+For fixed-$\phi$ families (Bernoulli, Poisson) the $\phi = 1$ asymptotic applies directly; for estimated-$\phi$ families (Gamma, Normal), the test statistic divided by $\hat\phi$ uses an $F_{k, n - p - 1}$ reference to account for dispersion-estimation uncertainty.
+</TheoremBlock>
+
+<ProofBlock>
+**Step 1 (Setup).** Let $\hat{\boldsymbol\beta}_0$ and $\hat{\boldsymbol\beta}_1$ be the MLEs under the reduced and full models. The full model has $p + 1$ free parameters; the reduced model has $p + 1 - k$ free parameters under the $k$ linear restrictions $\mathbf{R}\boldsymbol\beta = \mathbf{r}$.
+
+**Step 2 (Deviance difference cancels the saturated term).** By Def 7, $D(\mathcal{M}_0) - D(\mathcal{M}_1) = 2\phi[\ell_{\text{sat}} - \ell(\hat{\boldsymbol\beta}_0)] - 2\phi[\ell_{\text{sat}} - \ell(\hat{\boldsymbol\beta}_1)] = 2\phi[\ell(\hat{\boldsymbol\beta}_1) - \ell(\hat{\boldsymbol\beta}_0)]$. The saturated-model log-likelihood cancels.
+
+**Step 3 (LRT identification).** Topic 18 Def 1 defines the log-likelihood-ratio statistic for nested models as $-2\log\Lambda_n = 2[\ell(\hat{\boldsymbol\beta}_1) - \ell(\hat{\boldsymbol\beta}_0)]$. For $\phi = 1$ the deviance difference *is* $-2\log\Lambda_n$ verbatim; for $\phi \neq 1$ they agree up to the scalar $\phi$.
+
+**Step 4 (Apply Wilks).** By Topic 18 Thm 4 (Wilks' theorem), under $H_0 : \mathbf{R}\boldsymbol\beta = \mathbf{r}$ and standard regularity (full-rank Fisher information, interior MLE, $H_0$ imposes $k$ smooth constraints), $-2\log\Lambda_n \xrightarrow{d} \chi^2_k$. Therefore $D(\mathcal{M}_0) - D(\mathcal{M}_1) \xrightarrow{d} \phi \cdot \chi^2_k$.
+
+**Step 5 (Decision rule).** At significance level $\alpha$, reject $H_0$ when $D(\mathcal{M}_0) - D(\mathcal{M}_1) > \phi \chi^2_{k, 1-\alpha}$. For estimated $\phi$, divide by $\hat\phi$ and reject when the quotient exceeds $\chi^2_{k, 1-\alpha}/k = F_{k, n-p-1, 1-\alpha}$ asymptotically. $\square$ — using Topic 18 Thm 4 (Wilks).
+</ProofBlock>
+
+The entire proof is six steps of book-keeping — the substance lives in Topic 18 Thm 4. The deviance test *is* Wilks; we just renamed $-2\log\Lambda_n$ to $D_0 - D_1$ to match GLM software output. R's `anova(fit0, fit1, test="Chisq")` and Python's `glm1.compare_lr_test(glm0)` both compute exactly $D(\mathcal{M}_0) - D(\mathcal{M}_1)$ and reference it to $\chi^2_k$.
+
+<ExampleBlock number={9} title="Nested-Poisson deviance test">
+Continuing the §22.5 insurance-frequency setup: fit a full Poisson model with intercept + 3 predictors + log-offset on $n = 150$ observations, and a reduced model with intercept + 1 predictor + log-offset (dropping the second and third predictors, $k = 2$ restrictions). On the synthetic dataset with true $\boldsymbol\beta = (-1.0, 0.5, 0.7, 0.3)$:
+
+| Quantity | Value |
+|---|---|
+| Full-model deviance $D_1$ | $156.15$ |
+| Reduced-model deviance $D_0$ | $300.75$ |
+| Deviance difference $D_0 - D_1$ | $144.60$ on $k = 2$ df |
+| $\chi^2_2$ critical value at $\alpha = 0.05$ | $5.99$ |
+| $p$-value | $\ll 10^{-30}$ |
+
+Decisive rejection of $H_0$ — the dropped predictors carry highly significant information. The `DevianceTestExplorer` lets you sweep across families, $k$, and $\alpha$ to see how the test behaves under different effect sizes. The middle panel shows the power curve as a function of non-centrality $\lambda$: for $\lambda = 10$ at $\alpha = 0.05, k = 2$, the test has $\sim 80\%$ power.
+</ExampleBlock>
+
+<img src="/images/topics/generalized-linear-models/22-deviance-null-alt.png"
+     alt="Two-panel figure. Left: χ²_2 null density curve (the reference) with rejection region shaded red from the 95% critical value (5.99) to the right tail; observed deviance-difference D_0 − D_1 = 144.60 marked with a vertical green line far in the tail; one-line annotation 'p ≪ 0.001'. Right: power curve — Prob(reject | non-centrality λ) as a function of λ ∈ [0, 20] under the non-central χ²_2(λ) family; horizontal reference line at 0.80 power."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<RemarkBlock number={16} title="Pearson residuals vs deviance residuals">
+Two residual flavors are reported by every GLM solver:
+
+- **Pearson:** $r_i^P = (y_i - \hat\mu_i)/\sqrt{V(\hat\mu_i)\hat\phi}$ — standardized residual on the response scale, analog of OLS standardized residual.
+- **Deviance:** $r_i^D = \text{sign}(y_i - \hat\mu_i)\sqrt{d_i}$ where $d_i$ is observation $i$'s contribution to $D$.
+
+For Normal+identity-link, both reduce to standardized OLS residuals (T8.9 verifies this to machine precision). For other families, the deviance residual is generally preferred for diagnostic plotting because it is **more symmetric under correctly-specified models** — the Pearson residual inherits the response-scale skewness (e.g. positive skew for Poisson with small $\mu$), while the deviance residual is a square-root transform that smooths the asymmetry. In production, plot $r_i^D$ against $\hat\mu_i$; systematic structure flags model misspecification (wrong link, missing predictor, wrong variance function).
+
+The Figure 8 grid in §22.9 shows both residual flavors side-by-side for Poisson and Gamma fits — the Pearson residuals fan out heteroscedastically even under correct specification (fitting artifact, not model failure), while the deviance residuals are symmetric and unstructured.
+</RemarkBlock>
+
+The `DevianceTestExplorer` component lets you explore the deviance LRT across families and effect sizes. The left panel shows the $\chi^2_k$ null density with the rejection region shaded; the middle panel shows the power curve as a function of non-centrality $\lambda$; the right panel shows the profile-likelihood for $\beta_j$ with both the Wald-z CI and the profile-LRT CI rendered, making the asymmetry of the latter visible.
+
+<DevianceTestExplorer client:visible />
+
+## 22.8 Coefficient Inference: Wald, Score, Profile-Likelihood
+
+Topic 17 §17.9 introduced the asymptotic-equivalence trio — Wald, Score, and Likelihood-Ratio tests — as three flavors of the same $\chi^2$ inference machinery, each with its own computational and finite-sample tradeoffs. §22.8 specializes the trio to GLM coefficient inference: Wald-z for fast per-coefficient $z$-statistics, Score for "only fit the null" forward-selection contexts, and profile-LRT for the high-fidelity CIs that respect the likelihood's curvature near the boundary. Topic 19 §19.6 forward-promised that profile-LRT is the GLM default; Rem 17 below discharges that promise.
+
+<DefinitionBlock number={8} title="Wald-z, Score, and profile-LRT confidence intervals">
+For a single GLM coefficient $\beta_j$ at confidence level $1 - \alpha$:
+
+- **Wald-z CI:** $\hat\beta_j \pm z_{1-\alpha/2}\widehat{\text{SE}}(\hat\beta_j)$, where $\widehat{\text{SE}}(\hat\beta_j) = \sqrt{[\hat\phi(\mathbf{X}^\top\hat{\mathbf{W}}\mathbf{X})^{-1}]_{jj}}$. Symmetric about $\hat\beta_j$; uses the asymptotic Normal distribution of $\hat\beta_j$ from Thm 3.
+- **Score (Rao) CI:** $\{\beta_j^0 : U_j(\boldsymbol\beta_0^*)^2 / \mathcal{I}_{jj}(\boldsymbol\beta_0^*) \leq \chi^2_{1, 1-\alpha}\}$, where $\boldsymbol\beta_0^*$ is the constrained MLE under $\beta_j = \beta_j^0$. Computed entirely at the null; never requires the full-model fit.
+- **Profile-likelihood CI:** $\{\beta_j^0 : D(\beta_j^0) - D(\hat{\boldsymbol\beta}) \leq \chi^2_{1, 1-\alpha}\}$, where $D(\beta_j^0)$ profiles out the nuisance coefficients (refits the model with $\beta_j$ fixed at $\beta_j^0$ and other coefficients optimized). Asymmetric in general; the gold standard for GLMs.
+
+All three CIs invert the corresponding hypothesis test (Topic 19 Thm 1, the test–CI duality). All three converge to the same $\chi^2_1$ asymptotic distribution by Topic 18 §18.7 — they disagree only by $O_p(n^{-1/2})$ in finite samples.
+</DefinitionBlock>
+
+<TheoremBlock number={7} title="Asymptotic equivalence of Wald, Score, and LRT for GLM coefficients">
+Under $H_0 : \beta_j = \beta_j^0$ and GLM regularity, the three test statistics
+
+$$
+W_j = \frac{(\hat\beta_j - \beta_j^0)^2}{\widehat{\text{Var}}(\hat\beta_j)}, \quad S_j = \frac{U_j(\boldsymbol\beta_0^*)^2}{\mathcal{I}_{jj}(\boldsymbol\beta_0^*)}, \quad L_j = D(\beta_j^0) - D(\hat{\boldsymbol\beta}),
+$$
+
+each converge in distribution to $\chi^2_1$ as $n \to \infty$, and pairwise differ by $O_p(n^{-1/2})$. The three corresponding CIs (Wald-z, Score, profile-LRT) therefore agree to leading order asymptotically and differ only in finite-sample behavior — particularly near the parameter boundary, where Wald-z's symmetric form fails and the others recover correct coverage.
+</TheoremBlock>
+
+The proof is a direct specialization of Topic 18 §18.7's general statement to the GLM setting; we omit the restatement.
+
+<ExampleBlock number={10} title="Wald-z vs profile-LRT CI for a near-separation logistic">
+A logistic regression on $n = 80$ near-separation data ($\boldsymbol\beta_0 = (0, 4)$ — strong slope) produces $\hat{\boldsymbol\beta} \approx (0.3, 4.1)$ with substantial coefficient uncertainty due to the weak signal-to-noise at the boundary. The two CIs for $\beta_1$:
+
+| CI flavor | Lower | Upper | Width | Asymmetry |
+|---|---|---|---|---|
+| Wald-z (95%) | $1.4$ | $6.9$ | $5.5$ | symmetric |
+| Profile-LRT (95%) | $1.6$ | $9.8$ | $8.2$ | upper half $\approx 2.7\times$ lower half |
+
+The profile-LRT CI is **wider and asymmetric**, with most of the extra width pushed to the right (large positive $\beta_1$ values). This is the correct picture: near separation, the log-likelihood is much flatter on the "more positive" side of $\hat\beta_1$ than on the "less positive" side, so a $\chi^2_1$-cutoff slice of the likelihood profile gives an asymmetric region. The Wald-z CI's symmetric form artificially compresses the upper bound, undercovering the truth on the high side. This is the "Wald boundary pathology" Topic 18 Rem 16 already named; the profile-LRT CI is the production-standard fix.
+</ExampleBlock>
+
+<ExampleBlock number={11} title="Wald is link-dependent; LRT is not (logit vs probit)">
+Take a single binary dataset and fit it under both the logit link (canonical) and the probit link (non-canonical). Each link gives a different $\hat\beta_1$ on its own scale (logit gives log-odds units; probit gives latent-Normal-z units), so the Wald-z $p$-value for $H_0: \beta_1 = 0$ depends on which scale you fit:
+
+| Link | $\hat\beta_1$ | Wald-z | $p$-value |
+|---|---|---|---|
+| logit | $0.38$ | $2.16$ | $0.031$ |
+| probit | $0.21$ | $1.99$ | $0.047$ |
+| LRT (deviance difference) | — | — | $0.028$ (both links) |
+
+The Wald-z $p$-values disagree across links ($0.031$ vs $0.047$) — a worrying $50\%$ relative difference for a finding that hovers near the $0.05$ threshold. The LRT $p$-value is link-invariant: $D(\hat{\boldsymbol\beta}_0) - D(\hat{\boldsymbol\beta}_1)$ is the same regardless of which link parameterization you fit, because the deviance difference depends only on the maximum likelihoods, which are identical across smooth reparameterizations (Topic 18 Thm 6). This is exactly the "GLM software defaults to LRT for nested-model comparisons" rationale that Topic 18 Rem 17 named — and it is one of the strongest practical reasons to prefer LRT over Wald when the choice is available.
+</ExampleBlock>
+
+<RemarkBlock number={17} title="Profile-LRT is the GLM default — discharging Topic 19 §19.6">
+Topic 19 §19.6 forward-promised that **profile-likelihood CIs are the workhorse for GLM coefficients in production software** — R's `confint()` on a `glm` object defaults to the profile-LRT, computed by refitting the model with $\beta_j$ fixed at a grid of values and tracing the deviance drop until the $\chi^2_{1, 0.95} = 3.84$ threshold is crossed. Three reasons:
+
+1. **Reparameterization invariance** (Topic 18 Thm 6, Topic 19 Rem 8): the LRT $p$-value is invariant under smooth reparameterization, including the link function (Ex 11 above). Wald-z fails this invariance.
+2. **Asymptotic efficiency via Wilks** (Topic 18 Thm 4, Topic 19 §19.6): all three CIs (Wald, Score, LRT) are first-order asymptotically efficient, but LRT has better higher-order properties — Bartlett correction, refined coverage in moderate samples.
+3. **Correct coverage at boundaries** (Ex 10 above): near separation, near-zero variance components, and other boundary cases, profile-LRT respects the likelihood's curvature; Wald-z does not.
+
+The cost is computational: profile-LRT requires $\sim 30 \times 2 = 60$ constrained refits per coefficient (for bisection on each side). For a $p = 10$ GLM on $n = 10{,}000$ data, that is $\sim 600$ IRLS solves — not cheap but very tractable. The `coefCIProfileGLM` function in `regression.ts` implements the bisection; the `DevianceTestExplorer` right panel renders profile-LRT and Wald-z side-by-side for visual comparison.
+</RemarkBlock>
+
+## 22.9 Misspecification and the Sandwich Estimator
+
+Topic 21 §21.9 Rem 19 forward-promised a treatment of **HC-robust standard errors** — the White (1980) sandwich variance estimator that gives consistent SEs under arbitrary heteroscedasticity, even when the homoscedasticity assumption of OLS is wrong. §22.9 discharges that promise, and generalizes it: the sandwich estimator works for any GLM (not just Normal+identity-link OLS) under any variance misspecification, as long as the *mean* specification $\mu_i = g^{-1}(\mathbf{x}_i^\top\boldsymbol\beta)$ is correct. The estimator is consistent because Wedderburn (1974) showed quasi-likelihood — fitting only on the mean–variance relationship without specifying the full distribution — gives a consistent point estimate regardless of higher-moment misspecification. Huber (1967) and White (1980) independently derived the sandwich form $\mathbf{A}^{-1}\mathbf{B}\mathbf{A}^{-1}$ as the variance of this quasi-MLE. The three threads converged into modern QMLE / sandwich-SE practice.
+
+<DefinitionBlock number={9} title="Quasi-likelihood score and the QMLE">
+Given a mean specification $\mu_i = g^{-1}(\mathbf{x}_i^\top\boldsymbol\beta)$ and a variance function $V(\mu)$ (without committing to a full distributional family), the **quasi-likelihood score** is
+
+$$
+\mathbf{U}_Q(\boldsymbol\beta) = \mathbf{X}^\top(\mathbf{y} - \boldsymbol\mu(\boldsymbol\beta)).
+$$
+
+The **quasi-maximum-likelihood estimator** (QMLE) $\hat{\boldsymbol\beta}_{\text{QMLE}}$ solves $\mathbf{U}_Q(\hat{\boldsymbol\beta}_{\text{QMLE}}) = \mathbf{0}$. When the canonical-link assumption holds, the quasi-score equals the true GLM score (Thm 1), so $\hat{\boldsymbol\beta}_{\text{QMLE}} = \hat{\boldsymbol\beta}_{\text{MLE}}$ — the same estimate, computed by the same IRLS algorithm, with the same point estimates. The difference is in the *variance*: the MLE assumes the full distribution is correct (giving $\widehat{\text{Var}}(\hat{\boldsymbol\beta}) = \hat\phi(\mathbf{X}^\top\hat{\mathbf{W}}\mathbf{X})^{-1}$), while the QMLE acknowledges the variance specification might be wrong and uses the sandwich estimator below.
+</DefinitionBlock>
+
+<TheoremBlock number={8} title="QMLE consistency and the sandwich variance">
+Suppose the **mean specification** is correct: $E[Y_i \mid \mathbf{x}_i] = g^{-1}(\mathbf{x}_i^\top\boldsymbol\beta_0)$ for some true $\boldsymbol\beta_0$. The variance specification $\text{Var}(Y_i \mid \mathbf{x}_i)$ may be arbitrary (overdispersion, cluster-correlation, full distributional misspecification). Then under standard regularity conditions:
+
+1. **Consistency.** $\hat{\boldsymbol\beta}_{\text{QMLE}} \xrightarrow{p} \boldsymbol\beta_0$ as $n \to \infty$.
+2. **Asymptotic normality with sandwich variance.** $\sqrt{n}(\hat{\boldsymbol\beta}_{\text{QMLE}} - \boldsymbol\beta_0) \xrightarrow{d} \mathcal{N}_{p+1}(\mathbf{0}, \mathbf{A}^{-1}\mathbf{B}\mathbf{A}^{-1})$, where
+
+$$
+\mathbf{A} = E\!\left[\mathbf{X}^\top \mathbf{W}(\boldsymbol\beta_0) \mathbf{X}/n\right], \qquad \mathbf{B} = E\!\left[\mathbf{X}^\top (\mathbf{y} - \boldsymbol\mu)(\mathbf{y} - \boldsymbol\mu)^\top \mathbf{X}/n\right].
+$$
+
+The sandwich form $\mathbf{A}^{-1}\mathbf{B}\mathbf{A}^{-1}$ replaces the model-based $\mathbf{A}^{-1}$ (which assumes $\mathbf{B} = \mathbf{A}$ — the "information identity" that holds under correct full-distribution specification). Empirical estimators of $\mathbf{B}$ — HC0 through HC3 — give finite-sample sandwich SEs without requiring the full variance structure.
+</TheoremBlock>
+
+We state Thm 8 without full proof — the $O_p$ manipulation requires Topic 14's MLE-asymptotics machinery applied to the misspecified-likelihood setting (Huber 1967), then a uniform law of large numbers to turn population $\mathbf{A}, \mathbf{B}$ into their empirical counterparts (White 1980). The full derivation is HUB1967 §3 + WHI1980 §3 (~20 lines of $O_p$ algebra). The conceptual content of Thm 8 is what matters: **point estimates depend only on mean specification; SE estimation is what varies.** Get the mean right, use the sandwich, and your inference is robust to whatever variance distortion the true DGP imposes.
+
+The four empirical sandwich estimators (HC0, HC1, HC2, HC3) differ only in finite-sample bias adjustments to the $\mathbf{B}$-term:
+
+- **HC0** (White 1980): $\hat{\mathbf{B}}_{HC0} = (1/n)\sum_i \hat r_i^2 \mathbf{x}_i \mathbf{x}_i^\top$ where $\hat r_i = y_i - \hat\mu_i$ — the raw plug-in estimate.
+- **HC1** (MacKinnon-White 1985): scale HC0 by $n/(n - p - 1)$ to account for finite-sample shrinkage. Standard `vcovHC` default in R.
+- **HC2:** divide $\hat r_i^2$ by $(1 - h_{ii})$ where $h_{ii}$ is the leverage from §22.3's IRLS hat matrix.
+- **HC3:** divide $\hat r_i^2$ by $(1 - h_{ii})^2$ — the Davidson–MacKinnon "preferred" finite-sample estimator, recommended by default for $n < 250$. Numerical stability requires capping $h_{ii}$ at 0.9999 to avoid blow-up at high-leverage observations (the `regression.ts` implementation enforces this with a console warning when triggered).
+
+In production, HC1 and HC3 are the most-used variants; HC0 is the asymptotic-limit version used in derivations.
+
+<ExampleBlock number={12} title="Sandwich coverage on overdispersed Poisson (n_sim = 200)">
+Generate $n = 200$ overdispersed-Poisson responses with true $\boldsymbol\beta_0 = (-0.3, 0.9)$ and dispersion ratio $r = \text{Var}/E = 1.8$ (so the Poisson model is correct on the mean but wrong on the variance by a factor of $1.8$). Repeat $200$ times, refit each replication with `glmFit(X, y, FAMILIES.poisson)`, and compute both the naive Wald CI and the HC3 sandwich CI for $\beta_1$ at the $95\%$ level:
+
+| CI | Empirical coverage | Target | Gap |
+|---|---|---|---|
+| Naive Wald-z | $0.79$ | $0.95$ | $-16$ pp |
+| HC3 sandwich | $0.915$ | $0.95$ | $-3.5$ pp |
+
+Naive Wald undercovers severely — $79\%$ instead of $95\%$ — because its SE is too small by roughly $\sqrt{1.8} \approx 1.34$. HC3 recovers nearly nominal coverage with no change to the point estimates. The §22.9 figure renders this directly: each simulation contributes two horizontal CI bars (one naive, one HC3), color-coded green if it covers $\beta_1^{\text{true}}$ or red if it misses. The naive bars miss roughly one in five times; the HC3 bars miss roughly one in twenty.
+</ExampleBlock>
+
+<ExampleBlock number={13} title="Gamma regression with misspecified dispersion">
+For a Gamma GLM, the variance function is $V(\mu) = \mu^2$ and dispersion $\phi$ is estimated. Suppose the true DGP has $\text{Var}(Y_i) = 4 \mu_i^2$ (so the dispersion is twice the value the model is implicitly assuming via $\hat\phi$). Naive Wald CIs again undercover; HC3 sandwich CIs recover. The pattern is the same as Poisson: point estimates ($\hat{\boldsymbol\beta}$ from IRLS) are unaffected by the dispersion misspecification because the score equation $\mathbf{X}^\top(\mathbf{y} - \boldsymbol\mu) = \mathbf{0}$ does not involve $\phi$; only the SE estimation needs adjustment. The `SandwichCoverageSimulator` exposes this with a "misspecifiedGamma" preset.
+</ExampleBlock>
+
+<img src="/images/topics/generalized-linear-models/22-pearson-deviance-residuals.png"
+     alt="2×2 grid figure. Top row: Poisson fit — (a) Pearson residuals r_i^P against fitted μ̂_i, (b) deviance residuals r_i^D against the same fitted values. Pearson residuals fan out heteroscedastically; deviance residuals are symmetric and unstructured. Bottom row: same comparison for a Gamma fit. Title: 'Which residual do you trust? Deviance residuals are more symmetric under correct specification.'"
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<img src="/images/topics/generalized-linear-models/22-sandwich-coverage.png"
+     alt="Two-panel figure. Left: 100 simulated overdispersed-Poisson datasets (Var/E = 1.8); 95% naive Wald CIs for β₁ drawn as horizontal bars stacked vertically, color-coded green (covers β₁^true) or red (misses). Roughly 21 of 100 bars are red. Empirical coverage 0.79 annotated. Right: same 100 simulations with 95% HC3 sandwich CIs; only ~9 of 100 are red. Empirical coverage 0.91 annotated. Title: 'Sandwich estimator restores nominal coverage under variance misspecification.'"
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<RemarkBlock number={18} title="Pearson-vs-deviance residual diagnostic — what the discrepancy flags">
+A useful diagnostic: plot Pearson and deviance residuals on the same axes for a fitted GLM. If both look unstructured, the model is well-specified. If Pearson residuals fan out but deviance residuals are clean, you have **variance misspecification with correct mean** — exactly the scenario the sandwich estimator handles. If deviance residuals show systematic structure (a U-shape, monotone trend, or fan), you have **mean misspecification** (wrong link, missing predictor, wrong functional form) and the sandwich does NOT save you — you need to fix the model. Figure 8 above shows the variance-misspecification flavor; the structural-misspecification version is what `RegressionDiagnosticsExplorer` on Topic 21 illustrates for the OLS case (and the same pattern carries over to GLMs).
+</RemarkBlock>
+
+<RemarkBlock number={19} title="Robust GLMs — outlier influence beyond sandwich SEs">
+Sandwich SEs handle variance misspecification but do nothing about influential outliers — single observations whose leverage and residual combine to dominate $\hat{\boldsymbol\beta}$. The Huber-ified Poisson and bounded-influence logistic estimators (Cantoni & Ronchetti 2001) downweight high-Pearson-residual observations using M-estimator machinery from Topic 15 §15.10–§15.11. Topic 23's penalized GLMs (ridge, lasso) provide an alternative outlier-control mechanism via shrinkage of the coefficients themselves. Both are deferred from this topic; Thm 8's sandwich framework is the variance-misspecification fix, while these are the influence-control fixes.
+</RemarkBlock>
+
+<RemarkBlock number={20} title="Negative Binomial regression — the full-distribution overdispersion fix">
+The sandwich approach is the "model-agnostic" fix for Poisson overdispersion: keep the Poisson model, fix the SEs. The "model-correct" alternative is **Negative Binomial regression** — replace Poisson with $Y_i \sim \text{NegBin}(\mu_i, r)$ where $r$ is a separate dispersion parameter. The full distribution allows likelihood-based inference (deviance, profile-LRT CIs, etc.) on top of the corrected variance. Standard tooling: `MASS::glm.nb` in R, `statsmodels.discrete.NegativeBinomial` in Python. <ExternalLink site="formalml" topic="Generalized linear models" href="https://formalml.com/topics/generalized-linear-models" /> covers NegBin in the count-regression chapter.
+</RemarkBlock>
+
+<RemarkBlock number={21} title="Wedderburn 1974 — quasi-likelihood predates sandwich SEs">
+The quasi-likelihood framework is older than the sandwich SE: Wedderburn (1974) introduced the idea that "specifying the mean–variance relationship is enough for consistent estimation" two years after Nelder–Wedderburn (1972) introduced GLMs. Huber (1967) had derived the misspecified-MLE asymptotic-variance form independently in the M-estimation context, and White (1980) made the empirical sandwich estimator standard in econometrics. Three threads, three authors, one consensus by the late 1980s: under correct mean specification, the QMLE / IRLS estimate is consistent, and the sandwich variance fixes the SE. McCullagh–Nelder (1989) Ch. 9 is the canonical book-length development; modern statsmodels and R-`sandwich` implementations follow that template directly.
+</RemarkBlock>
+
+The `SandwichCoverageSimulator` lets you watch the coverage gap close in real time. Pick a family (overdispersed Poisson / misspecified Gamma / clustered Bernoulli), set the misspecification magnitude with the slider, and click "Run 500" — each simulation contributes a CI bar to the top panel and updates the running coverage in the bottom panel. The naive bars consistently undercover; the HC3 bars consistently approach the nominal $1 - \alpha$ line.
+
+<SandwichCoverageSimulator client:visible />
+
+## 22.10 Forward Map: Where GLMs Lead
+
+Topic 22 establishes the core GLM framework: link function, exponential-family response, IRLS fitting, deviance inference, sandwich-SE robustness. The framework opens onto five major extensions, each of which is a separate topic or even a separate track. §22.10 is the catalog — one paragraph per extension.
+
+<RemarkBlock number={22} title="Topic 23 — Penalized GLMs (Ridge, Lasso, Elastic Net)">
+The next Track 6 topic generalizes IRLS to **penalized log-likelihoods**: $\ell(\boldsymbol\beta) - \lambda P(\boldsymbol\beta)$ where $P$ is a penalty (squared-$\ell^2$ for ridge, $\ell^1$ for lasso, convex combination for elastic net). The L² penalty stabilizes IRLS near separation (Bernoulli) or in high-collinearity designs; the L¹ penalty induces sparsity in $\hat{\boldsymbol\beta}$ and is the foundation of variable-selection in modern high-dimensional GLM applications. The reference implementation is `glmnet` (Friedman, Hastie & Tibshirani 2010) — a coordinate-descent algorithm that scales to $p$ in the millions and is the production workhorse for penalized GLMs in R, Python (`sklearn.linear_model.LogisticRegression(penalty=...)`), and Julia.
+</RemarkBlock>
+
+<RemarkBlock number={23} title="Track 7 — Bayesian GLMs and GLMMs">
+Adding a prior $\pi(\boldsymbol\beta)$ on the coefficients and computing the posterior $p(\boldsymbol\beta \mid \mathbf{y}) \propto \pi(\boldsymbol\beta) \prod_i f(y_i \mid \mu_i, \phi)$ converts the GLM into a **Bayesian GLM**. MAP estimation reduces to penalized MLE (Gaussian prior = ridge, Laplace prior = lasso); full posterior inference uses MCMC (Stan, PyMC, brms) or variational methods. **Generalized linear mixed models (GLMMs)** add cluster-level or individual-level **random effects** $\mathbf{b} \sim \mathcal{N}(\mathbf{0}, \boldsymbol\Sigma)$ to the linear predictor for hierarchical data; the marginal likelihood requires integrating out the random effects (Laplace approximation, AGHQ, MCMC). Track 7 is the Bayesian-foundations track; mixed-effects and hierarchical GLMs live there + at <ExternalLink site="formalml" topic="Mixed-effects models" href="https://formalml.com/topics/mixed-effects" />.
+</RemarkBlock>
+
+<RemarkBlock number={24} title="Track 8 — Generalized additive models (GAMs)">
+Replace the linear predictor $\mathbf{x}^\top\boldsymbol\beta$ with a sum of smooth nonparametric functions $\sum_j f_j(x_{ij})$ — each $f_j$ is fit by penalized basis-function expansion (cubic regression splines, thin-plate splines, P-splines). The result is a **generalized additive model** (Hastie & Tibshirani 1990): more flexible than a GLM (captures nonlinearities without prespecifying functional form), more interpretable than a black-box neural network (each $f_j$ is a 1D function you can plot). Standard tooling: `mgcv::gam` in R (Wood 2017), `pyGAM` in Python. Track 8 will cover the kernel-regression / nonparametric-regression machinery this builds on.
+</RemarkBlock>
+
+<RemarkBlock number={25} title="formalml.com — Mixed-effects and hierarchical models at scale">
+GLMMs are the right tool for clustered data — patients within hospitals, students within classrooms, repeat measurements within subjects. Random effects deliver **partial pooling** (estimates for sparse clusters borrow strength from other clusters via the random-effects prior), automatic regularization, and individual-level inference. The ML-scale treatment at <ExternalLink site="formalml" topic="Mixed-effects models" href="https://formalml.com/topics/mixed-effects" /> covers `lme4`-style frequentist GLMMs, Stan-style Bayesian GLMMs, and the recommendation-system applications where random-effects structure (user / item / context) is the dominant modeling choice.
+</RemarkBlock>
+
+<RemarkBlock number={26} title="formalml.com — Information geometry and natural gradient">
+The IRLS step is the **natural gradient** in exponential-family information geometry (Amari 1985). For a GLM, the Fisher information matrix $\mathcal{I}(\boldsymbol\beta) = \mathbf{X}^\top\mathbf{W}\mathbf{X}$ is a Riemannian metric on parameter space; the natural gradient is the ordinary gradient transported through the inverse metric. Natural-gradient descent in continuous time *is* IRLS, *is* Fisher scoring, *is* Newton's method on the canonical-link GLM. The deep-learning community rediscovered natural-gradient methods (K-FAC, Shampoo, neural tangent kernels) as approximations to this geometry on neural-network parameter spaces. <ExternalLink site="formalml" topic="Information geometry" href="https://formalml.com/topics/information-geometry" /> develops the framework.
+</RemarkBlock>
+
+<RemarkBlock number={27} title="formalml.com — Multinomial, ordinal, zero-inflated, hurdle, Tweedie">
+Several practical response types extend the four-family GLM core:
+
+- **Multinomial logit** — categorical response with $K > 2$ levels; one logit per level relative to a reference. Standard for image classification, document classification, recommendation choice models.
+- **Ordinal regression** (proportional odds, cumulative logit) — ordered categorical response (rating scales, survey responses).
+- **Zero-inflated and hurdle models** — count response with excess zeros (insurance no-claim policies, social media accounts with zero posts).
+- **Tweedie family** — continuous-positive response with point mass at zero (insurance pure-premium modeling, rainfall amounts).
+
+The catalog reference is Agresti (2015) Ch. 6–7. <ExternalLink site="formalml" topic="Generalized linear models" href="https://formalml.com/topics/generalized-linear-models" /> covers all of these in the practical-modeling chapter.
+</RemarkBlock>
+
+<RemarkBlock number={28} title="formalml.com — High-dimensional p ≫ n GLMs">
+When $p > n$, $\mathbf{X}^\top\mathbf{W}\mathbf{X}$ is rank-deficient and ordinary IRLS fails — the GLM analog of OLS failing when $p > n$. The Track-6 fix is Topic 23's penalized GLMs (lasso for sparse $\hat{\boldsymbol\beta}$); the asymptotic theory (consistency rates, minimax bounds, double descent for classification) lives at <ExternalLink site="formalml" topic="High-dimensional regression" href="https://formalml.com/topics/high-dimensional-regression" />. The applied workflow — `glmnet` with cross-validation for $\lambda$ selection — is in Topic 23; the theoretical underpinnings are external.
+</RemarkBlock>
+
+<img src="/images/topics/generalized-linear-models/22-forward-map.png"
+     alt="Forward-map diagram. Central horizontal spine of Topics 21 → 22 → 23 → 24 (Linear Regression / GLMs / Penalized / Selection) in Track 6 blue. Up-arrows from Topic 22 to Track 7 boxes (Bayesian Foundations, GLMMs) and Track 8 boxes (GAMs, Nonparametric) in amber. Side-arrows to formalml.com boxes (Mixed-effects, Causal inference, High-dim regression, Information geometry, Multinomial/Tweedie) in purple. Back-arrows from Topic 22 to Topics 7 (Exponential families), 14 (MLE), 18 (LRT), 19 (CIs) in grey. Color legend in the corner."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+Topic 22 closes Track 6's first half. The framework is now in place: linear predictor + link function + exponential-family response + IRLS + deviance inference + sandwich SEs. **Linear regression is a GLM; the normal equations are the GLM score; OLS-as-orthogonal-projection is GLM IRLS with $\mathbf{W} = \mathbf{I}$.** Every claim Topic 21 made about Normal-linear-model estimation is the special case of Topic 22's framework where the family is Normal, the link is identity, and the dispersion is $\sigma^2$. Going forward, Topic 23 (penalization), Topic 24 (model selection), Track 7 (Bayesian extensions), and Track 8 (nonparametric generalizations) all build on this foundation. The forward map above lays out the routes.
+
+---
+
+### References
+
+1. Nelder, J. A. & Wedderburn, R. W. M. (1972). [*Generalized linear models*](https://www.jstor.org/stable/2344614). *Journal of the Royal Statistical Society, Series A (General)*, 135(3), 370–384.
+2. McCullagh, P. & Nelder, J. A. (1989). [*Generalized Linear Models*](https://www.routledge.com/Generalized-Linear-Models/McCullagh-Nelder/p/book/9780412317606) (2nd ed.). Chapman & Hall/CRC.
+3. Agresti, A. (2015). [*Foundations of Linear and Generalized Linear Models*](https://www.wiley.com/en-us/Foundations+of+Linear+and+Generalized+Linear+Models-p-9781118730034). Wiley.
+4. Dobson, A. J. & Barnett, A. G. (2008). [*An Introduction to Generalized Linear Models*](https://www.routledge.com/An-Introduction-to-Generalized-Linear-Models/Dobson-Barnett/p/book/9781138741515) (3rd ed.). Chapman & Hall/CRC.
+5. Wedderburn, R. W. M. (1974). [*Quasi-likelihood functions, generalized linear models, and the Gauss–Newton method*](https://doi.org/10.1093/biomet/61.3.439). *Biometrika*, 61(3), 439–447.
+6. Huber, P. J. (1967). [*The behavior of maximum likelihood estimates under nonstandard conditions*](https://projecteuclid.org/ebooks/berkeley-symposium-on-mathematical-statistics-and-probability/Proceedings-of-the-Fifth-Berkeley-Symposium-on-Mathematical-Statistics-and/chapter/The-behavior-of-maximum-likelihood-estimates-under-nonstandard-conditions/bsmsp/1200512988). *Proceedings of the Fifth Berkeley Symposium on Mathematical Statistics and Probability, Vol. 1*, 221–233. University of California Press.
+7. White, H. (1980). [*A heteroskedasticity-consistent covariance matrix estimator and a direct test for heteroskedasticity*](https://www.jstor.org/stable/1912934). *Econometrica*, 48(4), 817–838.
+8. Hosmer, D. W., Lemeshow, S. & Sturdivant, R. X. (2013). [*Applied Logistic Regression*](https://onlinelibrary.wiley.com/doi/book/10.1002/9781118548387) (3rd ed.). Wiley.
+9. Fahrmeir, L., Kneib, T., Lang, S. & Marx, B. (2013). [*Regression: Models, Methods and Applications*](https://link.springer.com/book/10.1007/978-3-642-34333-9). Springer.
+10. Lehmann, E. L. & Romano, J. P. (2005). [*Testing Statistical Hypotheses*](https://doi.org/10.1007/0-387-27605-X) (3rd ed.). Springer.
+11. Casella, G. & Berger, R. L. (2002). *Statistical Inference* (2nd ed.). Duxbury.
+12. Greene, W. H. (2012). *Econometric Analysis* (7th ed.). Pearson.
+
+
+
