@@ -46,3 +46,32 @@ export const inferenceColors = {
   confidence: '#BBF7D0',
   rejection: '#FECACA',
 } as const;
+
+/**
+ * Topic 20 — Multiple Testing & False Discovery palette.
+ *
+ * Four FWER procedures in a purple gradient (deepest = most conservative):
+ *   bonf (deepest) → holm → sidak → hoch (lightest).
+ *
+ * Three FDR procedures in a green gradient (deepest = most conservative):
+ *   by (deepest, arbitrary dependence) → bh (independence) → storey (adaptive).
+ *
+ * `bh` intentionally shares hex #10B981 with the Topic 18 LRT / Topic 19
+ * test-CI-duality green — BH is the FDR inheritor of the same visual family.
+ *
+ * `nullMixture` / `altMixture` are used in the §20.4 mixture decomposition
+ * figures (slate for Uniform nulls, amber for concentrated alternatives).
+ */
+export const multipleTestingColors = {
+  bonf: '#6B21A8',
+  holm: '#9333EA',
+  sidak: '#A855F7',
+  hoch: '#C084FC',
+  bh: '#10B981',
+  by: '#047857',
+  storey: '#34D399',
+  nullMixture: '#94A3B8',
+  altMixture: '#F59E0B',
+} as const;
+
+export type MultipleTestingColorKey = keyof typeof multipleTestingColors;

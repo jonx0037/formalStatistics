@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "astro dev",
-    "build": "astro build",
+    "build": "cross-env NODE_OPTIONS=--max-old-space-size=8192 astro build",
     "postbuild": "pagefind --site dist",
     "preview": "astro preview",
     "astro": "astro",
@@ -34,6 +34,7 @@
   "devDependencies": {
     "@astrojs/check": "^0.9.8",
     "@types/node": "^25.5.0",
+    "cross-env": "^10.1.0",
     "pagefind": "^1.4.0",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"

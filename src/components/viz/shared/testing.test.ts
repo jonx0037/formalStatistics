@@ -56,6 +56,14 @@ import {
   profileNuisanceOptimizerGamma,
   tostTest,
   actualCoverageBinomial,
+  // Topic 20 extensions:
+  bonferroni,
+  holm,
+  benjaminiHochberg,
+  benjaminiHochbergSweep,
+  harmonicNumber,
+  simultaneousCIBonferroni,
+  multiTestingMonteCarlo,
 } from './testing';
 import { normalSample, bernoulliSample } from './convergence';
 import { seededRandom } from './probability';
@@ -853,6 +861,172 @@ console.log('========================================\n');
     lrt.lower,
     0.185,
     'tol 0.01; notebook reference',
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  TOPIC 20 — Multiple Testing & False Discovery (T1–T6 per brief §6.2)
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ── 63–64. T1. BH rejects exactly 3 on the canonical fixed vector ─────────
+// p_(3) = 0.011 ≤ 3·0.05/10 = 0.015 (pass); p_(4) = 0.021 > 4·0.05/10 = 0.020 (fail).
+// Step-up search finds k* = 3; first three smallest p-values rejected.
+{
+  const p = [0.0005, 0.003, 0.011, 0.021, 0.043, 0.051, 0.087, 0.21, 0.33, 0.55];
+  const sweep = benjaminiHochbergSweep(p, 0.05);
+  check(
+    `63. T1a. BH sweep kStar = 3 on canonical vector`,
+    sweep.kStar === 3,
+    sweep.kStar,
+    3,
+    'BH step-up on sorted [0.0005..0.55] at α=0.05',
+  );
+  const rejected = benjaminiHochberg(p, 0.05);
+  const rejectCount = rejected.filter((x) => x).length;
+  check(
+    `64. T1b. benjaminiHochberg rejects exactly 3 hypotheses`,
+    rejectCount === 3 &&
+      rejected[0] === true &&
+      rejected[1] === true &&
+      rejected[2] === true &&
+      rejected.slice(3).every((x) => x === false),
+    rejectCount,
+    3,
+    'boolean array [T,T,T,F,F,F,F,F,F,F]',
+  );
+}
+
+// ── 65–66. T2. Holm ≡ Bonferroni when only one rejection occurs ──────────
+// pvals [0.0001, 0.08, 0.12, 0.5] at α=0.05, m=4:
+//   Bonferroni threshold = 0.0125 → rejects only the first.
+//   Holm step-down: k=1 threshold 0.0125 (pass), k=2 threshold 0.0167 (FAIL).
+//   Both give [T, F, F, F] — the "single-rejection" regime where step-down
+//   doesn't gain over single-step.
+{
+  const p = [0.0001, 0.08, 0.12, 0.5];
+  const bonf = bonferroni(p, 0.05);
+  const h = holm(p, 0.05);
+  check(
+    `65. T2a. Bonferroni on [0.0001, 0.08, 0.12, 0.5] rejects only first`,
+    bonf[0] === true && bonf[1] === false && bonf[2] === false && bonf[3] === false,
+    bonf,
+    [true, false, false, false],
+    'α/m = 0.0125; only 0.0001 qualifies',
+  );
+  check(
+    `66. T2b. Holm(same input) ≡ Bonferroni (single-rejection regime)`,
+    h.length === 4 &&
+      h[0] === bonf[0] &&
+      h[1] === bonf[1] &&
+      h[2] === bonf[2] &&
+      h[3] === bonf[3],
+    h,
+    bonf,
+    'Holm step-down fails at k=2; result matches Bonferroni',
+  );
+}
+
+// ── 67–68. T3. BH empirical FDR on m=200, π₀=0.8, δ=3.0, 3000 MC trials ──
+// Theoretical bound α·π₀ = 0.04; empirical FDR should land in (0.030, 0.050).
+// Also verify BH does NOT control FWER — expect fwer.mean > 0.50 (by contrast).
+{
+  const out = multiTestingMonteCarlo('bh', 200, 0.8, 3.0, 0.05, 3000, 123);
+  check(
+    `67. T3a. BH empirical FDR ∈ (0.030, 0.050) [bound α·π₀ = 0.040]`,
+    out.fdr.mean > 0.03 && out.fdr.mean < 0.05,
+    out.fdr.mean,
+    '∈ (0.030, 0.050)',
+    'm=200, π₀=0.8, δ=3.0, 3000 trials, seed=123',
+  );
+  check(
+    `68. T3b. BH empirical FWER > 0.50 (procedure does NOT control FWER)`,
+    out.fwer.mean > 0.5,
+    out.fwer.mean,
+    '> 0.50',
+    'BH is an FDR procedure, not a FWER one',
+  );
+}
+
+// ── 69–70. T4. FWER explosion formula 1 − (1−α)^m at canonical m ─────────
+// Analytic, not MC. Values shown in §20.1 Figure 1; cross-checks union bound
+// being loose relative to the exact formula under independence.
+{
+  const alpha = 0.05;
+  const f20 = 1 - Math.pow(1 - alpha, 20);
+  const f100 = 1 - Math.pow(1 - alpha, 100);
+  check(
+    `69. T4a. FWER at m=20 ≈ 0.6415 (got ${f20.toFixed(4)})`,
+    approx(f20, 0.6415, 1e-4),
+    f20,
+    0.6415,
+    'tol 1e-4; §20.1 Fig 1 value',
+  );
+  check(
+    `70. T4b. FWER at m=100 ≈ 0.9941 (got ${f100.toFixed(4)})`,
+    approx(f100, 0.9941, 1e-4),
+    f100,
+    0.9941,
+    'tol 1e-4; §20.1 Fig 1 value',
+  );
+}
+
+// ── 71–73. T5. Harmonic number c_m = Σ 1/k for BY normalization ──────────
+// c_10 ≈ 2.9290, c_100 ≈ 5.1874, c_1000 ≈ 7.4855. Exact O(m) summation;
+// deviates from ln(m) + γ at small m (γ ≈ 0.5772).
+{
+  check(
+    `71. T5a. harmonicNumber(10) ≈ 2.9290 (got ${harmonicNumber(10).toFixed(4)})`,
+    approx(harmonicNumber(10), 2.929, 1e-3),
+    harmonicNumber(10),
+    2.929,
+    'tol 1e-3',
+  );
+  check(
+    `72. T5b. harmonicNumber(100) ≈ 5.1874 (got ${harmonicNumber(100).toFixed(4)})`,
+    approx(harmonicNumber(100), 5.1874, 1e-3),
+    harmonicNumber(100),
+    5.1874,
+    'tol 1e-3',
+  );
+  check(
+    `73. T5c. harmonicNumber(1000) ≈ 7.4855 (got ${harmonicNumber(1000).toFixed(4)})`,
+    approx(harmonicNumber(1000), 7.4855, 1e-3),
+    harmonicNumber(1000),
+    7.4855,
+    'tol 1e-3',
+  );
+}
+
+// ── 74. T6. Bonferroni simultaneous CI joint coverage ≥ 0.94 ─────────────
+// m=10 independent Normal means (true μ_i = 0, SE = 1/√n with n=25).
+// Over 500 trials, fraction of trials where all 10 CIs cover 0 should
+// meet or beat 1−α=0.95 (tolerating 2σ MC slack, hence 0.94 floor).
+{
+  const m = 10;
+  const n = 25;
+  const alpha = 0.05;
+  const trials = 500;
+  const rng = seededRandom(777);
+  const se = 1 / Math.sqrt(n);
+  const ses = new Array(m).fill(se);
+  let jointCovered = 0;
+  for (let t = 0; t < trials; t++) {
+    const means: number[] = [];
+    for (let i = 0; i < m; i++) {
+      // Sample mean of n iid N(0,1) observations has distribution N(0, 1/n).
+      means.push(normalSample(0, se, rng));
+    }
+    const cis = simultaneousCIBonferroni(means, ses, alpha);
+    const allCover = cis.every(({ lower, upper }) => lower <= 0 && 0 <= upper);
+    if (allCover) jointCovered++;
+  }
+  const coverage = jointCovered / trials;
+  check(
+    `74. T6. Bonf simultaneous CI joint coverage ≥ 0.94 (got ${coverage.toFixed(3)})`,
+    coverage >= 0.94,
+    coverage,
+    '≥ 0.94',
+    `m=${m}, n=${n}, 500 trials, seed=777`,
   );
 }
 

@@ -688,7 +688,7 @@ Confusing the three is common; each is a different level-$\alpha$ claim. FDA's p
 
 Topic 19 built the frequentist confidence-interval framework for scalar $\theta$. Four directions for deeper study, all deferred to specific later topics or tracks.
 
-![Topic 19's forward connections. Central: test-CI duality (Theorem 1). Outward arrows to Track 6 (regression CIs via Wald/LRT on GLM coefficients), Track 7 (Bayesian credible intervals — different semantics, same numerics under flat priors), Track 8 (bootstrap CIs — distribution-free extension), and Topic 20 (simultaneous CIs with FWER/FDR control). Backward arrow: Topic 18 §18.10 Rem 22 — the organizing-principle remark that Topic 19 fulfilled.](/images/topics/confidence-intervals-and-duality/19-forward-map.png)
+![Topic 19's forward connections. Central: test-CI duality (Theorem 1). Outward arrows to Track 6 (regression CIs via Wald/LRT on GLM coefficients), Track 7 (Bayesian credible intervals — different semantics, same numerics under flat priors), Track 8 (bootstrap CIs — distribution-free extension), and [Topic 20](/topics/multiple-testing-and-false-discovery) (simultaneous CIs with FWER/FDR control). Backward arrow: Topic 18 §18.10 Rem 22 — the organizing-principle remark that Topic 19 fulfilled.](/images/topics/confidence-intervals-and-duality/19-forward-map.png)
 
 <RemarkBlock number={19} title="Scope boundary — what Topic 19 did not cover">
 Six topics stated in pointers, none proved in Topic 19.
@@ -697,7 +697,7 @@ Six topics stated in pointers, none proved in Topic 19.
 
 2. **Bayesian credible intervals.** Track 7's territory. HPD (highest-posterior-density) intervals, posterior-probability bands, Lindley's paradox. Rem 3 of §19.1 sets the frequentist/Bayesian contrast; the full Bayesian theory is Track 7.
 
-3. **Simultaneous CIs, confidence ellipsoids, Hotelling's $T^2$.** Vector-$\theta$ and multiple-parameter confidence regions require test-family inversion with FWER control (Bonferroni, Scheffé, Tukey, Working–Hotelling). LEH2005 Ch. 7 and Ch. 8 are the canonical references; Topic 20 handles the multiple-testing side, which covers simultaneous CIs as a byproduct.
+3. **Simultaneous CIs, confidence ellipsoids, Hotelling's $T^2$.** Vector-$\theta$ and multiple-parameter confidence regions require test-family inversion with FWER control (Bonferroni, Scheffé, Tukey, Working–Hotelling). LEH2005 Ch. 7 and Ch. 8 are the canonical references; [Topic 20 §20.9](/topics/multiple-testing-and-false-discovery#section-20-9) delivers the simultaneous-CI construction as the dual of the §20.4 FWER procedures — Thm 8 plus the `SimultaneousCIBands` interactive artifact.
 
 4. **Fieller's theorem, ratio CIs.** The CI for a ratio $\mu_1/\mu_2$ of Normal means requires Fieller 1954's machinery — the "confidence set" can be unbounded, disconnected, or empty depending on the sign of the denominator. Niche but important in some drug-discovery contexts; LEH2005 §9.2 has the derivation.
 
@@ -737,7 +737,7 @@ Default: **Wilson for binomial, profile-LRT for GLM coefficients, t-CI for Norma
 </RemarkBlock>
 
 <RemarkBlock number={23} title="Track 5 closing — where this framework lives in ML">
-Topic 17 built the framework; Topic 18 delivered optimality; Topic 19 is the CI dual. Topic 20 closes the track with multiple testing — every technique of Topics 17–19 applied to many hypotheses simultaneously with FWER/FDR control.
+Topic 17 built the framework; Topic 18 delivered optimality; Topic 19 is the CI dual. [Topic 20](/topics/multiple-testing-and-false-discovery) closes the track with multiple testing — every technique of Topics 17–19 applied to many hypotheses simultaneously with FWER/FDR control, culminating in the featured Benjamini–Hochberg proof and the Bonferroni / Šidák simultaneous CIs that dualize the FWER procedures.
 
 Beyond Track 5, the framework continues to matter. **Track 6 (Regression).** Every GLM coefficient CI is a Wald or LRT CI of §19.4; the F-test for linear regression is Wilks. **Track 7 (Bayesian).** The contrast with frequentist coverage is where Bayesian inference earns its keep. **Track 8 (Nonparametric).** Bootstrap CIs are the distribution-free extension; permutation tests invert to distribution-free CIs.
 
