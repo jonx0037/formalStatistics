@@ -26,6 +26,7 @@ pnpm dev            # Dev server at localhost:4321
 pnpm build          # Production build (runs pagefind post-build)
 pnpm preview        # Preview production build
 pnpm test:testing   # Run the Track 5 testing.ts regression harness
+npx tsx src/components/viz/shared/regression.test.ts  # Track 6 (regression.ts) tests — not wired into a pnpm script
 pnpm astro check    # TypeScript + Astro frontmatter check (no `lint` script exists)
 ```
 
@@ -94,7 +95,7 @@ Each topic in `src/content/topics/` is an MDX file with YAML frontmatter definin
 - No `\begin{aligned}` blocks — multi-line derivations use separate `$$...$$` blocks connected by prose. Grep-verify before committing: `grep -nF '\begin{aligned}' <file>.mdx` (the `-F` fixed-string flag avoids regex-escaping the backslash / braces) must return zero hits.
 - Escape `\{` / `\}` in prose MDX — bare `{` and `}` are JSX expression boundaries.
 
-**Cross-reference anchors use `#section-N-X`** (lowercase, single hyphen, no dots — e.g., `/topics/hypothesis-testing#section-17-7`). No rehype-slug plugin is installed; this is a repeated editorial convention, not an auto-generated slug.
+**Cross-reference anchors use `#section-N-X`** (lowercase, single hyphen, no dots — e.g., `/topics/hypothesis-testing#section-17-7`). Astro's auto-slugified h2 IDs (e.g. `221-when-normal-errors-fail`) do NOT match this format — you must add an explicit empty-anchor tag immediately before each `## N.X` header: `<a id="section-N-X"></a>` followed by a blank line, then the heading. See `linear-regression.mdx` lines 190, 282, 330, … for the canonical pattern.
 
 ### Visualization components
 
@@ -170,6 +171,7 @@ formalCalculus → formalStatistics → formalML
 - Assume the reader already knows statistics rigorously — that's what this site teaches
 - Assume knowledge from formalml.com topics — only formalcalculus.com topics may be prerequisites
 - Link to formalml.com topics as prerequisites — only as forward references
+- Create markdown handoff docs for citation updates — the citations spreadsheet at `docs/formalstatistics-citations.xlsx` is updated directly per topic via the `xlsx` skill. The `topic-21-citations-spreadsheet-updates.md` artifact (since deleted) was a one-off mistake; never replicate.
 - **Do not commit, push, or open a PR before visually inspecting the change in the local preview server. See "Visual Inspection Workflow" below.**
 
 ## Visual Inspection Workflow (HARD RULE)
@@ -196,6 +198,9 @@ For any change that affects something a browser would render — MDX topic, Reac
 - **Phantom PNG deletions in `git status`:** Hundreds of PNGs from Topics 1–16 (and earlier) recurrently show as deleted in the working tree due to an iCloud sync artifact on the local filesystem. Files exist in `HEAD` and on the deployed site. **Never** `git add -A` (or `--all`) or `git commit -a` — stage explicit paths only. Before branch switches, stash the tracked-deletions set (`git stash push -m "expected PNG deletions"`) and continue.
 - **Test harness is `tsx`-based, not Jest:** `pnpm test:testing` invokes `tsx src/components/viz/shared/testing.test.ts`. Tests use `check(id, ok, got, want, note)` with `approx(x, y, tol)` for floats. Hand-off briefs sometimes request "Jest tests" — use the existing `check()` pattern instead; the file already has 90+ tests.
 - **References schema gap:** `src/content.config.ts` does not declare `url` / `isbn` / `journal` / `pages` on the references subschema. Astro strips them from `entry.data` — so MDX topics render the `### References` section as a **hand-rolled numbered Markdown list** at the end of the file, matching Topics 17–20. Fixing the schema + building a `References.astro` renderer is deferred tech-debt; until then, hand-roll.
+- **Astro dev-server content-collection cache is sticky.** When adding a NEW MDX topic file (not editing existing), the dev server may keep 404'ing the new route even after the file lands on disk. `pnpm build` works (dist/ is correct); the dev server needs a full restart. Symptom: navigate to the new topic → "404: Not Found" with `getStaticPaths()` warnings in dev-server logs.
+- **PR auto-reviewers**: Copilot and gemini-code-assist bots open inline comments on every PR — triage normally. Expect ~1 false alarm per PR (typically "missing function" for symbols defined elsewhere in the same file — bots only see the diff). Reply via `gh api repos/{owner}/{repo}/pulls/N/comments/{id}/replies` to thread the response (NOT a top-level `gh pr comment`, which orphans the discussion).
+- **Notebook reference values are read from .ipynb cell outputs**, not from JSON exports. Some handoff briefs reference `notebooks/<topic>/data-exports/*.json` files that don't exist — extract values via `grep -B1 -A20 "T<N>\." notebooks/<topic>/<file>.ipynb` to read the printed verification cell directly.
 
 ## Editorial Voice
 
