@@ -513,7 +513,7 @@ We have covered the general case where no additional structure relates the $m$ p
 - **Tukey's HSD** for all pairwise mean differences: exact simultaneous CIs via the studentized range distribution, tighter than Bonferroni when all $\binom{m}{2}$ pairwise contrasts are of interest.
 - **Working–Hotelling** for regression coefficient trajectories: tighter simultaneous bands via the $F$-distribution over a contiguous parameter space.
 
-These are Topic 20's immediate neighbors and are covered in depth in <ExternalLink href="/topics/hypothesis-testing">Track 6</ExternalLink>'s regression material.
+These are Topic 20's immediate neighbors and are covered in depth in [Track 6's regression material](/topics/linear-regression) — §21.8 Rem 16 delivers both Bonferroni-adjusted CIs and Working–Hotelling bands with full F-distribution-based derivations.
 </RemarkBlock>
 
 <RemarkBlock number={24} title="Simultaneous CIs vs the Bonferroni-of-FDR temptation">
@@ -528,7 +528,7 @@ Topic 19 explicitly deferred simultaneous CIs to Topic 20. The construction abov
 
 Track 5 — Hypothesis Testing & Confidence — ends here, 4 topics deep. The next tracks inherit this topic's scaffolding rather than re-derive it:
 
-- **Track 6 (Regression)** uses Bonferroni-adjusted coefficient CIs as the default simultaneous-inference tool and BH for variable selection. F-tests for nested-model comparisons are the closed-testing ancestor of Holm (§20.5 Rem 11).
+- **[Track 6 (Regression)](/topics/linear-regression)** uses Bonferroni-adjusted coefficient CIs (§21.8 Rem 16) as the default simultaneous-inference tool and BH for variable selection. F-tests for nested-model comparisons (§21.8 Thm 9, Example 8) are the closed-testing ancestor of Holm (§20.5 Rem 11).
 - **Track 7 (Bayesian)** contrasts FDR with Bayesian local-FDR (Efron 2010) — the posterior probability that an individual observation is from the null. Bayesian multiplicity reduces to posterior updating; no closed-testing scaffold is required.
 - **Track 8 (High-Dimensional)** builds knockoffs (Barber–Candès 2015) and online FDR (Javanmard–Montanari 2018) directly on top of BH. Every modern multiplicity method traces to §20.7 Thm 5.
 

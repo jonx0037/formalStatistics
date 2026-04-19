@@ -25,7 +25,7 @@
     { "id": "confidence-intervals-and-duality", "label": "Confidence Intervals & Duality", "domain": "hypothesis-testing-confidence", "status": "published", "url": "/topics/confidence-intervals-and-duality" },
     { "id": "multiple-testing-and-false-discovery", "label": "Multiple Testing & False Discovery", "domain": "hypothesis-testing-confidence", "status": "published", "url": "/topics/multiple-testing-and-false-discovery" },
 
-    { "id": "linear-regression", "label": "Simple & Multiple Linear Regression", "domain": "regression-linear-models", "status": "planned", "url": "/topics/linear-regression" },
+    { "id": "linear-regression", "label": "Simple & Multiple Linear Regression", "domain": "regression-linear-models", "status": "published", "url": "/topics/linear-regression" },
     { "id": "generalized-linear-models", "label": "Generalized Linear Models", "domain": "regression-linear-models", "status": "planned", "url": "/topics/generalized-linear-models" },
     { "id": "regularization", "label": "Regularization & Penalized Estimation", "domain": "regression-linear-models", "status": "planned", "url": "/topics/regularization" },
     { "id": "model-selection", "label": "Model Selection & Information Criteria", "domain": "regression-linear-models", "status": "planned", "url": "/topics/model-selection" },

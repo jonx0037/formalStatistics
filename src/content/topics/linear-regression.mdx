@@ -1,0 +1,741 @@
+---
+title: "Simple & Multiple Linear Regression"
+subtitle: "The first conditional model — OLS as orthogonal projection, Gauss–Markov's BLUE property, the Wilks-specialized F-test, and the diagnostic anchors that motivate Topic 22's GLM machinery."
+status: "published"
+difficulty: "intermediate"
+prerequisites:
+  - "likelihood-ratio-tests-and-np"
+  - "sufficient-statistics"
+  - "hypothesis-testing"
+  - "confidence-intervals-and-duality"
+  - "multiple-testing-and-false-discovery"
+  - "multivariate-distributions"
+  - "maximum-likelihood"
+  - "continuous-distributions"
+tags:
+  - "statistics"
+  - "inference"
+  - "regression"
+  - "least-squares"
+  - "ols"
+  - "orthogonal-projection"
+  - "gauss-markov"
+  - "blue"
+  - "hat-matrix"
+  - "leverage"
+  - "cooks-distance"
+  - "f-test"
+  - "partial-f-test"
+  - "anova"
+  - "working-hotelling"
+  - "bonferroni"
+  - "residual-diagnostics"
+  - "anscombe-quartet"
+domain: "regression-linear-models"
+videoId: null
+notebookPath: "notebooks/linear-regression/21_linear_regression.ipynb"
+githubUrl: "https://github.com/jonx0037/formalStatistics/blob/main/src/content/topics/linear-regression.mdx"
+datePublished: 2026-04-19
+estimatedReadTime: 60
+abstract: "Track 5 built the inference framework — tests, CIs, simultaneous control. Track 6 opens by using it on the first *conditional* model: $E[Y \\mid \\mathbf{x}]$ as a linear function of the predictors. §21.1–§21.3 handle simple regression in the scalar-x setting so the geometric picture (residual orthogonal to the column space) emerges cleanly; §21.4 pivots explicitly to matrix form and commits the notation that powers the rest of the topic. The featured result is **Theorem 1 (§21.2): OLS-as-orthogonal-projection** — the unique $\\hat{\\boldsymbol\\beta}$ minimizing $\\|\\mathbf{y} - \\mathbf{X}\\boldsymbol\\beta\\|^2$ is the one whose residual is orthogonal to $\\text{col}(\\mathbf{X})$, proved via Pythagorean uniqueness. The second full proof is **Theorem 6 (§21.6): Gauss–Markov** — OLS is BLUE under zero-mean homoscedastic errors (no Normal assumption needed), with the covariance-expansion argument showing any competing linear-unbiased estimator has variance $\\sigma^2 \\mathbf{D}\\mathbf{D}^\\top \\succeq \\mathbf{0}$ worse. The third is **Theorem 9 (§21.8): F-test-as-Wilks specialization** — a compact derivation that cites Topic 18 Thm 4 (Wilks) and sharpens its asymptotic $\\chi^2_k$ limit to the exact finite-sample $F_{k, n-p-1}$ distribution under Normal errors. One-way ANOVA falls out as Example 9. §21.9 hands diagnostics (Anscombe's punchline that residual plots are irreducible); §21.10 closes with the Track 6 forward map — GLMs (Topic 22), penalization (Topic 23), model selection (Topic 24), Bayesian regression (Track 7), nonparametric regression (Track 8). Scope is the fixed-design Normal linear model with homoscedastic errors; WLS, GLS, HC-robust SEs, ridge/lasso, and mixed effects are explicitly deferred."
+formalcalculusPrereqs:
+  - topic: "inner-products-and-projections"
+    site: "formalcalculus"
+    relationship: "Theorem 1 (OLS-as-orthogonal-projection) is an application of the projection theorem in finite-dimensional inner-product spaces: the unique closest point in $\\text{col}(\\mathbf{X})$ to $\\mathbf{y}$ is the orthogonal projection $\\hat{\\mathbf{y}}$, and the residual $\\mathbf{e} = \\mathbf{y} - \\hat{\\mathbf{y}}$ is orthogonal to every vector in $\\text{col}(\\mathbf{X})$. The Pythagorean decomposition step in Proof 1 uses the same identity $\\|\\mathbf{a} + \\mathbf{b}\\|^2 = \\|\\mathbf{a}\\|^2 + \\|\\mathbf{b}\\|^2$ when $\\mathbf{a} \\perp \\mathbf{b}$."
+  - topic: "quadratic-forms"
+    site: "formalcalculus"
+    relationship: "§21.7 characterizes the hat matrix $\\mathbf{H}$ as an orthogonal projector — idempotent, symmetric, with $\\text{rank}(\\mathbf{H}) = \\text{tr}(\\mathbf{H}) = p + 1$. The spectral decomposition of a symmetric idempotent matrix (eigenvalues $\\in \\{0, 1\\}$) is the calculus-side fact the proof invokes. §21.8 Proof 9 uses Cochran's theorem on quadratic forms in Normal vectors to split $\\text{SSE}_0 - \\text{SSE}_1$ and $\\text{SSE}_1$ into independent $\\chi^2$ components."
+  - topic: "vector-spaces"
+    site: "formalcalculus"
+    relationship: "§21.4's matrix-form pivot rests on linear algebra essentials: $\\mathbf{X}$ is $n \\times (p+1)$, $\\text{col}(\\mathbf{X}) \\subseteq \\mathbb{R}^n$ is a $(p+1)$-dimensional subspace under full rank, and $\\hat{\\mathbf{y}} \\in \\text{col}(\\mathbf{X})$ is the projection. No machinery beyond undergraduate linear algebra is assumed."
+formalmlConnections:
+  - topic: "generalized-linear-models"
+    site: "formalml"
+    relationship: "Topic 22 is the immediate successor — logistic, Poisson, and gamma regression drop the Normal-errors assumption by composing a linear predictor with a link function and fitting via IRLS. The Wald / Score / LRT trio of §18.7 reappears as the three standard GLM inference procedures (deviance, z-tests, score). §21.10 Rem 22 states the bridge."
+  - topic: "feature-engineering"
+    site: "formalml"
+    relationship: "Topic 21's scope boundary in §21.1 Rem 1 (linear in parameters, not in predictors) licenses polynomial basis expansions, interaction terms, and spline features — all of which preserve linearity in $\\boldsymbol\\beta$ and thus preserve Gauss–Markov and the F-test. The forward pointer to Track 8's kernel regression (§21.10 Rem 26) handles the nonparametric case."
+  - topic: "causal-inference-methods"
+    site: "formalml"
+    relationship: "Instrumental variables, difference-in-differences, regression discontinuity — all live in the linear-model framework where OLS + identifying restrictions give unbiased causal estimates. §21.10 Rem 27 points here; the prerequisite is §21.4's matrix form and §21.8's inference machinery."
+  - topic: "high-dimensional-regression"
+    site: "formalml"
+    relationship: "When $p > n$, $\\mathbf{X}^\\top \\mathbf{X}$ is singular and OLS fails. Topic 23 (ridge, lasso) is the Track-6 answer; the high-dimensional theory (double descent, minimax rates) lives at formalml. §21.10 Rem 28 states the forward pointer."
+connections:
+  - topic: "likelihood-ratio-tests-and-np"
+    relationship: "Topic 18 Thm 4 (Wilks, §18.6) is the asymptotic engine of §21.8's F-test. The §18.10 Track 6 promise that 'linear regression's F-test is exactly Wilks' theorem specialized to nested linear models' is the load-bearing forward-pointer this topic discharges: §21.8 Thm 9 states and proves the exact $F_{k, n-p-1}$ distribution under Normal errors as the finite-sample sharpening of Topic 18's $\\chi^2_k$ limit."
+  - topic: "sufficient-statistics"
+    relationship: "Topic 16 §16.12's bullet on Track 6 — OLS as a function of $(\\mathbf{X}^\\top\\mathbf{X}, \\mathbf{X}^\\top\\mathbf{y})$ with Gauss–Markov delivering UMVUE among linear unbiased estimators — is discharged in §21.4 (normal equations expose the sufficient pair) and §21.6 (Gauss–Markov full proof). §21.6 Rem 11 cites Topic 16's Lehmann–Scheffé machinery to upgrade BLUE to UMVUE under Normal errors."
+  - topic: "hypothesis-testing"
+    relationship: "Topic 17 §17.8 Rem 9 promised the F-test's 'natural home' is linear regression; §17.12 named F-tests, partial F-tests, and ANOVA as explicit Track 6 deliverables. §21.8 fulfills all three: Thm 9 (F-test), Example 8 (partial F-test), Example 9 (one-way ANOVA as nested F-test). The t-test machinery of §17.7 is specialized to coefficient inference in §21.8 Def 8."
+  - topic: "confidence-intervals-and-duality"
+    relationship: "Topic 19 Thm 1 (test–CI duality, §19.2) is the scaffold for every coefficient CI in §21.8. Wald-t CIs are inversions of t-tests; profile-likelihood CIs are inversions of LRTs (§21.8 Rem 15, coinciding with Wald-t under Normal errors); simultaneous CIs are inversions of FWER-controlled joint tests (§21.8 Rem 16, citing Topic 20 §20.9)."
+  - topic: "multiple-testing-and-false-discovery"
+    relationship: "Topic 20 §20.9 Thm 8 (simultaneous CIs via Bonferroni inversion) and §20.9 Rem 23 (Working–Hotelling via the F-distribution) are specialized to coefficient trajectories in §21.8 Rem 16. The `CoefficientCIBands` component renders Wald-t, profile-likelihood, and Bonferroni-adjusted intervals side-by-side."
+  - topic: "multivariate-distributions"
+    relationship: "Topic 8 §8.4's conditional MVN formula is the population-level anchor: when $(Y, \\mathbf{X})$ are jointly Normal, $E[Y \\mid \\mathbf{x}]$ is *exactly* a linear function of $\\mathbf{x}$. §21.4 Rem 8 and §21.5 Rem 9 cite this as the 'this is not an approximation' anchor."
+  - topic: "maximum-likelihood"
+    relationship: "Topic 14's MLE machinery specializes in §21.5 Rem 9: OLS = MLE under Normal errors. The normal equations are the score-equation zero of the Normal log-likelihood."
+  - topic: "continuous-distributions"
+    relationship: "Topic 6 introduced Student's t, Snedecor's F, and chi-squared as derived distributions with Track 5–6 forward-pointers. §21.5 (chi-squared for $\\hat\\sigma^2$), §21.8 Def 8 (t for individual coefficients), §21.8 Thm 9 (F for nested models) are the explicit fulfillments."
+references:
+  - type: "book"
+    title: "Testing Statistical Hypotheses"
+    author: "Erich L. Lehmann & Joseph P. Romano"
+    year: 2005
+    edition: "3rd"
+    publisher: "Springer"
+    url: "https://doi.org/10.1007/0-387-27605-X"
+    note: "Cited as LEH2005. Chapters 7–8 are the classical reference for linear hypotheses and the F-test; §7.1 has the exact F-test construction; §7.6 covers simultaneous inference including Working–Hotelling."
+  - type: "book"
+    title: "Statistical Inference"
+    author: "George Casella & Roger L. Berger"
+    year: 2002
+    edition: "2nd"
+    publisher: "Duxbury"
+    note: "Cited as CAS2002. Chapters 11–12 — accessible graduate-level derivations of simple and multiple regression; §11.3 and §12.2 for the Normal-errors distributional theory; §12.4 for Gauss–Markov."
+  - type: "book"
+    title: "Linear Regression Analysis"
+    author: "George A. F. Seber & Alan J. Lee"
+    year: 2003
+    edition: "2nd"
+    publisher: "Wiley"
+    url: "https://onlinelibrary.wiley.com/doi/book/10.1002/9780471722199"
+    note: "Cited as SEB2003. The definitive Normal-linear-model reference; Ch. 3 for Gauss–Markov and the hat matrix, Ch. 4 for the F-test and simultaneous inference, Ch. 10 for diagnostics."
+  - type: "book"
+    title: "Applied Linear Regression"
+    author: "Sanford Weisberg"
+    year: 2005
+    edition: "3rd"
+    publisher: "Wiley"
+    note: "Cited as WEI2005. The canonical undergraduate treatment; §5.1 for leverage and Cook's distance, §8.1–§8.2 for residual-plot diagnostics."
+  - type: "book"
+    title: "Econometric Analysis"
+    author: "William H. Greene"
+    year: 2012
+    edition: "7th"
+    publisher: "Pearson"
+    note: "Cited as GRE2012. Ch. 3–4 for the econometric treatment of OLS; §4.9 on heteroscedasticity and HC-robust SEs — motivates Topic 22's sandwich estimators."
+  - type: "paper"
+    title: "Applications of the Theory of Error to the Interpretation of Trends"
+    author: "Holbrook Working & Harold Hotelling"
+    year: 1929
+    journal: "Journal of the American Statistical Association"
+    volume: "24(165A)"
+    pages: "73–85"
+    url: "https://www.jstor.org/stable/2277011"
+    note: "Cited as WOR1929. The original Working–Hotelling paper establishing the simultaneous confidence band for regression coefficient trajectories via the F-distribution. §21.8 Rem 16 invokes this."
+  - type: "paper"
+    title: "Regression Towards Mediocrity in Hereditary Stature"
+    author: "Francis Galton"
+    year: 1886
+    journal: "Journal of the Anthropological Institute of Great Britain and Ireland"
+    volume: "15"
+    pages: "246–263"
+    url: "https://www.jstor.org/stable/2841583"
+    note: "Cited as GAL1886. The paper that gave regression its name (§21.1 Rem 2)."
+  - type: "book"
+    title: "Theoria Combinationis Observationum Erroribus Minimis Obnoxiae"
+    author: "Carl Friedrich Gauss"
+    year: 1823
+    publisher: "Werke, IV"
+    note: "Cited as GAU1823. Gauss's original 'theory of combinations of observations subject to minimal errors' — the origin of both the least-squares principle and the Gauss–Markov theorem."
+  - type: "book"
+    title: "Wahrscheinlichkeitsrechnung"
+    author: "Andrey A. Markov"
+    year: 1900
+    publisher: "Teubner"
+    note: "Cited as MAR1900. Markov's probabilistic formalization and extension of Gauss's least-squares theorem; the joint Gauss–Markov attribution in §21.6."
+---
+
+import LeastSquaresDraggable from '../../components/viz/LeastSquaresDraggable.tsx';
+import FTestExplorer from '../../components/viz/FTestExplorer.tsx';
+import CoefficientCIBands from '../../components/viz/CoefficientCIBands.tsx';
+import RegressionDiagnosticsExplorer from '../../components/viz/RegressionDiagnosticsExplorer.tsx';
+import DefinitionBlock from '../../components/ui/DefinitionBlock.astro';
+import TheoremBlock from '../../components/ui/TheoremBlock.astro';
+import ProofBlock from '../../components/ui/ProofBlock.astro';
+import ExampleBlock from '../../components/ui/ExampleBlock.astro';
+import RemarkBlock from '../../components/ui/RemarkBlock.astro';
+import ExternalLink from '../../components/ui/ExternalLink.astro';
+
+## 21.1 From Predictions to Lines
+
+Every scatter plot invites a line. A biologist plots height against age and wants to know how growth rate depends on sex. An economist plots a firm's revenue against advertising spend and wants the marginal return. A machine-learning engineer plots validation loss against training-set size and wants to extrapolate. In all three cases the question is the same: given paired observations $(x_1, y_1), \ldots, (x_n, y_n)$, what linear function of $x$ best explains $y$ — and how much of the variation in $y$ is it actually explaining?
+
+<img src="/images/topics/linear-regression/21-simple-regression-motivation.png" alt="Two-panel scatter of height-vs-age data. Left: the OLS line overlaid with residuals drawn as short vertical segments. Right: the same scatter without any line — 'where would you draw it?'" />
+
+The classical answer — **ordinary least squares** (OLS) — picks the line that minimizes the sum of squared vertical distances from each point to the line. That choice is not arbitrary. It has a geometric meaning (the residual vector lies orthogonal to the column space of the design matrix), a probabilistic meaning (it is the maximum-likelihood estimator under Normal errors), and an optimality property (Gauss–Markov: among all linear unbiased estimators, OLS has the smallest variance). Topic 21 builds all three in turn.
+
+<DefinitionBlock number={1} title="Simple linear regression model">
+Given paired data $(x_1, y_1), \ldots, (x_n, y_n)$ with the $x_i$ treated as fixed (non-random), the **simple linear regression model** asserts
+$$
+y_i = \beta_0 + \beta_1 x_i + \epsilon_i, \qquad i = 1, \ldots, n,
+$$
+where $\beta_0, \beta_1 \in \mathbb{R}$ are unknown parameters (the intercept and slope) and the errors $\epsilon_1, \ldots, \epsilon_n$ are random variables with $E[\epsilon_i] = 0$ and $\text{Var}(\epsilon_i) = \sigma^2$ for all $i$. The errors are assumed uncorrelated: $\text{Cov}(\epsilon_i, \epsilon_j) = 0$ for $i \neq j$.
+</DefinitionBlock>
+
+<ExampleBlock number={1} title="Galton's height data and the origin of 'regression'">
+Galton's 1886 study of hereditary stature plotted adult-child height against mid-parent height and found the regression line's slope was less than 1 — tall parents tended to have tall children, but on average *less tall* than the parents. He called this "regression toward mediocrity" (later softened to "regression toward the mean"). Figure 1 shows the Galton-style scatter; the fit line has slope $\approx 0.65$, cutting through the 45° line at the sample mean. The vertical segments are residuals — the part of each child's height unexplained by the parental-height linear model.
+</ExampleBlock>
+
+<RemarkBlock number={1} title="'Linear' means linear-in-parameters, not linear-in-predictors">
+The model $y_i = \beta_0 + \beta_1 x_i^2 + \beta_2 \log x_i + \epsilon_i$ is a linear regression: the response depends linearly on the unknown parameters $(\beta_0, \beta_1, \beta_2)$, even though $x_i^2$ and $\log x_i$ are nonlinear transformations of the predictor. The matrix form $\mathbf{y} = \mathbf{X}\boldsymbol\beta + \boldsymbol\epsilon$ of §21.4 accommodates any such design matrix. What this topic does *not* cover is **nonlinear regression** — models like $y_i = \beta_0 e^{-\beta_1 x_i} + \epsilon_i$ where $\boldsymbol\beta$ enters nonlinearly. Those require iterative fitting (Gauss–Newton, Levenberg–Marquardt) and belong to Topic 22 or later.
+</RemarkBlock>
+
+<RemarkBlock number={2} title="Historical note — Galton's etymology">
+The word "regression" comes from Galton's 1886 observation. A century earlier, Legendre (1805) and Gauss (1809, GAU1823) had introduced least squares for astronomical-orbit estimation. The two traditions — Galton's statistical "regression toward the mean" and Gauss's computational least-squares — merged into the modern discipline in the early 20th century, with Fisher's 1922 foundational paper on estimation theory providing the bridge.
+</RemarkBlock>
+
+<a id="section-21-2"></a>
+
+## 21.2 The Least-Squares Criterion
+
+What does "best fit" mean? OLS picks the line that minimizes the **sum of squared residuals**. For simple regression:
+
+<DefinitionBlock number={2} title="Sum of squared residuals (OLS objective)">
+Given data $(x_1, y_1), \ldots, (x_n, y_n)$, the **sum-of-squared-residuals** loss is
+$$
+L(\beta_0, \beta_1) = \sum_{i=1}^n (y_i - \beta_0 - \beta_1 x_i)^2.
+$$
+The **OLS estimator** $(\hat\beta_0, \hat\beta_1)$ is the minimizer of $L$ over $\mathbb{R}^2$.
+</DefinitionBlock>
+
+Squared loss is not the only option — absolute deviation (LAD / quantile regression) and Huber loss are standard alternatives — but OLS has three properties its competitors lack, and one of them is the featured theorem of this topic.
+
+<TheoremBlock number={1} title="OLS as orthogonal projection (featured)">
+In the simple-regression setup, let $\hat{\mathbf{y}} = \hat\beta_0 \mathbf{1} + \hat\beta_1 \mathbf{x}$ denote the fitted values (vectors in $\mathbb{R}^n$). The OLS solution $(\hat\beta_0, \hat\beta_1)$ is the unique pair for which the **residual vector** $\mathbf{e} = \mathbf{y} - \hat{\mathbf{y}}$ satisfies
+
+$$
+\mathbf{1}^\top \mathbf{e} = 0, \qquad \mathbf{x}^\top \mathbf{e} = 0.
+$$
+
+Equivalently, $\mathbf{e}$ is orthogonal to the column space $\text{col}(\mathbf{1}, \mathbf{x}) \subseteq \mathbb{R}^n$, and $\hat{\mathbf{y}}$ is the orthogonal projection of $\mathbf{y}$ onto that subspace. The OLS solution is unique whenever $\mathbf{x}$ is not constant.
+</TheoremBlock>
+
+<ProofBlock title="Proof 1 — OLS as orthogonal projection">
+**Setup.** Let $L(\boldsymbol\beta) = \|\mathbf{y} - \mathbf{X}\boldsymbol\beta\|^2$ with $\mathbf{X} = [\mathbf{1}, \mathbf{x}]$ the $n \times 2$ design matrix. $L$ is a positive-semidefinite quadratic form in $\boldsymbol\beta$, so a minimizer $\hat{\boldsymbol\beta}$ exists by continuity and coercivity.
+
+**First-order condition.** Expanding $L(\boldsymbol\beta) = \mathbf{y}^\top \mathbf{y} - 2 \boldsymbol\beta^\top \mathbf{X}^\top \mathbf{y} + \boldsymbol\beta^\top \mathbf{X}^\top \mathbf{X} \boldsymbol\beta$ and differentiating,
+
+$$
+\nabla_{\boldsymbol\beta} L(\boldsymbol\beta) = -2 \mathbf{X}^\top (\mathbf{y} - \mathbf{X} \boldsymbol\beta).
+$$
+
+Setting the gradient to zero at $\hat{\boldsymbol\beta}$ yields the **normal equations**
+
+$$
+\mathbf{X}^\top (\mathbf{y} - \mathbf{X} \hat{\boldsymbol\beta}) = \mathbf{0}.
+$$
+
+**Geometric reading.** The normal equations say the residual $\mathbf{e} = \mathbf{y} - \mathbf{X} \hat{\boldsymbol\beta}$ is orthogonal to every column of $\mathbf{X}$, hence to every vector in the column space $\text{col}(\mathbf{X})$. Since $\hat{\mathbf{y}} = \mathbf{X} \hat{\boldsymbol\beta}$ lies in $\text{col}(\mathbf{X})$, we have decomposed $\mathbf{y} = \hat{\mathbf{y}} + \mathbf{e}$ with $\hat{\mathbf{y}} \in \text{col}(\mathbf{X})$ and $\mathbf{e} \perp \text{col}(\mathbf{X})$ — the defining property of the orthogonal projection onto $\text{col}(\mathbf{X})$. Figure 2 renders the picture.
+
+<img src="/images/topics/linear-regression/21-orthogonal-projection.png" alt="3D schematic. The column space of X is drawn as a tilted plane through the origin. The vector y extends above the plane. The fitted vector ŷ = X β̂ is the perpendicular projection of y onto the plane. The residual vector e = y − ŷ is the perpendicular segment from ŷ up to y. Labels: 'col(X)', 'y', 'ŷ = X β̂', 'e ⊥ col(X)'." />
+
+**Uniqueness via Pythagoras.** For any alternative $\boldsymbol\beta^\ast \in \mathbb{R}^{p+1}$, write $\mathbf{X} \boldsymbol\beta^\ast = \mathbf{X} \hat{\boldsymbol\beta} - \mathbf{X}(\hat{\boldsymbol\beta} - \boldsymbol\beta^\ast)$. Then
+
+$$
+\|\mathbf{y} - \mathbf{X} \boldsymbol\beta^\ast\|^2 = \|(\mathbf{y} - \mathbf{X} \hat{\boldsymbol\beta}) + \mathbf{X}(\hat{\boldsymbol\beta} - \boldsymbol\beta^\ast)\|^2.
+$$
+
+The two summands on the right are orthogonal: $\mathbf{y} - \mathbf{X}\hat{\boldsymbol\beta}$ is the residual and $\mathbf{X}(\hat{\boldsymbol\beta} - \boldsymbol\beta^\ast) \in \text{col}(\mathbf{X})$, so the cross term vanishes. By Pythagoras,
+
+$$
+\|\mathbf{y} - \mathbf{X} \boldsymbol\beta^\ast\|^2 = \|\mathbf{y} - \mathbf{X} \hat{\boldsymbol\beta}\|^2 + \|\mathbf{X}(\hat{\boldsymbol\beta} - \boldsymbol\beta^\ast)\|^2.
+$$
+
+Hence $L(\boldsymbol\beta^\ast) \geq L(\hat{\boldsymbol\beta})$, with equality iff $\mathbf{X}(\hat{\boldsymbol\beta} - \boldsymbol\beta^\ast) = \mathbf{0}$. When $\mathbf{X}$ has full column rank (the simple-regression case when $\mathbf{x}$ is non-constant), this forces $\boldsymbol\beta^\ast = \hat{\boldsymbol\beta}$. ∎ — using positive-definite quadratic minimization and uniqueness of orthogonal projection onto a closed subspace
+</ProofBlock>
+
+Solving the normal equations in the simple-regression case gives the closed form
+
+$$
+\hat\beta_1 = \frac{\sum_{i=1}^n (x_i - \bar x)(y_i - \bar y)}{\sum_{i=1}^n (x_i - \bar x)^2}, \qquad \hat\beta_0 = \bar y - \hat\beta_1 \bar x.
+$$
+
+<img src="/images/topics/linear-regression/21-residuals-geometry.png" alt="Two-panel. Left: a scatter with the fitted OLS line and signed residual segments drawn vertically above and below the line. Right: a bar chart of the residuals in observation order, showing sum-to-zero and the symmetry enforced by the normal equations." />
+
+<ExampleBlock number={2} title="Five-point worked example">
+Take the data $\mathbf{x} = (1, 2, 3, 4, 5)$, $\mathbf{y} = (1.2, 1.9, 3.3, 4.1, 5.0)$. Then $\bar x = 3$, $\bar y = 3.1$, $\sum (x_i - \bar x)^2 = 10$, $\sum (x_i - \bar x)(y_i - \bar y) = 9.6$, so
+
+$$
+\hat\beta_1 = \frac{9.6}{10} = 0.96, \qquad \hat\beta_0 = 3.1 - 0.96 \cdot 3 = 0.22.
+$$
+
+The fitted line $\hat y = 0.22 + 0.96 x$ produces residuals $(0.02, -0.24, 0.20, -0.04, 0.02)$, which sum to $-0.04$ (≈ 0, the small numerical residual from finite arithmetic) and have the signature of an OLS fit: one-half positive, one-half negative, approximately centered on zero.
+</ExampleBlock>
+
+<LeastSquaresDraggable client:visible />
+
+<RemarkBlock number={3} title="Why squared loss?">
+Three reasons, in order of historical importance. (1) **Analytic tractability**: squared loss is differentiable and convex, so the minimizer has a closed form via the normal equations. Absolute-deviation loss is neither — LAD requires iterative linear programming or specialized algorithms. (2) **Normal-errors connection**: under Gaussian $\epsilon_i$, OLS coincides with the MLE (see §21.5 Rem 9). (3) **Optimality certificate**: Gauss–Markov (§21.6) shows OLS is BLUE under second-order assumptions — no competitor in the linear-unbiased class beats it on variance. The forward-pointer cost is sensitivity to outliers: squared loss magnifies large residuals quadratically, so one bad observation can swing the fit. Topic 15's M-estimators (Huber, Tukey) trade some of Gauss–Markov's optimality for robustness; the forward pointer in §21.9 Rem 20 states this explicitly.
+</RemarkBlock>
+
+<RemarkBlock number={4} title="OLS equals the MLE under Normal errors (teaser)">
+If we add the stronger assumption $\epsilon_i \overset{\text{iid}}{\sim} \mathcal{N}(0, \sigma^2)$, the log-likelihood is
+$$
+\log L(\beta_0, \beta_1, \sigma^2) = -\tfrac{n}{2} \log(2\pi\sigma^2) - \tfrac{1}{2\sigma^2} \sum (y_i - \beta_0 - \beta_1 x_i)^2.
+$$
+Maximizing over $(\beta_0, \beta_1)$ for any fixed $\sigma^2$ is identical to minimizing the sum of squared residuals — OLS and MLE pick the same $(\hat\beta_0, \hat\beta_1)$. Full treatment in §21.5 Rem 9 via [Topic 14's MLE machinery](/topics/maximum-likelihood).
+</RemarkBlock>
+
+<a id="section-21-3"></a>
+
+## 21.3 Properties of Simple OLS
+
+With the OLS estimator in hand, we can ask: how well does $\hat\beta_1$ recover the true $\beta_1$? What fraction of variation in $y$ does the fitted line explain? These are the first questions a practitioner asks, and their answers set up the inferential machinery of §21.5 and §21.8.
+
+<DefinitionBlock number={3} title="Fitted values, residuals, and $R^2$">
+Given OLS estimates $(\hat\beta_0, \hat\beta_1)$, define
+$$
+\hat y_i = \hat\beta_0 + \hat\beta_1 x_i \qquad \text{(fitted values)},
+$$
+$$
+e_i = y_i - \hat y_i \qquad \text{(residuals)},
+$$
+$$
+\text{SSE} = \sum_{i=1}^n e_i^2, \qquad \text{SST} = \sum_{i=1}^n (y_i - \bar y)^2, \qquad \text{SSR} = \text{SST} - \text{SSE}.
+$$
+The **coefficient of determination** is $R^2 = 1 - \text{SSE}/\text{SST} = \text{SSR}/\text{SST}$, interpreted as the fraction of total variation in $y$ explained by the linear fit.
+</DefinitionBlock>
+
+<TheoremBlock number={2} title="Unbiasedness and variance of the simple-regression slope">
+Under Definition 1 (fixed $x_i$, zero-mean uncorrelated errors with common variance $\sigma^2$),
+
+$$
+E[\hat\beta_1] = \beta_1, \qquad \text{Var}(\hat\beta_1) = \frac{\sigma^2}{\sum_{i=1}^n (x_i - \bar x)^2}.
+$$
+</TheoremBlock>
+
+**Brief derivation.** Substituting $y_i = \beta_0 + \beta_1 x_i + \epsilon_i$ into the closed form,
+
+$$
+\hat\beta_1 = \frac{\sum (x_i - \bar x)(y_i - \bar y)}{\sum (x_i - \bar x)^2} = \beta_1 + \frac{\sum (x_i - \bar x) \epsilon_i}{\sum (x_i - \bar x)^2}.
+$$
+
+(The $\beta_0$ and $\bar x \bar\epsilon$ terms cancel because $\sum (x_i - \bar x) = 0$.) Taking expectations: $E[\hat\beta_1] = \beta_1 + 0 = \beta_1$. The variance: $\text{Var}(\hat\beta_1) = \frac{\sum (x_i - \bar x)^2 \sigma^2}{[\sum (x_i - \bar x)^2]^2} = \sigma^2 / \sum (x_i - \bar x)^2$. ∎
+
+<ExampleBlock number={3} title="A 95% CI for the slope">
+Continuing Example 2 with $\sigma$ assumed known for illustration at $\sigma = 0.3$: $\sum (x_i - \bar x)^2 = 10$, so $\text{SE}(\hat\beta_1) = 0.3 / \sqrt{10} \approx 0.095$. A 95% Wald CI for $\beta_1$ is $0.96 \pm 1.96 \cdot 0.095 = (0.77, 1.15)$. In practice $\sigma$ is unknown and we plug in $\hat\sigma$ with a t-distribution critical value — see §21.8. The [test–CI duality](/topics/confidence-intervals-and-duality#section-19-2) of Topic 19 tells us this CI is exactly the set of $\beta_1$ values a two-sided level-0.05 t-test would not reject.
+</ExampleBlock>
+
+<RemarkBlock number={5} title="$R^2$ interpretation and its limitations">
+$R^2$ is the fraction of $y$-variance captured by the linear fit. $R^2 = 1$ means perfect fit; $R^2 = 0$ means the fit is no better than the constant $\bar y$. Two caveats. **First**, $R^2$ always increases when predictors are added (the enlarged column space cannot shrink the projection's accuracy), so it is useless as a model-comparison tool across models of different dimension. The **adjusted $R^2$**, $1 - (1 - R^2)(n - 1)/(n - p - 1)$, penalizes for predictor count but is still ad hoc; principled model selection lives in [Topic 24 AIC/BIC/CV](/topics/model-selection). **Second**, high $R^2$ does not imply the model is *correct* — the Anscombe quartet of Example 10 exhibits $R^2 \approx 0.67$ for four datasets with wildly different residual structures, only one of which is actually well-modeled by a line. Residual diagnostics (§21.9) are non-negotiable.
+</RemarkBlock>
+
+<RemarkBlock number={6} title="Correlation and regression share arithmetic but answer different questions">
+The sample Pearson correlation $r = \sum (x_i - \bar x)(y_i - \bar y) / \sqrt{\sum (x_i - \bar x)^2 \sum (y_i - \bar y)^2}$ is related to the slope by $\hat\beta_1 = r \cdot s_y / s_x$ and to $R^2$ by $r^2 = R^2$ (in simple regression). But correlation is **symmetric** ($r(x, y) = r(y, x)$) while regression is **directional** — the slope of $y$ on $x$ is not the reciprocal of the slope of $x$ on $y$ unless $r = \pm 1$. Regression asks "how does $E[Y \mid x]$ depend on $x$?", a conditional-expectation question; correlation asks "how much do $x$ and $y$ co-vary?", a joint-distribution question.
+</RemarkBlock>
+
+<a id="section-21-4"></a>
+
+## 21.4 The Matrix Form
+
+Simple regression ($p = 1$, single predictor) is the pedagogical on-ramp; the real payoff is multiple regression with $p$ predictors plus an intercept. The matrix form unifies every result from §21.2–§21.3 into a single geometric picture that generalizes without change.
+
+> **Notation.** Throughout this topic and Track 6, we use **column vectors by default**: $\mathbf{y}, \boldsymbol\beta, \hat{\boldsymbol\beta}, \boldsymbol\epsilon, \mathbf{x}_i$ are column vectors; their transposes are row vectors. Transposes are written $\mathbf{X}^\top$ (not $\mathbf{X}'$). Vectors are bold lowercase; matrices are bold uppercase. The sample size is $n$; $p$ denotes the number of **non-intercept predictors**, so the design matrix $\mathbf{X}$ is $n \times (p+1)$ with a leading column of ones, and the residual-degrees-of-freedom is $n - p - 1$. Inner products are $\mathbf{u}^\top \mathbf{v}$; $\|\mathbf{v}\|^2 = \mathbf{v}^\top \mathbf{v}$. For $\mathbf{A}$ symmetric positive-semidefinite we write $\mathbf{A} \succeq \mathbf{0}$; $\mathbf{A} \succeq \mathbf{B}$ means $\mathbf{A} - \mathbf{B}$ is PSD.
+
+<DefinitionBlock number={4} title="Design matrix, parameter vector, error vector">
+Given $n$ observations with $p$ non-intercept predictors, the **design matrix** $\mathbf{X}$ is $n \times (p + 1)$ with a leading column of ones and $i$-th row $(1, x_{i1}, \ldots, x_{ip})$. The **parameter vector** $\boldsymbol\beta = (\beta_0, \beta_1, \ldots, \beta_p)^\top \in \mathbb{R}^{p+1}$ collects intercept and slopes. The **error vector** $\boldsymbol\epsilon = (\epsilon_1, \ldots, \epsilon_n)^\top \in \mathbb{R}^n$ has $E[\boldsymbol\epsilon] = \mathbf{0}$ and $\text{Cov}(\boldsymbol\epsilon) = \sigma^2 \mathbf{I}_n$. The **linear regression model** is
+$$
+\mathbf{y} = \mathbf{X} \boldsymbol\beta + \boldsymbol\epsilon.
+$$
+</DefinitionBlock>
+
+<TheoremBlock number={3} title="Normal equations">
+Assuming $\mathbf{X}$ has full column rank $p + 1$, the OLS estimator minimizing $L(\boldsymbol\beta) = \|\mathbf{y} - \mathbf{X} \boldsymbol\beta\|^2$ is the unique solution to the **normal equations**
+$$
+\mathbf{X}^\top \mathbf{X} \hat{\boldsymbol\beta} = \mathbf{X}^\top \mathbf{y},
+$$
+explicitly given by $\hat{\boldsymbol\beta} = (\mathbf{X}^\top \mathbf{X})^{-1} \mathbf{X}^\top \mathbf{y}$.
+</TheoremBlock>
+
+**Brief derivation.** Differentiating $L(\boldsymbol\beta) = \|\mathbf{y} - \mathbf{X}\boldsymbol\beta\|^2$ and setting the gradient to zero gives $-2 \mathbf{X}^\top (\mathbf{y} - \mathbf{X}\boldsymbol\beta) = \mathbf{0}$, i.e., $\mathbf{X}^\top \mathbf{X} \boldsymbol\beta = \mathbf{X}^\top \mathbf{y}$. Full column rank makes $\mathbf{X}^\top \mathbf{X}$ invertible, so the solution is unique. Proof 1 of §21.2 verified that this critical point is the global minimum via Pythagorean uniqueness. ∎
+
+<img src="/images/topics/linear-regression/21-matrix-form.png" alt="Two-panel. Left: block diagram of a 5×3 design matrix X with an intercept column of ones, two predictor columns, paired with a 3-vector β and a 5-vector y in the equation y = Xβ + ε. Right: a 3×3 matrix Xᵀ X with its entries labeled (n, Σx_{i1}, Σx_{i1}², etc.) showing the sufficient-statistic structure that Topic 16 anticipated." />
+
+<ExampleBlock number={4} title="Recovering the scalar formulas">
+For simple regression ($p = 1$, so $\mathbf{X}$ has columns $(\mathbf{1}, \mathbf{x})$):
+$$
+\mathbf{X}^\top \mathbf{X} = \begin{pmatrix} n & \sum x_i \\ \sum x_i & \sum x_i^2 \end{pmatrix}, \qquad \mathbf{X}^\top \mathbf{y} = \begin{pmatrix} \sum y_i \\ \sum x_i y_i \end{pmatrix}.
+$$
+Solving $\mathbf{X}^\top \mathbf{X} \hat{\boldsymbol\beta} = \mathbf{X}^\top \mathbf{y}$ by hand (apply the $2 \times 2$ matrix inverse) reproduces
+$$
+\hat\beta_1 = \frac{\sum (x_i - \bar x)(y_i - \bar y)}{\sum (x_i - \bar x)^2}, \qquad \hat\beta_0 = \bar y - \hat\beta_1 \bar x,
+$$
+matching §21.3. The sufficient pair $(\mathbf{X}^\top \mathbf{X}, \mathbf{X}^\top \mathbf{y})$ is all the data tells OLS — no other aspect of $(\mathbf{x}, \mathbf{y})$ matters for the point estimate. This discharges the bullet in [Topic 16 §16.12](/topics/sufficient-statistics#section-16-12): OLS is a function of a Normal-linear-model sufficient statistic.
+</ExampleBlock>
+
+<RemarkBlock number={7} title="Full column rank is necessary">
+$(\mathbf{X}^\top \mathbf{X})^{-1}$ exists if and only if $\mathbf{X}$ has full column rank $p + 1$ — equivalently, no predictor is a linear combination of the others. When this fails (**perfect collinearity**), the normal equations have infinitely many solutions and OLS is undefined. In practice even near-collinearity (**multicollinearity**) destabilizes $\hat{\boldsymbol\beta}$: variances inflate, standard errors explode, individual coefficients become uninterpretable. The classical diagnostic is the **variance inflation factor** (VIF); the classical remedy is ridge regression ([Topic 23](/topics/regularization)). For Topic 21 we assume full column rank throughout.
+</RemarkBlock>
+
+<RemarkBlock number={8} title="Connection to conditional MVN — 'this is not an approximation'">
+When $(Y, \mathbf{X})$ are jointly multivariate Normal with mean $(\mu_Y, \boldsymbol\mu_X)$ and covariance $\begin{pmatrix} \sigma_Y^2 & \boldsymbol\Sigma_{YX} \\ \boldsymbol\Sigma_{XY} & \boldsymbol\Sigma_{XX} \end{pmatrix}$, [Topic 8 §8.4](/topics/multivariate-distributions#section-8-4) shows the conditional expectation is exactly linear:
+$$
+E[Y \mid \mathbf{X} = \mathbf{x}] = \mu_Y + \boldsymbol\Sigma_{YX} \boldsymbol\Sigma_{XX}^{-1} (\mathbf{x} - \boldsymbol\mu_X).
+$$
+So for jointly Normal data, multiple regression is not an approximation — it recovers the population regression line exactly. For non-Normal data, OLS is fitting the *best linear approximation* to $E[Y \mid \mathbf{X}]$ in mean-squared-error, which may or may not be the true conditional mean. The Gauss–Markov theorem (§21.6) handles the "best" part; Rem 11 under Normality promotes it to "unique UMVUE."
+</RemarkBlock>
+
+<a id="section-21-5"></a>
+
+## 21.5 Distributional Theory under Normal Errors
+
+Gauss–Markov does not require Normal errors — only zero mean, uncorrelated, common variance. But for *exact* distributional statements — t-tests for individual coefficients, F-tests for nested models, confidence intervals — we need more. The standard additional assumption is Normality.
+
+<DefinitionBlock number={5} title="Normal linear model">
+The **Normal linear model** extends Definition 4 with the distributional assumption
+$$
+\boldsymbol\epsilon \sim \mathcal{N}_n(\mathbf{0}, \sigma^2 \mathbf{I}_n),
+$$
+i.e., the errors are iid $\mathcal{N}(0, \sigma^2)$. The design matrix $\mathbf{X}$ remains fixed (non-random).
+</DefinitionBlock>
+
+<TheoremBlock number={4} title="Sampling distribution of OLS">
+Under Definition 5 (Normal linear model, full column rank),
+$$
+\hat{\boldsymbol\beta} \sim \mathcal{N}_{p+1}\bigl(\boldsymbol\beta, \sigma^2 (\mathbf{X}^\top \mathbf{X})^{-1}\bigr).
+$$
+</TheoremBlock>
+
+**Brief derivation.** $\hat{\boldsymbol\beta} = (\mathbf{X}^\top \mathbf{X})^{-1} \mathbf{X}^\top \mathbf{y}$ is a linear combination of $\mathbf{y}$, which is multivariate Normal under the Normal linear model. Linear combinations of MVN vectors are MVN, so $\hat{\boldsymbol\beta}$ is MVN with mean $(\mathbf{X}^\top \mathbf{X})^{-1} \mathbf{X}^\top E[\mathbf{y}] = (\mathbf{X}^\top \mathbf{X})^{-1} \mathbf{X}^\top \mathbf{X} \boldsymbol\beta = \boldsymbol\beta$ and covariance $(\mathbf{X}^\top \mathbf{X})^{-1} \mathbf{X}^\top \text{Cov}(\mathbf{y}) \mathbf{X} (\mathbf{X}^\top \mathbf{X})^{-1} = \sigma^2 (\mathbf{X}^\top \mathbf{X})^{-1}$. ∎
+
+<TheoremBlock number={5} title="Independence of OLS and variance estimator; $\chi^2$ distribution of the SSE">
+Under the Normal linear model, let $\hat\sigma^2 = \text{SSE} / (n - p - 1)$. Then
+
+$$
+\hat{\boldsymbol\beta} \perp\!\!\!\perp \hat\sigma^2, \qquad \frac{(n - p - 1) \hat\sigma^2}{\sigma^2} \sim \chi^2_{n - p - 1}.
+$$
+</TheoremBlock>
+
+**Brief derivation.** Write $\hat{\boldsymbol\beta} - \boldsymbol\beta = (\mathbf{X}^\top \mathbf{X})^{-1} \mathbf{X}^\top \boldsymbol\epsilon$ and $\mathbf{e} = (\mathbf{I} - \mathbf{H}) \boldsymbol\epsilon$ where $\mathbf{H} = \mathbf{X}(\mathbf{X}^\top \mathbf{X})^{-1} \mathbf{X}^\top$ is the hat matrix (§21.7). Both are linear functions of $\boldsymbol\epsilon$; their cross-covariance is
+$$
+\text{Cov}(\hat{\boldsymbol\beta} - \boldsymbol\beta, \mathbf{e}) = (\mathbf{X}^\top \mathbf{X})^{-1} \mathbf{X}^\top \sigma^2 \mathbf{I}_n (\mathbf{I} - \mathbf{H})^\top = \sigma^2 (\mathbf{X}^\top \mathbf{X})^{-1} \mathbf{X}^\top (\mathbf{I} - \mathbf{H}) = \mathbf{0}
+$$
+because $\mathbf{X}^\top (\mathbf{I} - \mathbf{H}) = \mathbf{X}^\top - \mathbf{X}^\top \mathbf{H} = \mathbf{X}^\top - \mathbf{X}^\top = \mathbf{0}$ (the defining property of the hat matrix). Uncorrelated Normal vectors are independent, so $\hat{\boldsymbol\beta} \perp\!\!\!\perp \mathbf{e}$, hence $\hat{\boldsymbol\beta} \perp\!\!\!\perp \hat\sigma^2 = \|\mathbf{e}\|^2 / (n - p - 1)$.
+
+For the $\chi^2$ distribution: $\text{SSE} = \boldsymbol\epsilon^\top (\mathbf{I} - \mathbf{H}) \boldsymbol\epsilon$. The matrix $\mathbf{I} - \mathbf{H}$ is symmetric idempotent with rank $n - p - 1$ (see §21.7 Thm 7). A symmetric idempotent quadratic form in iid $\mathcal{N}(0, \sigma^2)$ entries is $\sigma^2 \cdot \chi^2_r$ where $r$ is the rank — this is a classical application of the Fisher–Cochran decomposition, cited from [Topic 16 Ex 21](/topics/sufficient-statistics#section-16-11). Hence $\text{SSE} / \sigma^2 \sim \chi^2_{n-p-1}$. ∎
+
+<img src="/images/topics/linear-regression/21-sampling-distribution-beta.png" alt="Two-panel. Left: MC histogram of β̂_1 from 5000 simulations at n=50, p=1, β_1=2, σ=1, overlaid with the theoretical Normal density — a tight match. Right: joint scatter of (β̂_0, β̂_1) across simulations with a 95% elliptical confidence contour showing the (XᵀX)⁻¹ correlation structure." />
+
+<RemarkBlock number={9} title="OLS is the MLE under Normal errors">
+The Normal log-likelihood is $\ell(\boldsymbol\beta, \sigma^2) = -\frac{n}{2} \log(2\pi\sigma^2) - \frac{1}{2\sigma^2} \|\mathbf{y} - \mathbf{X}\boldsymbol\beta\|^2$. For any $\sigma^2 > 0$, the $\boldsymbol\beta$ that maximizes $\ell$ is the one that minimizes $\|\mathbf{y} - \mathbf{X}\boldsymbol\beta\|^2$ — exactly the OLS problem. So $\hat{\boldsymbol\beta}_{\text{MLE}} = \hat{\boldsymbol\beta}_{\text{OLS}}$. The MLE of $\sigma^2$ is $\text{SSE}/n$ (biased downward by a factor $(n-p-1)/n$); the unbiased $\hat\sigma^2$ of Theorem 5 divides by $n - p - 1$ instead. See [Topic 14](/topics/maximum-likelihood) for the general MLE framework.
+</RemarkBlock>
+
+<RemarkBlock number={10} title="The pivotal quantity for coefficient inference">
+Combining Theorems 4 and 5: for each coefficient $j$,
+$$
+\frac{\hat\beta_j - \beta_j}{\sqrt{\hat\sigma^2 [(\mathbf{X}^\top \mathbf{X})^{-1}]_{jj}}} \sim t_{n - p - 1}.
+$$
+The numerator is $\mathcal{N}(0, \sigma^2 [(\mathbf{X}^\top \mathbf{X})^{-1}]_{jj})$; the denominator is $\sqrt{\sigma^2 \chi^2_{n-p-1} / (n-p-1)}$, independent of the numerator. Their ratio is Student's $t_{n-p-1}$. This **pivotal quantity** is the foundation of §21.8's confidence intervals and hypothesis tests — the direct inheritor of [Topic 17 §17.7](/topics/hypothesis-testing#section-17-7)'s one-sample t-test.
+</RemarkBlock>
+
+<a id="section-21-6"></a>
+
+## 21.6 The Gauss–Markov Theorem
+
+OLS is unbiased and has a tractable sampling distribution. Is it also *good*? Gauss and Markov together answer: among all linear unbiased estimators of $\boldsymbol\beta$, OLS has the smallest variance. This optimality certificate is the second pillar of the topic, and — unlike the distributional results of §21.5 — it does not require Normality.
+
+<DefinitionBlock number={6} title="Best Linear Unbiased Estimator (BLUE)">
+An estimator $\tilde{\boldsymbol\beta} = \mathbf{C} \mathbf{y}$ is a **linear estimator** of $\boldsymbol\beta$. It is **unbiased** if $E[\tilde{\boldsymbol\beta}] = \boldsymbol\beta$ for all $\boldsymbol\beta \in \mathbb{R}^{p+1}$ — equivalently, $\mathbf{C} \mathbf{X} = \mathbf{I}_{p+1}$. Among all linear unbiased estimators, the **Best Linear Unbiased Estimator (BLUE)** is the one with the smallest covariance matrix in the PSD sense: $\text{Cov}(\tilde{\boldsymbol\beta}) - \text{Cov}(\hat{\boldsymbol\beta}) \succeq \mathbf{0}$ for every competing $\tilde{\boldsymbol\beta}$.
+</DefinitionBlock>
+
+<TheoremBlock number={6} title="Gauss–Markov">
+Under Definition 4 (the linear regression model with $E[\boldsymbol\epsilon] = \mathbf{0}$, $\text{Cov}(\boldsymbol\epsilon) = \sigma^2 \mathbf{I}_n$, full column rank $\mathbf{X}$) — *without any Normality assumption* — the OLS estimator $\hat{\boldsymbol\beta} = (\mathbf{X}^\top \mathbf{X})^{-1} \mathbf{X}^\top \mathbf{y}$ is BLUE.
+</TheoremBlock>
+
+<ProofBlock title="Proof 6 — Gauss–Markov">
+**Setup.** Assume $E[\boldsymbol\epsilon] = \mathbf{0}$, $\text{Cov}(\boldsymbol\epsilon) = \sigma^2 \mathbf{I}_n$. No Normal assumption.
+
+**Linear form.** Any linear estimator of $\boldsymbol\beta$ has the form $\tilde{\boldsymbol\beta} = \mathbf{C} \mathbf{y}$ for some $(p+1) \times n$ matrix $\mathbf{C}$.
+
+**Unbiasedness constraint.** $E[\tilde{\boldsymbol\beta}] = \mathbf{C} E[\mathbf{y}] = \mathbf{C} \mathbf{X} \boldsymbol\beta$. For this to equal $\boldsymbol\beta$ for every $\boldsymbol\beta \in \mathbb{R}^{p+1}$, we need
+
+$$
+\mathbf{C} \mathbf{X} = \mathbf{I}_{p+1}.
+$$
+
+**Decomposition.** Write $\mathbf{C} = (\mathbf{X}^\top \mathbf{X})^{-1} \mathbf{X}^\top + \mathbf{D}$ for some $(p+1) \times n$ matrix $\mathbf{D}$. The unbiasedness constraint becomes
+
+$$
+\mathbf{I} = \mathbf{C} \mathbf{X} = (\mathbf{X}^\top \mathbf{X})^{-1} \mathbf{X}^\top \mathbf{X} + \mathbf{D} \mathbf{X} = \mathbf{I} + \mathbf{D} \mathbf{X},
+$$
+
+so $\mathbf{D} \mathbf{X} = \mathbf{0}$. This is the load-bearing identity.
+
+**Covariance expansion.** The covariance of a linear estimator is $\text{Cov}(\mathbf{C} \mathbf{y}) = \mathbf{C} \text{Cov}(\mathbf{y}) \mathbf{C}^\top = \sigma^2 \mathbf{C} \mathbf{C}^\top$. Expanding:
+
+$$
+\mathbf{C} \mathbf{C}^\top = \bigl[(\mathbf{X}^\top \mathbf{X})^{-1} \mathbf{X}^\top + \mathbf{D}\bigr]\bigl[\mathbf{X} (\mathbf{X}^\top \mathbf{X})^{-1} + \mathbf{D}^\top\bigr]
+$$
+
+$$
+= (\mathbf{X}^\top \mathbf{X})^{-1} + \mathbf{D} \mathbf{D}^\top + (\mathbf{X}^\top \mathbf{X})^{-1} \mathbf{X}^\top \mathbf{D}^\top + \mathbf{D} \mathbf{X} (\mathbf{X}^\top \mathbf{X})^{-1}.
+$$
+
+The last two cross-terms vanish by $\mathbf{D} \mathbf{X} = \mathbf{0}$ (and its transpose $\mathbf{X}^\top \mathbf{D}^\top = \mathbf{0}$). Therefore
+
+$$
+\mathbf{C} \mathbf{C}^\top = (\mathbf{X}^\top \mathbf{X})^{-1} + \mathbf{D} \mathbf{D}^\top.
+$$
+
+**Comparison.** Multiplying by $\sigma^2$,
+
+$$
+\text{Cov}(\tilde{\boldsymbol\beta}) = \sigma^2 (\mathbf{X}^\top \mathbf{X})^{-1} + \sigma^2 \mathbf{D} \mathbf{D}^\top = \text{Cov}(\hat{\boldsymbol\beta}) + \sigma^2 \mathbf{D} \mathbf{D}^\top.
+$$
+
+Since $\mathbf{D} \mathbf{D}^\top \succeq \mathbf{0}$ (any matrix times its transpose is PSD), we have
+
+$$
+\text{Cov}(\tilde{\boldsymbol\beta}) - \text{Cov}(\hat{\boldsymbol\beta}) = \sigma^2 \mathbf{D} \mathbf{D}^\top \succeq \mathbf{0},
+$$
+
+with equality iff $\mathbf{D} = \mathbf{0}$, i.e., $\tilde{\boldsymbol\beta} = \hat{\boldsymbol\beta}$.
+
+**Scalar corollary.** For any linear combination $\mathbf{a}^\top \boldsymbol\beta$ with $\mathbf{a} \in \mathbb{R}^{p+1}$:
+
+$$
+\text{Var}(\mathbf{a}^\top \tilde{\boldsymbol\beta}) - \text{Var}(\mathbf{a}^\top \hat{\boldsymbol\beta}) = \sigma^2 \mathbf{a}^\top \mathbf{D} \mathbf{D}^\top \mathbf{a} = \sigma^2 \|\mathbf{D}^\top \mathbf{a}\|^2 \geq 0.
+$$
+
+∎ — using unbiasedness to derive $\mathbf{D}\mathbf{X} = \mathbf{0}$; covariance expansion; PSD property of $\mathbf{D}\mathbf{D}^\top$
+</ProofBlock>
+
+<ExampleBlock number={5} title="OLS vs a naive linear unbiased competitor">
+Take $n = 4$, $\mathbf{x} = (1, 2, 3, 4)$, $\boldsymbol\beta = (0, 1)^\top$, $\sigma = 1$. OLS gives $\text{Var}(\hat\beta_1) = 1/\sum(x_i - \bar x)^2 = 1/5 = 0.2$. A naive competitor — "use only the first three observations to fit a simple regression" — is also linear and unbiased, with $\text{Var}(\tilde\beta_1) = 1/\sum_{i=1}^3 (x_i - \bar x_3)^2 = 1/2 = 0.5$. Gauss–Markov guarantees OLS wins; the gap here is a factor of 2.5. Figure 6 shows the full MC comparison.
+</ExampleBlock>
+
+<img src="/images/topics/linear-regression/21-gauss-markov-comparison.png" alt="Two-panel. Left: MC histograms of β̂_1 from 5000 simulations — OLS (tight, centered at 1) vs 'first-3-points only' estimator (wider, also centered at 1). Right: variance as a function of n. OLS variance decreases as 1/n; the naive estimator's variance is flat (it never uses the extra data). Gauss–Markov guarantees the picture." />
+
+<RemarkBlock number={11} title="Under Normal errors, BLUE promotes to UMVUE">
+Gauss–Markov says OLS beats every linear unbiased competitor. Could a *nonlinear* unbiased estimator do better? Under Normal errors, [Topic 16 Thm 4 (Lehmann–Scheffé)](/topics/sufficient-statistics) answers no: $(\mathbf{X}^\top \mathbf{X})^{-1} \mathbf{X}^\top \mathbf{y}$ is the unique UMVUE — minimum variance among *all* unbiased estimators, linear or not — because it is a function of a complete sufficient statistic for the Normal-linear-model exponential family. Without Normality, BLUE is the best we can claim; with Normality, BLUE = UMVUE. This is the §16.12 Track-6 promise discharged.
+</RemarkBlock>
+
+<RemarkBlock number={12} title="What the proof does *not* assume">
+Gauss–Markov requires only: zero-mean errors, uncorrelated errors, common variance $\sigma^2$, full column rank $\mathbf{X}$. It does **not** require Normality, independence (only uncorrelatedness), or even identical distribution — errors can follow different distributions as long as they share variance. The one structural assumption that is load-bearing is **homoscedasticity**: all errors have the same variance. When this fails — heteroscedastic errors, $\text{Cov}(\boldsymbol\epsilon) = \sigma^2 \text{diag}(w_1, \ldots, w_n)$ with unequal $w_i$ — OLS is no longer BLUE. The weighted least squares (WLS) estimator reweights observations by $1/w_i$ and is BLUE in the heteroscedastic setting; see §21.9 Rem 21 for the one-sentence forward pointer to Topic 22.
+</RemarkBlock>
+
+<a id="section-21-7"></a>
+
+## 21.7 Geometry of Fitted Values
+
+Proof 1 of §21.2 identified $\hat{\mathbf{y}}$ as the orthogonal projection of $\mathbf{y}$ onto $\text{col}(\mathbf{X})$. That projection has a matrix representation — the **hat matrix** — and a rich algebraic structure that powers the diagnostic machinery of §21.9.
+
+<DefinitionBlock number={7} title="Hat matrix and leverage">
+Under full column rank, the **hat matrix** is
+$$
+\mathbf{H} = \mathbf{X} (\mathbf{X}^\top \mathbf{X})^{-1} \mathbf{X}^\top \in \mathbb{R}^{n \times n}.
+$$
+It "puts the hat on $\mathbf{y}$": $\hat{\mathbf{y}} = \mathbf{H} \mathbf{y}$. The diagonal entries $h_{ii}$ are the **leverage values** of observation $i$ — measuring how much the $i$-th observation's own response contributes to its own fit.
+</DefinitionBlock>
+
+<TheoremBlock number={7} title="Hat matrix properties">
+The hat matrix $\mathbf{H}$ is:
+
+1. **Symmetric**: $\mathbf{H}^\top = \mathbf{H}$.
+2. **Idempotent**: $\mathbf{H} \mathbf{H} = \mathbf{H}$.
+3. **Rank and trace**: $\text{rank}(\mathbf{H}) = \text{tr}(\mathbf{H}) = p + 1$.
+4. **Complementary projector**: $\mathbf{I} - \mathbf{H}$ is also symmetric idempotent, with $\text{rank}(\mathbf{I} - \mathbf{H}) = n - p - 1$.
+</TheoremBlock>
+
+**Brief derivation.** Symmetry: $\mathbf{H}^\top = \mathbf{X} [(\mathbf{X}^\top \mathbf{X})^{-1}]^\top \mathbf{X}^\top = \mathbf{X} (\mathbf{X}^\top \mathbf{X})^{-1} \mathbf{X}^\top = \mathbf{H}$ (using symmetry of $(\mathbf{X}^\top \mathbf{X})^{-1}$). Idempotence: $\mathbf{H} \mathbf{H} = \mathbf{X} (\mathbf{X}^\top \mathbf{X})^{-1} \mathbf{X}^\top \mathbf{X} (\mathbf{X}^\top \mathbf{X})^{-1} \mathbf{X}^\top = \mathbf{X} (\mathbf{X}^\top \mathbf{X})^{-1} \mathbf{X}^\top = \mathbf{H}$. For rank and trace: a symmetric idempotent matrix has eigenvalues $\in \{0, 1\}$, so its trace equals its rank. Using the cyclic property of trace, $\text{tr}(\mathbf{H}) = \text{tr}(\mathbf{X} (\mathbf{X}^\top \mathbf{X})^{-1} \mathbf{X}^\top) = \text{tr}((\mathbf{X}^\top \mathbf{X})^{-1} \mathbf{X}^\top \mathbf{X}) = \text{tr}(\mathbf{I}_{p+1}) = p + 1$. Finally, $\mathbf{I} - \mathbf{H}$ is symmetric and idempotent (direct check), with trace $n - (p+1)$. ∎
+
+<ExampleBlock number={6} title="Explicit hat matrix for $n = 3$, $p = 1$">
+Take $\mathbf{x} = (0, 1, 2)^\top$, so $\mathbf{X} = \begin{pmatrix} 1 & 0 \\ 1 & 1 \\ 1 & 2 \end{pmatrix}$. Then $\mathbf{X}^\top \mathbf{X} = \begin{pmatrix} 3 & 3 \\ 3 & 5 \end{pmatrix}$, $(\mathbf{X}^\top \mathbf{X})^{-1} = \tfrac{1}{6} \begin{pmatrix} 5 & -3 \\ -3 & 3 \end{pmatrix}$, and
+$$
+\mathbf{H} = \tfrac{1}{6} \begin{pmatrix} 5 & 2 & -1 \\ 2 & 2 & 2 \\ -1 & 2 & 5 \end{pmatrix}.
+$$
+
+Verify: row sums equal 1 (as they must when the first column of $\mathbf{X}$ is $\mathbf{1}$), trace $= (5 + 2 + 5)/6 = 2 = p + 1$. The diagonal entries $h_{11} = h_{33} = 5/6 \approx 0.83$ are high — the endpoint observations have the most leverage. The middle observation has $h_{22} = 2/6 \approx 0.33$, the lowest in this 3-point design.
+</ExampleBlock>
+
+<img src="/images/topics/linear-regression/21-hat-matrix-leverage.png" alt="Two-panel. Left: scatter with 12 observations, 3 highlighted amber as high-leverage (endpoints and outliers in x). Right: bar chart of leverage values h_ii in observation order, with the 2(p+1)/n threshold drawn as a horizontal line; the 3 amber observations exceed the threshold." />
+
+<RemarkBlock number={13} title="Leverage and its rule of thumb">
+Leverage $h_{ii} \in [0, 1]$ measures how "far" observation $i$'s predictor vector $\mathbf{x}_i$ is from the center of the predictor cloud. Since $\sum_i h_{ii} = p + 1$, the average leverage is $(p + 1)/n$. The common rule of thumb flags observations with $h_{ii} > 2 (p + 1) / n$ as **high-leverage**. High leverage is not itself pathological — a well-designed experiment may deliberately include extreme $\mathbf{x}_i$ values to reduce $\text{Var}(\hat{\boldsymbol\beta})$ — but it is a prerequisite for being **influential**: an observation with low residual but high leverage contributes little to visible fit quality and much to the estimated coefficients. The diagnostic machinery of §21.9 combines leverage with studentized residuals via Cook's distance.
+</RemarkBlock>
+
+<RemarkBlock number={14} title="Variance decomposition via Eve's law">
+The ANOVA identity $\text{SST} = \text{SSR} + \text{SSE}$ is the sample analog of [Topic 4's Eve's law](/topics/expectation-moments): $\text{Var}(Y) = E[\text{Var}(Y \mid \mathbf{X})] + \text{Var}(E[Y \mid \mathbf{X}])$. The fitted values $\hat y_i$ play the role of the conditional expectation $E[Y \mid \mathbf{X} = \mathbf{x}_i]$; the residuals $e_i$ play the role of the conditional deviation. The decomposition is exact in-sample (Pythagoras: $\|\mathbf{y} - \bar y \mathbf{1}\|^2 = \|\hat{\mathbf{y}} - \bar y \mathbf{1}\|^2 + \|\mathbf{y} - \hat{\mathbf{y}}\|^2$ when the intercept is included, because $\hat{\mathbf{y}} - \bar y \mathbf{1} \in \text{col}(\mathbf{X}) \cap \{\mathbf{1}\}^\perp$) and is the geometric basis of the one-way ANOVA example in §21.8.
+</RemarkBlock>
+
+<a id="section-21-8"></a>
+
+## 21.8 Hypothesis Tests and Confidence Intervals
+
+The distributional theory of §21.5 plus Topic 19's test–CI duality delivers the full inferential package: CIs for individual coefficients, tests for nested-model hypotheses, simultaneous inference for families of coefficients.
+
+<DefinitionBlock number={8} title="Coefficient t-statistic">
+For the $j$-th coefficient under the Normal linear model, the **t-statistic** for testing $H_0: \beta_j = \beta_j^0$ against the two-sided alternative is
+$$
+T_j = \frac{\hat\beta_j - \beta_j^0}{\widehat{\text{SE}}(\hat\beta_j)}, \qquad \widehat{\text{SE}}(\hat\beta_j) = \sqrt{\hat\sigma^2 [(\mathbf{X}^\top \mathbf{X})^{-1}]_{jj}}.
+$$
+</DefinitionBlock>
+
+<TheoremBlock number={8} title="Coefficient t-distribution">
+Under the Normal linear model and $H_0: \beta_j = \beta_j^0$, $T_j \sim t_{n - p - 1}$. Hence a level-$\alpha$ two-sided test rejects when $|T_j| > t_{n - p - 1, 1 - \alpha/2}$, and the corresponding **Wald-t confidence interval** at level $1 - \alpha$ is
+$$
+\hat\beta_j \pm t_{n - p - 1, 1 - \alpha/2} \cdot \widehat{\text{SE}}(\hat\beta_j).
+$$
+</TheoremBlock>
+
+**Brief derivation.** This is Remark 10 restated: the numerator $\hat\beta_j - \beta_j$ is $\mathcal{N}(0, \sigma^2 [(\mathbf{X}^\top\mathbf{X})^{-1}]_{jj})$ under $H_0$. The denominator is $\hat\sigma \sqrt{[(\mathbf{X}^\top\mathbf{X})^{-1}]_{jj}}$ with $\hat\sigma^2 \perp\!\!\!\perp \hat\beta_j$ and $(n-p-1)\hat\sigma^2/\sigma^2 \sim \chi^2_{n-p-1}$. Their ratio is standardized $\mathcal{N}(0, 1)$ over $\sqrt{\chi^2_{n-p-1}/(n-p-1)}$ — by definition, $t_{n-p-1}$. The CI follows from [Topic 19 Thm 1](/topics/confidence-intervals-and-duality#section-19-2): a two-sided t-test and its inversion produce the symmetric interval above. ∎
+
+<ExampleBlock number={7} title="Testing $H_0: \beta_1 = 0$">
+In a simple regression at $n = 30$, suppose $\hat\beta_1 = 0.45$ with $\widehat{\text{SE}}(\hat\beta_1) = 0.12$. Then $T_1 = 0.45 / 0.12 = 3.75$ on $t_{28}$. The two-sided p-value is $2 \cdot P(T_{28} > 3.75) \approx 8 \times 10^{-4}$, strongly rejecting the null at conventional levels. The 95% Wald-t CI is $0.45 \pm t_{28, 0.975} \cdot 0.12 = 0.45 \pm 2.048 \cdot 0.12 = (0.20, 0.70)$ — the interval excludes zero, consistent with the rejection.
+</ExampleBlock>
+
+The individual coefficient test is the simplest case. For **nested-model hypotheses** — "do these $k$ coefficients add anything?" — the t-test generalizes to the F-test, and the F-test has a beautiful interpretation as the finite-sample sharpening of Wilks' theorem.
+
+<TheoremBlock number={9} title="F-test as Wilks specialization (third full proof)">
+Let $\mathcal{M}_1$ be the full Normal linear model with $p + 1$ parameters and $\mathcal{M}_0 \subset \mathcal{M}_1$ be the reduced model obtained by imposing $k$ linear restrictions $\mathbf{R} \boldsymbol\beta = \mathbf{r}$ (so $\mathcal{M}_0$ has $p + 1 - k$ free parameters). Let $\text{SSE}_1, \text{SSE}_0$ be the residual sums of squares under each. Under $H_0: \mathbf{R} \boldsymbol\beta = \mathbf{r}$ and Normal errors,
+$$
+F = \frac{(\text{SSE}_0 - \text{SSE}_1) / k}{\text{SSE}_1 / (n - p - 1)} \sim F_{k, n - p - 1}
+$$
+*exactly* (not just asymptotically).
+</TheoremBlock>
+
+<ProofBlock title="Proof 9 — F-test as Wilks specialization">
+**Setup.** Under $\mathcal{M}_1$, $\mathbf{y} = \mathbf{X} \boldsymbol\beta + \boldsymbol\epsilon$ with $\boldsymbol\epsilon \sim \mathcal{N}_n(\mathbf{0}, \sigma^2 \mathbf{I})$. The restriction subspace under $\mathcal{M}_0$ has dimension $p + 1 - k$; its orthogonal complement within $\text{col}(\mathbf{X})$ has dimension $k$.
+
+**Independence via Fisher–Cochran.** The quadratic forms $\text{SSE}_1 = \|\mathbf{y} - \hat{\mathbf{y}}_1\|^2$ and $\text{SSE}_0 - \text{SSE}_1 = \|\hat{\mathbf{y}}_1 - \hat{\mathbf{y}}_0\|^2$ project onto orthogonal subspaces of $\mathbb{R}^n$: the residual subspace (dim $n - p - 1$) and the restriction-complement subspace (dim $k$). [Topic 16 Ex 21](/topics/sufficient-statistics#section-16-11)'s Fisher–Cochran theorem says quadratic forms in a Normal vector in orthogonal subspaces are independent.
+
+**Chi-squared distributions.** $\text{SSE}_1 / \sigma^2 \sim \chi^2_{n-p-1}$ (Theorem 5). Under $H_0$, $(\text{SSE}_0 - \text{SSE}_1)/\sigma^2$ is a quadratic form in Normal residuals projected onto a $k$-dimensional subspace, hence $\sim \chi^2_k$ (Fisher–Cochran on the orthogonal complement).
+
+**F-statistic.** By definition of the F distribution ([Topic 6 Def 13](/topics/continuous-distributions)), the ratio of two independent chi-squareds each divided by its degrees of freedom is distributed $F$:
+$$
+F = \frac{(\text{SSE}_0 - \text{SSE}_1)/k}{\text{SSE}_1/(n-p-1)} \sim F_{k, n-p-1}.
+$$
+
+**Wilks connection.** The log-likelihood-ratio statistic for $\mathcal{M}_0$ vs $\mathcal{M}_1$ works out to
+$$
+-2 \log \Lambda_n = n \log(\text{SSE}_0 / \text{SSE}_1) = n \log\bigl(1 + kF/(n-p-1)\bigr).
+$$
+For large $n$ at fixed $k$, $n \log(1 + kF/(n-p-1)) = kF + O(n^{-1})$ by Taylor expansion, so $-2 \log \Lambda_n \xrightarrow{d} \chi^2_k$ — matching [Topic 18 Thm 4 (Wilks)](/topics/likelihood-ratio-tests-and-np#section-18-6). But we just proved that the *exact finite-sample* distribution of $F$ is $F_{k, n-p-1}$ under Normal errors — not just asymptotically $\chi^2_k$. The F-test is Wilks' theorem sharpened to an exact distribution under the additional Normal-errors assumption.
+
+∎ — using Topic 18 Thm 4 (Wilks, §18.6), Topic 16 Ex 21 (Fisher–Cochran), Topic 6 Def 13 (F distribution)
+</ProofBlock>
+
+<ExampleBlock number={8} title="Partial F-test for joint significance">
+Fit a four-predictor model $y_i = \beta_0 + \beta_1 x_{i1} + \beta_2 x_{i2} + \beta_3 x_{i3} + \beta_4 x_{i4} + \epsilon_i$ at $n = 50$. To test $H_0: \beta_2 = \beta_3 = 0$ (predictors 2 and 3 together add nothing), fit both the full and the reduced (two-predictor) models. With $k = 2$, $n - p - 1 = 45$, suppose $\text{SSE}_0 = 180$, $\text{SSE}_1 = 144$. Then $F = (36/2)/(144/45) = 18/3.2 = 5.625$ on $F_{2, 45}$. Since $F_{2, 45, 0.95} \approx 3.20$, we reject at $\alpha = 0.05$; the p-value is $\approx 0.0065$. Predictors 2 and 3 jointly contribute even though, as individual t-tests might show, neither alone is significant at 5%.
+</ExampleBlock>
+
+<ExampleBlock number={9} title="One-way ANOVA as a nested F-test">
+Three groups with $n_1 = n_2 = n_3 = 10$ observations each ($n = 30$). The full model is "group-specific means" — $y_{ij} = \mu_j + \epsilon_{ij}$ for $j \in \{1, 2, 3\}$ — fit by an all-dummy design matrix. The reduced model is "common mean" — $y_{ij} = \mu + \epsilon_{ij}$ — fit by a column of ones. The nested F-test has $k = 2$ (two group-mean differences), $n - p - 1 = 27$. Its $F$ statistic is exactly the classical ANOVA F, and its exact finite-sample distribution under $H_0: \mu_1 = \mu_2 = \mu_3$ is $F_{2, 27}$. [Topic 4's Eve's law](/topics/expectation-moments) framing is the decomposition:
+$$
+\underbrace{\sum_{i, j} (y_{ij} - \bar y)^2}_{\text{SST}} = \underbrace{\sum_j n_j (\bar y_j - \bar y)^2}_{\text{between-group}} + \underbrace{\sum_{i, j} (y_{ij} - \bar y_j)^2}_{\text{within-group}}.
+$$
+ANOVA is regression. Topic 21 treats it as a running example rather than a separate chapter.
+</ExampleBlock>
+
+<img src="/images/topics/linear-regression/21-f-test-null-alt.png" alt="Two-panel. Left: F_{3,96} null density (blue) with upper-α = 0.05 rejection region shaded grey. The observed F-statistic from Example 8 is drawn as a dashed vertical line, well inside the rejection region. Right: non-central F_{3,96}(λ) densities at λ = 5, 15, 30 (amber curves) showing power increasing with λ. 'F-test power grows with the effect-size non-centrality.'" />
+
+<FTestExplorer client:visible />
+
+<RemarkBlock number={15} title="Wald-t and profile-likelihood CIs coincide under Normal errors">
+[Topic 19 Thm 1](/topics/confidence-intervals-and-duality#section-19-2) gave two paths to a CI for any parameter: invert a Wald test (symmetric CI built on $\hat\theta \pm z \cdot \widehat{\text{SE}}$) or invert a LRT (possibly asymmetric CI built by profiling the likelihood). For a coefficient $\beta_j$ in the Normal linear model, the profile log-likelihood is exactly quadratic — because the log-likelihood itself is quadratic in $\boldsymbol\beta$ — so the Wald and LRT inversions produce identical intervals. Under non-Normal errors (GLMs of Topic 22), the profile likelihood is no longer quadratic and the two CIs diverge, with the LRT/profile interval usually better-calibrated. For Topic 21's Normal linear model: they agree.
+</RemarkBlock>
+
+<RemarkBlock number={16} title="Simultaneous inference — Bonferroni and Working–Hotelling">
+A regression report with $p + 1$ coefficient CIs at individual level $1 - \alpha$ carries a family-wise error rate that grows with $p + 1$. [Topic 20 §20.9 Thm 8](/topics/multiple-testing-and-false-discovery#section-20-9) hands us the **Bonferroni-adjusted** CI: widen each interval to individual level $1 - \alpha / (p+1)$ and the simultaneous coverage is $\geq 1 - \alpha$. This is the default simultaneous-inference tool for regression reports.
+
+For **continuous coefficient trajectories** — e.g., the fitted regression function $\mu(\mathbf{x}) = \mathbf{x}^\top \boldsymbol\beta$ evaluated over a grid of $\mathbf{x}$ — Bonferroni is too conservative (an infinite grid would require infinite widening). The **Working–Hotelling** (WOR1929) confidence band uses the F-distribution:
+$$
+\mathbf{x}^\top \hat{\boldsymbol\beta} \pm \sqrt{(p+1) \cdot F_{p+1, n-p-1, 1-\alpha}} \cdot \widehat{\text{SE}}(\mathbf{x}^\top \hat{\boldsymbol\beta}).
+$$
+The factor $\sqrt{(p+1) F_{p+1, n-p-1, 1-\alpha}}$ replaces Bonferroni's $z_{1 - \alpha/(p+1)}$ and delivers exact simultaneous coverage over the entire continuum of $\mathbf{x}$ values. This discharges the §19.10 closer and the §20.9 Rem 23 forward-pointer.
+</RemarkBlock>
+
+<CoefficientCIBands client:visible />
+
+<a id="section-21-9"></a>
+
+## 21.9 Diagnostics and Model Validation
+
+All of §21.5–§21.8 assumes the Normal linear model holds. What if it doesn't? **Regression diagnostics** are the tools for detecting model failures — heteroscedasticity, non-linearity, outliers, influential points — without which the inferential machinery of the last four sections can produce confident nonsense. The Anscombe quartet (Example 10) is the canonical warning.
+
+<RemarkBlock number={17} title="The residual-vs-fitted plot — the single most important diagnostic">
+Plot $e_i$ on the vertical axis against $\hat y_i$ on the horizontal. Under a correctly specified homoscedastic linear model, the scatter should be structureless — roughly symmetric around the horizontal line $e = 0$, with constant vertical spread across the range of $\hat y$. Three common pathologies: (1) a **funnel shape** (variance grows or shrinks with $\hat y$) signals heteroscedasticity; (2) a **curved trend** signals the linear-in-parameters assumption is missing a quadratic or nonlinear term; (3) **one or two extreme points** signal outliers or influential observations. If the residual-vs-fitted plot looks random, that is most of the diagnostic battle.
+</RemarkBlock>
+
+<RemarkBlock number={18} title="Q-Q plots for Normal-errors diagnostics">
+A **Q-Q plot** of the studentized residuals against theoretical $t_{n-p-1}$ quantiles tests the Normal-errors assumption of [Definition 5](#section-21-5). Points on the $45°$ line indicate Normality; systematic departures (S-shaped curves, heavy tails, skew) flag distributional misspecification. Under non-Normal errors the point estimate $\hat{\boldsymbol\beta}$ is still unbiased and Gauss–Markov still applies, but the exact t- and F-distributions of §21.8 become approximations; for moderate $n$ this is usually acceptable, but near the tails (extreme p-values, wide CIs) it matters.
+</RemarkBlock>
+
+<RemarkBlock number={19} title="Heteroscedasticity — HC-robust SEs are in Topic 22">
+When $\text{Cov}(\boldsymbol\epsilon) = \sigma^2 \text{diag}(w_1, \ldots, w_n)$ with unequal $w_i$, OLS coefficient estimates remain unbiased but their standard errors from $\hat\sigma^2 (\mathbf{X}^\top \mathbf{X})^{-1}$ are wrong — usually too small, producing over-confident inferences. [Topic 22](/topics/generalized-linear-models) handles this two ways: (1) **HC-robust (sandwich) standard errors** — White 1980, HC0 through HC3 — replace the homoscedastic SE formula with one that is consistent under arbitrary heteroscedasticity; (2) **weighted least squares (WLS)** — reweight observations by $1/w_i$ — delivers BLUE when the $w_i$ are known. Topic 21 surfaces the pathology (Figure 9, `RegressionDiagnosticsExplorer`) but defers the fix.
+</RemarkBlock>
+
+<RemarkBlock number={20} title="Outliers, influential points, and Cook's distance">
+An **outlier** has large residual. A **high-leverage point** has extreme $\mathbf{x}_i$ (large $h_{ii}$). An **influential point** has both, and **Cook's distance**
+$$
+D_i = \frac{r_i^2}{p + 1} \cdot \frac{h_{ii}}{1 - h_{ii}}
+$$
+(where $r_i$ is the internally studentized residual) is the standard one-number summary. Thresholds of $D_i > 1$ or $D_i > 4/n$ flag points whose removal would substantially shift $\hat{\boldsymbol\beta}$. For robust fitting — M-estimators (Huber, Tukey) that explicitly downweight large residuals — see [Topic 15](/topics/method-of-moments) for the moment-conditions generalization and Topic 22 for robust regression practice.
+</RemarkBlock>
+
+<RemarkBlock number={21} title="WLS as diagonal re-weighting of OLS">
+WLS with known diagonal weights $w_i$ solves the transformed OLS problem $\tilde{\mathbf{y}} = \tilde{\mathbf{X}} \boldsymbol\beta + \tilde{\boldsymbol\epsilon}$ where $\tilde y_i = y_i / \sqrt{w_i}$ and $\tilde{\mathbf{X}}_i = \mathbf{X}_i / \sqrt{w_i}$ — classical OLS applied to scaled data. The general case with non-diagonal $\text{Cov}(\boldsymbol\epsilon) = \sigma^2 \boldsymbol\Omega$ is **generalized least squares (GLS)**, solving $\hat{\boldsymbol\beta}_{\text{GLS}} = (\mathbf{X}^\top \boldsymbol\Omega^{-1} \mathbf{X})^{-1} \mathbf{X}^\top \boldsymbol\Omega^{-1} \mathbf{y}$. Both are BLUE in their respective settings — the Gauss–Markov theorem generalizes. Topic 22's GLM section treats GLS and WLS as special cases of iteratively reweighted least squares (IRLS).
+</RemarkBlock>
+
+<img src="/images/topics/linear-regression/21-diagnostic-panels.png" alt="4-panel grid of residual-vs-fitted plots. Top-left: 'ideal' — structureless cloud centered on zero. Top-right: 'heteroscedastic' — fan shape, spread grows with fitted value. Bottom-left: 'one high-leverage outlier' — a single point pulls the fit. Bottom-right: 'non-linearity' — residuals curve, showing a missing quadratic term. Each panel captions its failure mode." />
+
+<ExampleBlock number={10} title="The Anscombe quartet — why residual plots are irreducible">
+Anscombe (1973) constructed four datasets with identical $(n, \bar x, \bar y, \hat\beta_0, \hat\beta_1, \text{SE}(\hat\beta_1), R^2, \text{ANOVA F})$ — every summary statistic rounds to the same value. Yet their residual structures are wildly different: dataset I is a correctly-modeled linear scatter; II is a perfect quadratic with misfit linear model; III has one high-leverage outlier driving a high-leverage fit; IV is a single-x-value cluster plus one vertical outlier. Only dataset I warrants the regression report; the other three require different models or diagnostic intervention. The punchline: **no suite of summary statistics is a substitute for looking at the residual plot.** The `RegressionDiagnosticsExplorer` below cycles through five preset scenarios — ideal, heteroscedastic, outlier, non-linear, high-leverage — each producing a distinct residual-vs-fitted, Q-Q, scale-location, and leverage-Cook's-distance signature. Each failure mode is named, diagnosed, and linked to the appropriate Topic-22/23 remedy.
+</ExampleBlock>
+
+<RegressionDiagnosticsExplorer client:visible />
+
+<a id="section-21-10"></a>
+
+## 21.10 Forward Map
+
+Topic 21 built the machinery of the fixed-design homoscedastic Normal linear model. Five directions lead out, and the rest of Track 6 plus Tracks 7–8 plus formalml.com cover them.
+
+<RemarkBlock number={22} title="Topic 22 — Generalized Linear Models">
+The Normal-errors assumption is the restrictive one. Binary outcomes (logistic regression), count outcomes (Poisson regression), positive-skewed outcomes (gamma regression) all fit into the **exponential-family GLM** framework: a linear predictor $\eta_i = \mathbf{x}_i^\top \boldsymbol\beta$ composed with a **link function** $g$ such that $g(E[y_i]) = \eta_i$. The normal equations generalize to iteratively reweighted least squares (IRLS); the F-test generalizes to the deviance test (an exact LRT); HC-robust SEs and GLS both live here.
+</RemarkBlock>
+
+<RemarkBlock number={23} title="Topic 23 — Ridge, Lasso, and Elastic Net">
+When $p$ is large or $\mathbf{X}$ is ill-conditioned, OLS variance explodes. **Ridge regression** adds $\lambda \|\boldsymbol\beta\|_2^2$ to the OLS objective, shrinking coefficients toward zero in exchange for bias — a direct bias-variance trade-off controlled by $\lambda$. **Lasso** uses $\lambda \|\boldsymbol\beta\|_1$ and produces exactly-zero coefficients (variable selection). **Elastic net** combines both. Topic 23 covers the penalized objective, coordinate descent solvers, the LARS path, and the cross-validated $\lambda$ selection.
+</RemarkBlock>
+
+<RemarkBlock number={24} title="Topic 24 — Model Selection (AIC, BIC, CV)">
+Adjusted $R^2$ is a limited criterion. **AIC** (Akaike) penalizes by $2(p+1)$; **BIC** (Schwarz) by $\log(n)(p+1)$; **cross-validation** estimates out-of-sample predictive performance directly. Mallows' $C_p$ is a Gaussian-specific variant. Each criterion defines a preferred model in the nested sequence — they diverge in the large-$p$ regime, with BIC favoring sparser models and CV tracking predictive accuracy. Topic 24 covers their theoretical justifications and practical trade-offs.
+</RemarkBlock>
+
+<RemarkBlock number={25} title="Track 7 — Bayesian linear regression">
+A conjugate Normal-inverse-gamma prior on $(\boldsymbol\beta, \sigma^2)$ yields a closed-form Normal-inverse-gamma posterior, with the posterior mean an explicit ridge-regression estimate (the prior precision plays the role of $\lambda$). The Bayesian CI is the **credible interval** — a subset of parameter space with posterior mass $1 - \alpha$ — which agrees with the Wald-t CI only under flat priors and as $n \to \infty$. The conditional-MVN calculation of [Topic 8 §8.4](/topics/multivariate-distributions) is the mechanical engine. Track 7 covers this in full, plus non-conjugate priors via MCMC.
+</RemarkBlock>
+
+<RemarkBlock number={26} title="Track 8 — Nonparametric regression">
+When the linearity assumption itself is too restrictive, **nonparametric regression** estimates $E[Y \mid \mathbf{x}]$ without assuming a parametric form. Kernel regression (Nadaraya–Watson), local polynomial regression, and smoothing splines all replace the parametric $\mathbf{x}^\top \boldsymbol\beta$ with a data-driven smooth function. The bias-variance trade-off is controlled by a bandwidth or smoothing parameter; Track 8's topic on kernel methods treats the theory.
+</RemarkBlock>
+
+<RemarkBlock number={27} title="formalml.com — Mixed effects and causal inference">
+**Mixed-effects (hierarchical) models** add random coefficients for grouped data, handling repeated measurements or nested designs that violate the independent-errors assumption of §21.5. The <ExternalLink site="formalml" topic="Mixed effects" href="https://formalml.com/topics/mixed-effects" /> topic covers the REML estimator and shrinkage. **Causal inference** via IV, DiD, RDD, and synthetic control all live in the linear-model framework with identifying restrictions; see <ExternalLink site="formalml" topic="Causal inference methods" href="https://formalml.com/topics/causal-inference-methods" />.
+</RemarkBlock>
+
+<RemarkBlock number={28} title="formalml.com — High-dimensional regression">
+When $p > n$, OLS fails and penalized methods (Topic 23) become essential. The theory of **high-dimensional regression** — sparsity rates, minimax bounds, double descent — lives at <ExternalLink site="formalml" topic="High-dimensional regression" href="https://formalml.com/topics/high-dimensional-regression" />. The modern regime where $p \gg n$ with kernel-like implicit regularization (neural networks, random features) is an active research area that Track 8 and formalml.com's theory topics touch.
+</RemarkBlock>
+
+<img src="/images/topics/linear-regression/21-forward-map.png" alt="Track-6 spine of Topics 21–24 with forward arrows to Track 7 (Bayesian linear regression), Track 8 (nonparametric regression), formalml.com (mixed effects, causal inference, high-dimensional regression). Back-arrows to Topic 18 (Wilks) and Topic 19 (CI duality). Color-coded: Track 6 in blue, Tracks 7–8 in grey, formalml.com in amber." />
+
+Track 5 closed with simultaneous inference; Track 6 opens with the first conditional model. Every §21.8 result — the F-test, the coefficient CIs, the Bonferroni adjustment, the Working–Hotelling band — is a direct application of Track 5's machinery to the geometry of §21.2 and §21.7. The next three Track 6 topics widen the scope: GLMs drop the Normal-errors assumption, regularization handles $p \gg n$, model selection chooses among nested models. But the orthogonal-projection picture of Proof 1 — residual $\perp$ column space, fitted value as the closest point in the column space — is the geometric anchor that every extension rests on. When in doubt, draw Figure 2 again.
+
+---
+
+### References
+
+1. Erich L. Lehmann and Joseph P. Romano. (2005). [*Testing Statistical Hypotheses*](https://doi.org/10.1007/0-387-27605-X) (3rd ed.). Springer.
+2. George Casella and Roger L. Berger. (2002). *Statistical Inference* (2nd ed.). Duxbury.
+3. George A. F. Seber and Alan J. Lee. (2003). [*Linear Regression Analysis*](https://onlinelibrary.wiley.com/doi/book/10.1002/9780471722199) (2nd ed.). Wiley.
+4. Sanford Weisberg. (2005). *Applied Linear Regression* (3rd ed.). Wiley.
+5. William H. Greene. (2012). *Econometric Analysis* (7th ed.). Pearson.
+6. Holbrook Working and Harold Hotelling. (1929). [*Applications of the Theory of Error to the Interpretation of Trends*](https://www.jstor.org/stable/2277011). *Journal of the American Statistical Association*, 24(165A), 73–85.
+7. Francis Galton. (1886). [*Regression Towards Mediocrity in Hereditary Stature*](https://www.jstor.org/stable/2841583). *Journal of the Anthropological Institute of Great Britain and Ireland*, 15, 246–263.
+8. Carl Friedrich Gauss. (1823). *Theoria Combinationis Observationum Erroribus Minimis Obnoxiae*. *Werke*, IV, 1–108.
+9. Andrey A. Markov. (1900). *Wahrscheinlichkeitsrechnung*. Teubner.
