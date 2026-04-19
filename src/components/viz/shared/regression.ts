@@ -1282,6 +1282,13 @@ export function glmFit(
     maxIter?: number;
     tol?: number;
     startBeta?: number[];
+    /**
+     * Skip the intercept-only null-deviance refit. Off by default. Set true
+     * inside loops (e.g. profile-CI bisection, simulators) where the
+     * intercept-only model would otherwise be re-solved on every call. When
+     * skipped, `nullDeviance` is set equal to `deviance`.
+     */
+    skipNullDeviance?: boolean;
   },
 ): GLMFit {
   const n = X.length;
@@ -1290,6 +1297,7 @@ export function glmFit(
   const maxIter = options?.maxIter ?? 25;
   const tol = options?.tol ?? 1e-8;
   const off = options?.offset ?? new Array<number>(n).fill(0);
+  const skipNullDeviance = options?.skipNullDeviance ?? false;
 
   // Start: either user-provided β^(0), or g(initMu(y)) − offset projected onto X.
   let beta: number[];
@@ -1379,15 +1387,19 @@ export function glmFit(
     phi = ssr / Math.max(n - m, 1);
   }
 
-  // Null deviance: refit intercept-only model.
+  // Null deviance: refit intercept-only model. The recursive call passes
+  // skipNullDeviance=true so the intercept-only fit doesn't itself trigger
+  // another null-deviance refit (avoids unbounded recursion on Xnull = [[1]]
+  // and the redundant work flagged in PR #25 review).
   let nullDeviance = dev;
-  if (m > 1) {
+  if (!skipNullDeviance && m > 1) {
     const Xnull = X.map(() => [1]);
     try {
       const nullFit = glmFit(Xnull, y, family, linkFn, {
         offset: off.slice(),
         maxIter,
         tol,
+        skipNullDeviance: true,
       });
       nullDeviance = nullFit.deviance;
     } catch {
@@ -1492,10 +1504,21 @@ export function devianceTestNested(
   alpha: number,
   options?: { offset?: number[] },
 ): DevianceTestResult {
-  const fitFull = glmFit(Xfull, y, family, link, { offset: options?.offset });
-  const fitRed = glmFit(Xreduced, y, family, link, { offset: options?.offset });
-  const diff = fitRed.deviance - fitFull.deviance;
   const k = Xfull[0].length - Xreduced[0].length;
+  if (k <= 0) {
+    throw new Error(
+      `devianceTestNested: requires Xfull to have strictly more columns than Xreduced (got ${Xfull[0].length} vs ${Xreduced[0].length}, k=${k}). The reduced model must be nested in the full model.`,
+    );
+  }
+  const fitFull = glmFit(Xfull, y, family, link, {
+    offset: options?.offset,
+    skipNullDeviance: true,
+  });
+  const fitRed = glmFit(Xreduced, y, family, link, {
+    offset: options?.offset,
+    skipNullDeviance: true,
+  });
+  const diff = fitRed.deviance - fitFull.deviance;
 
   let pValue: number;
   if (family.fixedDispersion) {
@@ -1544,8 +1567,20 @@ export function sandwichVCov(fit: GLMFit, type: SandwichType = 'HC3'): number[][
   const m = fit.X[0].length;
 
   // A = X^T W X (φ-free), Ainv from the stored vcov by un-scaling.
+  // Catch Cholesky failure (rank-deficient design, separation, unconverged
+  // fit) and return an all-NaN covariance matrix so callers don't crash.
   const A = xtwx(fit.X, fit.weights);
-  const Ainv = choleskyInverse(A);
+  let Ainv: number[][];
+  try {
+    Ainv = choleskyInverse(A);
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn(
+      `sandwichVCov(${type}): X^T W X is not positive-definite (rank deficiency, separation, or unconverged fit). Returning NaN matrix.`,
+      err,
+    );
+    return Array.from({ length: m }, () => new Array<number>(m).fill(NaN));
+  }
 
   // Hat-equivalent leverages h_ii = (W^{1/2} X (X^T W X)^{-1} X^T W^{1/2})_{ii}.
   // For HC2/HC3 we need them; HC0/HC1 do not.
@@ -1668,8 +1703,16 @@ export function coefCIWaldSandwich(
  * trick: move β_j · X[:,j] into the offset, drop column j from X, refit. This
  * is exact (the constrained MLE on the reduced design with the right offset
  * IS the profile MLE). Solve for the two β_j values where
- *   D(β_j^0) - D(β̂) = χ²_{1, 1-α}
- * via bisection bracketed by ±gridBracket × Wald-SE around β̂_j.
+ *   D(β_j^0) - D(β̂) = c × cutoff,
+ * where the cutoff/scaling depends on whether the family has a fixed
+ * dispersion (Bernoulli, Poisson — χ²_1 cutoff, c=1) or estimated dispersion
+ * (Gamma, Normal — F_{1, n-p-1} cutoff via the Wilks-extension; we use the
+ * scaled deviance D/φ̂ against χ²_1 as the asymptotic equivalent and emit a
+ * console warning that the F reference would be more accurate at finite n).
+ * Bisection bracketed by ±gridBracket × Wald-SE around β̂_j.
+ *
+ * Loop-invariants `Xred`, `baseOff`, and `startBeta` are computed once
+ * outside `profileDeviance` (PR #25 review).
  *
  * Renamed from the brief's `coefCIProfile` to avoid colliding with Topic 21's
  * existing OLS `coefCIProfile(fit, alpha): CIEntry[]` at line 641.
@@ -1682,19 +1725,31 @@ export function coefCIProfileGLM(
 ): { lower: number; upper: number; center: number } {
   const maxBisect = options?.maxBisect ?? 50;
   const gridBracket = options?.gridBracket ?? 8;
-  const target = chiSquaredInvCDF(1 - alpha, 1);
   const center = fit.beta[j];
   const seWald = Math.sqrt(Math.max(fit.vcov[j][j], POSITIVE_CLIP));
 
+  // Choose cutoff: χ²_1 for fixed-dispersion families; for estimated
+  // dispersion the asymptotic-equivalent reference is still χ²_1 on the
+  // *scaled* deviance D/φ̂ (Wilks via Lehmann–Romano §12.4). The F_{1, n-p-1}
+  // refinement matches Topic 21's exact-distribution treatment under Normal
+  // errors but is not implemented here — we'd need to solve a per-bj F-cutoff
+  // equation. Topic 23 (penalized GLMs) revisits.
+  const chiCutoff = chiSquaredInvCDF(1 - alpha, 1);
+  const dispScale = fit.family.fixedDispersion ? 1 : Math.max(fit.phi, POSITIVE_CLIP);
+  const target = dispScale * chiCutoff;
+
+  // Loop-invariants — pulled out of profileDeviance for the up to 50 ×
+  // bisection iterations per CI bound (PR #25 perf review).
+  const Xred = fit.X.map((row) => row.filter((_, k) => k !== j));
+  const baseOff = fit.offset ?? new Array<number>(fit.X.length).fill(0);
+  const startBeta = fit.beta.filter((_, k) => k !== j);
+
   const profileDeviance = (bjFixed: number): number => {
-    // Remove column j from X; absorb β_j × X[:,j] into the offset.
-    const Xred = fit.X.map((row) => row.filter((_, k) => k !== j));
-    const baseOff = fit.offset ?? new Array<number>(fit.X.length).fill(0);
     const newOff = baseOff.map((o, i) => o + bjFixed * fit.X[i][j]);
     const refit = glmFit(Xred, fit.y, fit.family, fit.link, {
       offset: newOff,
-      // Warm-start drops the j-th coefficient.
-      startBeta: fit.beta.filter((_, k) => k !== j),
+      startBeta,
+      skipNullDeviance: true,
     });
     return refit.deviance;
   };
@@ -1819,7 +1874,10 @@ export function simulateGLM(
  * Y_i | λ_i ~ Poisson(λ_i), λ_i ~ Gamma(shape=μ_i/(r-1), rate=1/(r-1))
  * gives E[Y_i] = μ_i and Var(Y_i) = μ_i + μ_i²·(r-1)/μ_i = μ_i · r.
  *
- * For r = 1 (no overdispersion), reduces to plain Poisson.
+ * For r = 1 (no overdispersion), reduces to plain Poisson. **Hardcodes the
+ * log link** — the linear predictor η = X β + offset is exponentiated to
+ * give the Poisson mean μ. Underdispersion (r < 1) is not representable by
+ * this Gamma-mixture trick and throws.
  */
 export function simulateOverdispersedPoisson(
   X: number[][],
@@ -1828,6 +1886,11 @@ export function simulateOverdispersedPoisson(
   seed: number,
   options?: { offset?: number[] },
 ): number[] {
+  if (dispersionRatio < 1) {
+    throw new Error(
+      `simulateOverdispersedPoisson: dispersionRatio must be ≥ 1 (got ${dispersionRatio}). The Gamma-mixture overdispersion trick cannot represent underdispersion; use simulateGLM with a different family for that.`,
+    );
+  }
   const n = X.length;
   const off = options?.offset ?? new Array<number>(n).fill(0);
   const rng = seededRandom(seed);
@@ -1848,6 +1911,42 @@ export function simulateOverdispersedPoisson(
     out[i] = poissonSample(Math.max(lambda, POSITIVE_CLIP), rng);
   }
   return out;
+}
+
+/**
+ * Simulate clustered-Bernoulli responses with within-cluster latent-variable
+ * correlation ρ. Used by SandwichCoverageSimulator's clustered-Binomial
+ * scenario, which needs a true clustered DGP per iteration (not an i.i.d.
+ * Bernoulli draw via simulateGLM).
+ *
+ * Model: y_i = 𝟙[η_i + u_g(i) + ε_i > 0] where u_g ~ N(0, ρ) is a per-cluster
+ * latent shock and ε_i ~ N(0, 1-ρ) is the per-observation idiosyncratic
+ * shock. Marginally each y_i is roughly Bernoulli(Φ(η_i)), but observations
+ * within the same cluster are positively correlated.
+ */
+export function simulateClusteredBernoulli(
+  X: number[][],
+  beta: number[],
+  seed: number,
+  options?: { clusterSize?: number; rho?: number },
+): number[] {
+  const clusterSize = options?.clusterSize ?? 5;
+  const rho = options?.rho ?? 0.3;
+  const rng = seededRandom(seed);
+  const eta = matVec(X, beta);
+  const n = X.length;
+  const y = new Array<number>(n);
+  const sigU = Math.sqrt(rho);
+  const sigE = Math.sqrt(1 - rho);
+  for (let g = 0; g < Math.ceil(n / clusterSize); g++) {
+    const u = normalSample(0, sigU, rng);
+    for (let k = 0; k < clusterSize && g * clusterSize + k < n; k++) {
+      const i = g * clusterSize + k;
+      const eps = normalSample(0, sigE, rng);
+      y[i] = eta[i] + u + eps > 0 ? 1 : 0;
+    }
+  }
+  return y;
 }
 
 /**
@@ -1874,21 +1973,31 @@ export function coverageSimulatorGLM(
 ): number[] {
   const m = betaTrue.length;
   const hits = new Array<number>(m).fill(0);
+  let nValid = 0;
   for (let iter = 0; iter < iterations; iter++) {
     const y = options?.misspecify
       ? options.misspecify(X, betaTrue, seed + iter)
       : simulateGLM(X, betaTrue, family, link, seed + iter, { offset: options?.offset });
     let fit: GLMFit;
     try {
-      fit = glmFit(X, y, family, link, { offset: options?.offset });
+      fit = glmFit(X, y, family, link, {
+        offset: options?.offset,
+        skipNullDeviance: true,
+      });
     } catch {
       continue; // fit failure → don't count toward iteration total
     }
     if (!fit.converged) continue;
+    nValid++;
     const cis = ciConstructor(fit, alpha);
     for (let j = 0; j < m; j++) {
       if (cis[j].lower <= betaTrue[j] && betaTrue[j] <= cis[j].upper) hits[j]++;
     }
   }
-  return hits.map((h) => h / iterations);
+  // Divide by the count of *valid* fits (PR #25 review: previously divided
+  // by `iterations`, which underreported coverage when any iteration failed
+  // or didn't converge). Returns NaN if no fits succeeded so callers can
+  // detect the degenerate case.
+  if (nValid === 0) return new Array<number>(m).fill(NaN);
+  return hits.map((h) => h / nValid);
 }

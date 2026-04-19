@@ -677,8 +677,12 @@ export const DEVIANCE_TEST_EXPLORER_PRESETS = {
 
 /**
  * SandwichCoverageSimulator presets — three misspecification flavors.
- * The DGP function is captured as a closure so the simulator can re-invoke
- * with different seeds.
+ * Each preset is a fixed seeded dataset generated once at module load (used
+ * as the canonical "shape" of the DGP); the simulator re-runs its own seeded
+ * draws via the GLM simulators below to vary the random response per
+ * iteration. For the clustered-Binomial flavor the simulator must call
+ * `simulateClusteredBinomial` (re-exported below) per draw rather than
+ * re-using this fixed sample.
  */
 function buildClusteredBinomial(
   seed: number,

@@ -215,18 +215,22 @@ export default function DevianceTestExplorer() {
     const lo = center - 4 * seWald;
     const hi = center + 4 * seWald;
     const N = 30;
+    // Loop invariants — pulled out of the bj loop to avoid 30 redundant
+    // O(n·p) array allocations per render (PR #25 perf review).
+    const Xred = fullFit.X.map((row) => row.filter((_, kk) => kk !== targetJ));
+    const baseOff = fullFit.offset ?? new Array<number>(fullFit.X.length).fill(0);
+    const startBeta = fullFit.beta.filter((_, kk) => kk !== targetJ);
     const out: { x: number; y: number }[] = [];
     for (let i = 0; i <= N; i++) {
       const bj = lo + ((hi - lo) * i) / N;
       // Profile deviance: refit with β_j fixed at bj.
       try {
-        const Xred = fullFit.X.map((row) => row.filter((_, kk) => kk !== targetJ));
-        const baseOff = fullFit.offset ?? new Array<number>(fullFit.X.length).fill(0);
         const newOff = baseOff.map((o, ii) => o + bj * fullFit.X[ii][targetJ]);
         const refit = glmFit(Xred, fullFit.y, family, link, {
           offset: newOff,
-          startBeta: fullFit.beta.filter((_, kk) => kk !== targetJ),
+          startBeta,
           maxIter: 30,
+          skipNullDeviance: true,
         });
         out.push({ x: bj, y: refit.deviance });
       } catch {
@@ -411,7 +415,7 @@ export default function DevianceTestExplorer() {
                 fontSize={10}
                 fill={REJECT_COLOR}
               >
-                D̂ + χ²_{'{1,1-α}'}
+                D̂ + χ²₁,₁₋ₐ
               </text>
             </>
           )}

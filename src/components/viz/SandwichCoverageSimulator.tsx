@@ -7,6 +7,7 @@ import {
   sandwichSE,
   simulateGLM,
   simulateOverdispersedPoisson,
+  simulateClusteredBernoulli,
   type GLMFamily,
   type LinkFunction,
 } from './shared/regression';
@@ -101,7 +102,11 @@ export default function SandwichCoverageSimulator() {
       // Run a small batch per tick to keep UI responsive
       const batch = Math.min(10, totalToRun - done);
       for (let s = 0; s < batch; s++) {
-        const seed = baseSeed + workingRecords.length;
+        // Per-attempt seed (PR #25 review): bumping with `done + s` advances
+        // the seed even when an iteration is skipped (failed fit / non-
+        // convergence), so the next attempt sees fresh data instead of
+        // looping on the same failing draw.
+        const seed = baseSeed + done + s;
         let yi: number[];
         try {
           if (familyKey === 'poisson') {
@@ -111,8 +116,14 @@ export default function SandwichCoverageSimulator() {
               dispersion: 0.5 * misspec,
             });
           } else {
-            // bernoulli: just regenerate via family — misspec ignored
-            yi = simulateGLM(design.X, design.betaTrue, family, link, seed);
+            // Bernoulli "clustered" — uses simulateClusteredBernoulli so
+            // within-cluster latent correlation actually shows up in the
+            // sandwich-vs-naive coverage gap. (Previously called
+            // simulateGLM, which gave i.i.d. draws and defeated the demo.)
+            yi = simulateClusteredBernoulli(design.X, design.betaTrue, seed, {
+              clusterSize: 5,
+              rho: 0.3,
+            });
           }
         } catch {
           continue;
@@ -188,9 +199,15 @@ export default function SandwichCoverageSimulator() {
     return [lo - pad, hi + pad];
   }, [showRecent, targetBeta]);
 
+  // Single chart-width derivation used for the SVG viewBox, axis x-extent,
+  // and the scale range — previously these used `width - MARGIN.right` and
+  // `chartW` inconsistently, pushing plotted x-coords past the viewBox
+  // when the right rail was present (PR #25 review).
+  const RAIL_W = 280;
+  const chartW = isStacked ? width : width - RAIL_W;
   const topXScale = useMemo(
-    () => d3.scaleLinear().domain(xRangeTop).range([MARGIN.left, width - MARGIN.right]),
-    [xRangeTop, width],
+    () => d3.scaleLinear().domain(xRangeTop).range([MARGIN.left, chartW - MARGIN.right]),
+    [xRangeTop, chartW],
   );
 
   const rowH = Math.max(8, (TOP_H - 20) / Math.max(showRecent.length, 1));
@@ -238,7 +255,7 @@ export default function SandwichCoverageSimulator() {
           </p>
           <svg
             width="100%"
-            viewBox={`0 0 ${width - 280} ${MARGIN.top + TOP_H + 30}`}
+            viewBox={`0 0 ${chartW} ${MARGIN.top + TOP_H + 30}`}
             style={{ backgroundColor: 'var(--color-viz-bg, #ffffff)' }}
           >
             {/* β_true vertical line */}
@@ -290,7 +307,7 @@ export default function SandwichCoverageSimulator() {
 
             {/* X axis */}
             <g transform={`translate(0, ${MARGIN.top + TOP_H})`}>
-              <line x1={MARGIN.left} x2={width - MARGIN.right - 280} stroke={AXIS_COLOR} />
+              <line x1={MARGIN.left} x2={chartW - MARGIN.right} stroke={AXIS_COLOR} />
               {topXScale.ticks(6).map((t) => (
                 <g key={t} transform={`translate(${topXScale(t)}, 0)`}>
                   <line y1={0} y2={4} stroke={AXIS_COLOR} />
@@ -301,7 +318,7 @@ export default function SandwichCoverageSimulator() {
               ))}
             </g>
             <text
-              x={(MARGIN.left + width - MARGIN.right - 280) / 2}
+              x={(MARGIN.left + chartW - MARGIN.right) / 2}
               y={MARGIN.top + TOP_H + 28}
               textAnchor="middle"
               fontSize={11}
@@ -317,20 +334,20 @@ export default function SandwichCoverageSimulator() {
           </p>
           <svg
             width="100%"
-            viewBox={`0 0 ${width - 280} ${MARGIN.top + BOTTOM_H + 30}`}
+            viewBox={`0 0 ${chartW} ${MARGIN.top + BOTTOM_H + 30}`}
             style={{ backgroundColor: 'var(--color-viz-bg, #ffffff)' }}
           >
             {/* Target 0.95 line */}
             <line
               x1={MARGIN.left}
-              x2={width - MARGIN.right - 280}
+              x2={chartW - MARGIN.right}
               y1={MARGIN.top + BOTTOM_H * (1 - 0.95)}
               y2={MARGIN.top + BOTTOM_H * (1 - 0.95)}
               stroke="#111827"
               strokeDasharray="4 4"
             />
             <text
-              x={width - MARGIN.right - 280 - 4}
+              x={chartW - MARGIN.right - 4}
               y={MARGIN.top + BOTTOM_H * (1 - 0.95) - 4}
               textAnchor="end"
               fontSize={10}

@@ -255,9 +255,6 @@ export default function IRLSVisualizer() {
   const handleContourClick = (e: React.MouseEvent<SVGSVGElement>) => {
     if (iterates.length > 1) return;
     const svg = e.currentTarget;
-    const pt = svg.createSVGPoint();
-    pt.x = e.clientX;
-    pt.y = e.clientY;
     const vbox = svg.viewBox.baseVal;
     const rect = svg.getBoundingClientRect();
     const sx = vbox.width / rect.width;

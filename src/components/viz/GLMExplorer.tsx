@@ -8,12 +8,12 @@ import {
   predictGLM,
   pearsonResiduals,
   devianceResiduals,
-  coefCIWaldSandwich,
   coefCIProfileGLM,
   type GLMFit,
   type GLMFamily,
   type LinkFunction,
 } from './shared/regression';
+import { standardNormalCDF } from './shared/testing';
 import { glmFamilyColors } from './shared/colorScales';
 import {
   GLM_EXPLORER_PRESETS,
@@ -92,20 +92,17 @@ export default function GLMExplorer() {
   const coefTable = useMemo(() => {
     if (!fit) return [];
     const ses = fit.vcov.map((row, j) => Math.sqrt(Math.max(row[j], 0)));
-    const cis = coefCIWaldSandwich(fit, 0.05, 'HC0').map((c, j) => ({
-      ...c,
-      seNaive: ses[j],
-      // approximate two-sided z p-value
-      z: fit.beta[j] / Math.max(ses[j], 1e-12),
-    }));
-    return cis.map((c, j) => ({
-      j,
-      name: j === 0 ? 'intercept' : `β${j}`,
-      beta: fit.beta[j],
-      se: c.seNaive,
-      z: c.z,
-      p: 2 * (1 - cdfStdNormalApprox(Math.abs(c.z))),
-    }));
+    return fit.beta.map((b, j) => {
+      const z = b / Math.max(ses[j], 1e-12);
+      return {
+        j,
+        name: j === 0 ? 'intercept' : `β${j}`,
+        beta: b,
+        se: ses[j],
+        z,
+        p: 2 * (1 - standardNormalCDF(Math.abs(z))),
+      };
+    });
   }, [fit]);
 
   // Residuals
@@ -545,19 +542,6 @@ export default function GLMExplorer() {
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
-
-/** Cheap |z| → 2-tailed p approximation via Abramowitz & Stegun 26.2.17. */
-function cdfStdNormalApprox(z: number): number {
-  const sign = z < 0 ? -1 : 1;
-  const x = Math.abs(z) / Math.SQRT2;
-  // erf approximation
-  const t = 1 / (1 + 0.3275911 * x);
-  const a = [
-    0.254829592, -0.284496736, 1.421413741, -1.453152027, 1.061405429,
-  ];
-  const erf = 1 - (((((a[4] * t + a[3]) * t) + a[2]) * t + a[1]) * t + a[0]) * t * Math.exp(-x * x);
-  return 0.5 * (1 + sign * erf);
-}
 
 function formatP(p: number): string {
   if (!Number.isFinite(p)) return '—';

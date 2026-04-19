@@ -170,7 +170,7 @@ formalCalculus → formalStatistics → formalML
 - Assume the reader already knows statistics rigorously — that's what this site teaches
 - Assume knowledge from formalml.com topics — only formalcalculus.com topics may be prerequisites
 - Link to formalml.com topics as prerequisites — only as forward references
-- **Commit, push, or open a PR before visually inspecting the change in the local preview server. See "Visual Inspection Workflow" below.**
+- **Do not commit, push, or open a PR before visually inspecting the change in the local preview server. See "Visual Inspection Workflow" below.**
 
 ## Visual Inspection Workflow (HARD RULE)
 
