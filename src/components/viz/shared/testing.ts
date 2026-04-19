@@ -17,6 +17,13 @@
  *   • Asymptotic trio — Wald, Score (Rao), LRT — for Bernoulli, Normal-mean
  *     (σ known and unknown), and Poisson
  *   • Generic Monte Carlo p-value for arbitrary test statistics
+ *   • Confidence intervals: Wald, Score, LRT, Wilson, Clopper–Pearson,
+ *     Agresti–Coull, exact discrete; profile likelihood; TOST equivalence
+ *     and its CI. Coverage simulators for both binomial and continuous families
+ *   • Topic 20: Multiple-testing procedures (Bonferroni, Holm, Šidák,
+ *     Hochberg, Benjamini–Hochberg, Benjamini–Yekutieli, Storey adaptive),
+ *     simultaneous CIs (Bonferroni / Šidák), mixture p-value simulator,
+ *     FDR/FWER/power Monte-Carlo estimator
  */
 
 import {
@@ -2163,4 +2170,420 @@ export function coverageSimulator(
     widthSum += upper - lower;
   }
   return { actualCoverage: cov / M, meanWidth: widthSum / M };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  TOPIC 20 — Multiple Testing & False Discovery
+//  FWER procedures (Bonferroni, Holm, Šidák, Hochberg), FDR procedures
+//  (Benjamini–Hochberg, Benjamini–Yekutieli, Storey), simultaneous CIs, and
+//  the mixture p-value simulator + FDR/FWER/power Monte-Carlo estimator.
+//  `standardNormalInvCDF` is already re-exported above (line ~46) and is used
+//  in the simultaneous-CI constructors below.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// ── Interfaces ───────────────────────────────────────────────────────────────
+
+/** A single row of the BH step-up trace — one entry per rank k = 1..m. */
+export interface BHSweepEntry {
+  /** 1-based rank (k = 1 is the smallest p-value). */
+  k: number;
+  /** The k-th ordered p-value, p_(k). */
+  p_k: number;
+  /** The BH threshold at this rank, k·α/m. */
+  threshold: number;
+  /** Whether rank k is at or below k*, i.e., in the reject set. */
+  reject: boolean;
+}
+
+/** Return type of `benjaminiHochbergSweep`: boolean reject array + k* + full trace. */
+export interface BHSweepResult {
+  /** Boolean array at the original indices of `pvals`. */
+  rejected: boolean[];
+  /** Largest k with p_(k) ≤ k·α/m; 0 if no rejections. */
+  kStar: number;
+  /** One entry per rank, ascending in k. */
+  sweep: BHSweepEntry[];
+}
+
+/** A simultaneous CI entry for a single parameter. */
+export interface SimultaneousCI {
+  lower: number;
+  upper: number;
+}
+
+/** Procedure-name tag used by `multiTestingMonteCarlo`. */
+export type MultiTestingProcedure =
+  | 'bonferroni'
+  | 'holm'
+  | 'sidak'
+  | 'hochberg'
+  | 'bh'
+  | 'by'
+  | 'storey';
+
+// ── Helper: sort p-values ascending with permutation tracking ────────────────
+//
+// Shared scaffolding used by every step-up / step-down procedure. Returns a
+// permutation π such that pvals[π[0]] ≤ pvals[π[1]] ≤ ... (ascending).
+function argsortAscending(pvals: number[]): number[] {
+  const idx = pvals.map((_, i) => i);
+  idx.sort((a, b) => pvals[a] - pvals[b]);
+  return idx;
+}
+
+// ── Harmonic number c_m = Σ_{k=1}^m 1/k ─────────────────────────────────────
+//
+// Used as the BY normalization constant (see §20.8 Thm 6). Named
+// `harmonicNumber` in code to avoid collision with the hypothesis-index
+// notation H_i; written as c_m in the Topic 20 MDX.
+
+/** Harmonic number c_m = Σ_{k=1}^m 1/k. Exact O(m) summation. */
+export function harmonicNumber(m: number): number {
+  if (m <= 0) return 0;
+  let sum = 0;
+  for (let k = 1; k <= m; k++) sum += 1 / k;
+  return sum;
+}
+
+// ── FWER procedures (alphabetical within subsection) ────────────────────────
+
+/**
+ * Bonferroni (1936 / Dunn 1961) single-step FWER procedure.
+ * Rejects H_i iff p_i ≤ α/m. Controls FWER ≤ α under arbitrary dependence.
+ * Uniformly less powerful than Holm; baseline against which every other FWER
+ * procedure is compared.
+ */
+export function bonferroni(pvals: number[], alpha = 0.05): boolean[] {
+  const m = pvals.length;
+  if (m === 0) return [];
+  const threshold = alpha / m;
+  return pvals.map((p) => p <= threshold);
+}
+
+/**
+ * Hochberg (1988) step-up FWER procedure.
+ * Sort p-values ascending. Walk from k = m down to k = 1; at the first k with
+ * p_(k) ≤ α/(m − k + 1), reject hypotheses at the original indices of the k
+ * smallest p-values. Requires independence (or positive regression dependence
+ * / PRDS); under those assumptions uniformly more powerful than Holm.
+ */
+export function hochberg(pvals: number[], alpha = 0.05): boolean[] {
+  const m = pvals.length;
+  if (m === 0) return [];
+  const order = argsortAscending(pvals);
+  const rejected = new Array(m).fill(false);
+  for (let k = m; k >= 1; k--) {
+    const pSorted = pvals[order[k - 1]];
+    if (pSorted <= alpha / (m - k + 1)) {
+      for (let j = 0; j < k; j++) rejected[order[j]] = true;
+      break;
+    }
+  }
+  return rejected;
+}
+
+/**
+ * Holm (1979) step-down FWER procedure.
+ * Sort p-values ascending; for k = 1..m test p_(k) ≤ α/(m − k + 1). Stop at
+ * the first k where the test fails; reject hypotheses 1..k − 1 at their
+ * original indices; accept the rest.
+ *
+ * Strong FWER control ≤ α under any joint dependence structure. Uniformly
+ * more powerful than Bonferroni and requires no independence assumption.
+ *
+ * TODO (Jonathan): fill in the step-down logic. Hint:
+ *   1. order = argsortAscending(pvals)
+ *   2. Walk k = 1..m; threshold = α/(m − k + 1).
+ *   3. On first p_(k) > threshold, stop. Reject the original indices of
+ *      p_(1)..p_(k − 1); the rest stay accepted.
+ */
+export function holm(pvals: number[], alpha = 0.05): boolean[] {
+  // TODO (Jonathan): implement step-down loop.
+  void alpha;
+  return new Array(pvals.length).fill(false);
+}
+
+/**
+ * Šidák (1967) single-step FWER procedure for the *independent* case.
+ * Rejects H_i iff p_i ≤ 1 − (1 − α)^(1/m). Exact FWER = α under independence;
+ * exceeds α under positive dependence. Marginally more powerful than
+ * Bonferroni; the two are numerically indistinguishable for small α.
+ */
+export function sidak(pvals: number[], alpha = 0.05): boolean[] {
+  const m = pvals.length;
+  if (m === 0) return [];
+  const threshold = 1 - Math.pow(1 - alpha, 1 / m);
+  return pvals.map((p) => p <= threshold);
+}
+
+// ── FDR procedures (alphabetical; BH + variants + Storey adaptive) ──────────
+
+/**
+ * Benjamini & Hochberg (1995) step-up FDR procedure — the featured algorithm
+ * of Topic 20.
+ * Sort p-values ascending; find k* = max{k : p_(k) ≤ k·α/m}. Reject the k*
+ * smallest p-values (at their original indices); accept the rest.
+ *
+ * FDR control: E[V / max(R, 1)] ≤ α · π₀ ≤ α under independence (BH 1995
+ * Thm 1; independence lemma is BEN2001 Lemma 2.1, not BH 1995 directly).
+ *
+ * TODO (Jonathan): fill in the step-up logic. Hint:
+ *   1. order = argsortAscending(pvals)
+ *   2. Walk k = m down to 1; threshold = k·α/m.
+ *   3. Return on first p_(k) ≤ threshold. Reject original indices of the
+ *      k smallest p-values.
+ *   4. If no rank satisfies the bound, reject none (return all false).
+ */
+export function benjaminiHochberg(pvals: number[], alpha = 0.05): boolean[] {
+  // TODO (Jonathan): implement step-up loop.
+  void alpha;
+  return new Array(pvals.length).fill(false);
+}
+
+/**
+ * Benjamini–Hochberg step-up with full per-step trace.
+ * Same procedure as `benjaminiHochberg`, plus a `sweep` array logging
+ * (k, p_(k), k·α/m, reject?) at every rank. Drives `BHAlgorithmVisualizer`'s
+ * play/step animation.
+ *
+ * Intentionally self-contained (does not delegate to the `benjaminiHochberg`
+ * stub above) so the sweep trace is available even before the stub is filled.
+ */
+export function benjaminiHochbergSweep(
+  pvals: number[],
+  alpha = 0.05,
+): BHSweepResult {
+  const m = pvals.length;
+  if (m === 0) return { rejected: [], kStar: 0, sweep: [] };
+  const order = argsortAscending(pvals);
+  let kStar = 0;
+  for (let k = m; k >= 1; k--) {
+    if (pvals[order[k - 1]] <= (k * alpha) / m) {
+      kStar = k;
+      break;
+    }
+  }
+  const rejected = new Array(m).fill(false);
+  for (let j = 0; j < kStar; j++) rejected[order[j]] = true;
+  const sweep: BHSweepEntry[] = [];
+  for (let k = 1; k <= m; k++) {
+    sweep.push({
+      k,
+      p_k: pvals[order[k - 1]],
+      threshold: (k * alpha) / m,
+      reject: k <= kStar,
+    });
+  }
+  return { rejected, kStar, sweep };
+}
+
+/**
+ * Benjamini–Yekutieli (2001) step-up FDR procedure for arbitrary dependence.
+ * Applies BH at level α / c_m, where c_m = Σ_{k=1}^m 1/k. Controls FDR under
+ * any joint dependence structure; the price is a log(m)-factor loss of power.
+ * Preferred when the dependence structure is unknown or adversarial.
+ */
+export function benjaminiYekutieli(pvals: number[], alpha = 0.05): boolean[] {
+  const m = pvals.length;
+  if (m === 0) return [];
+  const cm = harmonicNumber(m);
+  const order = argsortAscending(pvals);
+  const rejected = new Array(m).fill(false);
+  for (let k = m; k >= 1; k--) {
+    if (pvals[order[k - 1]] <= (k * alpha) / (m * cm)) {
+      for (let j = 0; j < k; j++) rejected[order[j]] = true;
+      break;
+    }
+  }
+  return rejected;
+}
+
+/**
+ * Storey (2002) adaptive FDR procedure.
+ * Estimates π₀ = P(null) via the fraction of p-values above λ = 0.5, then
+ * applies BH at level α / π̂₀ (rejects more when π̂₀ < 1). Equivalent to
+ * rejecting H_i iff q_i ≤ α, where q_i is the Storey q-value.
+ */
+export function storeyBH(pvals: number[], alpha = 0.05): boolean[] {
+  const m = pvals.length;
+  if (m === 0) return [];
+  const { pi0Estimate } = storeyQValues(pvals);
+  const adjustedAlpha = alpha / Math.max(pi0Estimate, 1 / m);
+  const order = argsortAscending(pvals);
+  const rejected = new Array(m).fill(false);
+  for (let k = m; k >= 1; k--) {
+    if (pvals[order[k - 1]] <= (k * adjustedAlpha) / m) {
+      for (let j = 0; j < k; j++) rejected[order[j]] = true;
+      break;
+    }
+  }
+  return rejected;
+}
+
+/**
+ * Storey (2002) π₀ estimate + q-value sequence.
+ * π̂₀(λ) = #{p_i > λ} / (m·(1 − λ)) at λ = 0.5, clipped to [1/m, 1].
+ * Q-values are the monotone-adjusted BH p-value multipliers:
+ *   q_(k) = min_{j ≥ k} π̂₀ · m · p_(j) / j
+ * returned at the original indices of `pvals`.
+ */
+export function storeyQValues(pvals: number[]): {
+  qvals: number[];
+  pi0Estimate: number;
+} {
+  const m = pvals.length;
+  if (m === 0) return { qvals: [], pi0Estimate: 1 };
+  const lambda = 0.5;
+  const nAboveLambda = pvals.filter((p) => p > lambda).length;
+  const pi0Raw = nAboveLambda / (m * (1 - lambda));
+  const pi0Estimate = Math.min(Math.max(pi0Raw, 1 / m), 1);
+  const order = argsortAscending(pvals);
+  const qSorted = new Array(m).fill(1);
+  // Right-to-left sweep for monotone q-values.
+  let running = 1;
+  for (let k = m; k >= 1; k--) {
+    const pK = pvals[order[k - 1]];
+    const candidate = Math.min((pi0Estimate * m * pK) / k, 1);
+    running = Math.min(running, candidate);
+    qSorted[k - 1] = running;
+  }
+  const qvals = new Array(m).fill(0);
+  for (let k = 0; k < m; k++) qvals[order[k]] = qSorted[k];
+  return { qvals, pi0Estimate };
+}
+
+// ── Simultaneous confidence intervals ───────────────────────────────────────
+
+/**
+ * Bonferroni-adjusted simultaneous CIs for m parameters estimated by Gaussian
+ * pivots (Wald-style). Each interval uses z = Φ⁻¹(1 − α/(2m)); joint coverage
+ * ≥ 1 − α via the union bound. The price is wider individual intervals (the
+ * "cost of simultaneity" — see §20.9 Thm 8).
+ */
+export function simultaneousCIBonferroni(
+  means: number[],
+  ses: number[],
+  alpha = 0.05,
+): SimultaneousCI[] {
+  const m = means.length;
+  if (m === 0) return [];
+  const z = standardNormalInvCDF(1 - alpha / (2 * m));
+  return means.map((mu, i) => ({
+    lower: mu - z * ses[i],
+    upper: mu + z * ses[i],
+  }));
+}
+
+/**
+ * Šidák-adjusted simultaneous CIs for m *independent* Gaussian pivots.
+ * Each interval uses z = Φ⁻¹(1 − α_ind / 2) where α_ind = 1 − (1 − α)^(1/m).
+ * Joint coverage = exactly 1 − α under independence; slightly tighter than
+ * Bonferroni. Exceeds coverage under positive dependence.
+ */
+export function simultaneousCISidak(
+  means: number[],
+  ses: number[],
+  alpha = 0.05,
+): SimultaneousCI[] {
+  const m = means.length;
+  if (m === 0) return [];
+  const alphaInd = 1 - Math.pow(1 - alpha, 1 / m);
+  const z = standardNormalInvCDF(1 - alphaInd / 2);
+  return means.map((mu, i) => ({
+    lower: mu - z * ses[i],
+    upper: mu + z * ses[i],
+  }));
+}
+
+// ── Mixture p-value simulator + FDR/FWER Monte-Carlo ────────────────────────
+
+/**
+ * Mixture p-value generator used by `multiTestingMonteCarlo` and the Topic 20
+ * explorer presets.
+ *
+ * Convention (required for downstream truth-tracking):
+ *   • Hypotheses 0 .. m0 − 1 are nulls, where m0 = round(m · π₀).
+ *     P-values ~ Uniform(0, 1).
+ *   • Hypotheses m0 .. m − 1 are alternatives. Draw Z ~ Normal(δ, 1);
+ *     p-value is the one-sided upper-tail 1 − Φ(Z). Under the alternative
+ *     with δ > 0, p concentrates near 0.
+ *
+ * Callers that visualize p-values without ordering bias should shuffle the
+ * returned array with a separate permutation; callers that need truth (e.g.,
+ * `multiTestingMonteCarlo`) should rely on the index convention.
+ *
+ * Seeded via `seededRandom` (LCG in `probability.ts`) for reproducibility.
+ */
+export function simulatePValues(
+  m: number,
+  pi0: number,
+  signalStrength: number,
+  seed: number,
+): number[] {
+  if (m === 0) return [];
+  const rng = seededRandom(seed);
+  const m0 = Math.round(m * pi0);
+  const pvals = new Array<number>(m);
+  for (let i = 0; i < m0; i++) pvals[i] = rng();
+  for (let i = m0; i < m; i++) {
+    // Inverse-CDF sampling: Z = δ + Φ⁻¹(U), then p = 1 − Φ(Z).
+    const u = rng();
+    const z = signalStrength + standardNormalInvCDF(u);
+    pvals[i] = 1 - standardNormalCDF(z);
+  }
+  return pvals;
+}
+
+/** Monte-Carlo statistic: sample mean and standard error across trials. */
+export interface MCStat {
+  /** Estimated mean across `nTrials`. */
+  mean: number;
+  /** Standard error of the mean = sqrt(Var / nTrials). */
+  stderr: number;
+}
+
+/**
+ * Monte-Carlo FDR / FWER / power estimator for a given multiple-testing
+ * procedure on the mixture-p-value setup of `simulatePValues`.
+ *
+ * For each of `nTrials` iterations, draw a fresh p-value vector (seeded at
+ * `seed + trial`), apply `procedure`, and accumulate:
+ *   • V_t = false rejections (rejected nulls, indices 0..m0 − 1)
+ *   • S_t = true rejections  (rejected alternatives, indices m0..m − 1)
+ *   • R_t = total rejections = V_t + S_t
+ *   • FDP_t = V_t / max(R_t, 1) (per-trial false-discovery proportion)
+ *
+ * Return (each stat as MCStat = {mean, stderr}):
+ *   • fdr   — mean(FDP_t), stderr via sample SD of FDP_t / sqrt(nTrials)
+ *   • fwer  — fraction of trials with V_t ≥ 1 (Bernoulli, stderr = √p(1-p)/n)
+ *   • power — mean(S_t / max(m1, 1)), where m1 = m − m0
+ *
+ * TODO (Jonathan): implement the accumulator loop. Hints:
+ *   • Build a dispatch map from `MultiTestingProcedure` → function.
+ *   • Maintain running sums of x and x² per statistic; convert to stderr
+ *     at the end via  stderr = sqrt((Σx² − (Σx)²/n) / (n(n−1)))  for the
+ *     sample-SD-based SE of the mean.
+ *   • R_t = 0 contributes FDP_t = 0 (not NaN) — guard with max(R_t, 1).
+ *   • When π₀ = 1 (no alternatives), power.mean = 0, power.stderr = 0.
+ *   • When π₀ = 0 (no nulls), fdr.mean = fwer.mean = 0 by definition.
+ */
+export function multiTestingMonteCarlo(
+  procedure: MultiTestingProcedure,
+  m: number,
+  pi0: number,
+  signalStrength: number,
+  alpha: number,
+  nTrials: number,
+  seed: number,
+): { fdr: MCStat; fwer: MCStat; power: MCStat } {
+  // TODO (Jonathan): implement accumulator loop over nTrials.
+  void procedure;
+  void m;
+  void pi0;
+  void signalStrength;
+  void alpha;
+  void nTrials;
+  void seed;
+  const zero: MCStat = { mean: 0, stderr: 0 };
+  return { fdr: zero, fwer: zero, power: zero };
 }

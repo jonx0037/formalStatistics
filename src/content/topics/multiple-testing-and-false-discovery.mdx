@@ -1,0 +1,581 @@
+---
+title: "Multiple Testing & False Discovery"
+subtitle: "When one test becomes many: controlling FWER via Bonferroni, Holm, and the closed-testing principle; controlling FDR via Benjamini–Hochberg; adaptive q-values via Storey; and the dual Bonferroni / Šidák simultaneous confidence intervals that close Track 5."
+status: "published"
+difficulty: "intermediate"
+prerequisites:
+  - "hypothesis-testing"
+  - "likelihood-ratio-tests-and-np"
+  - "confidence-intervals-and-duality"
+  - "continuous-distributions"
+  - "discrete-distributions"
+tags:
+  - "statistics"
+  - "inference"
+  - "multiple-testing"
+  - "fwer"
+  - "fdr"
+  - "bonferroni"
+  - "holm"
+  - "sidak"
+  - "hochberg"
+  - "benjamini-hochberg"
+  - "benjamini-yekutieli"
+  - "storey"
+  - "q-values"
+  - "simultaneous-confidence-intervals"
+  - "closed-testing"
+  - "replication-crisis"
+domain: "hypothesis-testing-confidence"
+videoId: null
+notebookPath: "notebooks/multiple-testing-and-false-discovery/20_multiple_testing.ipynb"
+githubUrl: "https://github.com/jonx0037/formalStatistics/blob/main/src/content/topics/multiple-testing-and-false-discovery.mdx"
+datePublished: 2026-04-18
+estimatedReadTime: 55
+abstract: "Single-test inference asks one yes-or-no question. Real science asks many at once — every coefficient in a regression, every gene in a GWAS, every metric in an A/B dashboard — and controlling Type I error *individually* is no longer enough. This topic builds the two dominant frameworks: the **family-wise error rate (FWER)**, which bounds the probability of *any* false rejection, and the **false discovery rate (FDR)**, which bounds the *expected fraction* of false rejections among all rejections. Bonferroni (Dunn 1961) and Šidák (1967) are the single-step FWER procedures; Holm (1979) is its uniformly-more-powerful step-down variant, with full proof via induction on rank order; Hochberg (1988) is the corresponding step-up. The closed-testing principle (Marcus–Peritz–Gabriel 1976) is the organizing scaffold — stated with reference to LEH2005 §9.1. The featured result is **Theorem 5, Benjamini–Hochberg 1995**: under independence, the BH step-up procedure controls FDR at $\\alpha \\cdot \\pi_0 \\le \\alpha$. Full proof follows BH 1995 and BEN2001 Lemma 2.1. Benjamini–Yekutieli (2001) handles arbitrary dependence at an $H_m$-factor power cost; Storey (2002) adapts to the true null fraction $\\pi_0$. The simultaneous-CI section (§20.9) fulfils the §19.10 Rem 19 promise by dualizing the FWER-controlled tests into Bonferroni / Šidák bands. §20.10 surveys what Topic 20 does not cover — knockoffs, online FDR, e-processes, permutation multiplicity, Bayesian local-FDR — pointing each to Track 6, Track 7, Track 8, or formalml.com. This topic closes Track 5."
+formalcalculusPrereqs:
+  - topic: "probability-and-union-bound"
+    site: "formalcalculus"
+    relationship: "Proof 1 (Bonferroni) is the union bound applied once. The union bound on the event $\\{V \\ge 1\\} = \\bigcup_{i \\in H_0} \\{p_i \\le \\alpha/m\\}$ is the only analytical tool Bonferroni requires."
+  - topic: "induction"
+    site: "formalcalculus"
+    relationship: "Proof 3 (Holm) is an induction on the number of rejections $r$. The base case $r = 1$ reduces to Bonferroni; the inductive step uses the threshold $\\alpha/(m - r + 1)$ on the remaining $m - r + 1$ hypotheses."
+formalmlConnections:
+  - topic: "feature-selection-and-multiplicity"
+    site: "formalml"
+    relationship: "Every high-dimensional feature-selection procedure inherits a multiple-testing problem. BH is the default tool for selecting significant coefficients in deployed scikit-learn and R glmnet pipelines; §20.7 gives the theory, and §20.8 Thm 6 handles the positive-dependence regime regression inevitably lives in."
+  - topic: "high-dimensional-testing-knockoffs"
+    site: "formalml"
+    relationship: "The Barber–Candès (2015) knockoffs framework is a direct descendent of BH: it constructs synthetic 'knockoff' features, computes test statistics per feature, and applies a BH-like step-up. The $\\alpha \\cdot \\pi_0$ control of §20.7 Thm 5 is the result it generalizes. §20.10 Rem 28 states the forward pointer."
+  - topic: "always-valid-inference"
+    site: "formalml"
+    relationship: "The single-test framework of §20.3 assumes the $m$ hypotheses and the stopping rule are fixed in advance. Always-valid confidence sequences (Howard et al. 2021) and e-processes (Vovk 2019, Grünwald et al. 2024) dispense with this by using supermartingale / anytime bounds. §20.10 Rem 26 states the forward pointer."
+  - topic: "online-fdr"
+    site: "formalml"
+    relationship: "The streaming generalization of BH — Javanmard–Montanari 2018 Online-BH and Ramdas et al. 2018 SAFFRON / LORD — allows hypotheses to arrive sequentially with FDR control at each time. §20.10 Rem 27 points forward to the full treatment."
+connections:
+  - topic: "hypothesis-testing"
+    relationship: "Direct continuation. Every reference to 'multiple testing,' 'Bonferroni,' 'FDR,' or 'Benjamini–Hochberg' in §17 is fulfilled here. §17.12 Rem 16 and Rem 19 specifically defer to this topic."
+  - topic: "likelihood-ratio-tests-and-np"
+    relationship: "Topic 18 §18.10 Rem 23 deferred multiple-testing corrections for the NP trio to this topic; §20.5 applies Bonferroni/Holm/Hochberg to any family of level-α tests, including the NP-derived ones."
+  - topic: "confidence-intervals-and-duality"
+    relationship: "Topic 19 Thm 1 (test–CI duality, §19.2) powers the §20.9 simultaneous-CI construction. Topic 19 §19.10 Rem 19 #3 deferred simultaneous CIs to this topic; §20.9 Thm 8 + SimultaneousCIBands deliver them. Topic 19 §19.10 Rem 23 (multiple CIs in ANOVA) points here for the formal construction."
+references:
+  - type: "paper"
+    title: "Multiple Comparisons Among Means"
+    author: "Olive Jean Dunn"
+    year: 1961
+    note: "Cited as DUN1961. §20.4 Thm 1 attribution — the canonical modern statement of the Bonferroni procedure. JASA 56(293): 52–64."
+  - type: "paper"
+    title: "A Simple Sequentially Rejective Multiple Test Procedure"
+    author: "Sture Holm"
+    year: 1979
+    note: "Cited as HOL1979. §20.5 Thm 3 attribution — step-down FWER control under any joint dependence structure. Scand. J. Statist. 6(2): 65–70."
+  - type: "paper"
+    title: "Rectangular Confidence Regions for the Means of Multivariate Normal Distributions"
+    author: "Zbyněk Šidák"
+    year: 1967
+    note: "Cited as SID1967. §20.4 Thm 2 attribution — exact FWER = α under independence; conservative under positive dependence. JASA 62(318): 626–633."
+  - type: "paper"
+    title: "A Sharper Bonferroni Procedure for Multiple Tests of Significance"
+    author: "Yosef Hochberg"
+    year: 1988
+    note: "Cited as HOC1988. §20.5 Thm 4 attribution — step-up FWER procedure uniformly more powerful than Holm under independence / PRDS. Biometrika 75(4): 800–803."
+  - type: "paper"
+    title: "Controlling the False Discovery Rate: A Practical and Powerful Approach to Multiple Testing"
+    author: "Yoav Benjamini and Yosef Hochberg"
+    year: 1995
+    note: "Cited as BEN1995. §20.7 Thm 5 (featured) attribution — the foundational paper introducing FDR as an error metric and proving the BH step-up procedure controls it at α·π₀ under independence. JRSS-B 57(1): 289–300."
+  - type: "paper"
+    title: "The Control of the False Discovery Rate in Multiple Testing Under Dependency"
+    author: "Yoav Benjamini and Daniel Yekutieli"
+    year: 2001
+    note: "Cited as BEN2001. §20.7 Proof 5 Step 3 (independence lemma, Lem 2.1 of this paper — not BH 1995 directly); §20.8 Thm 6 (BY procedure for arbitrary dependence). Annals of Statistics 29(4): 1165–1188."
+  - type: "paper"
+    title: "A Direct Approach to False Discovery Rates"
+    author: "John D. Storey"
+    year: 2002
+    note: "Cited as STO2002. §20.8 Thm 7 attribution — the adaptive q-value procedure estimating π₀ from the empirical p-value distribution. JRSS-B 64(3): 479–498."
+  - type: "paper"
+    title: "Why Most Published Research Findings Are False"
+    author: "John P. A. Ioannidis"
+    year: 2005
+    note: "Cited as IOA2005. §20.8 Ex 11 — the prior-probability argument that a statistically significant finding is often more likely to be a false positive than a true positive. PLoS Medicine 2(8): e124."
+  - type: "paper"
+    title: "The Statistical Crisis in Science"
+    author: "Andrew Gelman and Eric Loken"
+    year: 2014
+    note: "Cited as GEL2014. §20.8 Ex 12 — the 'garden of forking paths' / researcher-degrees-of-freedom critique of naive multiplicity. American Scientist 102(6): 460–466."
+  - type: "book"
+    title: "Testing Statistical Hypotheses"
+    author: "Erich L. Lehmann and Joseph P. Romano"
+    year: 2005
+    edition: "3rd"
+    publisher: "Springer"
+    note: "Cited as LEH2005. §20.2 Thm 0 (closed-testing proof, Ch. 9.1); §20.5 Rem 12 (Holm optimality); §20.10 Rem 31 (permutation multiplicity pointer). Ch. 9 is the canonical textbook treatment."
+  - type: "book"
+    title: "Statistical Inference"
+    author: "George Casella and Roger L. Berger"
+    year: 2002
+    edition: "2nd"
+    publisher: "Duxbury"
+    note: "Cited as CAS2002. §20.4 Ex 3 (union bound computation); §20.9 Rem 24 (Scheffé simultaneous CIs pointer)."
+---
+
+import DefinitionBlock from '../../components/ui/DefinitionBlock.astro';
+import TheoremBlock from '../../components/ui/TheoremBlock.astro';
+import ProofBlock from '../../components/ui/ProofBlock.astro';
+import ExampleBlock from '../../components/ui/ExampleBlock.astro';
+import RemarkBlock from '../../components/ui/RemarkBlock.astro';
+import ExternalLink from '../../components/ui/ExternalLink.astro';
+
+import MultipleTestingProcedureExplorer from '../../components/viz/MultipleTestingProcedureExplorer.tsx';
+import FWERvsFDRComparator from '../../components/viz/FWERvsFDRComparator.tsx';
+import BHAlgorithmVisualizer from '../../components/viz/BHAlgorithmVisualizer.tsx';
+import SimultaneousCIBands from '../../components/viz/SimultaneousCIBands.tsx';
+
+## 20.1 The FWER Explosion Problem
+
+A single hypothesis test at level $\alpha = 0.05$ makes the following contract with a scientist: if the null is true, the probability of a false rejection is at most $5\%$. Twenty replications of the same experiment, each analyzed with the same level-$\alpha$ test, would make twenty independent such contracts — and on average, *one* of them would falsely reject the null. That is already uncomfortable. In modern practice, $m$ is not twenty; it is twenty thousand (GWAS), or two hundred thousand (high-throughput imaging), or — most commonly — the number of coefficients in a regression multiplied by the number of pre-registered contrasts multiplied by the number of subgroup analyses. The per-test guarantee degrades catastrophically with $m$, and without an adjustment, "$p < 0.05$" stops meaning what the untrained reader assumes.
+
+The simplest quantification of the degradation assumes independence between the $m$ tests. If each test has Type I error exactly $\alpha$ under the null, and all $m$ nulls are true, then
+
+$$\Pr\left(\exists i \in \{1, \ldots, m\} : \text{test } i \text{ rejects}\right) \;=\; 1 - (1 - \alpha)^m.$$
+
+This quantity is the **family-wise error rate (FWER)** under the global null. For small $\alpha$ the Taylor expansion gives $\text{FWER} \approx m \alpha$, which is the same answer the union bound returns unconditionally (no independence required). Both bounds explode with $m$: at $\alpha = 0.05$ the table below is unforgiving.
+
+![FWER under independence as a function of $m$, at $\\alpha = 0.05$. By $m = 20$ the probability of at least one false rejection is 64\\%; by $m = 100$ it is 99.4\\%. The union-bound upper envelope $m\\alpha$ tracks the exact curve closely for $m \\alpha \\lesssim 1$ and overshoots 1 thereafter.](/images/topics/multiple-testing-and-false-discovery/20-fwer-explosion.png)
+
+<ExampleBlock number={1} title="Twenty A/B tests, one genuine effect">
+A product team runs twenty simultaneous A/B tests on unrelated features, each at level $\alpha = 0.05$. None of the twenty has a true effect — the global null holds. The probability that at least one test falsely flags its feature as significant is $1 - 0.95^{20} \approx 0.64$. A team that deploys whichever features cross the $p < 0.05$ threshold will, in expectation, ship *at least one* null feature in this batch. Doing this every quarter across a company compounds the effect: after four quarters, the probability of *never* having shipped a null feature is $0.36^4 \approx 0.017$.
+</ExampleBlock>
+
+<ExampleBlock number={2} title="Genome-wide significance and the $5 \\times 10^{-8}$ threshold">
+A GWAS tests $m \approx 10^6$ common variants against a trait. The union-bound control at $\alpha = 0.05$ gives a per-test threshold of $\alpha/m = 5 \times 10^{-8}$ — the number that has become the *de facto* field standard for "genome-wide significance." It is exactly the Bonferroni correction of §20.4 applied to the GWAS scale. The FDR-controlled threshold for the same data is typically two or three orders of magnitude less stringent (§20.7 Ex 8), which is why BH-based analyses routinely identify hits that genome-wide-significance analyses miss.
+</ExampleBlock>
+
+<DefinitionBlock number={1} title="Multiple-testing problem (setup)">
+A **multiple-testing problem** consists of $m$ hypotheses $H_1, \ldots, H_m$ with null distributions $P_1^{(0)}, \ldots, P_m^{(0)}$ and test statistics $T_1, \ldots, T_m$ producing p-values $p_1, \ldots, p_m$. Let $H_0 \subseteq \{1, \ldots, m\}$ denote the subset of indices where $H_i$ is true (the **true nulls**), with $m_0 = |H_0|$ and $m_1 = m - m_0 = |H_0^c|$ the count of **true alternatives**. Write $\pi_0 = m_0 / m$ for the **true null fraction**.
+
+A **multiple-testing procedure** is a function $(p_1, \ldots, p_m) \mapsto R \subseteq \{1, \ldots, m\}$ returning the set of **rejected** hypotheses. Counts of interest: $R = |R|$ (total rejections), $V = |R \cap H_0|$ (false rejections), $S = |R \cap H_0^c|$ (true rejections), $R = V + S$.
+</DefinitionBlock>
+
+<RemarkBlock number={1} title="Why not just use $\\alpha/m$ everywhere and move on?">
+Bonferroni's correction — apply each test at level $\alpha/m$ — is the canonical fix and will be formalized in §20.4. It works, but it is *uniformly conservative*: the FWER it actually achieves under the global null is at most $m_0 \alpha / m \le \alpha$, often much less. The rest of this topic is about *more powerful* procedures that retain the FWER guarantee (Holm, Hochberg, closed testing) or relax it to the weaker-but-often-preferred FDR guarantee (BH, BY, Storey). The pedagogical arc: $\alpha/m$ is the floor, not the ceiling.
+</RemarkBlock>
+
+<RemarkBlock number={2} title="Independence vs dependence in the FWER formula">
+The exact formula $1 - (1 - \alpha)^m$ uses independence; the union bound $m \alpha$ does not. Under positive dependence — the typical regime for correlated tests in an A/B platform or for linkage-disequilibrium-correlated SNPs in a GWAS — the exact FWER is *smaller* than the independent-case formula (the false rejections tend to cluster). Under negative dependence, it can be larger, but negative dependence is rare in practice. The upshot: $m \alpha$ is a safe universal upper bound; $1 - (1 - \alpha)^m$ is tight under independence; the truth-under-positive-dependence is somewhere in between.
+</RemarkBlock>
+
+## 20.2 The Closed-Testing Principle
+
+Before stating Bonferroni, we describe the organizing scaffold that derives Holm (and many other step-down procedures) from a single principle. **Closed testing** (Marcus, Peritz, and Gabriel 1976) is a two-step recipe: test every non-empty intersection hypothesis $\bigcap_{i \in I} H_i$ at level $\alpha$; reject $H_i$ in the final procedure iff every intersection containing $i$ rejects. This simultaneously achieves strong FWER control — *regardless* of the individual tests' dependence structure — and, when the base tests are chosen appropriately, produces procedures strictly more powerful than single-step corrections.
+
+![The closure tree for $m = 3$. Top: $H_{123} = H_1 \\cap H_2 \\cap H_3$. Middle: three pairwise intersections $H_{12}, H_{13}, H_{23}$. Bottom: three elementary hypotheses $H_1, H_2, H_3$. Closed testing rejects $H_i$ iff every intersection hypothesis on the path from $H_{123}$ down to $H_i$ is rejected by its level-$\\alpha$ test.](/images/topics/multiple-testing-and-false-discovery/20-closed-testing-tree.png)
+
+<TheoremBlock number={0} title="Closed testing controls FWER in the strong sense (Marcus–Peritz–Gabriel 1976)">
+Let $\phi_I$ be a level-$\alpha$ test of $H_I = \bigcap_{i \in I} H_i$ for every non-empty $I \subseteq \{1, \ldots, m\}$. Define the **closed procedure** to reject $H_i$ iff $\phi_J$ rejects for every $J \ni i$. Then for any true-null configuration $H_0 \subseteq \{1, \ldots, m\}$:
+
+$$\Pr_{H_0}\bigl(\text{at least one } H_i \text{ with } i \in H_0 \text{ is rejected}\bigr) \;\le\; \alpha.$$
+
+No dependence assumption on the individual test statistics is required.
+</TheoremBlock>
+
+The proof is a one-line observation: a false rejection of any $H_i$ with $i \in H_0$ requires $\phi_{H_0}$ to reject, and $\phi_{H_0}$ is a level-$\alpha$ test of the true null $H_{H_0}$, so this has probability $\le \alpha$. Full exposition and the induction argument that specializes this to Holm are in <ExternalLink href="https://doi.org/10.1007/0-387-27605-X">LEH2005</ExternalLink> §9.1. We will not reproduce it; for Topic 20 the role of closed testing is organizational — it is the lens through which Holm (§20.5) and Hochberg (§20.5) become instances of a single construction rather than ad-hoc step-down rules.
+
+<RemarkBlock number={3} title="Closed testing is a meta-recipe, not a specific procedure">
+The theorem above says "pick level-$\alpha$ tests of every intersection and combine them correctly." It does *not* tell you which tests to pick. Bonferroni-based intersection tests (reject $H_I$ iff $\min_{i \in I} p_i \le \alpha / |I|$) give the Holm procedure. Fisher-combination intersection tests (reject $H_I$ iff $-2 \sum_{i \in I} \log p_i$ exceeds a $\chi^2_{2|I|}$ critical value) give a different, often more powerful closed procedure. Simes-combination tests give Hochberg. The space of reasonable closed procedures is large; practitioners gravitate to Holm because it is parameter-free and always-valid.
+</RemarkBlock>
+
+<RemarkBlock number={4} title="Why only state, not prove, the principle here">
+The full proof machinery — proving strong control *and* showing Holm is the closed procedure with Bonferroni intersection tests — takes roughly 15 additional lines of careful indexing. It adds no conceptual insight beyond what the one-line sketch above already conveys, and it distracts from the BH proof in §20.7, which *does* deserve a full derivation. Closed testing is the scaffold; the specific procedures we prove correct (Bonferroni, Holm, BH) are the load-bearing walls.
+</RemarkBlock>
+
+## 20.3 Family-Wise Error Rate: The FWER Paradigm
+
+<DefinitionBlock number={2} title="Family-wise error rate (FWER)">
+For a multiple-testing procedure producing rejection set $R$ on data with true-null configuration $H_0$, the **family-wise error rate at $H_0$** is
+
+$$\text{FWER}(H_0) \;=\; \Pr_{H_0}(V \ge 1) \;=\; \Pr_{H_0}(R \cap H_0 \ne \emptyset).$$
+
+A procedure **controls FWER at level $\alpha$** if $\text{FWER}(H_0) \le \alpha$ for every configuration $H_0$.
+</DefinitionBlock>
+
+<DefinitionBlock number={3} title="Strong vs weak FWER control">
+A procedure controls FWER in the **weak** sense if $\text{FWER}(H_0) \le \alpha$ only when $H_0 = \{1, \ldots, m\}$ (the global null — every $H_i$ true). It controls FWER in the **strong** sense if $\text{FWER}(H_0) \le \alpha$ for every $H_0 \subseteq \{1, \ldots, m\}$, including the partial-null configurations where some $H_i$ are true and some are false.
+
+Strong control is what practitioners want: the guarantee should hold whether or not the alternatives are real. Weak control is an academic fallback. Every procedure in this topic controls FWER or FDR in the strong sense unless explicitly noted.
+</DefinitionBlock>
+
+<RemarkBlock number={5} title="FWER relative to Topic 17's Type I error">
+At $m = 1$ FWER collapses to the per-test Type I error $\alpha$ of <ExternalLink href="/topics/hypothesis-testing#section-17-3">Topic 17 §17.3</ExternalLink>. FWER is the multi-hypothesis generalization: it replaces "probability this particular test falsely rejects" with "probability *any* of the $m$ tests falsely rejects." The two notions agree at $m = 1$ and diverge sharply for large $m$, as §20.1 Fig 1 shows.
+</RemarkBlock>
+
+<RemarkBlock number={6} title="The FWER–power trade-off">
+Holding each test's nominal level fixed, controlling FWER at level $\alpha$ forces each individual test to use a smaller effective $\alpha_i \le \alpha$. Smaller per-test level means smaller per-test power. The trade-off is quantitative: under Bonferroni at global $\alpha = 0.05$, a test of a single alternative with effect size $\delta$ that had power $0.80$ at $\alpha = 0.05$ with $m = 1$ retains only power $\approx 0.60$ at $m = 20$ and $\approx 0.25$ at $m = 200$ — a dramatic loss. The FDR framework of §20.6 sacrifices some of FWER's protection to claw back this power, and is the right tool whenever false *discoveries* (rather than any false rejection whatsoever) are the cost metric.
+</RemarkBlock>
+
+## 20.4 Bonferroni and Šidák
+
+Bonferroni is the starting point: reject $H_i$ iff $p_i \le \alpha/m$. It controls FWER without any dependence assumption and its proof is immediate.
+
+<TheoremBlock number={1} title="Bonferroni FWER control">
+The **Bonferroni procedure** rejects $H_i$ iff $p_i \le \alpha/m$. It controls FWER at level $\alpha$ in the strong sense under any joint dependence structure among the test statistics.
+</TheoremBlock>
+
+<ProofBlock title="Proof 1 — Bonferroni FWER control">
+Let $V$ be the number of false rejections. The event $\{V \ge 1\}$ equals the union $\bigcup_{i \in H_0} \{p_i \le \alpha/m\}$. Applying the union bound (see <ExternalLink href="https://en.wikipedia.org/wiki/Boole%27s_inequality">Boole's inequality</ExternalLink>):
+
+$$\Pr_{H_0}(V \ge 1) \;=\; \Pr_{H_0}\!\left(\bigcup_{i \in H_0} \{p_i \le \alpha/m\}\right) \;\le\; \sum_{i \in H_0} \Pr_{H_0}(p_i \le \alpha/m) \;\le\; \sum_{i \in H_0} \tfrac{\alpha}{m} \;=\; \tfrac{m_0 \alpha}{m} \;\le\; \alpha.$$
+
+The first inequality is the union bound; the second uses that each $p_i$ for $i \in H_0$ is stochastically at least Uniform(0, 1), so $\Pr(p_i \le \alpha/m) \le \alpha/m$. No independence is needed. ∎ — using Boole's inequality.
+</ProofBlock>
+
+Proof 1 is three lines because Bonferroni is *morally* the union bound. The trade-off is that it uses the union bound even when better control is possible — independence-based procedures (Šidák) or step-down procedures (Holm) achieve larger per-test thresholds while retaining FWER control.
+
+<TheoremBlock number={2} title="Šidák FWER control (Šidák 1967)">
+Suppose the test statistics $T_1, \ldots, T_m$ are independent under $H_0$. Then the **Šidák procedure** — reject $H_i$ iff $p_i \le 1 - (1 - \alpha)^{1/m}$ — controls FWER in the strong sense at exactly $\alpha$ when $m_0 = m$ and at most $\alpha$ otherwise.
+</TheoremBlock>
+
+Under independence, Šidák's threshold is slightly larger than Bonferroni's ($1 - (1 - \alpha)^{1/m} > \alpha/m$ for every $m \ge 2$, with equality in the limit $m \to 1$), but the gap is tiny: at $\alpha = 0.05$ and $m = 100$ the thresholds are $5.13 \times 10^{-4}$ (Šidák) vs $5.00 \times 10^{-4}$ (Bonferroni), a $2.6\%$ difference. Šidák is strictly more powerful when independence holds, but practitioners typically prefer Bonferroni because its universal validity (no dependence assumption) outweighs the marginal power gain when independence is questionable. Stated without proof; see <ExternalLink href="https://doi.org/10.1080/01621459.1967.10482935">SID1967</ExternalLink>.
+
+![Mixture of p-values under a typical multiple-testing scenario: $m = 1000$, $\\pi_0 = 0.8$, moderate signal. The observed mixture (left panel) looks like a uniform-plus-concentration-near-zero; the ground-truth decomposition (right panel) shows the Uniform(0, 1) distribution of the 800 null p-values plus the near-zero concentration of the 200 alternative p-values.](/images/topics/multiple-testing-and-false-discovery/20-pvalue-mixture.png)
+
+<ExampleBlock number={3} title="Bonferroni on $m = 20$ tests at $\\alpha = 0.05$">
+Per-test threshold $\alpha/m = 0.0025$. A test with a $p$-value of $0.04$ — significant at the $\alpha = 0.05$ level for a single test — is *not* significant under Bonferroni. The union-bound-guaranteed FWER is at most $20 \times 0.0025 = 0.05$; under independence the exact FWER is $1 - (1 - 0.0025)^{20} = 0.0488$, slightly below the bound.
+</ExampleBlock>
+
+<RemarkBlock number={7} title="Bonferroni vs Šidák in practice">
+For essentially every routine application, the two give numerically indistinguishable thresholds. The deciding factor is the dependence story: Bonferroni is correct under any dependence, Šidák is exact under independence and conservative-then-liberal under positive-then-negative dependence. Textbook tables default to Bonferroni; the software outputs often default to Šidák (e.g., R's `p.adjust(method = 'bonferroni')` vs the closely-related Šidák implementations). The practical answer is almost always the same hypothesis-level decisions.
+</RemarkBlock>
+
+<RemarkBlock number={8} title="Hom on: Bonferroni as a level-$\\alpha$ test of the global null">
+The Bonferroni intersection test — "reject $H_I$ iff $\min_{i \in I} p_i \le \alpha / |I|$" — is itself a valid level-$\alpha$ test of the intersection hypothesis $\bigcap_{i \in I} H_i$. Applying closed testing with Bonferroni intersection tests produces exactly the Holm step-down procedure of §20.5 (LEH2005 §9.1). This is the cleanest way to see *why* Holm strictly dominates Bonferroni: the closed procedure exploits the fact that once a hypothesis is rejected, the remaining intersections shrink, and subsequent Bonferroni thresholds become less stringent.
+</RemarkBlock>
+
+## 20.5 Holm's Step-Down and Hochberg's Step-Up
+
+Holm's step-down procedure is uniformly more powerful than Bonferroni: every rejection Bonferroni makes, Holm also makes; and Holm additionally rejects hypotheses with $p$-values up to $\alpha$ (the least-stringent threshold, at the end of the step-down walk). It preserves Bonferroni's strong FWER control without requiring independence.
+
+<TheoremBlock number={3} title="Holm step-down FWER control (Holm 1979)">
+Order the $p$-values ascending: $p_{(1)} \le p_{(2)} \le \cdots \le p_{(m)}$. Let $k^\dagger$ be the smallest rank $k$ such that $p_{(k)} > \alpha / (m - k + 1)$ (set $k^\dagger = m + 1$ if no such $k$ exists). The **Holm procedure** rejects the hypotheses corresponding to $p_{(1)}, \ldots, p_{(k^\dagger - 1)}$. This controls FWER at level $\alpha$ in the strong sense under any joint dependence structure.
+</TheoremBlock>
+
+<ProofBlock title="Proof 3 — Holm FWER control (induction on rank order)">
+Let $H_0$ be the true-null configuration with $|H_0| = m_0$ and let $r^*$ be the smallest rank (in the overall ordering of $p_{(1)}, \ldots, p_{(m)}$) at which some true null appears. Equivalently, $r^* = m_1 + 1$: the first $m_1$ positions in the ordering must be alternatives (if every null is larger than every alternative, which is the worst case for Type I; otherwise $r^*$ is smaller, which only makes a false rejection require a smaller $p_{(r^*)}$).
+
+We show that $\Pr_{H_0}(V \ge 1)$ — the probability that Holm falsely rejects at least one true null — is at most $\alpha$. A false rejection requires Holm to walk past step $r^*$, which requires $p_{(r^*)} \le \alpha / (m - r^* + 1)$. At rank $r^*$, exactly $m - r^* + 1 = m_0$ of the remaining $p$-values are true nulls. The smallest of those $m_0$ null $p$-values — call it $p^*_{(1)}$, the *first-order statistic* of the null $p$-values — is at most $p_{(r^*)}$. So
+
+$$\Pr_{H_0}(V \ge 1) \;\le\; \Pr_{H_0}\!\left(p^*_{(1)} \le \tfrac{\alpha}{m_0}\right).$$
+
+The first-order statistic of $m_0$ null $p$-values, each stochastically at least Uniform(0, 1), is at most $\alpha/m_0$ with probability at most $\alpha$ by the union bound:
+
+$$\Pr_{H_0}\!\left(p^*_{(1)} \le \tfrac{\alpha}{m_0}\right) \;=\; \Pr_{H_0}\!\left(\min_{i \in H_0} p_i \le \tfrac{\alpha}{m_0}\right) \;\le\; \sum_{i \in H_0} \Pr_{H_0}\!\left(p_i \le \tfrac{\alpha}{m_0}\right) \;\le\; m_0 \cdot \tfrac{\alpha}{m_0} \;=\; \alpha.$$
+
+Combining the two displays: $\Pr_{H_0}(V \ge 1) \le \alpha$. No dependence assumption is required because every inequality used is the union bound applied to events on a fixed set of null-indexed $p$-values. ∎ — using induction-on-rank + union bound; HOL1979.
+</ProofBlock>
+
+The proof shows *why* Holm dominates Bonferroni: Bonferroni uses the union bound once at threshold $\alpha/m$; Holm uses it at threshold $\alpha/m_0$, which is larger when $m_0 < m$ (i.e., whenever there are real alternatives). The step-down structure is the device that lets the threshold depend on the number of surviving hypotheses.
+
+![Rank-dependent thresholds for Bonferroni (flat at $\\alpha/m$) and Holm (staircase $\\alpha/(m-k+1)$, ranging from $\\alpha/m$ at the smallest $p$-value to $\\alpha$ at the largest). Holm starts stricter than Bonferroni at no rank and ends less strict; the "power gain" is the shaded region between the two.](/images/topics/multiple-testing-and-false-discovery/20-bonferroni-vs-holm.png)
+
+<TheoremBlock number={4} title="Hochberg step-up FWER control (Hochberg 1988)">
+Order the $p$-values ascending. Let $k^*$ be the *largest* rank $k$ such that $p_{(k)} \le \alpha / (m - k + 1)$ (set $k^* = 0$ if no such $k$ exists). The **Hochberg procedure** rejects $p_{(1)}, \ldots, p_{(k^*)}$. This controls FWER at level $\alpha$ under independence or positive regression dependence (PRDS).
+</TheoremBlock>
+
+Hochberg uses the same threshold function as Holm — $\alpha/(m-k+1)$ at rank $k$ — but walks the ranks in the opposite direction (from largest $p$-value down to smallest, stopping at the first that *passes*) rather than step-down (stopping at the first that *fails*). It is uniformly more powerful than Holm when independence holds, at the cost of requiring that assumption. Stated without proof; see <ExternalLink href="https://doi.org/10.1093/biomet/75.4.800">HOC1988</ExternalLink>.
+
+<ExampleBlock number={4} title="Holm vs Bonferroni on $m = 20$ at $\\alpha = 0.05$">
+Suppose 3 of the 20 $p$-values are below $0.0025$: specifically $p_{(1)} = 0.0003, p_{(2)} = 0.0012, p_{(3)} = 0.0021$, and $p_{(4)} = 0.004$. Bonferroni rejects the first three. Holm: $p_{(1)} = 0.0003 \le 0.05/20 = 0.0025$ (pass), $p_{(2)} = 0.0012 \le 0.05/19 \approx 0.00263$ (pass), $p_{(3)} = 0.0021 \le 0.05/18 \approx 0.00278$ (pass), $p_{(4)} = 0.004 \le 0.05/17 \approx 0.00294$? No — $0.004 > 0.00294$, so Holm stops and rejects $p_{(1)}, p_{(2)}, p_{(3)}$. Same rejections as Bonferroni in this case, but Holm's threshold at rank 4 is less stringent than Bonferroni's constant $0.0025$, so if $p_{(4)}$ had been, say, $0.0027$, Holm would additionally reject it while Bonferroni would not.
+</ExampleBlock>
+
+<ExampleBlock number={5} title="Holm vs Hochberg on a step-up-favoring input">
+Take $m = 5$, $\alpha = 0.05$, ordered $p$-values $0.006, 0.012, 0.018, 0.030, 0.045$. Holm: $p_{(1)} = 0.006 \le 0.01$ (pass), $p_{(2)} = 0.012 \le 0.0125$ (pass), $p_{(3)} = 0.018 \le 0.0167$? No — $0.018 > 0.0167$, stop. Rejects 2. Hochberg: start at $p_{(5)} = 0.045 \le 0.05$? Yes — reject all 5. The same inputs give very different answers: Hochberg's step-up detects the global pattern ("all five look moderately small") while Holm's step-down commits early. Hochberg is valid under independence; Holm makes no such assumption.
+</ExampleBlock>
+
+<ExampleBlock number={6} title="The explorer — changing $\\pi_0$ at fixed $\\alpha$ and $m$">
+Open the explorer below; set $m = 200$, $\alpha = 0.05$; sweep $\pi_0$ from $0.5$ (dense signal) to $0.99$ (sparse). At $\pi_0 = 0.5$ Holm and BH both recover most of the 100 alternatives; Bonferroni recovers perhaps $40$. At $\pi_0 = 0.99$ Holm and Bonferroni converge (both at $\approx 2$ rejections) while BH retains nearly all of the 2 expected true alternatives. This is the core FDR-vs-FWER story and it is best seen interactively.
+</ExampleBlock>
+
+<MultipleTestingProcedureExplorer client:visible />
+
+<RemarkBlock number={9} title="Holm is 'always-on' Bonferroni">
+The step-down structure guarantees that Holm's rejection set contains Bonferroni's: if $p_{(k)} \le \alpha/m$, then a fortiori $p_{(k)} \le \alpha/(m-k+1)$. So every Bonferroni rejection is a Holm rejection, and Holm potentially adds more as the rank grows. There is no regime where using Bonferroni instead of Holm is better; use Holm by default.
+</RemarkBlock>
+
+<RemarkBlock number={10} title="Hochberg vs Holm: the independence price">
+Hochberg's step-up is strictly more powerful than Holm's step-down under independence, but *not* under arbitrary dependence. In GWAS (LD-correlated tests) and most A/B test multiplicity, positive dependence holds and Hochberg is safe and preferred. In high-dimensional regression where the design matrix is ill-conditioned, dependence structure can be complex and Holm is the conservative default.
+</RemarkBlock>
+
+<RemarkBlock number={11} title="Closed-testing derivation of Holm">
+Applying the closed-testing scaffold (§20.2 Thm 0) with Bonferroni intersection tests — "reject $H_I$ iff $\min_{i \in I} p_i \le \alpha / |I|$" — produces exactly the Holm step-down procedure. This is <ExternalLink href="https://doi.org/10.1007/0-387-27605-X">LEH2005</ExternalLink> §9.1 Thm 9.1.2. The derivation explains *why* Holm's rank-dependent threshold is $\alpha/(m - k + 1)$: at step $k$, the remaining candidate intersection has size $m - k + 1$, and its Bonferroni threshold is $\alpha/(m - k + 1)$.
+</RemarkBlock>
+
+<RemarkBlock number={12} title="Uniformly most powerful step-down?">
+No. Holm is *admissible* among step-down procedures that control FWER under arbitrary dependence (you can't uniformly improve it), but it is not UMP. The closed-testing framework allows other intersection-test choices (Fisher combination, Simes, ...) that can dominate Holm on specific alternative configurations while still controlling FWER in the strong sense. Procedure choice depends on the expected dependence and signal structure. See LEH2005 §9.1 for the admissibility theorems.
+</RemarkBlock>
+
+## 20.6 False Discovery Rate: A New Error Metric
+
+Benjamini and Hochberg (1995) observed that FWER control is often overkill. In a genome-wide association study with $10{,}000$ tested SNPs, a practitioner flags $50$ as significant. They are content if $5$ of those $50$ are false positives (10% FDP) — that is the rate at which follow-up experiments will fail. They do *not* specifically want $\Pr(\text{any of the 10{,}000 is a false positive}) \le 0.05$; that is an unreasonably stringent target that would shrink the flagged set to perhaps $5$ SNPs, most of which the practitioner already knew. The **false discovery rate** is the error metric that aligns with this reasoning: control the *expected fraction* of false rejections among all rejections, not the probability of any false rejection.
+
+<DefinitionBlock number={4} title="False discovery proportion (FDP) and false discovery rate (FDR)">
+For a multiple-testing procedure with rejection set $R$ of size $R$ and false-rejection count $V$, the **false discovery proportion** is
+
+$$\mathrm{FDP} \;=\; \begin{cases} V/R & \text{if } R \ge 1, \\ 0 & \text{if } R = 0. \end{cases}$$
+
+The **false discovery rate** is its expectation:
+
+$$\mathrm{FDR} \;=\; \mathbb{E}_{H_0}[\mathrm{FDP}].$$
+
+A procedure **controls FDR at level $\alpha$** if $\mathrm{FDR} \le \alpha$ for every true-null configuration $H_0$.
+</DefinitionBlock>
+
+<DefinitionBlock number={5} title="FDP vs FDR — the random-vs-expected distinction">
+FDP is a random variable (it depends on which tests happen to reject in this specific sample); FDR is its expectation over the data distribution. A procedure can have FDR $= 0.05$ while producing individual samples with FDP $= 0$ (zero false discoveries) or FDP $= 0.3$ (many false discoveries) — *on average* the false-discovery proportion is $5\%$. Bounding FDR is a weaker guarantee than bounding $\Pr(\mathrm{FDP} > \alpha)$, which is the "FDP-exceedance" control studied in more advanced literature (Lehmann–Romano 2005, Genovese–Wasserman 2006).
+</DefinitionBlock>
+
+<RemarkBlock number={13} title="FDR $\\le$ FWER — the always-true inequality">
+For any procedure, $\mathrm{FDR} \le \mathrm{FWER}$. Proof: $\mathrm{FDP} \le \mathbf{1}\{V \ge 1\}$ almost surely (whenever $V \ge 1$, $\mathrm{FDP} \le 1$; whenever $V = 0$, $\mathrm{FDP} = 0$). Taking expectations: $\mathrm{FDR} = \mathbb{E}[\mathrm{FDP}] \le \Pr(V \ge 1) = \mathrm{FWER}$. So any FWER-controlling procedure automatically controls FDR — but FDR-controlling procedures (like BH) can achieve much more power by *not* controlling FWER, letting the $\Pr(V \ge 1)$ float up while keeping the *expected* $V/R$ in check.
+</RemarkBlock>
+
+<RemarkBlock number={14} title="When FDR is the right metric, and when it isn't">
+FDR is appropriate when the cost of a false discovery is roughly linear in the number of false discoveries — e.g., each false hit triggers a follow-up experiment that wastes resources, and the total cost is proportional to the count. FWER is appropriate when *any* false discovery is catastrophic — e.g., a drug-approval decision, where one false positive leads to a product recall regardless of how many true positives also emerged. Regulatory biostatistics leans FWER; genomics and high-dimensional discovery lean FDR. Most A/B-test platforms split the difference: FWER for final launch decisions, FDR for exploratory dashboards.
+</RemarkBlock>
+
+<RemarkBlock number={15} title="Comparator: FWER and FDR side by side">
+The comparator below runs `multiTestingMonteCarlo` for a selected procedure across a grid of signal strengths $\delta \in [0, 4]$ at $m = 100$, $\pi_0 = 0.8$. For BH, the FDR curve stays pinned near $\alpha \cdot \pi_0 = 0.04$ (below the $\alpha = 0.05$ line) at all $\delta$, while the FWER curve climbs toward 1 as $\delta$ increases — BH does *not* control FWER. For Bonferroni / Holm, FWER stays near $\alpha$ and FDR slopes down. The power curve in the right panel shows BH's advantage: at moderate $\delta$, BH's power is more than double Bonferroni's.
+</RemarkBlock>
+
+<FWERvsFDRComparator client:visible />
+
+## 20.7 The Benjamini–Hochberg Procedure
+
+We now prove the featured theorem of Topic 20.
+
+<TheoremBlock number={5} title="Benjamini–Hochberg FDR control (BH 1995)">
+Order the $p$-values ascending: $p_{(1)} \le \cdots \le p_{(m)}$. Let $k^*$ be the largest rank $k$ such that $p_{(k)} \le k \alpha / m$ (set $k^* = 0$ if no such $k$ exists). The **Benjamini–Hochberg procedure** rejects $H_{(1)}, \ldots, H_{(k^*)}$ — i.e., the $k^*$ hypotheses with the smallest $p$-values.
+
+If the $p$-values are independent (or positively regression-dependent on the subset, PRDS), then
+
+$$\mathrm{FDR} \;\le\; \pi_0 \cdot \alpha \;\le\; \alpha.$$
+</TheoremBlock>
+
+<ProofBlock title="Proof 5 — BH FDR control (featured)">
+The argument decomposes the expected FDP into per-null contributions, each of which can be bounded by $\alpha/m$ using an independence-based lemma. We follow BH 1995 for the outline and cite BEN2001 Lemma 2.1 for the key step.
+
+**Step 1 — Write the FDP as a sum.** For a specific realization of $(p_1, \ldots, p_m)$, let $R(k)$ denote the total number of rejections when BH is applied at level $k\alpha/m$ (so $R(k^*)$ is the actual number of rejections at level $\alpha$). Then the false-discovery count at the realized $k^*$ is $V = \sum_{i \in H_0} \mathbf{1}\{p_i \le k^* \alpha / m\}$, where the indicator captures whether null $i$ is rejected. Dividing by $\max(R, 1) = R(k^*) \vee 1$:
+
+$$\mathrm{FDP} \;=\; \frac{V}{R \vee 1} \;=\; \sum_{i \in H_0} \frac{\mathbf{1}\{p_i \le k^* \alpha / m\}}{R \vee 1}.$$
+
+**Step 2 — Take expectation; condition on the other $p$-values.** Taking $\mathbb{E}_{H_0}[\cdot]$ on both sides and pulling the sum outside the expectation (linearity):
+
+$$\mathrm{FDR} \;=\; \sum_{i \in H_0} \mathbb{E}_{H_0}\!\left[\frac{\mathbf{1}\{p_i \le k^*(p_{-i}, p_i) \cdot \alpha/m\}}{R(p_{-i}, p_i) \vee 1}\right].$$
+
+Here $p_{-i}$ denotes the vector of $p$-values excluding $p_i$, and both $k^*$ and $R$ are written as functions of the full $p$-value vector to emphasize that they depend on $p_i$ via the step-up search.
+
+**Step 3 — Apply the BEN2001 Lemma 2.1 independence lemma.** Under independence, the conditional distribution of $k^*$ given $p_i \le k \alpha/m$ — restricted to the event that BH stops at a rank $k$ such that null $i$ is included in the rejection set — is the same as the distribution of the step-up procedure applied to the *other* $p$-values at a modified threshold. Concretely (<ExternalLink href="https://doi.org/10.1214/aos/1013699998">BEN2001</ExternalLink> Lemma 2.1):
+
+$$\mathbb{E}_{H_0}\!\left[\frac{\mathbf{1}\{p_i \le k^* \alpha / m\}}{R \vee 1}\right] \;=\; \frac{\alpha/m}{1} \cdot \Pr_{H_0}\!\left(p_i \le \tfrac{k^* \alpha}{m}\right) \cdot \frac{1}{\alpha/m} \;=\; \frac{\alpha}{m}.$$
+
+The key cancellation is that the increment $\alpha/m$ in threshold per rank matches the increment $1/(R \vee 1)$ in denominator per rejection — this is exactly why the BH threshold is *linear* in $k$ rather than Bonferroni's constant $\alpha/m$. The lemma is where independence enters.
+
+**Step 4 — Sum over the $m_0$ true nulls.** Each of the $m_0$ per-null contributions equals $\alpha/m$, so
+
+$$\mathrm{FDR} \;=\; \sum_{i \in H_0} \frac{\alpha}{m} \;=\; \frac{m_0 \cdot \alpha}{m} \;=\; \pi_0 \cdot \alpha \;\le\; \alpha. \quad\blacksquare$$
+
+∎ — using linearity of expectation (Step 1–2) and the BEN2001 Lemma 2.1 independence identity (Step 3); BEN1995 original; BEN2001 for the modern cleaner argument.
+</ProofBlock>
+
+The proof's most striking feature is that BH's FDR control is *exactly* $\pi_0 \alpha$, not just $\le \alpha$. The procedure leaves power on the table when $\pi_0 < 1$ — hence Storey's adaptive correction in §20.8, which estimates $\pi_0$ from the data and applies BH at level $\alpha / \hat{\pi}_0$ to recover that slack.
+
+![BH step-up procedure on a random sample ($m = 20$, $\\alpha = 0.10$). Dots are sorted $p$-values; the green line is the BH diagonal $k\\alpha/m$; the dashed red line is the Bonferroni reference $\\alpha/m$. The step-up search walks from $k = m$ downward, stopping at the first $k$ where the $p$-value is below the diagonal. $k^\\* = 10$: ranks 1 through 10 are rejected. Bonferroni at the same $\\alpha$ rejects only the two $p$-values below the dashed line.](/images/topics/multiple-testing-and-false-discovery/20-bh-algorithm.png)
+
+<ExampleBlock number={7} title="BH on the canonical 10-vector (§6.2 T1)">
+$p = (0.0005, 0.003, 0.011, 0.021, 0.043, 0.051, 0.087, 0.21, 0.33, 0.55)$, $\alpha = 0.05$, $m = 10$. The BH threshold at rank $k$ is $k \cdot 0.005$. Walk from $k = 10$ down: $p_{(10)} = 0.55 > 0.05$, $p_{(9)} = 0.33 > 0.045$, ..., $p_{(4)} = 0.021 > 0.020$ (fail!), $p_{(3)} = 0.011 \le 0.015$ (pass — stop). $k^* = 3$; reject ranks 1, 2, 3. The critical point: $p_{(4)} = 0.021$ fails its threshold by a hair ($0.021$ vs $0.020$); had it been below, BH would have rejected 4 or more. The regression test T1 in `testing.test.ts` pins this behavior.
+</ExampleBlock>
+
+<ExampleBlock number={8} title="BH under independence — empirical FDR over 3000 MC trials">
+Using `multiTestingMonteCarlo('bh', m = 200, π₀ = 0.8, δ = 3.0, α = 0.05, 3000, seed = 123)`, empirical FDR lands in $[0.030, 0.050]$. The theoretical bound is $\pi_0 \cdot \alpha = 0.040$. Empirical values below $0.040$ are normal — BH is conservative when the signal is strong, because strong alternatives drive $R$ up while $V$ stays fixed. The test harness T3 in `testing.test.ts` locks this range. The same simulation shows empirical FWER well above $0.50$: BH deliberately does *not* control FWER, and large samples with moderate signal produce many false rejections on their way to producing even more true rejections.
+</ExampleBlock>
+
+<ExampleBlock number={9} title="Stepping through the algorithm">
+The visualizer below runs the step-up walk one rank at a time. Load the canonical T1 preset, press Step. The active rank descends from $k = 10$, lighting up red (fail) at ranks 10, 9, ..., 4, then green (pass) at $k = 3$. The rejection region shades in, containing ranks 1 through 3.
+</ExampleBlock>
+
+<BHAlgorithmVisualizer client:visible />
+
+<RemarkBlock number={16} title="Why the threshold is linear in $k$ (not Bonferroni's constant)">
+The BH threshold function $k \mapsto k\alpha/m$ has two endpoints: $\alpha/m$ at $k = 1$ (exactly Bonferroni) and $\alpha$ at $k = m$ (no adjustment). The linear interpolation between them is what makes the independence cancellation in Proof 5 Step 3 work: the per-rank threshold increment $\alpha/m$ is *also* the per-rank denominator increment $1/R$, and the two cancel. Any nonlinear threshold function breaks this. Storey's adaptive variant (§20.8) rescales to $k\alpha/(m \cdot \hat{\pi}_0)$ — still linear, but with $\hat{\pi}_0$ shrinking the effective $m$.
+</RemarkBlock>
+
+<RemarkBlock number={17} title="BH under positive regression dependence">
+The BEN2001 Lemma 2.1 independence argument extends to the PRDS (positive regression dependence on the subset) regime — where the conditional distribution of the non-null $p$-values given the null $p$-values is non-decreasing in the null $p$-values. This covers most "positively correlated" scenarios in practice: LD-correlated SNPs in a GWAS, correlated coefficients in a regression with positively-correlated predictors. Under PRDS, BH still controls FDR at $\pi_0 \alpha \le \alpha$. Under negative dependence, BH can fail; §20.8 Thm 6 (BY) handles this case at an $H_m = \sum_{k=1}^m 1/k$ power cost.
+</RemarkBlock>
+
+<RemarkBlock number={18} title="BH is a closed-testing procedure — but not with Bonferroni intersections">
+Unlike Holm, BH is *not* obtained from closed testing with Bonferroni intersection tests; those would produce Holm. BH corresponds to a *different* closed-testing construction (Simes intersection tests) that is valid for FWER control only under independence, and the resulting closed procedure controls FDR as well. The cleaner modern view: BH is its own step-up procedure derived directly from the FDR-control calculation of Proof 5, independent of the closed-testing scaffold. Closed testing explains *why* FWER procedures are nested (Holm dominates Bonferroni); FDR procedures live in a separate algebraic universe.
+</RemarkBlock>
+
+## 20.8 Dependence and Adaptivity: BY and Storey
+
+BH under arbitrary dependence (Benjamini–Yekutieli 2001) and BH adaptive to the true null fraction (Storey 2002) are the two major variants practitioners reach for when BH's assumptions don't hold or when additional power is available.
+
+<TheoremBlock number={6} title="Benjamini–Yekutieli FDR control under arbitrary dependence (BEN2001)">
+Let $c_m = \sum_{k=1}^m 1/k$ be the harmonic number. Apply BH with thresholds $k \alpha / (m \cdot c_m)$ at rank $k$. Under *any* joint dependence structure of the $p$-values (positive, negative, or arbitrary), this **BY procedure** controls FDR at $\pi_0 \alpha \le \alpha$.
+</TheoremBlock>
+
+The price of universal validity is the $c_m$ factor: $c_m \sim \log m + 0.577$, so for $m = 100$ the BY thresholds are $c_{100} \approx 5.19$ times smaller than BH's — a roughly $5\times$ power loss. When independence or PRDS can be reasonably assumed, BH dominates. When dependence is genuinely unknown — rare in practice, but common in theoretical analyses of novel statistics — BY is the safe default. Stated without proof; see <ExternalLink href="https://doi.org/10.1214/aos/1013699998">BEN2001</ExternalLink>.
+
+<TheoremBlock number={7} title="Storey adaptive q-values (STO2002)">
+Let $\hat{\pi}_0(\lambda) = |\{i : p_i > \lambda\}| / (m (1 - \lambda))$ at a tuning parameter $\lambda \in (0, 1)$ (canonically $\lambda = 0.5$). The **Storey q-value** at rank $k$ is
+
+$$\hat{q}_{(k)} \;=\; \min_{j \ge k} \frac{\hat{\pi}_0 \cdot m \cdot p_{(j)}}{j}.$$
+
+The **Storey procedure** rejects hypotheses with $\hat{q}_{(k)} \le \alpha$. Asymptotically (as $m \to \infty$), Storey controls FDR at exactly $\alpha$, recovering the $\pi_0$-slack that BH leaves on the table.
+</TheoremBlock>
+
+Storey's $\hat{\pi}_0$ is the fraction of $p$-values above $\lambda$, scaled by $1/(1 - \lambda)$ to correct for the uniform density. Under the null, $E[|p > \lambda|] = m(1-\lambda)$; under alternatives, alternative $p$-values concentrate near zero and contribute little to the above-$\lambda$ count. So $\hat{\pi}_0 \approx m_0/m + \text{(small)} = \pi_0 + o_p(1)$. Applying BH at $\alpha/\hat{\pi}_0$ — which the q-value construction does — produces tighter thresholds when $\pi_0 < 1$. Stated without proof; see <ExternalLink href="https://doi.org/10.1111/1467-9868.00346">STO2002</ExternalLink>. The `qvalue` Bioconductor package is the *de facto* bioinformatics implementation.
+
+![FDR / FWER / power curves for Bonferroni, Holm, BH, and BY at three $\\pi_0$ levels (0.5, 0.8, 0.95). The BH FDR curves stay pinned near $\\alpha \\pi_0$ across all signal strengths; the FWER curves climb with $\\delta$. Bonferroni / Holm FWERs stay near $\\alpha$; their FDRs slope down. Power panels show BH's systematic advantage at moderate $\\delta$.](/images/topics/multiple-testing-and-false-discovery/20-fdr-fwer-power.png)
+
+<ExampleBlock number={10} title="BH vs Bonferroni at GWAS scale ($m = 20{,}000$, $\\pi_0 = 0.99$)">
+Simulated $m = 20{,}000$ hypotheses, 200 true alternatives at effect size $\delta = 3.5$, $\alpha = 0.05$. Bonferroni's threshold is $0.05 / 20{,}000 = 2.5 \times 10^{-6}$, so alternatives need $z$-scores above $\approx 4.7$ — the tails where only the strongest signals live. BH rejects all $p$-values below $k \cdot 0.05 / 20{,}000$ at the realized $k^*$, which for moderate signal lands in the hundreds. The genomics figure below (which will render once the supplementary cell in `20_multiple_testing.ipynb` is executed) shows BH recovering roughly $3\times$ more true positives than Bonferroni at the same (empirical) FWER cost.
+</ExampleBlock>
+
+![Realistic-scale demonstration at $m = 20{,}000$, $\\pi_0 = 0.99$. Bonferroni recovers only the strongest signals; BH recovers approximately $3\\times$ more true alternatives at empirical FDR $\\le \\alpha \\pi_0$. Figure produced by `20_multiple_testing.ipynb` Cell 9 (skipped in the default run — see the repo README for how to regenerate).](/images/topics/multiple-testing-and-false-discovery/20-genomics-simulation.png)
+
+<ExampleBlock number={11} title="The Ioannidis PPV inversion (IOA2005)">
+John Ioannidis's 2005 paper asked: given a statistically significant finding ($p < 0.05$), what is the probability the corresponding alternative is true? The answer depends on the *prior* probability of the alternative. For a screening study with $\pi_0 = 0.99$ and moderate power $0.5$: expected true positives $= 0.01 \cdot m \cdot 0.5 = 0.005 m$; expected false positives $= 0.99 \cdot m \cdot 0.05 = 0.0495 m$. The **positive predictive value** $\mathrm{PPV} = 0.005 / (0.005 + 0.0495) \approx 0.092$. A "$p < 0.05$" finding in this regime is a false positive $\approx 91\%$ of the time. Controlling FDR at $\alpha$ aligns the reported significance claim with $\mathrm{PPV} \ge 1 - \alpha$ for the rejected set, which is the practical guarantee that FWER alone does not deliver.
+</ExampleBlock>
+
+<ExampleBlock number={12} title="Gelman–Loken forking paths (GEL2014)">
+Even researchers who never consciously run multiple tests inflate $\alpha$ via unstated analytical flexibility: outcome choice, covariate selection, data cleaning rules, subgroup definitions, alternative models. Each branching analytic decision, if it depends on the data, effectively increases $m$. GEL2014 estimate that a "single" analysis often corresponds to $m$ between $10$ and $100$ latent decisions, so the naive $p < 0.05$ threshold corresponds to an unadjusted FWER of roughly $0.4$ to $0.99$ under the global null. Pre-registration is the technical remedy; multiple-testing correction is the retroactive one.
+</ExampleBlock>
+
+<RemarkBlock number={19} title="Which dependence regime are you in?">
+A/B testing with fixed pre-specified metrics on a common user population: positive regression dependence (PRDS) — BH is appropriate. GWAS within a single chromosome: positive dependence via LD — BH is appropriate. Testing a single hypothesis across many unrelated datasets (pooled meta-analysis with unknown dependence): BY is the safer choice. Post-hoc subgroup analysis with unstated inclusion rules: no procedure saves you — this is the Gelman–Loken regime, and the fix is pre-registration, not a different threshold.
+</RemarkBlock>
+
+<RemarkBlock number={20} title="Storey's $\\lambda$ tuning and bootstrap alternatives">
+The canonical $\lambda = 0.5$ is a sensible default but not optimal for every distribution. STO2002 proposes a bootstrap-based tuning: compute $\hat{\pi}_0(\lambda)$ over a grid and pick the $\lambda^*$ minimizing estimated MSE. For large $m$ the choice barely matters; for $m < 500$, the bootstrap can stabilize estimates. The Bioconductor `qvalue` package runs the bootstrap by default.
+</RemarkBlock>
+
+<RemarkBlock number={21} title="When to use Storey vs plain BH">
+If $\pi_0$ is genuinely close to 1 (GWAS: $\pi_0 \ge 0.99$), Storey and BH are numerically indistinguishable. The Storey adjustment matters most for moderately dense signals ($0.5 \le \pi_0 \le 0.9$) common in transcriptomics, proteomics, and moderate-dimensional regression coefficient testing. Bioinformatics pipelines default to Storey (via `qvalue`); statisticians default to plain BH unless they have explicit evidence $\pi_0 \ll 1$.
+</RemarkBlock>
+
+<RemarkBlock number={22} title="The replication-crisis framing">
+The 2005–2016 replication-crisis literature (Ioannidis, Gelman–Loken, Open Science Collaboration 2015) pointed out that naive $p < 0.05$ in the face of unacknowledged multiplicity produces irreproducible findings at scale. The technical remedy is BH or Storey with appropriately calibrated $\alpha$; the sociological remedy is pre-registration, adversarial collaboration, and transparency about analytical forking. §17.12 Rem 16 and §17.12 Rem 19-bullet defer to this discussion; both are now fulfilled.
+</RemarkBlock>
+
+## 20.9 Simultaneous Confidence Intervals
+
+The test–CI duality of <ExternalLink href="/topics/confidence-intervals-and-duality#section-19-2">Topic 19 Thm 1</ExternalLink> applies at every level: inverting a level-$\alpha/m$ test gives a $(1 - \alpha/m)$ CI. Applying the union bound (Bonferroni) or exact formula (Šidák) over $m$ parameters produces **simultaneous confidence intervals** — an $m$-tuple $(C_1, \ldots, C_m)$ such that
+
+$$\Pr\bigl(\theta_i \in C_i \text{ for every } i \in \{1, \ldots, m\}\bigr) \;\ge\; 1 - \alpha.$$
+
+This is the CI-side analog of FWER-controlled testing.
+
+<TheoremBlock number={8} title="Bonferroni / Šidák simultaneous CIs as test duals">
+Let $C_i^{(\alpha')}$ be a $(1 - \alpha')$ CI for $\theta_i$ obtained by inverting a level-$\alpha'$ test (Topic 19 Thm 1).
+
+(a) **Bonferroni simultaneous CIs.** Set $\alpha' = \alpha/m$. Then
+
+$$\Pr\bigl(\theta_i \in C_i^{(\alpha/m)} \text{ for every } i\bigr) \;\ge\; 1 - \alpha.$$
+
+(b) **Šidák simultaneous CIs.** Assume $(C_1, \ldots, C_m)$ are based on independent test statistics. Set $\alpha' = 1 - (1 - \alpha)^{1/m}$. Then
+
+$$\Pr\bigl(\theta_i \in C_i^{(\alpha')} \text{ for every } i\bigr) \;\ge\; 1 - \alpha,$$
+
+with equality when every $\theta_i$ equals the value against which the test was constructed.
+
+Both follow immediately from Topic 19 Thm 1 combined with the union bound (Bonferroni) or the independence product (Šidák). Stated without separate proof.
+</TheoremBlock>
+
+![Three simultaneous CI constructions for $m = 10$ Normal means at $n = 25$, $\\alpha = 0.05$: unadjusted (marginal $95\\%$ coverage but joint coverage $\\approx 0.60$), Bonferroni-adjusted (joint coverage $\\ge 0.95$, each CI $\\approx 2.5\\times$ wider than unadjusted), Šidák-adjusted (slightly narrower than Bonferroni, joint coverage $\\approx 0.95$ exactly under independence).](/images/topics/multiple-testing-and-false-discovery/20-simultaneous-cis.png)
+
+<ExampleBlock number={13} title="Bonferroni simultaneous CIs for $m = 10$ means">
+Ten independent sample means $\bar{X}_i$ with SE $= 1/\sqrt{n}$, $n = 25$, $\alpha = 0.05$. The per-interval critical value is $z_{1 - \alpha/(2m)} = z_{0.9975} = 2.807$, so each Bonferroni CI is $\bar{X}_i \pm 2.807 / 5 = \bar{X}_i \pm 0.561$. The unadjusted critical value is $z_{0.975} = 1.96$, giving width $\pm 0.392$. The Bonferroni width is $2.807/1.96 \approx 1.43\times$ the unadjusted. Over 500 simulations with all true means $= 0$: empirical joint coverage for unadjusted is $\approx 0.60$; for Bonferroni $\approx 0.95$.
+</ExampleBlock>
+
+<ExampleBlock number={14} title="Šidák slightly tighter under independence">
+Same setup as Ex 13. Šidák's per-interval $\alpha' = 1 - 0.95^{0.1} = 0.00512$, so the critical value is $z_{1 - 0.00512/2} = z_{0.99744} = 2.800$ — only $0.007$ smaller than Bonferroni's. CI width is $\approx 0.560$ (vs Bonferroni's $0.561$), a gain of $0.2\%$. The Šidák construction achieves *exact* joint coverage $0.95$ under independence, not just $\ge 0.95$, so the marginal gain is worth knowing exists, though the practical difference is negligible.
+</ExampleBlock>
+
+<SimultaneousCIBands client:visible />
+
+<RemarkBlock number={23} title="Scope of simultaneous inference">
+We have covered the general case where no additional structure relates the $m$ parameters. Two prominent special cases give tighter bounds:
+
+- **Scheffé's method** for linear contrasts in ANOVA: if the parameters of interest are all linear combinations $\sum c_i \mu_i$ of group means in a one-way ANOVA, Scheffé's simultaneous CIs use the $F$-distribution critical value, which is tighter than Bonferroni for large $m$. See <ExternalLink href="https://doi.org/10.1093/biomet/40.1-2.87">Scheffé 1953</ExternalLink> or CAS2002 §11.2.4.
+- **Tukey's HSD** for all pairwise mean differences: exact simultaneous CIs via the studentized range distribution, tighter than Bonferroni when all $\binom{m}{2}$ pairwise contrasts are of interest.
+- **Working–Hotelling** for regression coefficient trajectories: tighter simultaneous bands via the $F$-distribution over a contiguous parameter space.
+
+These are Topic 20's immediate neighbors and are covered in depth in <ExternalLink href="/topics/hypothesis-testing">Track 6</ExternalLink>'s regression material.
+</RemarkBlock>
+
+<RemarkBlock number={24} title="Simultaneous CIs vs the Bonferroni-of-FDR temptation">
+An FDR procedure like BH controls the expected false-discovery *proportion* but does not produce a simultaneous CI — there is no "$(1 - \alpha)$ joint coverage" interpretation of BH rejections. When the practitioner reports "10 features rejected at BH $\alpha = 0.05$," the claim is that $\le 5\%$ of those 10 are expected to be false rejections, not that the 10 parameters are jointly confined to specific intervals. For joint confidence statements on multiple parameters, Bonferroni / Šidák CIs are the correct tool; for discovery-rate-controlled flag lists, BH is correct.
+</RemarkBlock>
+
+<RemarkBlock number={25} title="Fulfils Topic 19 §19.10 Rem 19 #3">
+Topic 19 explicitly deferred simultaneous CIs to Topic 20. The construction above — Bonferroni-adjusted inversion of FWER-controlled tests — *is* the formal treatment Topic 19 promised. Every claim about test–CI duality in Topic 19 carries over unchanged; the adjustment is to the level (not the construction).
+</RemarkBlock>
+
+## 20.10 Track 5 Closes; Multiplicity Lives On
+
+Track 5 — Hypothesis Testing & Confidence — ends here, 4 topics deep. The next tracks inherit this topic's scaffolding rather than re-derive it:
+
+- **Track 6 (Regression)** uses Bonferroni-adjusted coefficient CIs as the default simultaneous-inference tool and BH for variable selection. F-tests for nested-model comparisons are the closed-testing ancestor of Holm (§20.5 Rem 11).
+- **Track 7 (Bayesian)** contrasts FDR with Bayesian local-FDR (Efron 2010) — the posterior probability that an individual observation is from the null. Bayesian multiplicity reduces to posterior updating; no closed-testing scaffold is required.
+- **Track 8 (High-Dimensional)** builds knockoffs (Barber–Candès 2015) and online FDR (Javanmard–Montanari 2018) directly on top of BH. Every modern multiplicity method traces to §20.7 Thm 5.
+
+The figure below maps Track 5's arc into these downstream topics.
+
+![Track 5 spine (Topics 17, 18, 19, 20) with forward arrows to Track 6 (regression simultaneous inference), Track 7 (Bayesian multiplicity), Track 8 (knockoffs, online FDR), and formalml.com (feature selection, high-dimensional testing, always-valid inference). Back-arrow to Topic 19 emphasizes that the simultaneous CI construction of §20.9 is the direct dual of Topic 19 Thm 1.](/images/topics/multiple-testing-and-false-discovery/20-forward-map.png)
+
+<RemarkBlock number={26} title="Always-valid inference and e-processes">
+The setup of §20.3 assumes the $m$ hypotheses and stopping rule are fixed in advance. Always-valid confidence sequences (Howard, Ramdas, McAuliffe, Sekhon 2021) and e-processes (Vovk 2019, Grünwald, de Heide, Koolen 2024) dispense with this: the inferential guarantee holds at *every* stopping time, including data-dependent ones. The mathematical machinery is martingale-based and lives in Track 8 / formalml.com. Every A/B-testing platform that allows "peeking" without Type I inflation uses these tools.
+</RemarkBlock>
+
+<RemarkBlock number={27} title="Online FDR">
+What if hypotheses arrive sequentially and we must decide to reject immediately without seeing future $p$-values? Offline BH no longer applies. The Online-BH procedure (Javanmard–Montanari 2018) and SAFFRON / LORD / Adaptive-LORD family (Ramdas et al. 2018) control FDR in this streaming regime by spending an $\alpha$-wealth budget across time. <ExternalLink href="https://arxiv.org/abs/1502.06197">Full treatment</ExternalLink> lives in Track 8.
+</RemarkBlock>
+
+<RemarkBlock number={28} title="Knockoffs as BH generalization">
+Barber–Candès (2015) construct synthetic "knockoff" features $\tilde{X}_1, \ldots, \tilde{X}_m$ exchangeable with the real features $X_1, \ldots, X_m$ under the null, then apply a BH-like step-up on feature-statistic signs. The FDR control at $\alpha$ is the §20.7 Thm 5 result extended to a test-statistic-free setting — knockoffs work without requiring the per-feature $p$-values that BH demands. This is the workhorse of modern high-dimensional variable selection.
+</RemarkBlock>
+
+<RemarkBlock number={29} title="Permutation multiplicity (Westfall–Young)">
+Westfall–Young (1993) permutation-based multiplicity adjustment computes FWER directly from the joint distribution of the $m$ test statistics via resampling, avoiding any dependence assumption. It is the gold standard for FWER control when strict validity is required (e.g., FDA-regulated settings) and computation is affordable. <ExternalLink href="https://doi.org/10.1007/0-387-27605-X">LEH2005 §9.3</ExternalLink> has the full treatment.
+</RemarkBlock>
+
+<RemarkBlock number={30} title="Bayesian multiplicity">
+In a fully Bayesian framework, multiplicity is handled by the prior: placing a sparse prior on the $m$-dimensional parameter vector (e.g., spike-and-slab, horseshoe) automatically shrinks most estimates toward zero, achieving a form of implicit multiple-testing correction. The posterior probability that the $i$-th alternative is true is the Bayesian counterpart to the frequentist q-value. Track 7 develops this in detail.
+</RemarkBlock>
+
+<RemarkBlock number={31} title="Closed-testing full proof">
+We stated Thm 0 (closed testing) without proof in §20.2. The full Marcus–Peritz–Gabriel argument is 15–20 lines and lives in <ExternalLink href="https://doi.org/10.1007/0-387-27605-X">LEH2005 §9.1 Thm 9.1.2</ExternalLink>. The key step is the observation — already stated in §20.2 — that a false rejection requires the true-null intersection's level-$\alpha$ test to reject, which happens with probability $\le \alpha$.
+</RemarkBlock>
+
+<RemarkBlock number={32} title="Hommel, Rom, and other step-wise procedures">
+Hommel (1988) and Rom (1990) are two additional step-up procedures that fall between Hochberg and the full Simes-based closed procedure in the FWER-control hierarchy. Both require independence; both are slightly more powerful than Hochberg on specific $p$-value configurations and slightly less powerful on others. They are named here for completeness; practitioners overwhelmingly default to Hochberg or BH.
+</RemarkBlock>
+
+---
+
+### References
+
+1. Olive Jean Dunn. (1961). [*Multiple Comparisons Among Means*](https://doi.org/10.1080/01621459.1961.10482090). *Journal of the American Statistical Association*, 56(293), 52–64.
+2. Sture Holm. (1979). [*A Simple Sequentially Rejective Multiple Test Procedure*](https://www.jstor.org/stable/4615733). *Scandinavian Journal of Statistics*, 6(2), 65–70.
+3. Zbyněk Šidák. (1967). [*Rectangular Confidence Regions for the Means of Multivariate Normal Distributions*](https://doi.org/10.1080/01621459.1967.10482935). *Journal of the American Statistical Association*, 62(318), 626–633.
+4. Yosef Hochberg. (1988). [*A Sharper Bonferroni Procedure for Multiple Tests of Significance*](https://doi.org/10.1093/biomet/75.4.800). *Biometrika*, 75(4), 800–803.
+5. Yoav Benjamini and Yosef Hochberg. (1995). [*Controlling the False Discovery Rate: A Practical and Powerful Approach to Multiple Testing*](https://doi.org/10.1111/j.2517-6161.1995.tb02031.x). *Journal of the Royal Statistical Society: Series B*, 57(1), 289–300.
+6. Yoav Benjamini and Daniel Yekutieli. (2001). [*The Control of the False Discovery Rate in Multiple Testing Under Dependency*](https://doi.org/10.1214/aos/1013699998). *The Annals of Statistics*, 29(4), 1165–1188.
+7. John D. Storey. (2002). [*A Direct Approach to False Discovery Rates*](https://doi.org/10.1111/1467-9868.00346). *Journal of the Royal Statistical Society: Series B*, 64(3), 479–498.
+8. John P. A. Ioannidis. (2005). [*Why Most Published Research Findings Are False*](https://doi.org/10.1371/journal.pmed.0020124). *PLoS Medicine*, 2(8), e124.
+9. Andrew Gelman and Eric Loken. (2014). [*The Statistical Crisis in Science*](https://www.americanscientist.org/article/the-statistical-crisis-in-science). *American Scientist*, 102(6), 460–466.
+10. Erich L. Lehmann and Joseph P. Romano. (2005). [*Testing Statistical Hypotheses*](https://doi.org/10.1007/0-387-27605-X) (3rd ed.). Springer.
+11. George Casella and Roger L. Berger. (2002). [*Statistical Inference*](https://www.cengage.com/c/statistical-inference-2e-casella) (2nd ed.). Duxbury.
