@@ -2946,9 +2946,12 @@ export function penalizedGLMFit(
     previousBeta?: number[];
   },
 ): PenalizedGLMFit {
-  const familyName = options?.family ?? 'binomial';
+  const familyArg = options?.family ?? 'binomial';
+  // Translate brief's `binomial` to Topic 22's `bernoulli` registry key.
+  const familyName = familyArg === 'binomial' ? 'bernoulli' : familyArg;
   const linkName =
-    options?.link ?? (familyName === 'binomial' ? 'logit' : familyName === 'poisson' ? 'log' : 'inverse');
+    options?.link ??
+    (familyArg === 'binomial' ? 'logit' : familyArg === 'poisson' ? 'log' : 'inverse');
   const penalty = options?.penalty ?? 'ridge';
   const alpha = options?.alpha ?? (penalty === 'lasso' ? 1 : penalty === 'ridge' ? 0 : 0.5);
   const standardize = options?.standardize ?? true;
