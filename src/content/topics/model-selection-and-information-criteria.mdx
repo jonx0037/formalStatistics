@@ -276,9 +276,127 @@ On the canonical POLY_DGP ($n=80$, $\sigma=0.25$, seed $42$), with $\hat\sigma^2
 
 ## 24.3 Akaike's information criterion (FEATURED)
 
-{/* TODO Task 7: §24.3 prose (~1500 words) — Def 4 (AIC), Thm 1 + Proof 1 (7 steps,
-    verbatim from brief §3.4), Ex 4 + Fig 3 (24-aic-bias-correction.png), Rems 5–6,
-    <ICSelector client:visible /> embed at end. */}
+{/* Section opening — TODO Task 7 prose: framing paragraph on Akaike's 1974
+    information-theoretic insight. The optimism k/n result of §24.1 Def 2
+    becomes the +2k AIC penalty after multiplying by the -2 log-likelihood
+    convention. Proof 1 is the load-bearing technical content. */}
+
+Akaike (1974) showed that the optimism gap of Def 2 is exactly $k/n$ to leading order under correct specification + regularity, and that $-2\hat\ell + 2k$ is therefore an asymptotically unbiased estimator of $-2n$ times the expected out-of-sample log-likelihood. This is **AIC** — and the heart of the modern model-selection framework.
+
+<DefinitionBlock number={4} title="KL divergence and expected log-likelihood">
+For two densities $f_0$ (truth) and $f(\cdot;\theta)$ (model), the **Kullback–Leibler divergence** is
+
+$$D(f_0 \,\|\, f_\theta) \;:=\; \mathbb{E}_{Y \sim f_0}\!\left[\log\frac{f_0(Y)}{f(Y;\theta)}\right] \;=\; \mathbb{E}_{f_0}[\log f_0(Y)] - \mathrm{EL}(\theta),$$
+
+where the **expected log-likelihood** under truth is
+
+$$\mathrm{EL}(\theta) \;:=\; \mathbb{E}_{Y \sim f_0}[\log f(Y;\theta)].$$
+
+Since $\mathbb{E}_{f_0}[\log f_0(Y)]$ does not depend on $\theta$, **maximizing $\mathrm{EL}(\theta)$ is equivalent to minimizing $D(f_0 \,\|\, f_\theta)$**.
+</DefinitionBlock>
+
+<TheoremBlock number={1} title="AIC bias-correction (Akaike 1974)">
+Let $Y_1, \ldots, Y_n$ be iid from unknown density $f_0$, and let $\{f(\cdot;\theta) : \theta \in \Theta \subset \mathbb{R}^k\}$ be a parametric model satisfying Topic 14's regularity conditions: smooth log-likelihood, positive-definite Fisher information, MLE asymptotic normality. Let $\hat\theta$ be the MLE, $\hat\ell = \ell(\hat\theta;\mathbf{y})$, and define $\mathrm{AIC} := -2\hat\ell + 2k$. Then under correct specification ($f_0 \in \{f(\cdot;\theta)\}$),
+
+$$\mathbb{E}\!\left[\mathrm{AIC}\right] \;=\; -2n\cdot\mathbb{E}\!\left[\mathrm{EL}(\hat\theta)\right] + o(1).$$
+
+That is, $\mathrm{AIC}$ is asymptotically unbiased for $-2n$ times the expected out-of-sample log-predictive evaluated at the MLE.
+</TheoremBlock>
+
+<ProofBlock>
+
+**Setup.** Let $Y_1, \dots, Y_n$ be iid from unknown density $f_0$; let $\{f(\cdot;\theta) : \theta \in \Theta \subset \mathbb{R}^k\}$ be a parametric model satisfying Topic 14's regularity conditions (smooth $\ell$, positive-definite Fisher information, MLE asymptotic normality). We want to rank candidate models by expected out-of-sample log-predictive
+
+$$\mathrm{EL}(\theta) := \mathbb{E}_{Y_{\text{new}} \sim f_0}[\log f(Y_{\text{new}}; \theta)],$$
+
+evaluated at the plug-in estimator $\hat\theta = \hat\theta(Y_1, \dots, Y_n)$. The target is $\mathbb{E}[\mathrm{EL}(\hat\theta)]$; the naive estimator is $\hat\ell/n$. We show the gap is $k/n$ to leading order.
+
+**Step 1 — KL-projected parameter.** Define
+
+$$\theta_0 := \arg\min_{\theta \in \Theta} D(f_0 \,\|\, f(\cdot;\theta)) = \arg\max_{\theta \in \Theta} \mathrm{EL}(\theta).$$
+
+Under correct specification, $f_0 = f(\cdot; \theta_0)$. Under misspecification, $\theta_0$ is the best-in-family parameter.
+
+**Step 2 — MLE convergence.** Under regularity,
+
+$$\sqrt{n}(\hat\theta - \theta_0) \;\xrightarrow{d}\; \mathcal{N}(\mathbf{0}, \;\mathcal{K}(\theta_0)^{-1} \mathcal{J}(\theta_0) \mathcal{K}(\theta_0)^{-1}),$$
+
+where $\mathcal{J} = \operatorname{Var}_{f_0}[\nabla\log f]$ and $\mathcal{K} = -\mathbb{E}_{f_0}[\nabla^2\log f]$. Under correct specification, $\mathcal{J} = \mathcal{K} =: \mathcal{I}$ (Fisher identity, Topic 14 Thm 3), and the sandwich collapses to $\mathcal{I}^{-1}$.
+
+**Step 3 — Taylor-expand $\hat\ell(\hat\theta)$ around $\theta_0$.**
+
+$$\hat\ell(\hat\theta) = \hat\ell(\theta_0) + (\hat\theta - \theta_0)^\top \nabla\hat\ell(\theta_0) + \tfrac12 (\hat\theta - \theta_0)^\top \nabla^2\hat\ell(\theta_0)(\hat\theta - \theta_0) + o_p(1).$$
+
+The score $\nabla\hat\ell(\theta_0) = \sum_i \nabla\log f(Y_i;\theta_0)$ has mean zero under $f_0$ at $\theta_0$ (stationarity of $\mathrm{EL}$). By LLN, $n^{-1}\nabla^2\hat\ell(\theta_0) \to -\mathcal{K}(\theta_0)$.
+
+**Step 4 — Taylor-expand $\mathrm{EL}(\hat\theta)$ around $\theta_0$.**
+
+$$\mathrm{EL}(\hat\theta) = \mathrm{EL}(\theta_0) - \tfrac12 (\hat\theta - \theta_0)^\top \mathcal{K}(\theta_0)(\hat\theta - \theta_0) + o_p(1).$$
+
+First-order vanishes (stationarity of $\mathrm{EL}$); second-order negative since $\mathcal{K}$ is positive-definite.
+
+**Step 5 — Take expectations under $f_0^n$.** Using Step 3 + asymptotic covariance:
+
+$$\mathbb{E}[\hat\ell(\hat\theta)] = n\cdot\mathrm{EL}(\theta_0) + \tfrac12\mathbb{E}\!\left[(\hat\theta - \theta_0)^\top \nabla^2\hat\ell(\theta_0)(\hat\theta - \theta_0)\right] + o(1).$$
+
+With $n^{-1}\nabla^2\hat\ell(\theta_0) \to -\mathcal{K}(\theta_0)$ and $\operatorname{Cov}(\sqrt n(\hat\theta - \theta_0)) \to \mathcal{K}^{-1}\mathcal{J}\mathcal{K}^{-1}$:
+
+$$\mathbb{E}[\hat\ell(\hat\theta)] = n\cdot\mathrm{EL}(\theta_0) - \tfrac12\operatorname{tr}(\mathcal{K}^{-1}\mathcal{J}) + o(1).$$
+
+Similarly from Step 4:
+
+$$\mathbb{E}[\mathrm{EL}(\hat\theta)] = \mathrm{EL}(\theta_0) - \tfrac{1}{2n}\operatorname{tr}(\mathcal{K}^{-1}\mathcal{J}) + o(1/n).$$
+
+**Step 6 — Combine.** Multiply the $\mathrm{EL}$ expression by $n$, subtract:
+
+$$\mathbb{E}[\hat\ell(\hat\theta)] - n\cdot\mathbb{E}[\mathrm{EL}(\hat\theta)] = \operatorname{tr}(\mathcal{K}^{-1}\mathcal{J}) + o(1).$$
+
+**Step 7 — Specialize.** Under correct specification, $\mathcal{J} = \mathcal{K}$, so $\operatorname{tr}(\mathcal{K}^{-1}\mathcal{J}) = \operatorname{tr}(\mathbf{I}_k) = k$. Multiplying by $-2$:
+
+$$-2\mathbb{E}[\hat\ell] + 2k = -2n\cdot\mathbb{E}[\mathrm{EL}(\hat\theta)] + o(1).$$
+
+The left side is $\mathbb{E}[\mathrm{AIC}]$. The right side is $-2n$ times the expected log-predictive — what we wanted to estimate. AIC is asymptotically unbiased for $-2n\cdot\mathbb{E}[\mathrm{EL}(\hat\theta)]$ under correct specification.
+
+Under misspecification ($\mathcal{J} \neq \mathcal{K}$), the correct penalty is $2\operatorname{tr}(\hat{\mathcal{K}}^{-1}\hat{\mathcal{J}})$: Takeuchi's TIC (Rem 6). ∎ — using Topic 14 Thm 6 (MLE asymptotic normality), Topic 14 Thm 3 (Fisher identity), multivariate delta method (Topic 6).
+
+</ProofBlock>
+
+<ExampleBlock number={4} title="AIC on the polynomial DGP (T10 pinned)">
+On POLY_DGP ($n=80$, $\sigma=0.25$, seed $42$), $\mathrm{AIC}(d)$ values for $d = 0, 1, \ldots, 12$ have argmin at **$d = 6$ with $\mathrm{AIC} = 8.2633$** (T10.3). The $\mathrm{AIC}$ curve is U-shaped: $\mathrm{AIC}(d=0) = 179.0128$ (extreme underfit, T10.1); $\mathrm{AIC}(d=3) = 13.5077$ (undershooting; T10.2); $\mathrm{AIC}(d=6) = 8.2633$ (argmin, recovers the prediction-risk argmin from §24.1 Ex 1); $\mathrm{AIC}(d=12) = 14.9845$ (overfit, T10.4). Figure 3 overlays AIC and the bias-correction term $+2k$ to separate the empirical log-likelihood from the optimism penalty.
+</ExampleBlock>
+
+<img src="/images/topics/model-selection-and-information-criteria/24-aic-bias-correction.png"
+     alt="Three-curve plot over polynomial degree d=0..12 on POLY_DGP. Curve A: -2 log-likelihood, monotone-decreasing. Curve B: +2k bias-correction penalty, linear in d. Curve C: AIC = sum of A and B, U-shaped with argmin at d=6 (vertical reference). Title: 'AIC = -2 log-lik + 2k separates fit from complexity'."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<RemarkBlock number={5} title="Corrected AIC for small samples (AICc)">
+{/* TODO Task 7: 4–5 sentences with the full Hurvich–Tsai 1989 / Sugiura 1978
+    derivation summary, the formula AICc = AIC + 2k(k+1)/(n-k-1), the regime
+    where it matters (n / k < ~40), and the BUR2002 §2.4 default-to-AICc
+    recommendation. */}
+**AICc** corrects AIC's small-sample bias when $n/k$ is not large (Hurvich & Tsai 1989; Sugiura 1978):
+
+$$\mathrm{AICc} \;=\; \mathrm{AIC} + \frac{2k(k+1)}{n - k - 1}.$$
+
+Exact for Gaussian-linear models; asymptotic correction otherwise. The penalty $2k(k+1)/(n-k-1) \to 0$ as $n \to \infty$, so AICc and AIC agree asymptotically. Burnham & Anderson 2002 §2.4 recommend AICc as the default whenever $n/k < 40$.
+</RemarkBlock>
+
+<RemarkBlock number={6} title="Takeuchi information criterion (TIC) and information geometry">
+{/* TODO Task 7: 3–4 sentences on TIC as the misspecification-robust generalization,
+    the formula -2ℓ + 2 tr(K^{-1} J), why nobody uses it in practice (J and K hard
+    to estimate stably), and a one-sentence pointer to formalml's information
+    geometry topic. */}
+Takeuchi (1976) generalized AIC to misspecified parametric models:
+
+$$\mathrm{TIC} \;=\; -2\hat\ell + 2\operatorname{tr}(\hat{\mathcal{K}}^{-1}\hat{\mathcal{J}}),$$
+
+with $\hat{\mathcal{J}}$ the empirical score outer product and $\hat{\mathcal{K}}$ the observed Hessian of $-\ell$. Under correct specification $\hat{\mathcal{K}}^{-1}\hat{\mathcal{J}} \to \mathbf{I}_k$ and TIC $\to$ AIC. TIC sees little practical use because $\hat{\mathcal{J}}$ and $\hat{\mathcal{K}}$ are hard to estimate stably at moderate $n$; the broader information-geometric framing lives at formalml.
+</RemarkBlock>
+
+{/* Component embed (Task 9 — uncomment when ICSelector ships):
+<ICSelector client:visible />
+*/}
 
 <a id="section-24-4"></a>
 
