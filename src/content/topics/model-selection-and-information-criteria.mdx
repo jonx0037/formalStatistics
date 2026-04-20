@@ -156,6 +156,7 @@ import RemarkBlock from '../../components/ui/RemarkBlock.astro';
 import ExternalLink from '../../components/ui/ExternalLink.astro';
 
 import ICSelector from '../../components/viz/ICSelector.tsx';
+import CVvsICComparator from '../../components/viz/CVvsICComparator.tsx';
 
 ## 24.1 The model-selection problem
 
@@ -607,9 +608,7 @@ $k$-fold CV is the finite-sample analog of LOO: each fold holds out $n/k$ observ
 Thm 4 identifies LOO-CV with AIC; **no analogous result exists for BIC at fixed $k$**. The mismatch is asymptotic: BIC's $k\log n$ penalty grows in $n$, while CV's effective penalty grows like $2k$. To recover a BIC-like criterion from CV, one would have to use a vanishing-fraction held-out set ($n_\text{val} = o(n)$), not standard $k$-fold (Shao 1993).
 </RemarkBlock>
 
-{/* Component embed (Task 9 — uncomment when CVvsICComparator ships):
 <CVvsICComparator client:visible />
-*/}
 
 <a id="section-24-6"></a>
 

@@ -35,14 +35,27 @@ const TICK_COLOR = '#CBD5E1';
 const TRUE_COLOR = '#dc2626';
 const FIT_COLOR = '#0891b2';
 
-type Criterion = 'aic' | 'aicc' | 'bic' | 'cp' | 'loo';
-const CRITERIA: Criterion[] = ['aic', 'aicc', 'bic', 'cp', 'loo'];
+// ICSelector uses the same 5-criterion overlay the brief §5.1 specifies. The
+// "loo" key in informationCriteriaColors is shared between LOO-CV and 10-fold
+// CV (both empirical-CV procedures); here we wire it to the cv10 readout
+// since 10-fold is the default modern CV per HAS2009 §7.10.
+type CriterionKey = 'aic' | 'aicc' | 'bic' | 'cp';
+type Criterion = CriterionKey | 'cv10';
+const CRITERIA: Criterion[] = ['aic', 'aicc', 'bic', 'cp', 'cv10'];
 const CRITERION_LABEL: Record<Criterion, string> = {
   aic: 'AIC',
   aicc: 'AICc',
   bic: 'BIC',
   cp: 'Cp',
-  loo: '10-fold CV',
+  cv10: '10-fold CV',
+};
+/** Map criterion key → palette key (cv10 shares the empirical-CV "loo" hue). */
+const CRITERION_PALETTE: Record<Criterion, 'aic' | 'aicc' | 'bic' | 'cp' | 'loo'> = {
+  aic: 'aic',
+  aicc: 'aicc',
+  bic: 'bic',
+  cp: 'cp',
+  cv10: 'loo',
 };
 
 export default function ICSelector() {
@@ -270,9 +283,9 @@ export default function ICSelector() {
         .append('path')
         .datum(pts)
         .attr('fill', 'none')
-        .style('stroke', informationCriteriaColors[s.c])
+        .style('stroke', informationCriteriaColors[CRITERION_PALETTE[s.c]])
         .attr('stroke-width', 2)
-        .attr('stroke-dasharray', informationCriteriaLineStyles[s.c])
+        .attr('stroke-dasharray', informationCriteriaLineStyles[CRITERION_PALETTE[s.c]])
         .attr('d', lineGen);
       // Argmin marker
       const argIdx = s.shifted.indexOf(0);
@@ -282,7 +295,7 @@ export default function ICSelector() {
         .attr('cx', xScale(argDeg))
         .attr('cy', yScale(0))
         .attr('r', 4)
-        .style('fill', informationCriteriaColors[s.c]);
+        .style('fill', informationCriteriaColors[CRITERION_PALETTE[s.c]]);
     });
     // Legend
     const legX = w - MARGIN.right + 6;
@@ -294,9 +307,9 @@ export default function ICSelector() {
         .attr('x2', legX + 16)
         .attr('y1', legY)
         .attr('y2', legY)
-        .style('stroke', informationCriteriaColors[s.c])
+        .style('stroke', informationCriteriaColors[CRITERION_PALETTE[s.c]])
         .attr('stroke-width', 2)
-        .attr('stroke-dasharray', informationCriteriaLineStyles[s.c]);
+        .attr('stroke-dasharray', informationCriteriaLineStyles[CRITERION_PALETTE[s.c]]);
       svg
         .append('text')
         .attr('x', legX + 20)
@@ -393,12 +406,15 @@ export default function ICSelector() {
             key={c}
             className="flex items-center justify-between rounded border px-2 py-1"
             style={{
-              borderColor: informationCriteriaColors[c],
+              borderColor: informationCriteriaColors[CRITERION_PALETTE[c]],
               background: '#FFFFFF',
             }}
           >
             <span
-              style={{ color: informationCriteriaColors[c], fontWeight: 600 }}
+              style={{
+                color: informationCriteriaColors[CRITERION_PALETTE[c]],
+                fontWeight: 600,
+              }}
             >
               {CRITERION_LABEL[c]} argmin
             </span>

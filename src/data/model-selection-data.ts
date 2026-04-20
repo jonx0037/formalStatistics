@@ -34,6 +34,7 @@ import {
   bic,
   mallowsCp,
   kFoldCV,
+  looCV,
   type OLSFit,
 } from '../components/viz/shared/regression';
 import { polyDesign, polyFitOLS } from '../components/viz/shared/polynomial';
@@ -274,10 +275,10 @@ export const YANG_RACE_PRESETS: readonly RacePreset[] = [
 /** Inclusive degree range used for IC computation across components. */
 const POLY_DEG_MIN = 0;
 const POLY_DEG_MAX = 12;
-/** Number of CV folds. Modern default per HAS2009 §7.10. */
-const POLY_CV_FOLDS = 10;
-/** Deterministic seed for the CV fold partition. Held constant across renders. */
+/** Deterministic seed for the CV fold partitions. Held constant across renders. */
 const POLY_CV_SEED = 1234;
+/** Maximum degree for which the LOO hat-matrix shortcut is numerically safe. */
+const LOO_MAX_DEG = 11;
 
 /**
  * Materialized POLY_DGP sample + the full IC ranking machinery the §24.3 / §24.5
@@ -310,16 +311,23 @@ export interface PolyDGPPrecomputed {
     aicc: number[];
     bic: number[];
     cp: number[];
-    /** 10-fold CV mean squared error per degree. */
-    loo: number[];
+    /** 5-fold CV mean squared error per degree. */
+    cv5: number[];
+    /** 10-fold CV mean squared error per degree (Stone-equivalence default). */
+    cv10: number[];
+    /** Leave-one-out CV via hat-matrix shortcut. NaN for degrees where the
+     *  monomial Vandermonde is too ill-conditioned (d > LOO_MAX_DEG = 11). */
+    looCV: number[];
   };
-  /** Argmin degree per criterion. */
+  /** Argmin degree per criterion. NaN-safe for `looCV`. */
   argmins: {
     aic: number;
     aicc: number;
     bic: number;
     cp: number;
-    loo: number;
+    cv5: number;
+    cv10: number;
+    looCV: number;
   };
 }
 
@@ -344,13 +352,31 @@ export const POLY_DGP_PRECOMPUTED: PolyDGPPrecomputed = (() => {
   const aiccArr = fits.map((f) => aicc(f, n));
   const bicArr = fits.map((f) => bic(f, n));
   const cpArr = fits.map((f) => mallowsCp(f, sigmaSqRef));
-  const looArr = degrees.map((d) =>
-    kFoldCV(polyDesign(x, d), y, POLY_CV_FOLDS, undefined, POLY_CV_SEED),
+  const cv5Arr = degrees.map((d) =>
+    kFoldCV(polyDesign(x, d), y, 5, undefined, POLY_CV_SEED),
   );
+  const cv10Arr = degrees.map((d) =>
+    kFoldCV(polyDesign(x, d), y, 10, undefined, POLY_CV_SEED),
+  );
+  // LOO via hat-matrix shortcut throws on near-singular designs; fall back
+  // to NaN at the high-d tail where the monomial Vandermonde fails the
+  // 0.999-leverage check inside looCV.
+  const looArr = degrees.map((d) => {
+    if (d > LOO_MAX_DEG) return NaN;
+    try {
+      return looCV(polyDesign(x, d), y);
+    } catch {
+      return NaN;
+    }
+  });
+  /** Argmin over finite values; returns NaN if every value is NaN. */
   const argmin = (arr: number[]): number => {
-    let best = 0;
-    for (let i = 1; i < arr.length; i++) if (arr[i] < arr[best]) best = i;
-    return degrees[best];
+    let best = -1;
+    for (let i = 0; i < arr.length; i++) {
+      if (!Number.isFinite(arr[i])) continue;
+      if (best === -1 || arr[i] < arr[best]) best = i;
+    }
+    return best === -1 ? NaN : degrees[best];
   };
   return {
     x,
@@ -365,14 +391,18 @@ export const POLY_DGP_PRECOMPUTED: PolyDGPPrecomputed = (() => {
       aicc: aiccArr,
       bic: bicArr,
       cp: cpArr,
-      loo: looArr,
+      cv5: cv5Arr,
+      cv10: cv10Arr,
+      looCV: looArr,
     },
     argmins: {
       aic: argmin(aicArr),
       aicc: argmin(aiccArr),
       bic: argmin(bicArr),
       cp: argmin(cpArr),
-      loo: argmin(looArr),
+      cv5: argmin(cv5Arr),
+      cv10: argmin(cv10Arr),
+      looCV: argmin(looArr),
     },
   };
 })();
