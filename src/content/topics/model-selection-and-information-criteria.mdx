@@ -1,0 +1,267 @@
+---
+title: "Model Selection & Information Criteria"
+subtitle: "When every candidate model fits the training data differently, a principled ranking criterion is the only honest arbiter. AIC (Akaike) estimates out-of-sample log-likelihood asymptotically; BIC (Schwarz) approximates the Bayesian marginal likelihood; Mallows' Cp is the Gaussian special case; Stone's 1977 theorem identifies LOO-CV with AIC; Yang 2005 proves that selection consistency and prediction efficiency are mutually incompatible. Track 6 closes here."
+status: "published"
+difficulty: "intermediate"
+prerequisites:
+  - "linear-regression"
+  - "generalized-linear-models"
+  - "regularization-and-penalized-estimation"
+  - "maximum-likelihood"
+  - "likelihood-ratio-tests-and-np"
+  - "point-estimation"
+  - "confidence-intervals-and-duality"
+  - "exponential-families"
+tags:
+  - "statistics"
+  - "model-selection"
+  - "information-criteria"
+  - "aic"
+  - "bic"
+  - "mallows-cp"
+  - "aicc"
+  - "tic"
+  - "cross-validation"
+  - "stone-theorem"
+  - "yang-incompatibility"
+  - "consistency-vs-efficiency"
+  - "laplace-approximation"
+  - "marginal-likelihood"
+  - "bayesian-bridge"
+  - "effective-degrees-of-freedom"
+  - "nested-model-selection"
+  - "kullback-leibler-divergence"
+domain: "regression-linear-models"
+videoId: null
+notebookPath: "notebooks/model-selection/24_model_selection.ipynb"
+githubUrl: "https://github.com/jonx0037/formalStatistics/blob/main/src/content/topics/model-selection-and-information-criteria.mdx"
+datePublished: 2026-04-26
+estimatedReadTime: 60
+abstract: "Track 6 opened with linear regression as orthogonal projection (Topic 21) and continued with generalized linear models as IRLS on the exponential family (Topic 22). Topic 23 added penalization to stabilize both under collinearity and separation, with cross-validation as the default selector for the penalty parameter $\\lambda$. Topic 24 closes the track by formalizing the selection problem itself: given a candidate family $\\{\\mathcal{M}_1, \\mathcal{M}_2, \\dots\\}$, which model should we use, and by what criterion? The three main answers — AIC, BIC, and cross-validation — look superficially similar ($-2\\hat\\ell + \\text{penalty}$) but rest on distinct asymptotic guarantees. The featured §24.3 gives Akaike's theorem in full: AIC estimates the expected Kullback–Leibler divergence between the fitted model and the truth, with the $+2k$ penalty derived as the bias-correction term in the plug-in estimate of expected log-likelihood. §24.4 develops BIC as the Laplace approximation to the Bayesian marginal likelihood, with the $k\\log n$ penalty emerging from the second-order expansion — opening the on-ramp to Track 7's Bayesian machinery. §24.5 proves Stone's 1977 equivalence: LOO-CV and AIC select the same model asymptotically under Gaussian-homoscedastic errors, closing the loop on Topic 23's $\\lambda$-selection apparatus. §24.6 states Yang's 2005 incompatibility: no procedure can be both selection-consistent (BIC, when the true model is in the candidate set) and minimax-rate optimal for prediction (AIC, CV, in the misspecified-nonparametric regime). §24.7 connects LRT-based nested-model testing (Topics 18, 21, 22) to AIC via the identity $\\Delta\\mathrm{AIC} = 2q - 2\\Delta\\hat\\ell$. §24.8 extends the framework to penalized estimators via effective degrees of freedom ($\\operatorname{tr}(\\mathbf{H}_\\lambda)$ for ridge; $\\mathbb{E}[|\\mathcal{A}|]$ for lasso), discharging Topic 23 §23.8 Rem 20. §24.9 runs three workflows — polynomial-degree on simulated data, nested Poisson GLM, lasso-path AIC on prostate-cancer. §24.10 forward-maps to Track 7 (BIC → marginal likelihood → BMA → MCMC → DIC/WAIC/PSIS-LOO), Track 8 (nonparametric selection, Rademacher complexity), and formalml (post-selection inference, debiased lasso, cross-fitting)."
+formalcalculusPrereqs:
+  - topic: "multivariable-calculus"
+    site: "formalcalculus"
+    relationship: "Akaike's proof (§24.3 Proof 1) Taylor-expands $\\ell(\\theta)$ around $\\theta_0$ in $p+1$ dimensions; the BIC-Laplace proof (§24.4 Proof 2) does multivariate Laplace with a Hessian determinant. Both rely on the second-order Taylor theorem with remainder."
+  - topic: "matrix-calculus"
+    site: "formalcalculus"
+    relationship: "§24.5 Stone's hat-matrix identity uses the trace cyclicity property; §24.8 derives ridge effective DOF $\\sum_j d_j^2/(d_j^2+\\lambda)$ in SVD coordinates. Both rely on standard matrix-calculus identities from the formalCalculus track."
+formalmlConnections:
+  - topic: "post-selection-inference"
+    site: "formalml"
+    relationship: "After AIC/BIC/CV selection, naive Wald CIs are invalid because the selection event is data-dependent. Debiased lasso (Zhang–Zhang 2014), selective conditioning (Lee–Sun–Sun–Taylor 2016), and cross-fitting (Chernozhukov et al. 2018) restore validity. §24.10 Rem 20 forward-points."
+  - topic: "bayesian-model-averaging"
+    site: "formalml"
+    relationship: "BIC approximates the log marginal likelihood of a single model. BMA weights predictions by posterior model probabilities. §24.4 Rem 7 flags; §24.10 Rem 19 forward-points; full treatment Track 7."
+  - topic: "cross-fitting"
+    site: "formalml"
+    relationship: "Chernozhukov et al. 2018's double/debiased ML formalism uses cross-fitting for valid causal inference after ML-selected nuisance models. §24.10 Rem 20."
+  - topic: "high-dimensional-regression"
+    site: "formalml"
+    relationship: "When $p \\gg n$, likelihood-based IC degenerates. Extended BIC (Chen–Chen 2008), stability selection (Meinshausen–Bühlmann 2010), and knockoffs (Barber–Candès 2015) extend the framework. §24.10 Rem 25."
+  - topic: "structural-risk-minimization"
+    site: "formalml"
+    relationship: "Vapnik's SRM generalizes information criteria to function classes via VC dimension or Rademacher complexity. §24.10 Rem 26."
+connections:
+  - topic: "linear-regression"
+    relationship: "Topic 21 established OLS, residual sum of squares, and the hat matrix $\\mathbf{H} = \\mathbf{X}(\\mathbf{X}^\\top\\mathbf{X})^{-1}\\mathbf{X}^\\top$. Topic 24 §24.2 Mallows' $C_p$ and §24.5 Stone's proof both rely on RSS and leverage $h_{ii}$; §24.8 effective-DOF for ridge is $\\operatorname{tr}(\\mathbf{H}_\\lambda)$. Topic 21 §21.10 Rem 24 forward-promised this entire framework — discharged by §24.2/§24.3/§24.4/§24.5/§24.6."
+  - topic: "generalized-linear-models"
+    relationship: "Topic 22 delivered IRLS, Gaussian log-likelihood, and deviance. §24.3's AIC uses the log-likelihood directly; §24.7 uses Topic 22's deviance Wilks identity to demonstrate AIC ≡ LRT for nested GLMs."
+  - topic: "regularization-and-penalized-estimation"
+    relationship: "Topic 23 introduced ridge / lasso, with CV as the default $\\lambda$-selector. Topic 24 §24.8 derives effective DOF for ridge as $\\operatorname{tr}(\\mathbf{H}_\\lambda) = \\sum_j d_j^2/(d_j^2+\\lambda)$, discharging §23.8 Rem 20. §24.5 Stone equivalence identifies $k$-fold CV with AIC asymptotically, discharging §23.8 Rem 19. §24.10 closing paragraph reciprocally frames Topic 23 as a special case of Topic 24's framework."
+  - topic: "maximum-likelihood"
+    relationship: "Topic 14 delivered MLE, Fisher information, and asymptotic normality. Akaike's proof in §24.3 rests on Topic 14: Taylor expansion of $\\hat\\ell$ around $\\theta_0$ uses MLE asymptotic normality (Topic 14 Thm 6); the bias correction $\\mathbb{E}[\\operatorname{tr}(\\hat{\\mathcal{J}}^{-1}\\hat{\\mathcal{K}})] = k$ uses the Fisher identity $\\mathcal{J} = \\mathcal{K}$ (Topic 14 Thm 3)."
+  - topic: "likelihood-ratio-tests-and-np"
+    relationship: "Topic 18 Thm 4 (Wilks) is the asymptotic engine for §24.7: for nested models differing by $q$ parameters, $2\\Delta\\hat\\ell \\sim \\chi^2_q$. §24.7 Thm 6 identifies AIC's preference for the full model with $2\\Delta\\hat\\ell > 2q$ — AIC is a default-threshold LRT."
+  - topic: "point-estimation"
+    relationship: "Topic 13's bias-variance MSE decomposition underpins §24.1 motivation and §24.3 Rem 4 on the optimism gap. §24.8's effective DOF for ridge is the bias-variance tradeoff expressed as a continuous effective-parameter count."
+  - topic: "confidence-intervals-and-duality"
+    relationship: "Topic 19 test-CI duality informs §24.6's framing of Yang: selection consistency is an asymptotic claim about $\\mathbf{1}\\{\\hat{\\mathcal{M}} = \\mathcal{M}_*\\}$; prediction efficiency is a claim about $L^2$ risk — different parameters, different asymptotics, no compatibility guarantee."
+  - topic: "exponential-families"
+    relationship: "Topic 7 Thm 3 ($A'(\\theta) = \\mu$) and exponential-family log-likelihood structure are cited in §24.3 Proof 1. §24.4 Laplace uses observed Fisher information — for exponential families this is $A''(\\hat\\theta)$."
+references:
+  - type: "article"
+    title: "A new look at the statistical model identification"
+    author: "Hirotugu Akaike"
+    year: 1974
+    note: "AKA1974. Introduces AIC. §24.3 Thm 1 restates with modern notation."
+  - type: "article"
+    title: "Estimating the dimension of a model"
+    author: "Gideon Schwarz"
+    year: 1978
+    note: "SCH1978. Four-page paper introducing BIC. §24.4 Proof 2 generalizes via Laplace approximation."
+  - type: "article"
+    title: "Some comments on Cp"
+    author: "C. L. Mallows"
+    year: 1973
+    note: "MAL1973. Mallows' Cp for variable subset selection. §24.2 Def 3 + Ex 2."
+  - type: "article"
+    title: "An asymptotic equivalence of choice of model by cross-validation and Akaike's criterion"
+    author: "M. Stone"
+    year: 1977
+    note: "STO1977. LOO-CV ≡ AIC under Gaussian-linear errors. §24.5 Thm 4 + Proof 3."
+  - type: "article"
+    title: "Can the strengths of AIC and BIC be shared? A conflict between model identification and regression estimation"
+    author: "Yuhong Yang"
+    year: 2005
+    note: "YAN2005. Incompatibility theorem. §24.6 Thm 5; proof outside scope."
+  - type: "book"
+    title: "Model Selection and Multimodel Inference: A Practical Information-Theoretic Approach"
+    author: "Kenneth P. Burnham & David R. Anderson"
+    year: 2002
+    edition: "2nd"
+    publisher: "Springer"
+    note: "BUR2002. Most widely cited applied reference on AIC. §24.3 Rem 5 AICc; §24.4 Rem 7 Akaike weights."
+  - type: "book"
+    title: "Model Selection and Model Averaging"
+    author: "Gerda Claeskens & Nils Lid Hjort"
+    year: 2008
+    edition: "1st"
+    publisher: "Cambridge University Press"
+    note: "CLA2008. Canonical modern textbook. Ch. 2 AIC; Ch. 3 BIC; Ch. 4 model averaging."
+  - type: "book"
+    title: "The Elements of Statistical Learning: Data Mining, Inference, and Prediction"
+    author: "Trevor Hastie, Robert Tibshirani & Jerome Friedman"
+    year: 2009
+    edition: "2nd"
+    publisher: "Springer"
+    note: "Inherited. §7.5 (AIC/BIC), §7.7 (BIC consistency), §7.10 (CV)."
+  - type: "book"
+    title: "Testing Statistical Hypotheses"
+    author: "Erich L. Lehmann & Joseph P. Romano"
+    year: 2005
+    edition: "3rd"
+    publisher: "Springer"
+    note: "Inherited. §13.5 nested-model LRT — §24.7 Thm 6 identifies with AIC."
+  - type: "book"
+    title: "Statistical Inference"
+    author: "George Casella & Roger L. Berger"
+    year: 2002
+    edition: "2nd"
+    publisher: "Duxbury"
+    note: "Inherited. §10.4 asymptotic efficiency; §24.3 Rem 6."
+  - type: "book"
+    title: "High-Dimensional Statistics: A Non-Asymptotic Viewpoint"
+    author: "Martin J. Wainwright"
+    year: 2019
+    edition: "1st"
+    publisher: "Cambridge University Press"
+    note: "Inherited. Ch. 7 RE conditions; Ch. 11 post-selection. §24.10 Rem 20 + Rem 25."
+---
+
+import DefinitionBlock from '../../components/ui/DefinitionBlock.astro';
+import TheoremBlock from '../../components/ui/TheoremBlock.astro';
+import ProofBlock from '../../components/ui/ProofBlock.astro';
+import ExampleBlock from '../../components/ui/ExampleBlock.astro';
+import RemarkBlock from '../../components/ui/RemarkBlock.astro';
+import ExternalLink from '../../components/ui/ExternalLink.astro';
+
+{/*
+  Component embeds (Task 9 — components not yet created; uncomment per section
+  when each ships):
+
+  import ICSelector from '../../components/viz/ICSelector.tsx';
+  import CVvsICComparator from '../../components/viz/CVvsICComparator.tsx';
+  import ConsistencyEfficiencyRace from '../../components/viz/ConsistencyEfficiencyRace.tsx';
+*/}
+
+## 24.1 The model-selection problem
+
+{/* TODO Task 7: §24.1 prose (~700 words) — motivation, in-sample vs out-of-sample,
+    optimism gap formalized. Defs 1–2, Ex 1 + Fig 1 (24-optimism.png), Rems 1–2. */}
+
+<DefinitionBlock number={1} title="Candidate model family">
+A **candidate model family** is a finite collection $\{\mathcal{M}_1, \mathcal{M}_2, \ldots, \mathcal{M}_M\}$ of statistical models, each defining a parameter space $\Theta_k$ and a likelihood $L_k(\theta_k; \mathbf{y})$. The **model-selection problem** is to choose one model from this family, given the data $\mathbf{y}$, by a procedure that has a defensible asymptotic justification.
+</DefinitionBlock>
+
+<a id="section-24-2"></a>
+
+## 24.2 Mallows' Cp — the Gaussian-linear predecessor
+
+{/* TODO Task 7: §24.2 prose (~600 words, shortest section) — Def 3 (Cp),
+    Ex 2 embedded derivation, Rems 3–4, Ex 3 + Fig 2 (24-cp-polynomial.png). */}
+
+<a id="section-24-3"></a>
+
+## 24.3 Akaike's information criterion (FEATURED)
+
+{/* TODO Task 7: §24.3 prose (~1500 words) — Def 4 (AIC), Thm 1 + Proof 1 (7 steps,
+    verbatim from brief §3.4), Ex 4 + Fig 3 (24-aic-bias-correction.png), Rems 5–6,
+    <ICSelector client:visible /> embed at end. */}
+
+<a id="section-24-4"></a>
+
+## 24.4 Schwarz's BIC and the Bayesian bridge
+
+{/* TODO Task 7: §24.4 prose (~1700 words, LONGEST) — Def 5 (BIC), Thm 2 + Proof 2
+    (4 steps, verbatim), Thm 3 (BIC consistency, stated), Ex 5 + Fig 4
+    (24-bic-laplace.png), Rems 7–10 (Track-7 amplification per Appendix B #15:
+    Rem 7 BMA flag, Rem 8 prior on model space, Rem 10 marginal likelihood
+    computation). */}
+
+<a id="section-24-5"></a>
+
+## 24.5 Stone's CV ≡ AIC equivalence
+
+{/* TODO Task 7: §24.5 prose (~1200 words) — Def 6 (LOO-CV), Thm 4 + Proof 3
+    (5 steps, verbatim), Ex 6 + Fig 5 (24-stone-equivalence.png), Rems 11–13
+    (Rem 11 nested CV — discharges Topic 23 R1), <CVvsICComparator client:visible />
+    embed. */}
+
+<a id="section-24-6"></a>
+
+## 24.6 Yang's incompatibility theorem
+
+{/* TODO Task 7: §24.6 prose (~900 words) — Thm 5 (stated only, proof outside
+    scope), Ex 7 + Fig 6 (24-yang-race.png), Rems 14–16,
+    <ConsistencyEfficiencyRace client:visible /> embed. */}
+
+<a id="section-24-7"></a>
+
+## 24.7 Nested-model selection: AIC ≡ LRT with default threshold
+
+{/* TODO Task 7: §24.7 prose (~700 words) — Thm 6 embedded derivation (4 lines:
+    ΔAIC = 2q - 2Δℓ̂ via -2ℓ + 2k), Ex 8 + Fig 7 (24-nested-glm.png) using
+    pinned T10.12–T10.19 values, Rems 17–18. */}
+
+<a id="section-24-8"></a>
+
+## 24.8 Effective degrees of freedom for penalized estimators
+
+{/* TODO Task 7: §24.8 prose (~800 words) — Def 7 (effective DOF),
+    Thm 7 embedded SVD derivation (ridge), Thm 8 stated (lasso, Tibshirani–Taylor 2012),
+    Ex 9 (T10.20–T10.25 ridge DOF table), Ex 10 + Fig 8 (24-lasso-aic-path.png)
+    using PROSTATE_CANCER_DATA, Rems 19–20. */}
+
+<a id="section-24-9"></a>
+
+## 24.9 Worked examples
+
+{/* TODO Task 7: §24.9 prose (~1100 words) — Exs 11–13 spanning the three
+    workflows (polynomial sin DGP, nested Poisson, prostate lasso path with
+    AIC overlay), Rems 21–22. */}
+
+<a id="section-24-10"></a>
+
+## 24.10 Forward map
+
+{/* TODO Task 7: §24.10 prose (~800 words) — Rems 19–27 forward-pointing to
+    Track 7 (BMA, MCMC, DIC/WAIC), Track 8 (nonparametric selection), formalml
+    (post-selection inference, debiased lasso, cross-fitting, SRM/VC), with
+    closing paragraph that reciprocally frames Topic 23 as a special case
+    of Topic 24's framework. Fig 9 (24-forward-map.png). */}
+
+---
+
+### References
+
+1. Akaike, H. (1974). [*A new look at the statistical model identification*](https://doi.org/10.1109/TAC.1974.1100705). *IEEE Transactions on Automatic Control*, 19(6), 716–723.
+2. Schwarz, G. (1978). [*Estimating the dimension of a model*](https://doi.org/10.1214/aos/1176344136). *The Annals of Statistics*, 6(2), 461–464.
+3. Mallows, C. L. (1973). [*Some comments on Cp*](https://doi.org/10.1080/00401706.1973.10489103). *Technometrics*, 15(4), 661–675.
+4. Stone, M. (1977). [*An asymptotic equivalence of choice of model by cross-validation and Akaike's criterion*](https://doi.org/10.1111/j.2517-6161.1977.tb01603.x). *Journal of the Royal Statistical Society, Series B*, 39(1), 44–47.
+5. Yang, Y. (2005). [*Can the strengths of AIC and BIC be shared? A conflict between model identification and regression estimation*](https://doi.org/10.1093/biomet/92.4.937). *Biometrika*, 92(4), 937–950.
+6. Burnham, K. P. & Anderson, D. R. (2002). [*Model Selection and Multimodel Inference: A Practical Information-Theoretic Approach*](https://doi.org/10.1007/b97636) (2nd ed.). Springer.
+7. Claeskens, G. & Hjort, N. L. (2008). [*Model Selection and Model Averaging*](https://doi.org/10.1017/CBO9780511790485) (1st ed.). Cambridge University Press.
+8. Hastie, T., Tibshirani, R. & Friedman, J. (2009). [*The Elements of Statistical Learning*](https://hastie.su.domains/ElemStatLearn/) (2nd ed.). Springer.
+9. Lehmann, E. L. & Romano, J. P. (2005). [*Testing Statistical Hypotheses*](https://link.springer.com/book/10.1007/0-387-27605-X) (3rd ed.). Springer.
+10. Casella, G. & Berger, R. L. (2002). [*Statistical Inference*](https://www.routledge.com/Statistical-Inference/Casella-Berger/p/book/9780534243128) (2nd ed.). Duxbury.
+11. Wainwright, M. J. (2019). [*High-Dimensional Statistics: A Non-Asymptotic Viewpoint*](https://doi.org/10.1017/9781108627771) (1st ed.). Cambridge University Press.
