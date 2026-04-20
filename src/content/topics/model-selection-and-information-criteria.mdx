@@ -511,10 +511,114 @@ The Laplace approximation underlying Thm 2 has $O_p(1)$ error — fine for ranki
 
 ## 24.5 Stone's CV ≡ AIC equivalence
 
-{/* TODO Task 7: §24.5 prose (~1200 words) — Def 6 (LOO-CV), Thm 4 + Proof 3
-    (5 steps, verbatim), Ex 6 + Fig 5 (24-stone-equivalence.png), Rems 11–13
-    (Rem 11 nested CV — discharges Topic 23 R1), <CVvsICComparator client:visible />
-    embed. */}
+{/* Section opening — TODO Task 7 prose: Stone's 1977 result that LOO-CV and
+    AIC are the same procedure asymptotically under Gaussian-linear errors.
+    The result closes the loop on Topic 23's λ-selection apparatus and
+    discharges §23.8 Rem 19 (the nested-CV pointer). */}
+
+Stone (1977) proved that leave-one-out cross-validation and AIC select the same model asymptotically under Gaussian-homoscedastic errors. The result is a tight identification: LOO-CV is not just *similar* to AIC but converges to it after a logarithm and an additive constant — the two frequentist procedures collapse into one.
+
+<DefinitionBlock number={6} title="Leave-one-out cross-validation">
+For data $(\mathbf{X}, \mathbf{y})$ with $n$ rows, let $\hat\theta^{(-i)}$ be the estimator fit on the $n - 1$ rows excluding observation $i$, and let $\hat y_i^{(-i)}$ be its prediction at $\mathbf{x}_i$. The **leave-one-out cross-validation** estimate of mean squared prediction error is
+
+$$\mathrm{LOO\text{-}CV} \;:=\; \frac{1}{n}\sum_{i=1}^n \left(y_i - \hat y_i^{(-i)}\right)^2.$$
+
+For Gaussian OLS with hat-matrix diagonal $h_{ii}$, the **hat-matrix shortcut** (PRESS statistic; Allen 1974) avoids the $n$ refits:
+
+$$y_i - \hat y_i^{(-i)} \;=\; \frac{y_i - \hat y_i}{1 - h_{ii}}.$$
+
+The shortcut requires $h_{ii} < 1$ for all $i$; `looCV` in `regression.ts` throws when $\max h_{ii} \geq 0.999$.
+</DefinitionBlock>
+
+<TheoremBlock number={4} title="Stone's CV ≡ AIC equivalence (Stone 1977)">
+Consider the Gaussian linear model $\mathbf{y} = \mathbf{X}\boldsymbol\beta + \boldsymbol\varepsilon$ with $\boldsymbol\varepsilon \sim \mathcal{N}_n(\mathbf{0}, \sigma^2\mathbf{I})$ and a fixed full-rank design $\mathbf{X}$. Under regularity (balanced design, fixed $p$, $\max h_{ii} = O(\log n / n)$),
+
+$$n\log\mathrm{LOO\text{-}CV} \;=\; \mathrm{AIC}^* + O_p(n^{-1}),$$
+
+where $\mathrm{AIC}^* := n\log(\mathrm{RSS}/n) + 2k$ is AIC up to model-invariant additive constants. Consequently,
+
+$$\arg\min_{\mathcal{M}} \mathrm{LOO\text{-}CV}(\mathcal{M}) \;=\; \arg\min_{\mathcal{M}} \mathrm{AIC}(\mathcal{M}) + o_p(1).$$
+
+LOO-CV and AIC asymptotically select the same model from any nested family on the Gaussian-linear model.
+</TheoremBlock>
+
+<ProofBlock>
+
+**Setup.** Consider the Gaussian linear model $\mathbf{y} = \mathbf{X}\boldsymbol\beta + \boldsymbol\varepsilon$ with $\boldsymbol\varepsilon \sim \mathcal{N}_n(\mathbf{0}, \sigma^2\mathbf{I})$, fixed full-rank design $\mathbf{X}$ ($p+1$ columns). Let $\hat{\boldsymbol\beta}$ be OLS, $\hat y_i = (\mathbf{X}\hat{\boldsymbol\beta})_i$, $h_{ii}$ the hat-matrix diagonal $\mathbf{H} = \mathbf{X}(\mathbf{X}^\top\mathbf{X})^{-1}\mathbf{X}^\top$. Write $k = p + 2$ (coefficients + $\sigma^2$).
+
+**Step 1 — Hat-matrix shortcut.** The leave-one-out fit satisfies
+
+$$y_i - \hat y_i^{(-i)} = \frac{y_i - \hat y_i}{1 - h_{ii}}.$$
+
+(Standard OLS identity via Sherman–Morrison; HAS2009 §7.10 gives full 5-line derivation.) Squaring and summing:
+
+$$\mathrm{LOO\text{-}CV} = \frac{1}{n}\sum_{i=1}^n\frac{(y_i - \hat y_i)^2}{(1 - h_{ii})^2}.$$
+
+**Step 2 — Uniform leverage.** Under regularity (balanced design, fixed $p$), $\sum h_{ii} = \operatorname{tr}(\mathbf{H}) = p+1$ and $\max h_{ii} = O(\log n / n)$. So
+
+$$\frac{1}{(1 - h_{ii})^2} = 1 + 2h_{ii} + 3h_{ii}^2 + \cdots = 1 + \frac{2(p+1)}{n} + O(n^{-2})$$
+
+uniformly in $i$.
+
+**Step 3 — Substitute.**
+
+$$\mathrm{LOO\text{-}CV} = \left(1 + \frac{2(p+1)}{n} + O(n^{-2})\right) \cdot \hat\sigma^2_{\text{MLE}} = \hat\sigma^2_{\text{MLE}}\left(1 + \frac{2(p+1)}{n}\right) + O(n^{-2}),$$
+
+with $\hat\sigma^2_{\text{MLE}} = \mathrm{RSS}/n$.
+
+**Step 4 — AIC on the same model.** Dropping model-invariant constants $n\log(2\pi) + n$:
+
+$$\mathrm{AIC}^* = n\log\hat\sigma^2_{\text{MLE}} + 2(p+2) = n\log\hat\sigma^2_{\text{MLE}} + 2k.$$
+
+Using $\log(\hat\sigma^2(1 + 2k/n)) = \log\hat\sigma^2 + 2k/n + O(n^{-2})$:
+
+$$n\log\mathrm{LOO\text{-}CV} = n\log\hat\sigma^2_{\text{MLE}} + 2(p+1) + O(n^{-1}) = \mathrm{AIC}^* - 2 + O(n^{-1}),$$
+
+using $k = p+2$ so $2k - 2 = 2(p+1)$.
+
+**Step 5 — Equivalence.** The $-2$ is model-invariant (depends only on whether $\sigma^2$ is counted in $k$, a family-wide convention). Therefore
+
+$$\arg\min_{\mathcal{M}} n\log\mathrm{LOO\text{-}CV}(\mathcal{M}) = \arg\min_{\mathcal{M}} \mathrm{AIC}^*(\mathcal{M}) + o_p(1).$$
+
+LOO-CV and AIC select the same model asymptotically. ∎ — using Topic 21 §21.7 hat-matrix structure and $\log(1+x) = x - x^2/2 + O(x^3)$.
+
+</ProofBlock>
+
+<ExampleBlock number={6} title="Stone equivalence empirically (T10.26 + T10.27)">
+On POLY_DGP, both $\arg\min_d \mathrm{LOO\text{-}CV} = 6$ and $\arg\min_d \mathrm{AIC} = 6$ over $d \in [0, 11]$ (T10.26 — d=12 is excluded because the monomial Vandermonde is too ill-conditioned for the hat-matrix shortcut; the argmin lies safely inside the range). At the joint argmin $d = 6$, $\mathrm{LOO\text{-}CV} = 0.063835$ (T10.10) and $\mathrm{AIC}^* = -218.6963$ (computed from the full Gaussian AIC by stripping the $n(\log 2\pi + 1)$ constants); the gap $|n\log\mathrm{LOO\text{-}CV} - \mathrm{AIC}^*| < 2.5$ (T10.27) is the order-1 constant Proof 3 Step 4 predicts. Figure 5 overlays the LOO-CV curve, the 5-fold and 10-fold CV curves, and the AIC curve over $d$.
+</ExampleBlock>
+
+<img src="/images/topics/model-selection-and-information-criteria/24-stone-equivalence.png"
+     alt="Multi-curve plot over polynomial degree d=0..12 on POLY_DGP. Curves: LOO-CV, 5-fold CV, 10-fold CV, AIC (rescaled to match LOO-CV's vertical scale). All four curves U-shaped with argmin at d=6 (vertical reference). Legend bottom-left. Title: 'Stone 1977: LOO-CV and AIC select the same model asymptotically'."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<RemarkBlock number={11} title="Nested cross-validation (discharges Topic 23 §23.8 Rem 19)">
+{/* TODO Task 7: 4–5 sentences. The R1 forward-promise discharge: outer CV
+    estimates generalization error; inner CV selects λ. The single-loop CV that
+    Topic 23 used for λ-selection IS the inner loop here; reporting its minimum
+    as test error leaks tuning information (selection bias). Reference Bates–
+    Hastie–Tibshirani 2024 for recent rigorous treatment. */}
+The single-loop CV Topic 23 §23.8 used to select $\lambda$ should not also serve as the test-error estimator: reporting $\min_\lambda \mathrm{CV}(\lambda)$ as test error leaks tuning information into the test estimate (selection bias). **Nested cross-validation** fixes this: an outer CV loop holds out folds for honest test-error estimation, and within each outer fold, an inner CV loop selects $\lambda$. Bates–Hastie–Tibshirani (2024) give the recent rigorous treatment. The result is an asymptotically unbiased generalization-error estimate at the cost of $K_\text{outer} \cdot K_\text{inner}$ refits.
+</RemarkBlock>
+
+<RemarkBlock number={12} title="$k$-fold CV: bias-variance of $k = 5$ vs $k = 10$">
+{/* TODO Task 7: 3–4 sentences. k-fold CV is finite-sample LOO. CLA2008 §4.3
+    and HAS2009 §7.10 both show k=10 is the modern default — slightly biased
+    upward vs LOO but lower variance. k=5 has more bias; k=n gives LOO. */}
+$k$-fold CV is the finite-sample analog of LOO: each fold holds out $n/k$ observations. As $k \to n$, the procedure converges to LOO. Smaller $k$ has lower computational cost but higher bias (more held-out fold per refit means more train-set shrinkage). Hastie et al. 2009 §7.10 and Claeskens & Hjort 2008 §4.3 recommend $k = 10$ as the modern default — slightly biased upward vs LOO but with lower Monte Carlo variance.
+</RemarkBlock>
+
+<RemarkBlock number={13} title="Stone's result is AIC-specific">
+{/* TODO Task 7: 2–3 sentences. There's no analogous "BIC ≡ k-fold CV" theorem
+    at fixed k. BIC's k log n penalty grows with n; CV's penalty grows like 2k.
+    Mismatch is asymptotically O(log n) per parameter — material. */}
+Thm 4 identifies LOO-CV with AIC; **no analogous result exists for BIC at fixed $k$**. The mismatch is asymptotic: BIC's $k\log n$ penalty grows in $n$, while CV's effective penalty grows like $2k$. To recover a BIC-like criterion from CV, one would have to use a vanishing-fraction held-out set ($n_\text{val} = o(n)$), not standard $k$-fold (Shao 1993).
+</RemarkBlock>
+
+{/* Component embed (Task 9 — uncomment when CVvsICComparator ships):
+<CVvsICComparator client:visible />
+*/}
 
 <a id="section-24-6"></a>
 
