@@ -1,6 +1,6 @@
 ---
 title: "Regularization & Penalized Estimation"
-subtitle: "When OLS and IRLS break under collinearity or separation, a penalty $\\lambda P(\\boldsymbol\\beta)$ on the loss restores well-posedness. Ridge gives MSE-improvement (Hoerl–Kennard 1970); lasso gives variable selection through soft-thresholding (Tibshirani 1996); elastic net combines them; coordinate descent (Tseng 2001) is the algorithmic engine, and cross-validation picks $\\lambda$."
+subtitle: "When OLS and IRLS break under collinearity or separation, a penalty term on the loss restores well-posedness. Ridge gives MSE-improvement (Hoerl–Kennard 1970); lasso gives variable selection through soft-thresholding (Tibshirani 1996); elastic net combines them; coordinate descent (Tseng 2001) is the algorithmic engine, and cross-validation picks the penalty parameter."
 status: "published"
 difficulty: "intermediate"
 prerequisites:
@@ -194,6 +194,12 @@ references:
     note: "Inherited from Topics 21–22; §7.3 (MLE), §10.1 (pivots) cited at §23.2 and §23.8."
 ---
 
+import DefinitionBlock from '../../components/ui/DefinitionBlock.astro';
+import TheoremBlock from '../../components/ui/TheoremBlock.astro';
+import ProofBlock from '../../components/ui/ProofBlock.astro';
+import ExampleBlock from '../../components/ui/ExampleBlock.astro';
+import RemarkBlock from '../../components/ui/RemarkBlock.astro';
+import ExternalLink from '../../components/ui/ExternalLink.astro';
 import RegularizationPathExplorer from '../../components/viz/RegularizationPathExplorer.tsx';
 import LevelSetExplorer from '../../components/viz/LevelSetExplorer.tsx';
 import CoordinateDescentVisualizer from '../../components/viz/CoordinateDescentVisualizer.tsx';
