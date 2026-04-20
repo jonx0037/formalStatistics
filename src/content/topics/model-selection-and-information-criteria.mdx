@@ -1,0 +1,979 @@
+---
+title: "Model Selection & Information Criteria"
+subtitle: "When every candidate model fits the training data differently, a principled ranking criterion is the only honest arbiter. AIC (Akaike) estimates out-of-sample log-likelihood asymptotically; BIC (Schwarz) approximates the Bayesian marginal likelihood; Mallows' Cp is the Gaussian special case; Stone's 1977 theorem identifies LOO-CV with AIC; Yang 2005 proves that selection consistency and prediction efficiency are mutually incompatible. Track 6 closes here."
+status: "published"
+difficulty: "intermediate"
+prerequisites:
+  - "linear-regression"
+  - "generalized-linear-models"
+  - "regularization-and-penalized-estimation"
+  - "maximum-likelihood"
+  - "likelihood-ratio-tests-and-np"
+  - "point-estimation"
+  - "confidence-intervals-and-duality"
+  - "exponential-families"
+tags:
+  - "statistics"
+  - "model-selection"
+  - "information-criteria"
+  - "aic"
+  - "bic"
+  - "mallows-cp"
+  - "aicc"
+  - "tic"
+  - "cross-validation"
+  - "stone-theorem"
+  - "yang-incompatibility"
+  - "consistency-vs-efficiency"
+  - "laplace-approximation"
+  - "marginal-likelihood"
+  - "bayesian-bridge"
+  - "effective-degrees-of-freedom"
+  - "nested-model-selection"
+  - "kullback-leibler-divergence"
+domain: "regression-linear-models"
+videoId: null
+notebookPath: "notebooks/model-selection/24_model_selection.ipynb"
+githubUrl: "https://github.com/jonx0037/formalStatistics/blob/main/src/content/topics/model-selection-and-information-criteria.mdx"
+datePublished: 2026-04-26
+estimatedReadTime: 60
+abstract: "Track 6 opened with linear regression as orthogonal projection (Topic 21) and continued with generalized linear models as IRLS on the exponential family (Topic 22). Topic 23 added penalization to stabilize both under collinearity and separation, with cross-validation as the default selector for the penalty parameter $\\lambda$. Topic 24 closes the track by formalizing the selection problem itself: given a candidate family $\\{\\mathcal{M}_1, \\mathcal{M}_2, \\dots\\}$, which model should we use, and by what criterion? The three main answers — AIC, BIC, and cross-validation — look superficially similar ($-2\\hat\\ell + \\text{penalty}$) but rest on distinct asymptotic guarantees. The featured §24.3 gives Akaike's theorem in full: AIC estimates the expected Kullback–Leibler divergence between the fitted model and the truth, with the $+2k$ penalty derived as the bias-correction term in the plug-in estimate of expected log-likelihood. §24.4 develops BIC as the Laplace approximation to the Bayesian marginal likelihood, with the $k\\log n$ penalty emerging from the second-order expansion — opening the on-ramp to Track 7's Bayesian machinery. §24.5 proves Stone's 1977 equivalence: LOO-CV and AIC select the same model asymptotically under Gaussian-homoscedastic errors, closing the loop on Topic 23's $\\lambda$-selection apparatus. §24.6 states Yang's 2005 incompatibility: no procedure can be both selection-consistent (BIC, when the true model is in the candidate set) and minimax-rate optimal for prediction (AIC, CV, in the misspecified-nonparametric regime). §24.7 connects LRT-based nested-model testing (Topics 18, 21, 22) to AIC via the identity $\\Delta\\mathrm{AIC} = 2q - 2\\Delta\\hat\\ell$. §24.8 extends the framework to penalized estimators via effective degrees of freedom ($\\operatorname{tr}(\\mathbf{H}_\\lambda)$ for ridge; $\\mathbb{E}[|\\mathcal{A}|]$ for lasso), discharging Topic 23 §23.8 Rem 20. §24.9 runs three workflows — polynomial-degree on simulated data, nested Poisson GLM, lasso-path AIC on prostate-cancer. §24.10 forward-maps to Track 7 (BIC → marginal likelihood → BMA → MCMC → DIC/WAIC/PSIS-LOO), Track 8 (nonparametric selection, Rademacher complexity), and formalml (post-selection inference, debiased lasso, cross-fitting)."
+formalcalculusPrereqs:
+  - topic: "multivariable-calculus"
+    site: "formalcalculus"
+    relationship: "Akaike's proof (§24.3 Proof 1) Taylor-expands $\\ell(\\theta)$ around $\\theta_0$ in $p+1$ dimensions; the BIC-Laplace proof (§24.4 Proof 2) does multivariate Laplace with a Hessian determinant. Both rely on the second-order Taylor theorem with remainder."
+  - topic: "matrix-calculus"
+    site: "formalcalculus"
+    relationship: "§24.5 Stone's hat-matrix identity uses the trace cyclicity property; §24.8 derives ridge effective DOF $\\sum_j d_j^2/(d_j^2+\\lambda)$ in SVD coordinates. Both rely on standard matrix-calculus identities from the formalCalculus track."
+formalmlConnections:
+  - topic: "post-selection-inference"
+    site: "formalml"
+    relationship: "After AIC/BIC/CV selection, naive Wald CIs are invalid because the selection event is data-dependent. Debiased lasso (Zhang–Zhang 2014), selective conditioning (Lee–Sun–Sun–Taylor 2016), and cross-fitting (Chernozhukov et al. 2018) restore validity. §24.10 Rem 24 forward-points."
+  - topic: "bayesian-model-averaging"
+    site: "formalml"
+    relationship: "BIC approximates the log marginal likelihood of a single model. BMA weights predictions by posterior model probabilities. §24.4 Rem 7 flags; §24.10 Rem 23 forward-points; full treatment Track 7."
+  - topic: "cross-fitting"
+    site: "formalml"
+    relationship: "Chernozhukov et al. 2018's double/debiased ML formalism uses cross-fitting for valid causal inference after ML-selected nuisance models. §24.10 Rem 24."
+  - topic: "high-dimensional-regression"
+    site: "formalml"
+    relationship: "When $p \\gg n$, likelihood-based IC degenerates. Extended BIC (Chen–Chen 2008), stability selection (Meinshausen–Bühlmann 2010), and knockoffs (Barber–Candès 2015) extend the framework. §24.10 Rem 25."
+  - topic: "structural-risk-minimization"
+    site: "formalml"
+    relationship: "Vapnik's SRM generalizes information criteria to function classes via VC dimension or Rademacher complexity. §24.10 Rem 26."
+connections:
+  - topic: "linear-regression"
+    relationship: "Topic 21 established OLS, residual sum of squares, and the hat matrix $\\mathbf{H} = \\mathbf{X}(\\mathbf{X}^\\top\\mathbf{X})^{-1}\\mathbf{X}^\\top$. Topic 24 §24.2 Mallows' $C_p$ and §24.5 Stone's proof both rely on RSS and leverage $h_{ii}$; §24.8 effective-DOF for ridge is $\\operatorname{tr}(\\mathbf{H}_\\lambda)$. Topic 21 §21.10 Rem 24 forward-promised this entire framework — discharged by §24.2/§24.3/§24.4/§24.5/§24.6."
+  - topic: "generalized-linear-models"
+    relationship: "Topic 22 delivered IRLS, Gaussian log-likelihood, and deviance. §24.3's AIC uses the log-likelihood directly; §24.7 uses Topic 22's deviance Wilks identity to demonstrate AIC ≡ LRT for nested GLMs."
+  - topic: "regularization-and-penalized-estimation"
+    relationship: "Topic 23 introduced ridge / lasso, with CV as the default $\\lambda$-selector. Topic 24 §24.8 derives effective DOF for ridge as $\\operatorname{tr}(\\mathbf{H}_\\lambda) = \\sum_j d_j^2/(d_j^2+\\lambda)$, discharging §23.8 Rem 20. §24.5 Stone equivalence identifies $k$-fold CV with AIC asymptotically, discharging §23.8 Rem 19. §24.10 closing paragraph reciprocally frames Topic 23 as a special case of Topic 24's framework."
+  - topic: "maximum-likelihood"
+    relationship: "Topic 14 delivered MLE, Fisher information, and asymptotic normality. Akaike's proof in §24.3 rests on Topic 14: Taylor expansion of $\\hat\\ell$ around $\\theta_0$ uses MLE asymptotic normality (Topic 14 Thm 6); the bias correction $\\mathbb{E}[\\operatorname{tr}(\\hat{\\mathcal{J}}^{-1}\\hat{\\mathcal{K}})] = k$ uses the Fisher identity $\\mathcal{J} = \\mathcal{K}$ (Topic 14 Thm 3)."
+  - topic: "likelihood-ratio-tests-and-np"
+    relationship: "Topic 18 Thm 4 (Wilks) is the asymptotic engine for §24.7: for nested models differing by $q$ parameters, $2\\Delta\\hat\\ell \\sim \\chi^2_q$. §24.7 Thm 6 identifies AIC's preference for the full model with $2\\Delta\\hat\\ell > 2q$ — AIC is a default-threshold LRT."
+  - topic: "point-estimation"
+    relationship: "Topic 13's bias-variance MSE decomposition underpins §24.1 motivation and §24.3 Rem 4 on the optimism gap. §24.8's effective DOF for ridge is the bias-variance tradeoff expressed as a continuous effective-parameter count."
+  - topic: "confidence-intervals-and-duality"
+    relationship: "Topic 19 test-CI duality informs §24.6's framing of Yang: selection consistency is an asymptotic claim about $\\mathbf{1}\\{\\hat{\\mathcal{M}} = \\mathcal{M}_*\\}$; prediction efficiency is a claim about $L^2$ risk — different parameters, different asymptotics, no compatibility guarantee."
+  - topic: "exponential-families"
+    relationship: "Topic 7 Thm 3 ($A'(\\theta) = \\mu$) and exponential-family log-likelihood structure are cited in §24.3 Proof 1. §24.4 Laplace uses observed Fisher information — for exponential families this is $A''(\\hat\\theta)$."
+references:
+  - type: "article"
+    title: "A new look at the statistical model identification"
+    author: "Hirotugu Akaike"
+    year: 1974
+    note: "AKA1974. Introduces AIC. §24.3 Thm 1 restates with modern notation."
+  - type: "article"
+    title: "Estimating the dimension of a model"
+    author: "Gideon Schwarz"
+    year: 1978
+    note: "SCH1978. Four-page paper introducing BIC. §24.4 Proof 2 generalizes via Laplace approximation."
+  - type: "article"
+    title: "Some comments on Cp"
+    author: "C. L. Mallows"
+    year: 1973
+    note: "MAL1973. Mallows' Cp for variable subset selection. §24.2 Def 3 + Ex 2."
+  - type: "article"
+    title: "An asymptotic equivalence of choice of model by cross-validation and Akaike's criterion"
+    author: "M. Stone"
+    year: 1977
+    note: "STO1977. LOO-CV ≡ AIC under Gaussian-linear errors. §24.5 Thm 4 + Proof 3."
+  - type: "article"
+    title: "Can the strengths of AIC and BIC be shared? A conflict between model identification and regression estimation"
+    author: "Yuhong Yang"
+    year: 2005
+    note: "YAN2005. Incompatibility theorem. §24.6 Thm 5; proof outside scope."
+  - type: "book"
+    title: "Model Selection and Multimodel Inference: A Practical Information-Theoretic Approach"
+    author: "Kenneth P. Burnham & David R. Anderson"
+    year: 2002
+    edition: "2nd"
+    publisher: "Springer"
+    note: "BUR2002. Most widely cited applied reference on AIC. §24.3 Rem 5 AICc; §24.4 Rem 7 Akaike weights."
+  - type: "book"
+    title: "Model Selection and Model Averaging"
+    author: "Gerda Claeskens & Nils Lid Hjort"
+    year: 2008
+    edition: "1st"
+    publisher: "Cambridge University Press"
+    note: "CLA2008. Canonical modern textbook. Ch. 2 AIC; Ch. 3 BIC; Ch. 4 model averaging."
+  - type: "book"
+    title: "The Elements of Statistical Learning: Data Mining, Inference, and Prediction"
+    author: "Trevor Hastie, Robert Tibshirani & Jerome Friedman"
+    year: 2009
+    edition: "2nd"
+    publisher: "Springer"
+    note: "Inherited. §7.5 (AIC/BIC), §7.7 (BIC consistency), §7.10 (CV)."
+  - type: "book"
+    title: "Testing Statistical Hypotheses"
+    author: "Erich L. Lehmann & Joseph P. Romano"
+    year: 2005
+    edition: "3rd"
+    publisher: "Springer"
+    note: "Inherited. §13.5 nested-model LRT — §24.7 Thm 6 identifies with AIC."
+  - type: "book"
+    title: "Statistical Inference"
+    author: "George Casella & Roger L. Berger"
+    year: 2002
+    edition: "2nd"
+    publisher: "Duxbury"
+    note: "Inherited. §10.4 asymptotic efficiency; §24.3 Rem 6."
+  - type: "book"
+    title: "High-Dimensional Statistics: A Non-Asymptotic Viewpoint"
+    author: "Martin J. Wainwright"
+    year: 2019
+    edition: "1st"
+    publisher: "Cambridge University Press"
+    note: "Inherited. Ch. 7 RE conditions; Ch. 11 post-selection. §24.10 Rem 24 + Rem 29."
+---
+
+import DefinitionBlock from '../../components/ui/DefinitionBlock.astro';
+import TheoremBlock from '../../components/ui/TheoremBlock.astro';
+import ProofBlock from '../../components/ui/ProofBlock.astro';
+import ExampleBlock from '../../components/ui/ExampleBlock.astro';
+import RemarkBlock from '../../components/ui/RemarkBlock.astro';
+import ExternalLink from '../../components/ui/ExternalLink.astro';
+
+import ICSelector from '../../components/viz/ICSelector.tsx';
+import CVvsICComparator from '../../components/viz/CVvsICComparator.tsx';
+import ConsistencyEfficiencyRace from '../../components/viz/ConsistencyEfficiencyRace.tsx';
+
+## 24.1 The model-selection problem
+
+{/* Section opening — TODO Task 7 prose: motivation paragraph on in-sample vs
+    out-of-sample fit, the running sin(2πx) example, and why "smaller training
+    loss" is not enough. */}
+
+Given data $\mathbf{y}$ and a candidate family $\{\mathcal{M}_1, \mathcal{M}_2, \ldots, \mathcal{M}_M\}$ of statistical models — each with parameter space $\Theta_k$ and likelihood $L_k(\theta_k; \mathbf{y})$ — the **model-selection problem** is to choose one model from the family by a procedure that has a defensible asymptotic justification. Maximum log-likelihood $\hat\ell$ alone is not such a procedure: $\hat\ell$ is monotone in model complexity, so it always picks the largest candidate.
+
+<DefinitionBlock number={1} title="Prediction risk">
+For an estimator $\hat\theta$ trained on $\mathbf{y} = (Y_1, \ldots, Y_n)$ and a fresh observation $Y_{\text{new}} \sim f_0$ from the same data-generating distribution, the **prediction risk** under loss $L$ is
+
+$$R(\hat\theta) \;:=\; \mathbb{E}_{Y_{\text{new}}}\!\left[L(\hat\theta;\, Y_{\text{new}})\right].$$
+
+For log-likelihood loss $L(\hat\theta; y) = -\log f(y; \hat\theta)$, the risk is the negative expected log-predictive
+
+$$R(\hat\theta) \;=\; -\mathbb{E}_{Y_{\text{new}}}\!\left[\log f(Y_{\text{new}}; \hat\theta)\right] \;=\; -\mathrm{EL}(\hat\theta).$$
+</DefinitionBlock>
+
+<DefinitionBlock number={2} title="Optimism gap">
+The **training empirical risk** is $\hat R(\hat\theta) = (1/n)\sum_{i=1}^n L(\hat\theta; Y_i)$. The **optimism gap** measures how much in-sample loss underestimates out-of-sample loss in expectation:
+
+$$\mathrm{opt} \;:=\; \mathbb{E}\!\left[R(\hat\theta)\right] - \mathbb{E}\!\left[\hat R(\hat\theta)\right].$$
+
+For correctly-specified parametric models satisfying Topic 14's regularity conditions, $\mathrm{opt} = k/n + o(1/n)$ where $k = \dim(\theta)$ — the optimism is exactly the parameter count divided by sample size, to leading order.
+</DefinitionBlock>
+
+<ExampleBlock number={1} title="Polynomial fit on sin(2πx): in-sample lies, out-of-sample doesn't">
+Generate $n=80$ observations from $y = \sin(2\pi x) + \mathcal{N}(0, 0.25^2)$ with $x \sim \mathcal{U}(0, 1)$. Fit polynomials of degree $d = 0, 1, \ldots, 12$ by ordinary least squares. The training $\mathrm{RSS}$ is monotone-decreasing in $d$ (every extra coefficient can only reduce the in-sample residual sum). The out-of-sample prediction risk, however, follows a U-shape: it falls as $d$ rises from $0$ to $\sim 6$ (model approximates the sine well), then climbs as $d$ exceeds $\sim 8$ (the polynomial wiggles to fit noise). Figure 1 shows the gap.
+</ExampleBlock>
+
+<img src="/images/topics/model-selection-and-information-criteria/24-optimism.png"
+     alt="Two-panel figure. Left: training RSS vs polynomial degree d on the sin DGP, monotone-decreasing from d=0 to d=12. Right: out-of-sample prediction risk on a fresh test set of size 1000, U-shaped with minimum near d=6. Vertical reference line at d=6 in both panels. Title: 'In-sample fit lies; out-of-sample risk does not'."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<RemarkBlock number={1} title="Selection as a decision problem">
+{/* TODO Task 7: 2–3 sentences on why model selection is a *decision* over $\mathcal{M}$,
+    contrasting with parameter estimation within a single model. Frame the AIC/BIC/CV
+    triple as three different loss functions on the model space. */}
+Model selection is a decision problem over the candidate set $\{\mathcal{M}_1, \ldots, \mathcal{M}_M\}$ — distinct from parameter estimation, which decides over $\Theta_k$ for a fixed $\mathcal{M}_k$. AIC, BIC, and cross-validation correspond to three different loss functions on the model space, each with its own asymptotic guarantee.
+</RemarkBlock>
+
+<RemarkBlock number={2} title="Three question families: consistency, efficiency, sparsity recovery">
+{/* TODO Task 7: 4–5 sentences distinguishing (1) selection consistency
+    (BIC's target), (2) prediction efficiency (AIC's target), (3) sparsity
+    recovery (Topic 23 lasso's target). Stress that each is a different
+    asymptotic regime and the procedures align with their respective targets. */}
+Three asymptotic targets organize the literature: **selection consistency** ($\mathbb{P}(\hat{\mathcal{M}} = \mathcal{M}_*) \to 1$ when the truth is in the candidate set — BIC's target), **prediction efficiency** (minimax-rate optimal $L^2$ risk in the misspecified-nonparametric regime — AIC and CV's target), and **sparsity recovery** (correctly identifying $\mathrm{supp}(\boldsymbol\beta_*)$ — Topic 23's lasso target). §24.6 Thm 5 shows the first two are formally incompatible.
+</RemarkBlock>
+
+<a id="section-24-2"></a>
+
+## 24.2 Mallows' $C_p$ — the Gaussian-linear predecessor
+
+{/* Section opening — TODO Task 7 prose: 2–3 sentences placing Cp historically
+    (Mallows 1973, eight years before Akaike's 1974 AIC paper, eleven years
+    before Schwarz 1978's BIC). The Gaussian-linear setting is the simplest
+    place to see the optimism-correction logic that AIC will generalize. */}
+
+Before Akaike's information-theoretic framework, Mallows (1973) proposed a Gaussian-linear-specific criterion that estimates expected scaled prediction risk via a complexity penalty calibrated against a reference variance.
+
+<DefinitionBlock number={3} title="Mallows' $C_p$">
+For an OLS fit of a candidate model with $k$ free parameters (intercept + slopes + $\sigma^2$) to $n$ observations under the Gaussian linear model $\mathbf{y} = \mathbf{X}\boldsymbol\beta + \mathcal{N}(\mathbf{0}, \sigma^2\mathbf{I})$, with residual sum of squares $\mathrm{RSS}_k$, **Mallows' $C_p$** is
+
+$$C_p \;:=\; \frac{\mathrm{RSS}_k}{\hat\sigma^2_{\text{ref}}} + 2k - n,$$
+
+where $\hat\sigma^2_{\text{ref}}$ is the MLE error variance from the **largest** candidate model (the conventional reference).
+</DefinitionBlock>
+
+<ExampleBlock number={2} title="$C_p$ unbiasedness for scaled prediction risk (embedded derivation)">
+Under the Gaussian linear model with $\hat\sigma^2_{\text{ref}}$ known (or treated as known via the reference convention), the expected scaled in-sample residual sum is
+
+$$\mathbb{E}\!\left[\mathrm{RSS}_k / \sigma^2\right] \;=\; n - k.$$
+
+Adding $2k - n$ to both sides:
+
+$$\mathbb{E}[C_p] \;=\; (n - k) + 2k - n \;=\; k.$$
+
+A separate calculation (Mallows 1973 §3) gives the expected scaled prediction risk on a fresh test set of size $n$:
+
+$$\mathbb{E}\!\left[\mathrm{R}_{\text{scaled}}\right] \;=\; k + (\text{model bias term}).$$
+
+Under correct specification (model bias $= 0$), $\mathbb{E}[C_p] = \mathbb{E}[\mathrm{R}_{\text{scaled}}] = k$. Otherwise $C_p$ overestimates the parameter count by exactly the model bias — making $C_p$ minus its parameter count a calibrated estimator of model bias, the original use case Mallows 1973 §3 emphasized.
+</ExampleBlock>
+
+<RemarkBlock number={3} title="$C_p$ ≡ AIC under Gaussian-linear errors">
+{/* TODO Task 7: 3–4 sentences showing the $C_p$/AIC equivalence. Both estimate
+    the same expected scaled prediction risk to leading order; AIC generalizes
+    away from Gaussian. */}
+Under the Gaussian linear model, $\mathrm{AIC} = n\log(\mathrm{RSS}/n) + 2k$ (dropping additive constants), and a Taylor expansion of $\log(\mathrm{RSS}/n)$ around $\sigma^2_{\text{ref}}$ recovers $C_p$ up to higher-order terms. The two criteria rank candidates identically under Gaussian-homoscedastic errors; AIC is the strict generalization to other exponential families (§24.3 Thm 1).
+</RemarkBlock>
+
+<RemarkBlock number={4} title="Choice of $\hat\sigma^2_{\text{ref}}$">
+{/* TODO Task 7: 4–5 sentences on the practical question of which model gives
+    the reference variance. Mallows recommended the largest candidate; HAS2009
+    §7.5 discusses the bias if the largest is itself misspecified. */}
+The convention $\hat\sigma^2_{\text{ref}} = \mathrm{RSS}_{\text{full}}/(n - k_{\text{full}})$ — using the unbiased estimator from the largest candidate — has the cleanest theory: $\hat\sigma^2_{\text{ref}}$ is unbiased for $\sigma^2$ if the largest model is correctly specified, and $C_p$'s argmin then targets the bias-variance-optimal submodel. T10.8 in `regression.test.ts` pins $\hat\sigma^2_{\text{ref}} = 0.0497586381$ for the canonical POLY_DGP at $n=80$, giving $\arg\min_d C_p = 6$.
+</RemarkBlock>
+
+<ExampleBlock number={3} title="$C_p$ on the polynomial DGP (T10 pinned)">
+On the canonical POLY_DGP ($n=80$, $\sigma=0.25$, seed $42$), with $\hat\sigma^2_{\text{ref}} = 0.0497586381$ from the $d = 12$ fit, the Mallows $C_p$ values for $d = 0, 1, \ldots, 12$ have argmin at **$d = 6$ with $C_p = 21.4569$** (T10.8). The argmin coincides with AIC's argmin (T10.3), illustrating Rem 3's $C_p \equiv \mathrm{AIC}$ equivalence on the Gaussian linear model. Figure 2 plots the $C_p$ curve alongside the in-sample $\mathrm{RSS}/\hat\sigma^2_{\text{ref}}$ to make the $+2k - n$ correction visually concrete.
+</ExampleBlock>
+
+<img src="/images/topics/model-selection-and-information-criteria/24-cp-polynomial.png"
+     alt="Two curves over polynomial degree d=0..12 on the POLY_DGP. Bottom curve: scaled RSS (RSS/sigma^2_ref) — monotone-decreasing. Top curve: Mallows Cp = scaled RSS + 2k - n — U-shaped with argmin at d=6. Vertical reference at argmin Cp. Title: 'Mallows Cp adds the +2k - n optimism correction'."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<a id="section-24-3"></a>
+
+## 24.3 Akaike's information criterion (FEATURED)
+
+{/* Section opening — TODO Task 7 prose: framing paragraph on Akaike's 1974
+    information-theoretic insight. The optimism k/n result of §24.1 Def 2
+    becomes the +2k AIC penalty after multiplying by the -2 log-likelihood
+    convention. Proof 1 is the load-bearing technical content. */}
+
+Akaike (1974) showed that the optimism gap of Def 2 is exactly $k/n$ to leading order under correct specification + regularity, and that $-2\hat\ell + 2k$ is therefore an asymptotically unbiased estimator of $-2n$ times the expected out-of-sample log-likelihood. This is **AIC** — and the heart of the modern model-selection framework.
+
+<DefinitionBlock number={4} title="KL divergence and expected log-likelihood">
+For two densities $f_0$ (truth) and $f(\cdot;\theta)$ (model), the **Kullback–Leibler divergence** is
+
+$$D(f_0 \,\|\, f_\theta) \;:=\; \mathbb{E}_{Y \sim f_0}\!\left[\log\frac{f_0(Y)}{f(Y;\theta)}\right] \;=\; \mathbb{E}_{f_0}[\log f_0(Y)] - \mathrm{EL}(\theta),$$
+
+where the **expected log-likelihood** under truth is
+
+$$\mathrm{EL}(\theta) \;:=\; \mathbb{E}_{Y \sim f_0}[\log f(Y;\theta)].$$
+
+Since $\mathbb{E}_{f_0}[\log f_0(Y)]$ does not depend on $\theta$, **maximizing $\mathrm{EL}(\theta)$ is equivalent to minimizing $D(f_0 \,\|\, f_\theta)$**.
+</DefinitionBlock>
+
+<TheoremBlock number={1} title="AIC bias-correction (Akaike 1974)">
+Let $Y_1, \ldots, Y_n$ be iid from unknown density $f_0$, and let $\{f(\cdot;\theta) : \theta \in \Theta \subset \mathbb{R}^k\}$ be a parametric model satisfying Topic 14's regularity conditions: smooth log-likelihood, positive-definite Fisher information, MLE asymptotic normality. Let $\hat\theta$ be the MLE, $\hat\ell = \ell(\hat\theta;\mathbf{y})$, and define $\mathrm{AIC} := -2\hat\ell + 2k$. Then under correct specification ($f_0 \in \{f(\cdot;\theta)\}$),
+
+$$\mathbb{E}\!\left[\mathrm{AIC}\right] \;=\; -2n\cdot\mathbb{E}\!\left[\mathrm{EL}(\hat\theta)\right] + o(1).$$
+
+That is, $\mathrm{AIC}$ is asymptotically unbiased for $-2n$ times the expected out-of-sample log-predictive evaluated at the MLE.
+</TheoremBlock>
+
+<ProofBlock number={1} title="Akaike's bias-correction theorem">
+
+**Setup.** Let $Y_1, \dots, Y_n$ be iid from unknown density $f_0$; let $\{f(\cdot;\theta) : \theta \in \Theta \subset \mathbb{R}^k\}$ be a parametric model satisfying Topic 14's regularity conditions (smooth $\ell$, positive-definite Fisher information, MLE asymptotic normality). We want to rank candidate models by expected out-of-sample log-predictive
+
+$$\mathrm{EL}(\theta) := \mathbb{E}_{Y_{\text{new}} \sim f_0}[\log f(Y_{\text{new}}; \theta)],$$
+
+evaluated at the plug-in estimator $\hat\theta = \hat\theta(Y_1, \dots, Y_n)$. The target is $\mathbb{E}[\mathrm{EL}(\hat\theta)]$; the naive estimator is $\hat\ell/n$. We show the gap is $k/n$ to leading order.
+
+**Step 1 — KL-projected parameter.** Define
+
+$$\theta_0 := \arg\min_{\theta \in \Theta} D(f_0 \,\|\, f(\cdot;\theta)) = \arg\max_{\theta \in \Theta} \mathrm{EL}(\theta).$$
+
+Under correct specification, $f_0 = f(\cdot; \theta_0)$. Under misspecification, $\theta_0$ is the best-in-family parameter.
+
+**Step 2 — MLE convergence.** Under regularity,
+
+$$\sqrt{n}(\hat\theta - \theta_0) \;\xrightarrow{d}\; \mathcal{N}(\mathbf{0}, \;\mathcal{K}(\theta_0)^{-1} \mathcal{J}(\theta_0) \mathcal{K}(\theta_0)^{-1}),$$
+
+where $\mathcal{J} = \operatorname{Var}_{f_0}[\nabla\log f]$ and $\mathcal{K} = -\mathbb{E}_{f_0}[\nabla^2\log f]$. Under correct specification, $\mathcal{J} = \mathcal{K} =: \mathcal{I}$ (Fisher identity, Topic 14 Thm 3), and the sandwich collapses to $\mathcal{I}^{-1}$.
+
+**Step 3 — Taylor-expand $\hat\ell(\hat\theta)$ around $\theta_0$.**
+
+$$\hat\ell(\hat\theta) = \hat\ell(\theta_0) + (\hat\theta - \theta_0)^\top \nabla\hat\ell(\theta_0) + \tfrac12 (\hat\theta - \theta_0)^\top \nabla^2\hat\ell(\theta_0)(\hat\theta - \theta_0) + o_p(1).$$
+
+The score $\nabla\hat\ell(\theta_0) = \sum_i \nabla\log f(Y_i;\theta_0)$ has mean zero under $f_0$ at $\theta_0$ (stationarity of $\mathrm{EL}$). By LLN, $n^{-1}\nabla^2\hat\ell(\theta_0) \to -\mathcal{K}(\theta_0)$.
+
+**Step 4 — Taylor-expand $\mathrm{EL}(\hat\theta)$ around $\theta_0$.**
+
+$$\mathrm{EL}(\hat\theta) = \mathrm{EL}(\theta_0) - \tfrac12 (\hat\theta - \theta_0)^\top \mathcal{K}(\theta_0)(\hat\theta - \theta_0) + o_p(1).$$
+
+First-order vanishes (stationarity of $\mathrm{EL}$); second-order negative since $\mathcal{K}$ is positive-definite.
+
+**Step 5 — Take expectations under $f_0^n$.** Using Step 3 + asymptotic covariance:
+
+$$\mathbb{E}[\hat\ell(\hat\theta)] = n\cdot\mathrm{EL}(\theta_0) + \tfrac12\mathbb{E}\!\left[(\hat\theta - \theta_0)^\top \nabla^2\hat\ell(\theta_0)(\hat\theta - \theta_0)\right] + o(1).$$
+
+With $n^{-1}\nabla^2\hat\ell(\theta_0) \to -\mathcal{K}(\theta_0)$ and $\operatorname{Cov}(\sqrt n(\hat\theta - \theta_0)) \to \mathcal{K}^{-1}\mathcal{J}\mathcal{K}^{-1}$:
+
+$$\mathbb{E}[\hat\ell(\hat\theta)] = n\cdot\mathrm{EL}(\theta_0) - \tfrac12\operatorname{tr}(\mathcal{K}^{-1}\mathcal{J}) + o(1).$$
+
+Similarly from Step 4:
+
+$$\mathbb{E}[\mathrm{EL}(\hat\theta)] = \mathrm{EL}(\theta_0) - \tfrac{1}{2n}\operatorname{tr}(\mathcal{K}^{-1}\mathcal{J}) + o(1/n).$$
+
+**Step 6 — Combine.** Multiply the $\mathrm{EL}$ expression by $n$, subtract:
+
+$$\mathbb{E}[\hat\ell(\hat\theta)] - n\cdot\mathbb{E}[\mathrm{EL}(\hat\theta)] = \operatorname{tr}(\mathcal{K}^{-1}\mathcal{J}) + o(1).$$
+
+**Step 7 — Specialize.** Under correct specification, $\mathcal{J} = \mathcal{K}$, so $\operatorname{tr}(\mathcal{K}^{-1}\mathcal{J}) = \operatorname{tr}(\mathbf{I}_k) = k$. Multiplying by $-2$:
+
+$$-2\mathbb{E}[\hat\ell] + 2k = -2n\cdot\mathbb{E}[\mathrm{EL}(\hat\theta)] + o(1).$$
+
+The left side is $\mathbb{E}[\mathrm{AIC}]$. The right side is $-2n$ times the expected log-predictive — what we wanted to estimate. AIC is asymptotically unbiased for $-2n\cdot\mathbb{E}[\mathrm{EL}(\hat\theta)]$ under correct specification.
+
+Under misspecification ($\mathcal{J} \neq \mathcal{K}$), the correct penalty is $2\operatorname{tr}(\hat{\mathcal{K}}^{-1}\hat{\mathcal{J}})$: Takeuchi's TIC (Rem 6). ∎ — using Topic 14 Thm 6 (MLE asymptotic normality), Topic 14 Thm 3 (Fisher identity), multivariate delta method (Topic 6).
+
+</ProofBlock>
+
+<ExampleBlock number={4} title="AIC on the polynomial DGP (T10 pinned)">
+On POLY_DGP ($n=80$, $\sigma=0.25$, seed $42$), $\mathrm{AIC}(d)$ values for $d = 0, 1, \ldots, 12$ have argmin at **$d = 6$ with $\mathrm{AIC} = 8.2633$** (T10.3). The $\mathrm{AIC}$ curve is U-shaped: $\mathrm{AIC}(d=0) = 179.0128$ (extreme underfit, T10.1); $\mathrm{AIC}(d=3) = 13.5077$ (undershooting; T10.2); $\mathrm{AIC}(d=6) = 8.2633$ (argmin, recovers the prediction-risk argmin from §24.1 Ex 1); $\mathrm{AIC}(d=12) = 14.9845$ (overfit, T10.4). Figure 3 overlays AIC and the bias-correction term $+2k$ to separate the empirical log-likelihood from the optimism penalty.
+</ExampleBlock>
+
+<img src="/images/topics/model-selection-and-information-criteria/24-aic-bias-correction.png"
+     alt="Three-curve plot over polynomial degree d=0..12 on POLY_DGP. Curve A: -2 log-likelihood, monotone-decreasing. Curve B: +2k bias-correction penalty, linear in d. Curve C: AIC = sum of A and B, U-shaped with argmin at d=6 (vertical reference). Title: 'AIC = -2 log-lik + 2k separates fit from complexity'."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<RemarkBlock number={5} title="Corrected AIC for small samples (AICc)">
+{/* TODO Task 7: 4–5 sentences with the full Hurvich–Tsai 1989 / Sugiura 1978
+    derivation summary, the formula AICc = AIC + 2k(k+1)/(n-k-1), the regime
+    where it matters (n / k < ~40), and the BUR2002 §2.4 default-to-AICc
+    recommendation. */}
+**AICc** corrects AIC's small-sample bias when $n/k$ is not large (Hurvich & Tsai 1989; Sugiura 1978):
+
+$$\mathrm{AICc} \;=\; \mathrm{AIC} + \frac{2k(k+1)}{n - k - 1}.$$
+
+Exact for Gaussian-linear models; asymptotic correction otherwise. The penalty $2k(k+1)/(n-k-1) \to 0$ as $n \to \infty$, so AICc and AIC agree asymptotically. Burnham & Anderson 2002 §2.4 recommend AICc as the default whenever $n/k < 40$.
+</RemarkBlock>
+
+<RemarkBlock number={6} title="Takeuchi information criterion (TIC) and information geometry">
+{/* TODO Task 7: 3–4 sentences on TIC as the misspecification-robust generalization,
+    the formula -2ℓ + 2 tr(K^{-1} J), why nobody uses it in practice (J and K hard
+    to estimate stably), and a one-sentence pointer to formalml's information
+    geometry topic. */}
+Takeuchi (1976) generalized AIC to misspecified parametric models:
+
+$$\mathrm{TIC} \;=\; -2\hat\ell + 2\operatorname{tr}(\hat{\mathcal{K}}^{-1}\hat{\mathcal{J}}),$$
+
+with $\hat{\mathcal{J}}$ the empirical score outer product and $\hat{\mathcal{K}}$ the observed Hessian of $-\ell$. Under correct specification $\hat{\mathcal{K}}^{-1}\hat{\mathcal{J}} \to \mathbf{I}_k$ and TIC $\to$ AIC. TIC sees little practical use because $\hat{\mathcal{J}}$ and $\hat{\mathcal{K}}$ are hard to estimate stably at moderate $n$; the broader information-geometric framing lives at formalml.
+</RemarkBlock>
+
+<ICSelector client:visible />
+
+<a id="section-24-4"></a>
+
+## 24.4 Schwarz's BIC and the Bayesian bridge
+
+{/* Section opening — TODO Task 7 prose: Bayesian framing of model comparison
+    via marginal likelihood; Schwarz 1978's four-page derivation; the
+    significance of the +k log n penalty (vs AIC's +2k) for selection
+    consistency. This section is amplified +400 words per Appendix B #15 to
+    serve as the Track 7 on-ramp. */}
+
+Where AIC asks "which model has the best expected out-of-sample predictive accuracy?", BIC asks the parallel Bayesian question: "which model has the highest posterior probability given the data, under a uniform prior over the model space?". The answer reduces to Laplace-approximating the marginal likelihood, and the $-2\hat\ell + k\log n$ form follows.
+
+<DefinitionBlock number={5} title="Bayesian marginal likelihood">
+For a model $\mathcal{M}$ with parameter $\theta \in \Theta$, prior $\pi(\theta)$, and likelihood $L(\theta;\mathbf{y})$, the **marginal likelihood** of the data under $\mathcal{M}$ is
+
+$$m(\mathbf{y}) \;:=\; \int_\Theta \pi(\theta)\, L(\theta;\mathbf{y})\,\mathrm d\theta.$$
+
+The **Bayes factor** comparing two models $\mathcal{M}_1, \mathcal{M}_2$ is the ratio $m_1(\mathbf{y})/m_2(\mathbf{y})$. Combined with prior model odds $\pi(\mathcal{M}_1)/\pi(\mathcal{M}_2)$, it gives posterior model odds.
+</DefinitionBlock>
+
+<TheoremBlock number={2} title="BIC as Laplace approximation (Schwarz 1978)">
+Let $f(\mathbf{y};\theta)$ be a smooth parametric model with $\Theta \subset \mathbb{R}^k$ and prior $\pi(\theta)$ continuous and strictly positive at the MLE $\hat\theta$. Let $\hat\ell = \ell(\hat\theta;\mathbf{y})$. Define $\mathrm{BIC} := -2\hat\ell + k\log n$. Then under standard regularity conditions,
+
+$$-2\log m(\mathbf{y}) \;=\; \mathrm{BIC} + O_p(1).$$
+
+The leading-order discrepancy between $-2\log m(\mathbf{y})$ and $\mathrm{BIC}$ is constant in $n$ (depending on the prior and Fisher information), so model rankings by BIC and by $-2\log m(\mathbf{y})$ agree asymptotically.
+</TheoremBlock>
+
+<ProofBlock number={2} title="Schwarz's BIC as Laplace approximation">
+
+**Setup.** Let $f(\mathbf{y};\theta)$ be a smooth parametric model with $\Theta \subset \mathbb{R}^k$ and prior $\pi(\theta)$ continuous and strictly positive at the MLE $\hat\theta$. The marginal likelihood is
+
+$$m(\mathbf{y}) = \int_\Theta \pi(\theta) L(\theta;\mathbf{y})\,\mathrm d\theta = \int_\Theta \exp\{\ell(\theta;\mathbf{y}) + \log\pi(\theta)\}\,\mathrm d\theta.$$
+
+**Step 1 — Laplace approximation.** Expand $\ell$ to second order around $\hat\theta$ (where $\nabla\ell(\hat\theta) = 0$):
+
+$$\ell(\theta) = \ell(\hat\theta) - \tfrac12(\theta - \hat\theta)^\top \hat{\mathcal{K}}_n (\theta - \hat\theta) + o(\|\theta - \hat\theta\|^2),$$
+
+with $\hat{\mathcal{K}}_n = -\nabla^2\ell(\hat\theta)$ the observed Fisher information. For iid data, $\hat{\mathcal{K}}_n = n\hat{\mathcal{K}}_1$ (per-observation information, consistent for $\mathcal{K}(\theta_0)$). The quadratic approximation is tight on a shrinking $n^{-1/2}$-neighborhood of $\hat\theta$; error $O_p(n^{-1/2})$.
+
+**Step 2 — Gaussian integral.** Treating $\pi(\theta) \approx \pi(\hat\theta)$ on the shrinking neighborhood (valid by continuity + posterior concentration):
+
+$$m(\mathbf{y}) \approx \pi(\hat\theta)\exp(\hat\ell)\int\exp\!\left\{-\tfrac12(\theta - \hat\theta)^\top \hat{\mathcal{K}}_n (\theta - \hat\theta)\right\}\,\mathrm d\theta.$$
+
+The Gaussian integral evaluates to $(2\pi)^{k/2}|\hat{\mathcal{K}}_n|^{-1/2}$. Substituting $|\hat{\mathcal{K}}_n| = n^k|\hat{\mathcal{K}}_1|$:
+
+$$m(\mathbf{y}) \approx \pi(\hat\theta)\exp(\hat\ell)(2\pi)^{k/2} n^{-k/2} |\hat{\mathcal{K}}_1|^{-1/2}.$$
+
+**Step 3 — Take logs.** Applying $-2\log$:
+
+$$-2\log m(\mathbf{y}) \approx -2\hat\ell + k\log n - k\log(2\pi) + \log|\hat{\mathcal{K}}_1| - 2\log\pi(\hat\theta).$$
+
+**Step 4 — Drop $O_p(1)$ terms.** Under fixed $k$, as $n \to \infty$: $\hat{\mathcal{K}}_1 \to \mathcal{K}(\theta_0)$ (nonrandom); $\pi(\hat\theta) \to \pi(\theta_0)$; both are $O(1)$. Therefore
+
+$$-2\log m(\mathbf{y}) = -2\hat\ell + k\log n + O_p(1) = \mathrm{BIC} + O_p(1). \quad\blacksquare$$
+
+∎ — using Topic 14 Thm 2 (observed/expected information consistency) and the multivariate Laplace approximation (CAS2002 §7.2.3, CLA2008 §3.3). The $O_p(1)$ gap is why BIC is prior-free: the prior's contribution is constant across candidate models and cancels in the ranking.
+
+</ProofBlock>
+
+<TheoremBlock number={3} title="BIC selection consistency (stated; CLA2008 §3.2, HAS2009 §7.7)">
+Suppose the true model $\mathcal{M}_*$ is in the candidate set $\{\mathcal{M}_1, \ldots, \mathcal{M}_M\}$, and standard regularity conditions hold (smooth log-likelihood, identifiable parameter, positive-definite Fisher information at $\theta_0$). Let $\hat{\mathcal{M}}_{\text{BIC}} = \arg\min_k \mathrm{BIC}(\mathcal{M}_k)$ be the BIC-selected model. Then
+
+$$\mathbb{P}\!\left(\hat{\mathcal{M}}_{\text{BIC}} = \mathcal{M}_*\right) \;\longrightarrow\; 1 \quad \text{as } n \to \infty.$$
+
+BIC is **selection-consistent**: it identifies the true model with probability $1$ in the large-$n$ limit, when the true model is in the candidate set. Proof outline in CLA2008 §3.2; uses BIC's $O_p(1)$ gap to log marginal likelihood (Thm 2) plus the asymptotic comparison of nested-model marginal likelihoods.
+</TheoremBlock>
+
+<ExampleBlock number={5} title="BIC on the polynomial DGP (T10 pinned)">
+On the canonical POLY_DGP, BIC values for $d = 0, 1, \ldots, 12$ have argmin at **$d = 3$ with $\mathrm{BIC} = 25.4179$** (T10.6) — strictly below AIC's argmin at $d = 6$. The shift reflects BIC's $\log n$ vs AIC's $2$ per-parameter penalty: at $n = 80$, $\log 80 \approx 4.38$, more than double AIC's penalty. BIC favors a sparser model. This is a core part of the AIC/BIC tension §24.6 Thm 5 will formalize. Figure 4 visualizes the Laplace approximation underlying BIC.
+</ExampleBlock>
+
+<img src="/images/topics/model-selection-and-information-criteria/24-bic-laplace.png"
+     alt="Two-panel figure. Left: 1D toy log-posterior (orange curve) overlaid with its quadratic Laplace approximation (dashed) at the MAP, with the Gaussian-integral interpretation of BIC as -2 log m(y) ≈ -2 log f(MAP) + k log n. Right: AIC vs BIC curves on POLY_DGP, BIC penalty (k log n) plotted as a faint background line — argmin BIC at d=3, argmin AIC at d=6. Title: 'BIC = Laplace approximation to -2 log marginal likelihood'."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<RemarkBlock number={7} title="Bayes factors, Akaike weights, and BMA (forward to §24.10 Rem 23)">
+{/* TODO Task 7: 4–5 sentences. The Q6 amplification: BIC ≈ -2 log marginal likelihood,
+    so exp(-BIC/2) is proportional to the unnormalized posterior model probability.
+    Akaike weights w_k = exp(-ΔAIC_k/2) / Σ exp(-ΔAIC_j/2) (BUR2002 §2.6) play the
+    same role for AIC. Both are special cases of Bayesian model averaging (BMA);
+    full forward-pointer at §24.10 Rem 23 + Track 7. */}
+$\exp(-\mathrm{BIC}/2)$ is proportional (asymptotically, by Thm 2) to the unnormalized posterior model probability; normalizing across the candidate set gives BIC weights $w_k^{\text{BIC}} = \exp(-\Delta\mathrm{BIC}_k/2) / \sum_j \exp(-\Delta\mathrm{BIC}_j/2)$. Burnham & Anderson 2002 §2.6 popularized the AIC analog $w_k^{\text{AIC}} = \exp(-\Delta\mathrm{AIC}_k/2) / \sum_j \exp(-\Delta\mathrm{AIC}_j/2)$ as Akaike weights. Both are the discrete-model special case of **Bayesian model averaging** (BMA), where predictions are weighted by posterior model mass instead of conditioning on a single $\hat{\mathcal{M}}$. Full forward-pointer to BMA at §24.10 Rem 23 + Track 7.
+</RemarkBlock>
+
+<RemarkBlock number={8} title="Priors on the model space — Track 7 territory">
+{/* TODO Task 7: 3–4 sentences on prior model probabilities π(M_k). The "uniform
+    prior" implicit in BIC is one choice; reference priors (Berger–Pericchi),
+    spike-and-slab (George–McCulloch), and intrinsic priors (Berger–Pericchi) are
+    others. Full development Track 7. */}
+Thm 2's BIC derivation implicitly assumes a uniform prior on the candidate set $\{\mathcal{M}_1, \ldots, \mathcal{M}_M\}$. Bayesian model comparison admits richer priors — reference priors (Berger–Pericchi), spike-and-slab priors (George–McCulloch 1993), intrinsic priors (Berger–Pericchi 1996) — each tilting the ranking toward sparser or denser models. Full development at Track 7 (Bayesian Foundations).
+</RemarkBlock>
+
+<RemarkBlock number={9} title="AIC vs BIC: the $n = e^2 \approx 7.39$ crossover">
+{/* TODO Task 7: 2–3 sentences on the crossover. AIC penalty 2k = BIC penalty k log n
+    when log n = 2, i.e. n = e^2. For n > 7.39, BIC is more conservative.
+    The shipped code/test pins reflect this. */}
+The per-parameter AIC penalty is $2$; the per-parameter BIC penalty is $\log n$. They equalize at $n = e^2 \approx 7.39$. For all practical sample sizes ($n \geq 10$), BIC penalizes complexity more aggressively than AIC; for $n = 80$ (the POLY_DGP), the BIC per-parameter penalty $\log 80 \approx 4.38$ is more than double AIC's, explaining T10.6's argmin shift from $d = 6$ (AIC) to $d = 3$ (BIC).
+</RemarkBlock>
+
+<RemarkBlock number={10} title="Computing the exact marginal likelihood is hard">
+{/* TODO Task 7: 4–5 sentences on why BIC is popular: the alternative is to compute
+    m(y) exactly via nested sampling (Skilling 2006), thermodynamic integration, or
+    bridge sampling. Each is a Track-7 topic on its own. BIC's accuracy is "good
+    enough for ranking" but not for posterior reporting. */}
+The Laplace approximation underlying Thm 2 has $O_p(1)$ error — fine for ranking ($\arg\min$ stable up to monotone transforms) but not for reporting a numerical posterior probability. Exact marginal-likelihood computation requires **nested sampling** (Skilling 2006), **thermodynamic integration**, or **bridge sampling** (Meng & Wong 1996); each is a Track-7 topic on its own. BIC's appeal is that the asymptotic approximation is prior-free and computationally trivial — only $\hat\ell$ and $k$ are needed.
+</RemarkBlock>
+
+<a id="section-24-5"></a>
+
+## 24.5 Stone's CV ≡ AIC equivalence
+
+{/* Section opening — TODO Task 7 prose: Stone's 1977 result that LOO-CV and
+    AIC are the same procedure asymptotically under Gaussian-linear errors.
+    The result closes the loop on Topic 23's λ-selection apparatus and
+    discharges §23.8 Rem 19 (the nested-CV pointer). */}
+
+Stone (1977) proved that leave-one-out cross-validation and AIC select the same model asymptotically under Gaussian-homoscedastic errors. The result is a tight identification: LOO-CV is not just *similar* to AIC but converges to it after a logarithm and an additive constant — the two frequentist procedures collapse into one.
+
+<DefinitionBlock number={6} title="Leave-one-out cross-validation">
+For data $(\mathbf{X}, \mathbf{y})$ with $n$ rows, let $\hat\theta^{(-i)}$ be the estimator fit on the $n - 1$ rows excluding observation $i$, and let $\hat y_i^{(-i)}$ be its prediction at $\mathbf{x}_i$. The **leave-one-out cross-validation** estimate of mean squared prediction error is
+
+$$\mathrm{LOO\text{-}CV} \;:=\; \frac{1}{n}\sum_{i=1}^n \left(y_i - \hat y_i^{(-i)}\right)^2.$$
+
+For Gaussian OLS with hat-matrix diagonal $h_{ii}$, the **hat-matrix shortcut** (PRESS statistic; Allen 1974) avoids the $n$ refits:
+
+$$y_i - \hat y_i^{(-i)} \;=\; \frac{y_i - \hat y_i}{1 - h_{ii}}.$$
+
+The shortcut requires $h_{ii} < 1$ for all $i$; `looCV` in `regression.ts` throws when $\max h_{ii} \geq 0.999$.
+</DefinitionBlock>
+
+<TheoremBlock number={4} title="Stone's CV ≡ AIC equivalence (Stone 1977)">
+Consider the Gaussian linear model $\mathbf{y} = \mathbf{X}\boldsymbol\beta + \boldsymbol\varepsilon$ with $\boldsymbol\varepsilon \sim \mathcal{N}_n(\mathbf{0}, \sigma^2\mathbf{I})$ and a fixed full-rank design $\mathbf{X}$. Under regularity (balanced design, fixed $p$, $\max h_{ii} = O(\log n / n)$),
+
+$$n\log\mathrm{LOO\text{-}CV} \;=\; \mathrm{AIC}^* + O_p(n^{-1}),$$
+
+where $\mathrm{AIC}^* := n\log(\mathrm{RSS}/n) + 2k$ is AIC up to model-invariant additive constants. Consequently,
+
+$$\arg\min_{\mathcal{M}} \mathrm{LOO\text{-}CV}(\mathcal{M}) \;=\; \arg\min_{\mathcal{M}} \mathrm{AIC}(\mathcal{M}) + o_p(1).$$
+
+LOO-CV and AIC asymptotically select the same model from any nested family on the Gaussian-linear model.
+</TheoremBlock>
+
+<ProofBlock number={3} title="Stone's cross-validation–AIC equivalence">
+
+**Setup.** Consider the Gaussian linear model $\mathbf{y} = \mathbf{X}\boldsymbol\beta + \boldsymbol\varepsilon$ with $\boldsymbol\varepsilon \sim \mathcal{N}_n(\mathbf{0}, \sigma^2\mathbf{I})$, fixed full-rank design $\mathbf{X}$ ($p+1$ columns). Let $\hat{\boldsymbol\beta}$ be OLS, $\hat y_i = (\mathbf{X}\hat{\boldsymbol\beta})_i$, $h_{ii}$ the hat-matrix diagonal $\mathbf{H} = \mathbf{X}(\mathbf{X}^\top\mathbf{X})^{-1}\mathbf{X}^\top$. Write $k = p + 2$ (coefficients + $\sigma^2$).
+
+**Step 1 — Hat-matrix shortcut.** The leave-one-out fit satisfies
+
+$$y_i - \hat y_i^{(-i)} = \frac{y_i - \hat y_i}{1 - h_{ii}}.$$
+
+(Standard OLS identity via Sherman–Morrison; HAS2009 §7.10 gives full 5-line derivation.) Squaring and summing:
+
+$$\mathrm{LOO\text{-}CV} = \frac{1}{n}\sum_{i=1}^n\frac{(y_i - \hat y_i)^2}{(1 - h_{ii})^2}.$$
+
+**Step 2 — Uniform leverage.** Under regularity (balanced design, fixed $p$), $\sum h_{ii} = \operatorname{tr}(\mathbf{H}) = p+1$ and $\max h_{ii} = O(\log n / n)$. So
+
+$$\frac{1}{(1 - h_{ii})^2} = 1 + 2h_{ii} + 3h_{ii}^2 + \cdots = 1 + \frac{2(p+1)}{n} + O(n^{-2})$$
+
+uniformly in $i$.
+
+**Step 3 — Substitute.**
+
+$$\mathrm{LOO\text{-}CV} = \left(1 + \frac{2(p+1)}{n} + O(n^{-2})\right) \cdot \hat\sigma^2_{\text{MLE}} = \hat\sigma^2_{\text{MLE}}\left(1 + \frac{2(p+1)}{n}\right) + O(n^{-2}),$$
+
+with $\hat\sigma^2_{\text{MLE}} = \mathrm{RSS}/n$.
+
+**Step 4 — AIC on the same model.** Dropping model-invariant constants $n\log(2\pi) + n$:
+
+$$\mathrm{AIC}^* = n\log\hat\sigma^2_{\text{MLE}} + 2(p+2) = n\log\hat\sigma^2_{\text{MLE}} + 2k.$$
+
+Using $\log(\hat\sigma^2(1 + 2k/n)) = \log\hat\sigma^2 + 2k/n + O(n^{-2})$:
+
+$$n\log\mathrm{LOO\text{-}CV} = n\log\hat\sigma^2_{\text{MLE}} + 2(p+1) + O(n^{-1}) = \mathrm{AIC}^* - 2 + O(n^{-1}),$$
+
+using $k = p+2$ so $2k - 2 = 2(p+1)$.
+
+**Step 5 — Equivalence.** The $-2$ is model-invariant (depends only on whether $\sigma^2$ is counted in $k$, a family-wide convention). Therefore
+
+$$\arg\min_{\mathcal{M}} n\log\mathrm{LOO\text{-}CV}(\mathcal{M}) = \arg\min_{\mathcal{M}} \mathrm{AIC}^*(\mathcal{M}) + o_p(1).$$
+
+LOO-CV and AIC select the same model asymptotically. ∎ — using Topic 21 §21.7 hat-matrix structure and $\log(1+x) = x - x^2/2 + O(x^3)$.
+
+</ProofBlock>
+
+<ExampleBlock number={6} title="Stone equivalence empirically (T10.26 + T10.27)">
+On POLY_DGP, both $\arg\min_d \mathrm{LOO\text{-}CV} = 6$ and $\arg\min_d \mathrm{AIC} = 6$ over $d \in [0, 11]$ (T10.26 — d=12 is excluded because the monomial Vandermonde is too ill-conditioned for the hat-matrix shortcut; the argmin lies safely inside the range). At the joint argmin $d = 6$, $\mathrm{LOO\text{-}CV} = 0.063835$ (T10.10) and $\mathrm{AIC}^* = -218.6963$ (computed from the full Gaussian AIC by stripping the $n(\log 2\pi + 1)$ constants); the gap $|n\log\mathrm{LOO\text{-}CV} - \mathrm{AIC}^*| < 2.5$ (T10.27) is the order-1 constant Proof 3 Step 4 predicts. Figure 5 overlays the LOO-CV curve, the 5-fold and 10-fold CV curves, and the AIC curve over $d$.
+</ExampleBlock>
+
+<img src="/images/topics/model-selection-and-information-criteria/24-stone-equivalence.png"
+     alt="Multi-curve plot over polynomial degree d=0..12 on POLY_DGP. Curves: LOO-CV, 5-fold CV, 10-fold CV, AIC (rescaled to match LOO-CV's vertical scale). All four curves U-shaped with argmin at d=6 (vertical reference). Legend bottom-left. Title: 'Stone 1977: LOO-CV and AIC select the same model asymptotically'."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<RemarkBlock number={11} title="Nested cross-validation (discharges Topic 23 §23.8 Rem 19)">
+{/* TODO Task 7: 4–5 sentences. The R1 forward-promise discharge: outer CV
+    estimates generalization error; inner CV selects λ. The single-loop CV that
+    Topic 23 used for λ-selection IS the inner loop here; reporting its minimum
+    as test error leaks tuning information (selection bias). Reference Bates–
+    Hastie–Tibshirani 2024 for recent rigorous treatment. */}
+The single-loop CV Topic 23 §23.8 used to select $\lambda$ should not also serve as the test-error estimator: reporting $\min_\lambda \mathrm{CV}(\lambda)$ as test error leaks tuning information into the test estimate (selection bias). **Nested cross-validation** fixes this: an outer CV loop holds out folds for honest test-error estimation, and within each outer fold, an inner CV loop selects $\lambda$. Bates–Hastie–Tibshirani (2024) give the recent rigorous treatment. The result is an asymptotically unbiased generalization-error estimate at the cost of $K_\text{outer} \cdot K_\text{inner}$ refits.
+</RemarkBlock>
+
+<RemarkBlock number={12} title="$k$-fold CV: bias-variance of $k = 5$ vs $k = 10$">
+{/* TODO Task 7: 3–4 sentences. k-fold CV is finite-sample LOO. CLA2008 §4.3
+    and HAS2009 §7.10 both show k=10 is the modern default — slightly biased
+    upward vs LOO but lower variance. k=5 has more bias; k=n gives LOO. */}
+$k$-fold CV is the finite-sample analog of LOO: each fold holds out $n/k$ observations. As $k \to n$, the procedure converges to LOO. Smaller $k$ has lower computational cost but higher bias (more held-out fold per refit means more train-set shrinkage). Hastie et al. 2009 §7.10 and Claeskens & Hjort 2008 §4.3 recommend $k = 10$ as the modern default — slightly biased upward vs LOO but with lower Monte Carlo variance.
+</RemarkBlock>
+
+<RemarkBlock number={13} title="Stone's result is AIC-specific">
+{/* TODO Task 7: 2–3 sentences. There's no analogous "BIC ≡ k-fold CV" theorem
+    at fixed k. BIC's k log n penalty grows with n; CV's penalty grows like 2k.
+    Mismatch is asymptotically O(log n) per parameter — material. */}
+Thm 4 identifies LOO-CV with AIC; **no analogous result exists for BIC at fixed $k$**. The mismatch is asymptotic: BIC's $k\log n$ penalty grows in $n$, while CV's effective penalty grows like $2k$. To recover a BIC-like criterion from CV, one would have to use a vanishing-fraction held-out set ($n_\text{val} = o(n)$), not standard $k$-fold (Shao 1993).
+</RemarkBlock>
+
+<CVvsICComparator client:visible />
+
+<a id="section-24-6"></a>
+
+## 24.6 Yang's incompatibility theorem
+
+{/* Section opening — TODO Task 7 prose: Yang 2005's central insight that
+    selection consistency (BIC's property) and minimax-rate-optimal prediction
+    (AIC/CV's property) are formally incompatible — no single procedure can
+    have both. The result is a deep impossibility, not a tradeoff that can
+    be designed around. */}
+
+The three procedures of §§24.3–24.5 carry different asymptotic guarantees: BIC is selection-consistent (Thm 3), AIC and CV are minimax-rate-optimal for prediction (under regularity). Yang (2005) proved these properties are not just *different* — they are formally **incompatible**: no single procedure can deliver both. The asymptotic philosophy must choose.
+
+<TheoremBlock number={5} title="Yang's incompatibility (Yang 2005, stated)">
+Let $\hat{\mathcal{M}}$ be a model-selection procedure operating on a candidate family $\{\mathcal{M}_1, \ldots, \mathcal{M}_M\}$. Suppose $\hat{\mathcal{M}}$ is **selection-consistent** in the well-specified regime: when $\mathcal{M}_*$ is in the candidate set, $\mathbb{P}(\hat{\mathcal{M}} = \mathcal{M}_*) \to 1$. Then $\hat{\mathcal{M}}$ is **not** minimax-rate-optimal in the misspecified-nonparametric regime: there exists a family of underlying truths and a sample-size sequence on which the prediction risk of $\hat{\mathcal{M}}$ achieves a strictly worse rate than the minimax-optimal procedure (e.g., AIC or CV).
+
+Proof: Yang 2005 §2–3, via a minimax lower-bound argument outside the scope of Topic 24.
+</TheoremBlock>
+
+<ExampleBlock number={7} title="Two-regime simulation: BIC consistent, AIC efficient">
+The Yang race compares procedures across two DGP regimes:
+
+- **Tab A — well-specified.** Truth is a degree-3 polynomial; candidate set $d \in [0, 8]$ contains the truth. As $n$ grows, BIC's selection frequency at $d = 3$ tends to $1$ (consistency); AIC's selection frequency at $d \geq 4$ persists at $\sim 25\%$ (asymptotic over-fit). Prediction risks are similar at any finite $n$.
+- **Tab B — misspecified.** Truth is $\sin(2\pi x)$; candidate set is polynomials $d \in [0, 12]$ (truth not in the candidate set). AIC's minimax-optimal selection adapts $d$ to $n$; BIC's $\log n$ penalty over-shrinks toward sparsity, giving worse prediction risk on the polynomial scale of the truth's smoothness. The risks diverge in $n$.
+
+Figure 6 plots both regimes side by side.
+</ExampleBlock>
+
+<img src="/images/topics/model-selection-and-information-criteria/24-yang-race.png"
+     alt="Two-panel race figure. Left (Tab A, truth = polynomial-d3): selection frequency of BIC at d=3 climbs from ~80% at n=50 to ~99% at n=5000, AIC plateaus at ~75% (with persistent tail at d≥4). Right (Tab B, truth = sin, polynomial-misspecified): prediction risk vs n for BIC, AIC, and 10-fold CV — BIC plateaus higher than AIC and CV, the gap widening with n. Title: 'Selection consistency and prediction efficiency are incompatible (Yang 2005)'."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<RemarkBlock number={14} title="Philosophical implication: a value judgment, not an empirical question">
+{/* TODO Task 7: 4–5 sentences. Yang's theorem says you can't have both; you
+    must choose. The choice is a value judgment about the use case (selection
+    for understanding vs prediction for downstream use). Reference Shao 1997
+    + BUR2002 §2.10 for the methodological discussion. */}
+Thm 5 forces a choice the practitioner cannot duck: **either prioritize identifying the right model (BIC) or prioritize accurate predictions (AIC, CV)**. The choice is not an empirical question to be settled by simulation but a value judgment about the use case — interpretive parsimony vs predictive accuracy. Shao 1997 and Burnham & Anderson 2002 §2.10 give complementary discussions of how to pick a side in a given application context.
+</RemarkBlock>
+
+<RemarkBlock number={15} title="Shao 1993's $k\log\log n$ penalty — limited positive result">
+{/* TODO Task 7: 3–4 sentences. Shao 1993 proposed a CV variant that is
+    asymptotically consistent in restricted (linear-Gaussian, bounded p) settings
+    via a specific held-out fraction. Limited positive result — does not
+    contradict Yang's broader incompatibility. */}
+Shao (1993) showed that **leaving out $n_v = n - n^{1/2}$ observations per fold** (held-out fraction shrinking to zero asymptotically) gives a CV variant that is selection-consistent on Gaussian linear models with bounded $p$. The result is a limited positive: Shao's CV variant is not minimax-rate-optimal for prediction in the nonparametric regime, so it lives on the BIC side of Yang's split rather than circumventing the incompatibility.
+</RemarkBlock>
+
+<RemarkBlock number={16} title="Practical recommendation: report both">
+{/* TODO Task 7: 3–4 sentences. The applied advice: report AIC and BIC side
+    by side. Disagreement is informative — it signals which side of the Yang
+    tradeoff matters for the application. */}
+Standard practice: **report both AIC and BIC**. Agreement is reassuring; disagreement is informative — it tells the reader which side of the consistency-vs-efficiency tradeoff matters for the application. For prediction-focused use cases, prefer the AIC argmin and report 10-fold CV as a sanity check; for inference-focused applications where parsimony matters (e.g. model identification in epidemiology), prefer the BIC argmin.
+</RemarkBlock>
+
+<ConsistencyEfficiencyRace client:visible />
+
+<a id="section-24-7"></a>
+
+## 24.7 Nested-model selection: AIC ≡ LRT with default threshold
+
+{/* Section opening — TODO Task 7 prose: AIC's threshold $2\Delta\hat\ell > 2q$
+    for preferring the full model is a default-LRT rule. Connects Topic 18 Wilks
+    to Topic 24 model-selection vocabulary. */}
+
+For nested models — the smaller obtained by setting $q$ parameters of the larger to zero — AIC's preference for the full model is equivalent to a likelihood-ratio test with a *fixed default threshold* of $2q$, irrespective of $\alpha$. This identifies AIC as a default-threshold LRT and connects Topic 18's Wilks machinery to the model-selection vocabulary of Topic 24.
+
+<TheoremBlock number={6} title="AIC ≡ LRT with default threshold (embedded derivation)">
+Let $\mathcal{M}_{\text{full}}$ and $\mathcal{M}_{\text{red}}$ be nested with $k_{\text{full}} = k_{\text{red}} + q$ free parameters ($q \geq 1$). Let $\hat\ell_{\text{full}}, \hat\ell_{\text{red}}$ be their MLE log-likelihoods on the same data. Then
+
+$$\Delta\mathrm{AIC} \;:=\; \mathrm{AIC}(\mathcal{M}_{\text{full}}) - \mathrm{AIC}(\mathcal{M}_{\text{red}}) \;=\; (-2\hat\ell_{\text{full}} + 2k_{\text{full}}) - (-2\hat\ell_{\text{red}} + 2k_{\text{red}}) \;=\; 2q - 2\Delta\hat\ell,$$
+
+with $\Delta\hat\ell = \hat\ell_{\text{full}} - \hat\ell_{\text{red}}$. **AIC prefers the full model** iff $\Delta\mathrm{AIC} < 0$ iff $2\Delta\hat\ell > 2q$ — exactly the LRT rejection rule with threshold $2q$ instead of the chi-square critical value $\chi^2_{q,1-\alpha}$. **BIC** uses the analogous threshold $q\log n$ in place of $2q$: BIC prefers the full model iff $2\Delta\hat\ell > q\log n$.
+</TheoremBlock>
+
+<ExampleBlock number={8} title="Nested Poisson GLM (T10.12–T10.19 pinned)">
+On the nested-Poisson DGP ($n = 200$, $\eta_{\text{true}} = 1.0 + 0.8 x_1 - 0.5 x_2$, $x_3$ has no true effect, `default_rng(123)`), fit the reduced model with $\{1, x_1, x_2\}$ and the full model with $\{1, x_1, x_2, x_3\}$. The pinned values: $\hat\beta_{\text{red}} \approx (0.9815, 0.8216, -0.5769)$ (T10.12–T10.14); $\hat\beta_{\text{full}}[3] \approx -0.0535$ (T10.15, near-zero as expected). The likelihood ratio is
+
+$$\mathrm{LR} \;=\; 2\Delta\hat\ell \;\approx\; 0.5547 \quad (\text{T10.16}).$$
+
+Since $q = 1$ and the LRT critical value at $\alpha = 0.05$ is $\chi^2_{1, 0.95} \approx 3.84$, the LRT does NOT reject (p-value $\approx 0.46$).
+
+Now apply Thm 6:
+
+$$\Delta\mathrm{AIC} \;=\; 2(1) - \mathrm{LR} \;=\; 2 - 0.5547 \;\approx\; 1.4453 > 0 \quad (\text{T10.17}).$$
+
+$$\Delta\mathrm{BIC} \;=\; (1)\log(200) - \mathrm{LR} \;\approx\; 5.298 - 0.5547 \;\approx\; 4.7436 > 0 \quad (\text{T10.18}).$$
+
+Both AIC and BIC prefer the **reduced** model. T10.19 verifies the algebraic identity $\Delta\mathrm{AIC} = 2 - \mathrm{LR}$ to within $10^{-10}$. Figure 7 plots the chi-square null density with the observed LR and both AIC/BIC thresholds for visual comparison.
+</ExampleBlock>
+
+<img src="/images/topics/model-selection-and-information-criteria/24-nested-glm.png"
+     alt="Two-panel figure. Top: scatter of fitted μ_i vs observed y_i for the reduced Poisson model on n=200, with y=μ̂ reference line. Bottom: chi-square_1 null density with observed LR=0.5547 marked (in the bulk, p≈0.46 — not rejected); vertical reference lines at AIC threshold (LR=2) and BIC threshold (LR=log 200 ≈ 5.30). Title: 'Nested LRT chi^2_1 null vs observed LR; AIC/BIC thresholds — both prefer reduced'."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<RemarkBlock number={17} title="AIC's effective $\alpha$ depends on $q$">
+{/* TODO Task 7: 3–4 sentences. AIC's threshold 2q corresponds to the LRT
+    p-value at chi^2_q ≥ 2q. For q=1 → α ≈ 0.157; for q=5 → α ≈ 0.42; for q=10
+    → α ≈ 0.55. So AIC is increasingly liberal as q grows. */}
+Thm 6's identification of AIC with a fixed-threshold LRT means AIC has an **effective $\alpha$** that depends on $q$. For $q = 1$, $\mathbb{P}(\chi^2_1 \geq 2) \approx 0.157$; for $q = 5$, $\mathbb{P}(\chi^2_5 \geq 10) \approx 0.075$; for $q = 10$, $\mathbb{P}(\chi^2_{10} \geq 20) \approx 0.029$. AIC is *more liberal* (admits more parameters) at small $q$, *more conservative* at large $q$ — the opposite of the LRT-with-fixed-$\alpha$ rule, which has fixed type-I error regardless of $q$.
+</RemarkBlock>
+
+<RemarkBlock number={18} title="Nested-only caveat — non-nested requires direct IC comparison">
+{/* TODO Task 7: 2–3 sentences. Thm 6 only applies to NESTED model comparisons.
+    For non-nested (e.g. polynomial vs spline at the same effective dimension),
+    the LRT is undefined and one must compare AIC values directly. */}
+Thm 6 applies only to **nested** comparisons. For non-nested candidates (e.g. degree-5 polynomial vs degree-3 spline with the same effective dimension), the likelihood-ratio statistic is undefined and the LRT framework breaks down. The IC framework still applies: compute $\mathrm{AIC}$ or $\mathrm{BIC}$ for each candidate and rank by the smaller value, no chi-square reference needed.
+</RemarkBlock>
+
+<a id="section-24-8"></a>
+
+## 24.8 Effective degrees of freedom for penalized estimators
+
+{/* Section opening — TODO Task 7 prose: Topic 23's penalized estimators don't
+    have an integer parameter count k — every λ shrinks the effective complexity.
+    Effective DOF generalizes k for penalized fits, allowing AIC/BIC/Cp to
+    apply to ridge and lasso paths. Discharges Topic 23 §23.8 Rem 20 (R2). */}
+
+Topic 23's penalized estimators don't have an integer parameter count: ridge shrinks every coefficient by an amount that depends on $\lambda$ and the design's singular values; lasso zeros out a data-dependent subset. **Effective degrees of freedom** generalizes the integer $k$ to a continuous notion of "how many parameters worth of freedom did the fit actually use", letting AIC/BIC/Cp apply to ridge and lasso paths. This section discharges Topic 23 §23.8 Rem 20.
+
+<DefinitionBlock number={7} title="Effective degrees of freedom (Efron 2004)">
+For a fitting procedure $\hat{\mathbf{f}}$ that maps data $\mathbf{y}$ to fitted values $\hat{\mathbf{f}}(\mathbf{y})$ on the same $n$ rows, the **effective degrees of freedom** is
+
+$$\mathrm{df}(\hat{\mathbf{f}}) \;:=\; \frac{1}{\sigma^2}\sum_{i=1}^n \operatorname{Cov}\!\left(\hat f_i, y_i\right).$$
+
+For OLS, $\mathrm{df} = p + 1$ (intercept + $p$ slopes — exactly the parameter count). For penalized estimators, $\mathrm{df}$ can be non-integer and depends continuously on the regularization parameter.
+</DefinitionBlock>
+
+<TheoremBlock number={7} title="Ridge effective DOF via SVD (embedded derivation)">
+For ridge regression on a centered design $\tilde{\mathbf{X}}$ with SVD $\tilde{\mathbf{X}} = \mathbf{U}\mathbf{D}\mathbf{V}^\top$ (singular values $d_1, \ldots, d_p > 0$), the smoother matrix is
+
+$$\mathbf{H}_\lambda \;=\; \tilde{\mathbf{X}}(\tilde{\mathbf{X}}^\top\tilde{\mathbf{X}} + \lambda\mathbf{I})^{-1}\tilde{\mathbf{X}}^\top.$$
+
+Substituting the SVD and using $\tilde{\mathbf{X}}^\top\tilde{\mathbf{X}} = \mathbf{V}\mathbf{D}^2\mathbf{V}^\top$ plus the rotational invariance of the trace:
+
+$$\mathrm{df}(\lambda) \;=\; \operatorname{tr}(\mathbf{H}_\lambda) \;=\; \sum_{j=1}^p \frac{d_j^2}{d_j^2 + \lambda}.$$
+
+The DOF is **monotone-decreasing in $\lambda$**: $\mathrm{df}(0) = p$ (unpenalized OLS), $\mathrm{df}(\lambda) \to 0$ as $\lambda \to \infty$. Equivalently and computationally cheaper, $\mathrm{df}(\lambda) = p - \lambda \cdot \operatorname{tr}((\tilde{\mathbf{X}}^\top\tilde{\mathbf{X}} + \lambda\mathbf{I})^{-1})$ via Cholesky inversion (the form `regression.ts`'s `hatMatrixTrace` uses).
+</TheoremBlock>
+
+<TheoremBlock number={8} title="Lasso effective DOF (stated; Tibshirani–Taylor 2012)">
+For lasso regression on a centered, orthonormal design (or under the more general restricted-eigenvalue conditions of WAI2019 Ch. 7), the active set $\mathcal{A}(\hat{\boldsymbol\beta})$ — the indices $j$ with $\hat\beta_j \neq 0$ — satisfies
+
+$$\mathbb{E}\!\left[\mathrm{df}(\hat{\boldsymbol\beta}_\lambda)\right] \;=\; \mathbb{E}\!\left[|\mathcal{A}(\hat{\boldsymbol\beta}_\lambda)|\right].$$
+
+The active-set size is an unbiased estimator of expected effective DOF. **Caveats:** the result fails at "knots" of the lasso path where the active set changes discontinuously, and ties in the optimization can make $|\mathcal{A}|$ data-dependent in a non-smooth way. Tibshirani & Taylor 2012 give the precise regularity statement.
+</TheoremBlock>
+
+<ExampleBlock number={9} title="Ridge effective DOF on poly $d=10$ design (T10.20–T10.25 pinned)">
+For the poly $d = 10$ design on $x \sim \mathcal{U}(0,1)$ at $n = 80$ (the canonical POLY_DGP $x$-values), the ridge effective DOF as $\lambda$ varies:
+
+| $\lambda$ | $\mathrm{df}(\lambda) = \operatorname{tr}(\mathbf{H}_\lambda)$ | Test |
+|---|---|---|
+| $0.0$ | $11.000000$ | T10.20 |
+| $0.01$ | $4.559080$ | T10.21 |
+| $0.1$ | $3.775848$ | T10.22 |
+| $1.0$ | $\mathbf{2.927366}$ | T10.23 |
+| $10.0$ | $1.961883$ | T10.24 |
+| $100.0$ | $0.851771$ | T10.25 |
+
+At $\lambda = 0$, $\mathrm{df} = 11$ exactly (intercept + 10 polynomial coefficients). Even modest regularization ($\lambda = 0.01$) drops the effective DOF by more than half — the high-order polynomial columns have small singular values and shrink rapidly under the ridge penalty.
+</ExampleBlock>
+
+<ExampleBlock number={10} title="AIC/BIC overlay on the prostate-cancer lasso path (discharges R2)">
+Refit the prostate-cancer lasso path of Topic 23 §23.9 Ex 14 ($n = 97$, $p = 8$, response `lpsa`) on a 100-point log-grid of $\lambda$. For each $\lambda$, compute $\mathrm{df}(\lambda) = |\mathcal{A}(\hat{\boldsymbol\beta}_\lambda)|$ (Thm 8) and apply
+
+$$\mathrm{AIC}(\lambda) \;=\; -2\hat\ell(\lambda) + 2\,(\mathrm{df}(\lambda) + 1), \qquad \mathrm{BIC}(\lambda) \;=\; -2\hat\ell(\lambda) + (\mathrm{df}(\lambda) + 1)\log n,$$
+
+with the $+1$ counting $\sigma^2$ per the parameter convention. Overlay the AIC, BIC, and 10-fold CV curves on the lasso path. The AIC argmin coincides with CV's $\hat\lambda_{\min}$ in the high-signal regime; BIC favors a sparser model with larger $\hat\lambda_{\text{BIC}} > \hat\lambda_{\min}$, recovering Yang's (Thm 5) consistency-vs-efficiency split on a worked example. This example is the practical fulfillment of Topic 23 §23.8 Rem 20.
+</ExampleBlock>
+
+<img src="/images/topics/model-selection-and-information-criteria/24-lasso-aic-path.png"
+     alt="Two-panel figure. Top: prostate-cancer lasso coefficient path over log λ — eight coefficient lines (lcavol, lweight, age, lbph, svi, lcp, gleason, pgg45), lcavol and lweight strongest. Bottom: AIC, BIC, and 10-fold CV curves over the same log-λ axis. Vertical reference lines at AIC argmin, BIC argmin (sparser, more right), and CV λ_min. Legend at bottom-right. Title: 'AIC and BIC overlay on the prostate-cancer lasso path'."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<RemarkBlock number={19} title="Lasso DOF caveats: ties, knots, non-smoothness">
+{/* TODO Task 7: 4–5 sentences. Tibshirani–Taylor 2012's result is asymptotic
+    and assumes regularity (RE conditions, no ties). At lasso path knots, the
+    active set transitions discontinuously and the DOF is not smoothly defined.
+    Practical implication: AIC/BIC on lasso paths are best computed at λ values
+    away from knots; some packages report a smoothed DOF instead. */}
+Thm 8's $\mathbb{E}[\mathrm{df}] = \mathbb{E}[|\mathcal{A}|]$ assumes the active set is well-defined — fine away from path knots, but at $\lambda$ values where a coefficient enters or leaves the active set, the cardinality is data-dependent in a non-smooth way. Practical AIC/BIC computations on lasso paths should evaluate at $\lambda$ values away from knots, or use a smoothed DOF estimator (e.g., debiased lasso DOF; Wainwright 2019 Ch. 11).
+</RemarkBlock>
+
+<RemarkBlock number={20} title="AIC for ridge — Li 1986 asymptotic equivalence to CV">
+{/* TODO Task 7: 3–4 sentences. Li 1986 proved AIC for ridge is asymptotically
+    equivalent to LOO-CV in the same Stone-1977 sense. So the §24.5 equivalence
+    extends from OLS to ridge. Practical implication: AIC-ridge is a valid
+    cheap alternative to CV-ridge for λ selection. */}
+Li (1986) proved an analog of Stone's Thm 4 for ridge: AIC computed with effective DOF $\operatorname{tr}(\mathbf{H}_\lambda)$ asymptotically agrees with LOO-CV for $\lambda$ selection on the Gaussian linear model. The practical implication is that AIC-ridge is a valid (and computationally cheap) alternative to CV-ridge: one fit per $\lambda$, no $n$-fold refits.
+</RemarkBlock>
+
+<a id="section-24-9"></a>
+
+## 24.9 Worked examples
+
+{/* Section opening — TODO Task 7 prose: three end-to-end workflows pulling
+    together everything from §§24.1–24.8. Each is the canonical applied use
+    case of one of the three procedures. */}
+
+Three end-to-end workflows pull the §§24.1–24.8 machinery into runnable applied form: a polynomial-degree comparison on simulated data (the Topic-24 canonical example), a nested-Poisson GLM (the §24.7 LRT-as-IC special case), and a lasso-path AIC/BIC overlay on the prostate-cancer dataset (§24.8 worked example).
+
+<ExampleBlock number={11} title="Polynomial sin(2πx): full ranking table">
+On POLY_DGP, the full $5 \times 13$ ranking table over $d \in [0, 12]$:
+
+| $d$ | $\mathrm{AIC}$ | $\mathrm{AICc}$ | $\mathrm{BIC}$ | $C_p$ | $\mathrm{LOO\text{-}CV}$ | $10$-fold CV |
+|---|---|---|---|---|---|---|
+| 0 | 179.0128 | — | 183.7768 | $\sim$ 859 | $\sim$ 0.522 | — |
+| 3 | 13.5077 | 14.3185 | $\mathbf{25.4179}$ | 28.3534 | 0.067936 | $\sim$ 0.069 |
+| 6 | $\mathbf{8.2633}$ | $\mathbf{10.2915}$ | 27.3196 | $\mathbf{21.4569}$ | $\mathbf{0.063835}$ | $\sim$ 0.066 |
+| 12 | 14.9845 | $\sim$ 21.45 | 48.3328 | $\sim$ 26.4 | n/a | n/a |
+
+(Bold cells are the per-criterion argmins; the $\sim$ entries are notebook-computed approximations not pinned in T10.) The argmin pattern is the canonical Yang signature: AIC, AICc, $C_p$, LOO-CV, and 10-fold CV all select $d = 6$; BIC alone selects the sparser $d = 3$. The pinned values come from T10.1–T10.11 (`regression.test.ts`).
+</ExampleBlock>
+
+<ExampleBlock number={12} title="Nested Poisson GLM walkthrough (T10.12–T10.19)">
+The nested-Poisson example of §24.7 Ex 8 is the canonical use case for the AIC ≡ LRT identification. Both AIC and BIC prefer the reduced model ($\Delta\mathrm{AIC} = 1.4453, \Delta\mathrm{BIC} = 4.7436$, both positive), and the LRT does not reject ($\mathrm{LR} = 0.5547, p \approx 0.46$). Reporting practice: state all three numbers — LR + p-value, $\Delta\mathrm{AIC}$, $\Delta\mathrm{BIC}$ — alongside the candidate-set description, so the reader can apply their own selection criterion.
+</ExampleBlock>
+
+<ExampleBlock number={13} title="Prostate lasso-path with CV vs AIC vs BIC argmins">
+Combining §24.8 Ex 10 with Topic 23 §23.9 Ex 14: on the 100-point log-grid lasso path of the prostate-cancer dataset ($n = 97$, $p = 8$), three argmin $\lambda$ values emerge:
+
+- $\hat\lambda_{\text{AIC}}$ — typically aligns with $\hat\lambda_{\min}$ from 10-fold CV (Stone-Li equivalence; §24.8 Rem 20).
+- $\hat\lambda_{\text{1SE}}$ — Topic 23's one-SE-rule choice; sparser than $\hat\lambda_{\min}$.
+- $\hat\lambda_{\text{BIC}}$ — sparser still; lies between $\hat\lambda_{\min}$ and the empty-active-set $\lambda_{\max}$.
+
+The corresponding active-set sizes order as $|\mathcal{A}(\hat\lambda_{\text{AIC}})| \geq |\mathcal{A}(\hat\lambda_{\text{1SE}})| \geq |\mathcal{A}(\hat\lambda_{\text{BIC}})|$, recovering the consistency-vs-efficiency tradeoff (§24.6 Thm 5) on a real dataset.
+</ExampleBlock>
+
+<RemarkBlock number={21} title="Production tooling">
+{/* TODO Task 7: 3–4 sentences. R: stats::AIC, stats::BIC, MASS::stepAIC.
+    Python: statsmodels.GLM.aic, sklearn.model_selection.cross_val_score +
+    KFold. Julia: StatsBase.aic, StatsBase.bic, MLBase.cross_validate.
+    All of these are wrappers around the same -2ℓ + penalty arithmetic. */}
+Standard implementations: **R** — `stats::AIC`, `stats::BIC`, `MASS::stepAIC`; **Python** — `statsmodels.GenericLikelihoodModel.aic` / `.bic`, `sklearn.model_selection.cross_val_score`; **Julia** — `StatsBase.aic`, `StatsBase.bic`, `MLBase.cross_validate`. All are wrappers around $-2\hat\ell + \text{penalty}$ with the parameter-count convention from the underlying fit object.
+</RemarkBlock>
+
+<RemarkBlock number={22} title="Reporting standards: criterion + candidate set must both be named">
+{/* TODO Task 7: 3–4 sentences. A reported "AIC = X" without the candidate set
+    is uninterpretable — AIC is only meaningful relative to the comparison set.
+    Always report the full candidate family + the criterion + the argmin index +
+    the per-criterion ranking table (or at least Δ values). */}
+A reported "AIC $= X$" without the candidate set is uninterpretable — AIC is meaningful only relative to the comparison family. Standard practice: state the candidate family, the criterion, the argmin index, and the full ranking (or at least the $\Delta$ values), so the reader can audit the selection. BUR2002 §2.6 and CLA2008 §1.2 give detailed reporting templates.
+</RemarkBlock>
+
+<a id="section-24-10"></a>
+
+## 24.10 Forward map
+
+{/* Section opening — TODO Task 7 prose: Topic 24 as Track 6 closer. The
+    candidate-family-comparison framework opens onto Bayesian model averaging,
+    high-dim selection, post-selection inference, structural risk
+    minimization. Each gets a one-paragraph forward-pointing remark; full
+    treatments are at Track 7 / Track 8 / formalml. */}
+
+Topic 24 closes Track 6's classical-regression toolkit and opens onto eight forward-pointing developments — each gets a one-paragraph remark below. The arc moves Bayesian (Track 7), then sparsity-aware (Track 8), then ML-native (formalml).
+
+<RemarkBlock number={23} title="Bayesian model averaging — full pointer (forward from §24.4 Rem 7)">
+{/* TODO Task 7: 5–6 sentences. The full BMA development. BIC weights as
+    unnormalized posterior model probabilities; predictive averaging
+    p(y_new | data) = Σ_k p(y_new | M_k, data) · w_k^BMA. Hoeting et al. 1999
+    survey + Track 7 detailed treatment + formalml ML-scale BMA. */}
+**Bayesian model averaging (BMA)** averages predictions over the candidate family weighted by posterior model probabilities. Using Thm 2's BIC approximation, $w_k^{\text{BIC}} \propto \exp(-\Delta\mathrm{BIC}_k/2)$ are the BMA weights for predictive averaging:
+
+$$p(y_{\text{new}} \mid \mathbf{y}) \;=\; \sum_{k=1}^M p(y_{\text{new}} \mid \mathcal{M}_k, \mathbf{y}) \cdot w_k^{\text{BMA}}.$$
+
+Hoeting et al. (1999) is the canonical methodology survey; Track 7 develops the full Bayesian framework (priors, MCMC for $p(y_{\text{new}} \mid \mathcal{M}_k, \mathbf{y})$, posterior model probabilities); formalml's [Bayesian Model Averaging](https://formalml.com/topics/bayesian-model-averaging) topic covers ML-scale BMA over deep-learning architectures and ensemble approaches.
+</RemarkBlock>
+
+<RemarkBlock number={24} title="Post-selection inference — full pointer">
+{/* TODO Task 7: 5–6 sentences. After AIC/BIC/CV selection, naive Wald CIs
+    are invalid. Berk-Brown-Buja 2013 PoSI, Lee-Sun-Sun-Taylor 2016 selective
+    conditioning, Zhang-Zhang 2014 debiased lasso, Chernozhukov 2018
+    cross-fitting / double ML. All formalml. */}
+A confidence interval reported after a model-selection step has no honest coverage guarantee under the standard frequentist framework — the selection event is data-dependent, so $\mathbb{P}(\theta \in \hat{\mathrm{CI}})$ is not the nominal $1 - \alpha$. **Post-selection inference** restores validity through several routes: PoSI (Berk–Brown–Buja 2013, simultaneous over all submodels), selective conditioning (Lee–Sun–Sun–Taylor 2016, conditioning on the selection event), debiased lasso (Zhang–Zhang 2014; Javanmard–Montanari 2014, one-step Newton correction), and cross-fitting / double ML (Chernozhukov et al. 2018, sample-splitting for valid causal inference after ML-selected nuisance models). All four directions live at formalml's [Post-Selection Inference](https://formalml.com/topics/post-selection-inference) and [Cross-Fitting](https://formalml.com/topics/cross-fitting) topics.
+</RemarkBlock>
+
+<RemarkBlock number={25} title="Stepwise / forward-backward selection — dismissed with citations">
+{/* TODO Task 7: 4–5 sentences. Dismissal with citations. Harrell 2015 §4.3
+    + Heinze-Wallisch-Dunkler 2018. Stepwise gives biased coefficient
+    estimates, invalid CIs, and unstable selection. Modern best practice:
+    use lasso (with debiasing for inference) or report the full IC ranking
+    rather than a single stepwise winner. */}
+**Stepwise selection** (forward, backward, or bidirectional, by AIC or by p-value threshold) is widely available in legacy tooling but is no longer recommended methodology. Harrell (2015) §4.3 and Heinze-Wallisch-Dunkler (2018) document the failure modes: biased coefficient estimates, invalid confidence intervals, and unstable selection across resamples. Modern best practice replaces stepwise with **lasso** (Topic 23) for the selection step, optionally followed by debiasing (Rem 20) for inference. We omit stepwise from Topic 24's main exposition for this reason.
+</RemarkBlock>
+
+<RemarkBlock number={26} title="DIC / WAIC / PSIS-LOO — Bayesian information criteria (single remark per Q5)">
+{/* TODO Task 7: 4–5 sentences. Three Bayesian analogs to AIC. DIC =
+    Spiegelhalter 2002, WAIC = Watanabe 2010, PSIS-LOO = Vehtari-Gelman-
+    Gabry 2017. All three estimate expected out-of-sample log-predictive in
+    the Bayesian framework. Track 7 develops; this remark is the pointer. */}
+Three Bayesian analogs of AIC have emerged. **DIC** (Spiegelhalter et al. 2002) estimates the expected predictive log-likelihood using posterior samples and an effective parameter count $p_D$. **WAIC** (Watanabe 2010) replaces the plug-in $p_D$ with a per-observation variance term that is invariant to reparameterization. **PSIS-LOO** (Vehtari–Gelman–Gabry 2017) computes leave-one-out cross-validation via Pareto-smoothed importance sampling on existing MCMC draws — the de facto standard in modern Bayesian model comparison. Track 7 develops all three; this single remark is the forward pointer.
+</RemarkBlock>
+
+<RemarkBlock number={27} title="MDL — minimum description length (Rissanen 1978)">
+{/* TODO Task 7: 3–4 sentences. MDL frames model selection as data-compression
+    problem: shortest joint description of (model, data | model). Universal
+    coding gives a code length proportional to BIC up to lower-order terms.
+    Rissanen 1978 origin; Grünwald 2007 modern textbook treatment. */}
+**Minimum description length** (Rissanen 1978) frames model selection as a data-compression problem: the best model is the one that gives the shortest joint description of (model, data $\mid$ model) using a universal code. Under regularity, the universal-code length of the data is asymptotically $\hat\ell + (k/2)\log n + O(1)$, recovering BIC up to additive constants — MDL and BIC give the same ranking. Grünwald (2007) is the canonical textbook treatment.
+</RemarkBlock>
+
+<RemarkBlock number={28} title="Time-series + graphical-model selection (one-sentences each)">
+{/* TODO Task 7: 2–3 sentences. HQIC for time series (Hannan-Quinn 1979).
+    BIC + tree priors for DAG selection (Heckerman-Geiger-Chickering 1995).
+    Both are domain-specific extensions; main framework still applies. */}
+Two domain-specific extensions: **HQIC** (Hannan–Quinn 1979) replaces $\log n$ with $2\log\log n$ for time-series model selection, giving a penalty that grows slower than BIC's but faster than AIC's. **Graphical-model / DAG selection** uses BIC with tree-structured priors over DAGs (Heckerman–Geiger–Chickering 1995); for protein-network and gene-regulatory inference, a substantial methodology has emerged on top of this core idea.
+</RemarkBlock>
+
+<RemarkBlock number={29} title="High-dimensional IC: Extended BIC, stability selection, knockoffs">
+{/* TODO Task 7: 4–5 sentences. When p ≫ n, classical IC degenerates.
+    Extended BIC (Chen-Chen 2008) adds a γ k log p term. Stability selection
+    (Meinshausen-Bühlmann 2010) bootstraps lasso to control selection
+    frequency. Knockoffs (Barber-Candès 2015) provide finite-sample FDR
+    control on selection. All formalml. */}
+When $p \gg n$, classical IC degenerates: the candidate set has $2^p$ subsets, and BIC's $k\log n$ penalty no longer compensates for the multiplicity. Three modern extensions: **Extended BIC** (Chen–Chen 2008) adds a $\gamma k \log p$ term to penalize the candidate-set size; **stability selection** (Meinshausen–Bühlmann 2010) bootstraps lasso to control variable-selection frequency under finite-sample bounds; **knockoffs** (Barber–Candès 2015) provide finite-sample FDR control on the selected variable set. All three live at formalml's [High-Dimensional Regression](https://formalml.com/topics/high-dimensional-regression) topic.
+</RemarkBlock>
+
+<RemarkBlock number={30} title="Structural risk minimization (VC theory, Rademacher complexity)">
+{/* TODO Task 7: 4–5 sentences. Vapnik's SRM generalizes IC from parametric
+    models to function classes. VC dimension or Rademacher complexity replaces
+    k. Bartlett-Mendelson 2002 give Rademacher bounds. Track 8 develops
+    nonparametric model selection; formalml has the SRM treatment. */}
+Vapnik's **structural risk minimization** generalizes information criteria from parametric models to function classes via complexity measures like VC dimension or Rademacher complexity. The penalty term $2k$ in AIC is replaced by a complexity-based bound on the gap between empirical and population risk; Bartlett & Mendelson (2002) give the Rademacher-complexity foundation. Track 8 develops nonparametric model selection in this language; formalml's [Structural Risk Minimization](https://formalml.com/topics/vc-dimension) topic covers the classical Vapnik–Chervonenkis theory.
+</RemarkBlock>
+
+<RemarkBlock number={31} title="Track 7 on-ramp: BIC → marginal likelihood → BMA → MCMC">
+{/* TODO Task 7: 5–6 sentences. The Track 7 paragraph (Q6 amplification land
+    here). BIC's Laplace approximation is the gateway to Bayesian model
+    comparison. Track 7 develops: priors on Θ and on the model space,
+    posterior computation via MCMC (Metropolis-Hastings, NUTS), marginal
+    likelihood via nested sampling/bridge sampling, predictive averaging
+    via posterior predictive checks. */}
+Thm 2's BIC-Laplace derivation is the gateway to the full Bayesian model-comparison machinery. Track 7 (Bayesian Foundations, upcoming) develops:
+- **Priors on $\Theta$ and on the model space** (Rems 8, 19): conjugate, weakly-informative, reference, intrinsic.
+- **Posterior computation via MCMC**: Metropolis–Hastings, Hamiltonian Monte Carlo, NUTS (Hoffman & Gelman 2014).
+- **Exact marginal likelihood**: nested sampling (Skilling 2006), bridge sampling (Meng–Wong 1996), thermodynamic integration.
+- **Predictive averaging via posterior predictive checks**: BMA (Rem 19), DIC / WAIC / PSIS-LOO (Rem 22).
+
+Topic 24 §24.4's BIC is the asymptotic shorthand for these computationally heavier procedures.
+</RemarkBlock>
+
+<img src="/images/topics/model-selection-and-information-criteria/24-forward-map.png"
+     alt="Forward-map diagram for Topic 24. Central hub of model selection (AIC, BIC, CV, IC ranking) with arrows out to Track 7 (Bayesian model averaging, MCMC, DIC/WAIC/PSIS-LOO, marginal likelihood), Track 8 (structural risk minimization, nonparametric selection, Rademacher complexity), and formalml.com (post-selection inference, debiased lasso, cross-fitting, double ML, high-dimensional selection, knockoffs). Back-arrows to Topic 14 (MLE), Topic 18 (LRT/Wilks), Topic 21 (linear regression), Topic 22 (GLM), Topic 23 (regularization). Track-color coded with Track 6 in blue, Track 7 in amber, Track 8 in green, formalml.com in purple."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+Topic 24 closes Track 6. Topic 21 was OLS as orthogonal projection; Topic 22 was IRLS on the exponential family; Topic 23 was penalized estimation as the rescue when those frameworks break; Topic 24 is the model-selection layer above all three. **Reciprocal framing of Topic 23**: with the effective-DOF generalization of §24.8, Topic 23's $\lambda$-indexed family becomes a continuous model space — every $\lambda > 0$ gives a model with effective parameter count $\operatorname{tr}(\mathbf{H}_\lambda)$, and Topic 23's CV-driven $\lambda$-selection is a special case of Topic 24's IC-driven model-selection framework. Topic 23 selects within a one-parameter family; Topic 24 selects across discrete or continuous candidate spaces, with a richer asymptotic theory. Track 6 ends here; the next topic shipped is Topic 25 — Track 7 opener — Bayesian Foundations.
+
+---
+
+### References
+
+1. Akaike, H. (1974). [*A new look at the statistical model identification*](https://doi.org/10.1109/TAC.1974.1100705). *IEEE Transactions on Automatic Control*, 19(6), 716–723.
+2. Schwarz, G. (1978). [*Estimating the dimension of a model*](https://doi.org/10.1214/aos/1176344136). *The Annals of Statistics*, 6(2), 461–464.
+3. Mallows, C. L. (1973). [*Some comments on Cp*](https://doi.org/10.1080/00401706.1973.10489103). *Technometrics*, 15(4), 661–675.
+4. Stone, M. (1977). [*An asymptotic equivalence of choice of model by cross-validation and Akaike's criterion*](https://doi.org/10.1111/j.2517-6161.1977.tb01603.x). *Journal of the Royal Statistical Society, Series B*, 39(1), 44–47.
+5. Yang, Y. (2005). [*Can the strengths of AIC and BIC be shared? A conflict between model identification and regression estimation*](https://doi.org/10.1093/biomet/92.4.937). *Biometrika*, 92(4), 937–950.
+6. Burnham, K. P. & Anderson, D. R. (2002). [*Model Selection and Multimodel Inference: A Practical Information-Theoretic Approach*](https://doi.org/10.1007/b97636) (2nd ed.). Springer.
+7. Claeskens, G. & Hjort, N. L. (2008). [*Model Selection and Model Averaging*](https://doi.org/10.1017/CBO9780511790485) (1st ed.). Cambridge University Press.
+8. Hastie, T., Tibshirani, R. & Friedman, J. (2009). [*The Elements of Statistical Learning*](https://hastie.su.domains/ElemStatLearn/) (2nd ed.). Springer.
+9. Lehmann, E. L. & Romano, J. P. (2005). [*Testing Statistical Hypotheses*](https://link.springer.com/book/10.1007/0-387-27605-X) (3rd ed.). Springer.
+10. Casella, G. & Berger, R. L. (2002). [*Statistical Inference*](https://www.routledge.com/Statistical-Inference/Casella-Berger/p/book/9780534243128) (2nd ed.). Duxbury.
+11. Wainwright, M. J. (2019). [*High-Dimensional Statistics: A Non-Asymptotic Viewpoint*](https://doi.org/10.1017/9781108627771) (1st ed.). Cambridge University Press.

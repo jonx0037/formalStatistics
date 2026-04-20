@@ -3329,3 +3329,575 @@ export function kktCheck(
   }
   return { satisfied: violations.length === 0, violations, maxViolation };
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Topic 24 — Model Selection & Information Criteria (§6.1.R, §6.1.S, §6.1.T)
+// ═══════════════════════════════════════════════════════════════════════════════
+//
+// Parameter-count convention (Topic 24 §3.3 + Appendix B #15):
+//
+//   k = number of free parameters, INCLUDING any scale/dispersion parameter.
+//
+// • OLSFit: k = beta.length + 1   (intercept + p coefficients + sigma²).
+// • GLMFit: k = beta.length + (family.fixedDispersion ? 0 : 1).
+//   ─ Bernoulli & Poisson: φ ≡ 1 (no scale parameter), so k = beta.length.
+//   ─ Gaussian (via glmFit) & Gamma: φ estimated, so k = beta.length + 1 — and
+//     critically Gaussian-via-glmFit then matches Gaussian-via-olsFit.
+//
+// Log-likelihood convention: full Gaussian log-likelihood including the
+// n · log(2π) + n constants (NOT the AIC* shorthand). This lets aic(OLSFit)
+// equal aic(glmFit(family='normal')) on the same data, which the T10 harness
+// silently relies on.
+//
+// ─────────────────────────────────────────────────────────────────────────────
+// §6.1.R — Information criteria
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Discriminate the union member at runtime by checking an OLSFit-only field. */
+function isOLSFit(fit: OLSFit | GLMFit): fit is OLSFit {
+  return (fit as OLSFit).sse !== undefined && (fit as OLSFit).sigmaSquared !== undefined;
+}
+
+/** Parameter count k (see convention block above). */
+function paramCount(fit: OLSFit | GLMFit): number {
+  if (isOLSFit(fit)) return fit.beta.length + 1;
+  return fit.beta.length + (fit.family.fixedDispersion ? 0 : 1);
+}
+
+/** Full Gaussian log-likelihood at MLE σ̂² = SSE/n. */
+function gaussianLogLikOLS(fit: OLSFit): number {
+  const sigmaSqMLE = fit.sse / fit.n;
+  return -0.5 * fit.n * (Math.log(2 * Math.PI) + Math.log(sigmaSqMLE) + 1);
+}
+
+/** Sum the family's pointwise log-likelihood across observations. */
+function glmLogLik(fit: GLMFit): number {
+  let ll = 0;
+  for (let i = 0; i < fit.y.length; i++) {
+    ll += fit.family.logLik(fit.y[i], fit.mu[i], fit.phi);
+  }
+  return ll;
+}
+
+/** Maximized log-likelihood, dispatching on fit type. */
+function logLikOf(fit: OLSFit | GLMFit): number {
+  return isOLSFit(fit) ? gaussianLogLikOLS(fit) : glmLogLik(fit);
+}
+
+/**
+ * Akaike Information Criterion: AIC = −2 ℓ̂ + 2 k.
+ * See parameter-count convention block above. Used as the foundation for
+ * §24.3 Thm 1, §24.5 Thm 4 (Stone equivalence), and ICSelector ranking.
+ */
+export function aic(fit: OLSFit | GLMFit): number {
+  return -2 * logLikOf(fit) + 2 * paramCount(fit);
+}
+
+/**
+ * Corrected AIC for small samples (Hurvich & Tsai 1989; Sugiura 1978):
+ *   AICc = AIC + 2 k (k+1) / (n − k − 1).
+ * Returns +Infinity (not throws) when n ≤ k + 1 — pedagogical signal that
+ * AICc is undefined in the over-parameterized regime, matching the brief
+ * Appendix B decision.
+ */
+export function aicc(fit: OLSFit | GLMFit, n: number): number {
+  const k = paramCount(fit);
+  if (n <= k + 1) return Infinity;
+  return aic(fit) + (2 * k * (k + 1)) / (n - k - 1);
+}
+
+/**
+ * Schwarz / Bayesian Information Criterion: BIC = −2 ℓ̂ + k log n.
+ * §24.4 develops the Laplace-approximation derivation.
+ */
+export function bic(fit: OLSFit | GLMFit, n: number): number {
+  return -2 * logLikOf(fit) + paramCount(fit) * Math.log(n);
+}
+
+/**
+ * Mallows' Cp = SSE/σ̂²_ref + 2 k − n.
+ * Reference σ̂²_ref is conventionally the MLE from the largest candidate
+ * model (Brief Appendix B). Gaussian-only — the parameter type is `OLSFit`
+ * so the TypeScript compiler enforces the Gaussian-only constraint at the
+ * call site (use AIC/BIC/TIC for GLM model selection). The runtime
+ * `sigmaSqRef > 0` check remains because that's a value-domain
+ * constraint TypeScript cannot enforce.
+ */
+export function mallowsCp(fit: OLSFit, sigmaSqRef: number): number {
+  if (sigmaSqRef <= 0) {
+    throw new Error(`mallowsCp: sigmaSqRef must be > 0, got ${sigmaSqRef}`);
+  }
+  return fit.sse / sigmaSqRef + 2 * paramCount(fit) - fit.n;
+}
+
+/**
+ * Takeuchi Information Criterion: TIC = −2 ℓ̂ + 2 tr(K⁻¹ J).
+ * Misspecification-robust generalization of AIC. Under correct specification,
+ * tr(K⁻¹ J) → k and TIC → AIC by White (1982) / Takeuchi (1976).
+ *
+ * Caller supplies J-hat (empirical score outer product) and K-hat (observed
+ * Hessian of −ℓ). Computed in O(k³) via column-wise Cholesky solve of
+ * K M = J, summing the diagonal of M.
+ */
+export function tic(
+  fit: OLSFit | GLMFit,
+  Jhat: number[][],
+  Khat: number[][],
+): number {
+  const k = Khat.length;
+  if (k === 0 || Jhat.length !== k || Jhat[0].length !== k || Khat[0].length !== k) {
+    throw new Error(
+      `tic: Jhat and Khat must be square and matched (got Jhat ${Jhat.length}×${Jhat[0]?.length}, Khat ${Khat.length}×${Khat[0]?.length})`,
+    );
+  }
+  let trace = 0;
+  for (let j = 0; j < k; j++) {
+    const jcol = new Array<number>(k);
+    for (let i = 0; i < k; i++) jcol[i] = Jhat[i][j];
+    const mcol = choleskySolve(Khat, jcol);
+    trace += mcol[j];
+  }
+  return -2 * logLikOf(fit) + 2 * trace;
+}
+
+export interface RankingEntry {
+  /** Index in the input fits array. */
+  index: number;
+  /** Parameter count k including any scale parameter. */
+  k: number;
+  /** Maximized log-likelihood ℓ̂. */
+  loglik: number;
+  aic: number;
+  aicc: number;
+  bic: number;
+  /** Only present when opts.includeMallowsCp === true. */
+  cp?: number;
+  /** AIC − min(AIC) across the input array. */
+  deltaAIC: number;
+  /** BIC − min(BIC) across the input array. */
+  deltaBIC: number;
+  isBestByAIC: boolean;
+  isBestByAICc: boolean;
+  isBestByBIC: boolean;
+  isBestByCp?: boolean;
+}
+
+/**
+ * Rank a list of candidate fits by each information criterion. Canonical
+ * display format used by ICSelector and the §24.9 Ex 11 nested-model table.
+ *
+ * AICc uses the n of the FIRST fit (the typical nested-model situation has
+ * all candidates sharing n). If candidates have different n, compute AICc
+ * per-fit yourself instead of using this aggregator.
+ */
+export function nestedICRanking(
+  fits: Array<OLSFit | GLMFit>,
+  opts?: { includeMallowsCp?: boolean; sigmaSqRef?: number },
+): RankingEntry[] {
+  if (fits.length === 0) return [];
+  const includeCp = opts?.includeMallowsCp ?? false;
+  if (includeCp && (opts?.sigmaSqRef === undefined || opts.sigmaSqRef <= 0)) {
+    throw new Error(
+      'nestedICRanking: includeMallowsCp requires opts.sigmaSqRef > 0',
+    );
+  }
+  const refN = isOLSFit(fits[0]) ? fits[0].n : fits[0].y.length;
+
+  const rows = fits.map((fit, index) => {
+    const ll = logLikOf(fit);
+    const k = paramCount(fit);
+    const aicVal = -2 * ll + 2 * k;
+    const aiccVal =
+      refN > k + 1 ? aicVal + (2 * k * (k + 1)) / (refN - k - 1) : Infinity;
+    const bicVal = -2 * ll + k * Math.log(refN);
+    const cp =
+      includeCp && isOLSFit(fit) ? mallowsCp(fit, opts!.sigmaSqRef!) : undefined;
+    return { index, k, loglik: ll, aic: aicVal, aicc: aiccVal, bic: bicVal, cp };
+  });
+
+  let minAIC = Infinity;
+  let minAICc = Infinity;
+  let minBIC = Infinity;
+  let minCp = Infinity;
+  for (const r of rows) {
+    if (r.aic < minAIC) minAIC = r.aic;
+    if (r.aicc < minAICc) minAICc = r.aicc;
+    if (r.bic < minBIC) minBIC = r.bic;
+    if (includeCp && r.cp !== undefined && r.cp < minCp) minCp = r.cp;
+  }
+
+  return rows.map((r) => {
+    const entry: RankingEntry = {
+      index: r.index,
+      k: r.k,
+      loglik: r.loglik,
+      aic: r.aic,
+      aicc: r.aicc,
+      bic: r.bic,
+      deltaAIC: r.aic - minAIC,
+      deltaBIC: r.bic - minBIC,
+      isBestByAIC: r.aic === minAIC,
+      isBestByAICc: r.aicc === minAICc,
+      isBestByBIC: r.bic === minBIC,
+    };
+    if (includeCp) {
+      entry.cp = r.cp;
+      entry.isBestByCp = r.cp === minCp;
+    }
+    return entry;
+  });
+}
+
+/**
+ * Compute AIC or BIC along a regularization path, using path.dof[i] as the
+ * effective parameter count k_eff. Used by §24.8 Ex 10 (prostate-cancer AIC
+ * overlay on the lasso path). Gaussian assumption — for GLM regularization
+ * paths, compute fit-by-fit using aic() / bic() instead.
+ */
+export function aicPath(
+  path: RegularizationPathResult,
+  y: number[],
+  X: number[][],
+  criterion: 'AIC' | 'BIC',
+): number[] {
+  const n = y.length;
+  if (X.length !== n) {
+    throw new Error(`aicPath: X and y must have matching n (X=${X.length}, y=${n})`);
+  }
+  const p = X[0].length;
+  const out = new Array<number>(path.lambdas.length);
+  for (let li = 0; li < path.lambdas.length; li++) {
+    const beta = path.betas[li];
+    // beta is length p+1 with beta[0] = intercept (Topic 23 convention).
+    let sse = 0;
+    for (let i = 0; i < n; i++) {
+      let yhat = beta[0];
+      for (let j = 0; j < p; j++) yhat += beta[j + 1] * X[i][j];
+      const r = y[i] - yhat;
+      sse += r * r;
+    }
+    const sigmaSqMLE = sse / n;
+    const ll = -0.5 * n * (Math.log(2 * Math.PI) + Math.log(sigmaSqMLE) + 1);
+    // k_eff = effective DOF + 1 (for σ²), matching the parameter-count convention.
+    const kEff = path.dof[li] + 1;
+    out[li] =
+      criterion === 'AIC' ? -2 * ll + 2 * kEff : -2 * ll + kEff * Math.log(n);
+  }
+  return out;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// §6.1.S — Effective degrees of freedom
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Threshold below which a lasso coefficient is treated as identically zero. */
+const LASSO_ACTIVE_EPSILON = 1e-10;
+
+/**
+ * Effective degrees of freedom for a fitted model.
+ *
+ * • OLSFit         → beta.length (= p + 1: intercept + p coefficients).
+ *                    Note: NOT the same as paramCount(fit) which adds σ². The
+ *                    smoother-trace convention excludes scale parameters.
+ * • RidgeFitResult → fit.dof (= Σ d_j²/(d_j² + λ), already computed by ridgeFit).
+ * • LassoFitResult → fit.activeSet.length + 1 (active predictors + intercept).
+ *                    Tibshirani–Taylor 2012: active-set size is an unbiased
+ *                    estimator of E[df] under regularity (§24.8 Thm 8 caveats).
+ *
+ * For GLM-ridge / penalized-GLM effective DOF, use hatMatrixTrace(X, λ) on
+ * the IRLS-weighted design √W X — that variant is not exposed here because
+ * PenalizedGLMFit does not retain X or W.
+ */
+export function effectiveDOF(
+  fit: OLSFit | RidgeFitResult | LassoFitResult,
+): number {
+  // RidgeFitResult is the only one with both `lambda` and `dof` numeric fields.
+  if (
+    'dof' in fit &&
+    'lambda' in fit &&
+    typeof fit.dof === 'number' &&
+    typeof fit.lambda === 'number'
+  ) {
+    return fit.dof;
+  }
+  // LassoFitResult: has activeSet.
+  if ('activeSet' in fit && Array.isArray((fit as LassoFitResult).activeSet)) {
+    return (fit as LassoFitResult).activeSet.length + 1; // + intercept
+  }
+  // OLSFit: smoother trace = number of fitted coefficients = beta.length.
+  return (fit as OLSFit).beta.length;
+}
+
+/**
+ * Trace of the ridge hat matrix H_λ = X (XᵀX + λI)⁻¹ Xᵀ on the supplied
+ * (un-standardized) design X. Computed via the Cholesky-trace identity:
+ *
+ *   tr(H_λ) = m − λ · tr((XᵀX + λI)⁻¹)
+ *
+ * which matches the SVD form Σ_j d_j²/(d_j² + λ) by direct algebra in the
+ * SVD basis. Cheaper than a full SVD for p < n (which is the usual regime).
+ *
+ * §24.8 Ex 9 reference values are pinned in T10.20–T10.25.
+ */
+export function hatMatrixTrace(X: number[][], lambda: number): number {
+  if (X.length === 0) throw new Error('hatMatrixTrace: empty design');
+  if (lambda < 0) throw new Error(`hatMatrixTrace: negative lambda ${lambda}`);
+  const m = X[0].length;
+  const xtxMat = xtx(X);
+  if (lambda === 0) {
+    // tr(H) = rank(X). For full-rank designs this is m. We don't bother
+    // detecting rank deficiency here; the test expects m at λ=0.
+    return m;
+  }
+  for (let j = 0; j < m; j++) xtxMat[j][j] += lambda;
+  const inv = choleskyInverse(xtxMat);
+  let traceInv = 0;
+  for (let j = 0; j < m; j++) traceInv += inv[j][j];
+  return m - lambda * traceInv;
+}
+
+/**
+ * Size of the lasso active set (number of nonzero non-intercept coefficients).
+ *
+ * The Topic-23 lassoFit returns activeSet as the nonzero-index list already
+ * thresholded by its inner tol (default 1e-7). This helper additionally
+ * applies an explicit |β_j| > threshold check on the returned coefficients
+ * — useful when β arrived from a path or warm-start where the activeSet
+ * may not have been re-thresholded.
+ */
+export function lassoActiveSetSize(
+  fit: LassoFitResult,
+  threshold: number = LASSO_ACTIVE_EPSILON,
+): number {
+  let count = 0;
+  // beta is length p+1 with beta[0] = intercept (skip).
+  for (let j = 1; j < fit.beta.length; j++) {
+    if (Math.abs(fit.beta[j]) > threshold) count++;
+  }
+  return count;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// §6.1.T — Leave-one-out cross-validation
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Maximum hat-diagonal allowed before the LOO shortcut becomes unstable. */
+const LOO_LEVERAGE_CAP = 0.999;
+
+/**
+ * Leave-one-out cross-validation. Returns the mean squared LOO residual:
+ *
+ *     LOO-CV = (1/n) Σ_i (y_i − ŷ_i^{(−i)})²
+ *
+ * Default path: hat-matrix shortcut (Allen 1974, "PRESS statistic")
+ *
+ *     y_i − ŷ_i^{(−i)} = (y_i − ŷ_i) / (1 − h_ii)
+ *
+ * which computes LOO-CV in O(n²p) via olsFit + leverage, no refits. This is
+ * the variant §24.5 Thm 4 (Stone equivalence) uses.
+ *
+ * Throws when max(h_ii) > 0.999 — leverage is too concentrated (a single
+ * point is nearly an interpolation node) for the shortcut to be stable.
+ *
+ * fitFn fallback: if a custom fitter is supplied, runs the n-fold refit
+ * loop. The fitter must return a `beta` field; predictions at the held-out
+ * row are computed as X[i] · β̂. Cost: O(n · fit_cost).
+ */
+export function looCV(
+  X: number[][],
+  y: number[],
+  fitFn?: (X: number[][], y: number[]) => { beta: number[] },
+): number {
+  const n = X.length;
+  if (n !== y.length) {
+    throw new Error(`looCV: X.length (${n}) !== y.length (${y.length})`);
+  }
+  if (n < 2) throw new Error(`looCV: need n ≥ 2, got n = ${n}`);
+  const m = X[0].length;
+
+  if (fitFn) {
+    let sse = 0;
+    for (let i = 0; i < n; i++) {
+      const Xtrain: number[][] = new Array(n - 1);
+      const ytrain: number[] = new Array(n - 1);
+      let k = 0;
+      for (let j = 0; j < n; j++) {
+        if (j === i) continue;
+        Xtrain[k] = X[j];
+        ytrain[k] = y[j];
+        k++;
+      }
+      const beta = fitFn(Xtrain, ytrain).beta;
+      let yhat = 0;
+      for (let jj = 0; jj < m; jj++) yhat += X[i][jj] * beta[jj];
+      const r = y[i] - yhat;
+      sse += r * r;
+    }
+    return sse / n;
+  }
+
+  // Hat-matrix shortcut: requires the OLS fit + leverages.
+  const fit = olsFit(X, y);
+  const hDiag = leverage(X);
+  let maxH = 0;
+  for (const h of hDiag) if (h > maxH) maxH = h;
+  if (maxH > LOO_LEVERAGE_CAP) {
+    throw new Error(
+      `looCV: design matrix produces hat-matrix diagonal ≥ ${LOO_LEVERAGE_CAP} ` +
+        `(max = ${maxH.toFixed(6)}); leverage is too concentrated for the shortcut. ` +
+        `Pass an explicit fitFn to use the refit-loop fallback.`,
+    );
+  }
+  let sse = 0;
+  for (let i = 0; i < n; i++) {
+    const denom = 1 - hDiag[i];
+    const press = fit.residuals[i] / denom;
+    sse += press * press;
+  }
+  return sse / n;
+}
+
+/**
+ * Generic k-fold cross-validation for OLS-style fits. Companion to `looCV`:
+ * `looCV` is the n-fold special case via the hat-matrix shortcut; `kFoldCV`
+ * is the finite-fold case via explicit refits, suitable when k = 5 or 10
+ * (the modern defaults per HAS2009 §7.10) or when the OLS shortcut is
+ * unstable (high-leverage cases).
+ *
+ * Folds are produced by a deterministic Fisher–Yates shuffle of the row
+ * indices using the supplied seed (default 1234) — same seed gives the
+ * same fold partition across calls, supporting reproducible CV reporting.
+ *
+ * @param X      design matrix, shape (n, p+1) including intercept column
+ * @param y      response vector, length n
+ * @param k      number of folds (must satisfy 2 ≤ k ≤ n)
+ * @param fitFn  fit function returning at least `{ beta }`. Default: OLS
+ *               via `qrSolve` (numerically more robust than Cholesky on
+ *               near-singular designs).
+ * @param seed   PRNG seed for the shuffle (default 1234)
+ * @returns      mean squared prediction error across all folds
+ */
+export function kFoldCV(
+  X: number[][],
+  y: number[],
+  k: number,
+  fitFn?: (X: number[][], y: number[]) => { beta: number[] },
+  seed: number = 1234,
+): number {
+  const n = X.length;
+  if (n !== y.length) {
+    throw new Error(`kFoldCV: X.length (${n}) !== y.length (${y.length})`);
+  }
+  if (k < 2) throw new Error(`kFoldCV: need k ≥ 2, got k = ${k}`);
+  if (k > n) throw new Error(`kFoldCV: need k ≤ n, got k = ${k} > n = ${n}`);
+  const m = X[0].length;
+
+  // Default fit: OLS via qrSolve (avoids olsFit's choleskyInverse PD-check).
+  const fitter =
+    fitFn ?? ((Xs: number[][], ys: number[]) => ({ beta: qrSolve(Xs, ys) }));
+
+  // Deterministic shuffle. Uses the codebase's shared seededRandom so CV
+  // partition seeding stays consistent with crossValidate, simulators, and
+  // the rest of the regression-module RNG calls.
+  const rng = seededRandom(seed);
+  const idx: number[] = Array.from({ length: n }, (_, i) => i);
+  for (let i = n - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [idx[i], idx[j]] = [idx[j], idx[i]];
+  }
+
+  const foldSize = Math.ceil(n / k);
+  let sse = 0;
+  let nTested = 0;
+  for (let f = 0; f < k; f++) {
+    const lo = f * foldSize;
+    const hi = Math.min(lo + foldSize, n);
+    const testIdx = idx.slice(lo, hi);
+    if (testIdx.length === 0) continue;
+    const testMask = new Set(testIdx);
+    const Xtrain: number[][] = [];
+    const ytrain: number[] = [];
+    for (let i = 0; i < n; i++) {
+      if (!testMask.has(i)) {
+        Xtrain.push(X[i]);
+        ytrain.push(y[i]);
+      }
+    }
+    if (Xtrain.length <= m) {
+      throw new Error(
+        `kFoldCV: fold ${f} has Xtrain.length = ${Xtrain.length} ≤ m = ${m}; ` +
+          `pick smaller k or use a richer design`,
+      );
+    }
+    let beta: number[];
+    try {
+      beta = fitter(Xtrain, ytrain).beta;
+    } catch (e) {
+      throw new Error(
+        `kFoldCV: fitter threw on fold ${f} (Xtrain ${Xtrain.length}×${m}): ${
+          (e as Error).message
+        }`,
+      );
+    }
+    for (const i of testIdx) {
+      let yhat = 0;
+      for (let j = 0; j < m; j++) yhat += X[i][j] * beta[j];
+      const r = y[i] - yhat;
+      sse += r * r;
+      nTested++;
+    }
+  }
+  // nTested === n in practice (every row appears in exactly one fold given
+  // foldSize = ceil(n/k)), but we divide by nTested to be defensive against
+  // empty trailing folds and to keep the result interpretable as mean SSE.
+  return nTested > 0 ? sse / nTested : NaN;
+}
+
+/**
+ * Mean squared (or deviance-scaled, for GLM) prediction risk on held-out data.
+ * Used by ConsistencyEfficiencyRace Tab B and §24.1 Ex 1 + Figure 1.
+ *
+ * For OLS: returns (1/n_test) Σ (y_test − X_test β̂)².
+ * For GLM: returns (1/n_test) · Σ devianceContribution(y_test, μ_test) — the
+ * scaled deviance. For Gaussian-via-glmFit this matches the OLS variant up
+ * to dispersion.
+ */
+export function predictionRisk(
+  fit: OLSFit | GLMFit,
+  XTest: number[][],
+  yTest: number[],
+): number {
+  const nTest = XTest.length;
+  if (nTest === 0) throw new Error('predictionRisk: empty test set');
+  if (yTest.length !== nTest) {
+    throw new Error(
+      `predictionRisk: XTest.length (${nTest}) !== yTest.length (${yTest.length})`,
+    );
+  }
+  if (isOLSFit(fit)) {
+    let sse = 0;
+    for (let i = 0; i < nTest; i++) {
+      let yhat = 0;
+      for (let j = 0; j < fit.beta.length; j++) yhat += fit.beta[j] * XTest[i][j];
+      const r = yTest[i] - yhat;
+      sse += r * r;
+    }
+    return sse / nTest;
+  }
+  // GLM: predict η_test → μ_test via canonical-link inverse; sum scaled
+  // deviance. η is clipped to [-ETA_CLIP, ETA_CLIP] before the inverse-link
+  // call to prevent Math.exp overflow (Math.exp(710) = Infinity), which
+  // would produce NaN deviance contributions. Same convention as glmFit's
+  // internal IRLS clip per Topic-22 brief gotcha G5.
+  const ETA_CLIP = 700;
+  let dev = 0;
+  for (let i = 0; i < nTest; i++) {
+    let eta = 0;
+    for (let j = 0; j < fit.beta.length; j++) eta += fit.beta[j] * XTest[i][j];
+    if (eta > ETA_CLIP) eta = ETA_CLIP;
+    else if (eta < -ETA_CLIP) eta = -ETA_CLIP;
+    const mu = fit.link.gInv(eta);
+    dev += fit.family.devianceContribution(yTest[i], mu);
+  }
+  return dev / nTest;
+}

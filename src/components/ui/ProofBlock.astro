@@ -1,4 +1,11 @@
 ---
+interface Props {
+  number?: number;
+  title?: string;
+}
+
+const { number, title } = Astro.props;
+const hasHeader = number !== undefined || title !== undefined;
 ---
 
 <details
@@ -6,12 +13,29 @@
   style="background: var(--color-proof-bg); border-color: var(--color-proof-border);"
 >
   <summary
-    class="cursor-pointer select-none text-xs font-bold uppercase tracking-wide mb-2"
+    class="cursor-pointer select-none mb-2"
     style="color: var(--color-proof-border);"
   >
-    Proof
-    <span class="ml-1 text-[10px] group-open:hidden">[show]</span>
-    <span class="ml-1 text-[10px] hidden group-open:inline">[hide]</span>
+    {hasHeader ? (
+      <span class="inline-flex items-baseline gap-2">
+        <span class="text-xs font-bold uppercase tracking-wide">
+          Proof{number !== undefined ? ` ${number}` : ''}
+        </span>
+        {title && (
+          <span class="font-semibold" style="color: var(--color-text-heading);">
+            {title}
+          </span>
+        )}
+        <span class="ml-1 text-[10px] group-open:hidden">[show]</span>
+        <span class="ml-1 text-[10px] hidden group-open:inline">[hide]</span>
+      </span>
+    ) : (
+      <span class="text-xs font-bold uppercase tracking-wide">
+        Proof
+        <span class="ml-1 text-[10px] group-open:hidden">[show]</span>
+        <span class="ml-1 text-[10px] hidden group-open:inline">[hide]</span>
+      </span>
+    )}
   </summary>
   <div class="topic-content mt-2" style="color: var(--color-text);">
     <slot />
