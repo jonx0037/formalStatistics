@@ -155,14 +155,7 @@ import ExampleBlock from '../../components/ui/ExampleBlock.astro';
 import RemarkBlock from '../../components/ui/RemarkBlock.astro';
 import ExternalLink from '../../components/ui/ExternalLink.astro';
 
-{/*
-  Component embeds (Task 9 — components not yet created; uncomment per section
-  when each ships):
-
-  import ICSelector from '../../components/viz/ICSelector.tsx';
-  import CVvsICComparator from '../../components/viz/CVvsICComparator.tsx';
-  import ConsistencyEfficiencyRace from '../../components/viz/ConsistencyEfficiencyRace.tsx';
-*/}
+import ICSelector from '../../components/viz/ICSelector.tsx';
 
 ## 24.1 The model-selection problem
 
@@ -303,7 +296,7 @@ $$\mathbb{E}\!\left[\mathrm{AIC}\right] \;=\; -2n\cdot\mathbb{E}\!\left[\mathrm{
 That is, $\mathrm{AIC}$ is asymptotically unbiased for $-2n$ times the expected out-of-sample log-predictive evaluated at the MLE.
 </TheoremBlock>
 
-<ProofBlock>
+<ProofBlock number={1} title="Akaike's bias-correction theorem">
 
 **Setup.** Let $Y_1, \dots, Y_n$ be iid from unknown density $f_0$; let $\{f(\cdot;\theta) : \theta \in \Theta \subset \mathbb{R}^k\}$ be a parametric model satisfying Topic 14's regularity conditions (smooth $\ell$, positive-definite Fisher information, MLE asymptotic normality). We want to rank candidate models by expected out-of-sample log-predictive
 
@@ -394,9 +387,7 @@ $$\mathrm{TIC} \;=\; -2\hat\ell + 2\operatorname{tr}(\hat{\mathcal{K}}^{-1}\hat{
 with $\hat{\mathcal{J}}$ the empirical score outer product and $\hat{\mathcal{K}}$ the observed Hessian of $-\ell$. Under correct specification $\hat{\mathcal{K}}^{-1}\hat{\mathcal{J}} \to \mathbf{I}_k$ and TIC $\to$ AIC. TIC sees little practical use because $\hat{\mathcal{J}}$ and $\hat{\mathcal{K}}$ are hard to estimate stably at moderate $n$; the broader information-geometric framing lives at formalml.
 </RemarkBlock>
 
-{/* Component embed (Task 9 — uncomment when ICSelector ships):
 <ICSelector client:visible />
-*/}
 
 <a id="section-24-4"></a>
 
@@ -426,7 +417,7 @@ $$-2\log m(\mathbf{y}) \;=\; \mathrm{BIC} + O_p(1).$$
 The leading-order discrepancy between $-2\log m(\mathbf{y})$ and $\mathrm{BIC}$ is constant in $n$ (depending on the prior and Fisher information), so model rankings by BIC and by $-2\log m(\mathbf{y})$ agree asymptotically.
 </TheoremBlock>
 
-<ProofBlock>
+<ProofBlock number={2} title="Schwarz's BIC as Laplace approximation">
 
 **Setup.** Let $f(\mathbf{y};\theta)$ be a smooth parametric model with $\Theta \subset \mathbb{R}^k$ and prior $\pi(\theta)$ continuous and strictly positive at the MLE $\hat\theta$. The marginal likelihood is
 
@@ -542,7 +533,7 @@ $$\arg\min_{\mathcal{M}} \mathrm{LOO\text{-}CV}(\mathcal{M}) \;=\; \arg\min_{\ma
 LOO-CV and AIC asymptotically select the same model from any nested family on the Gaussian-linear model.
 </TheoremBlock>
 
-<ProofBlock>
+<ProofBlock number={3} title="Stone's cross-validation–AIC equivalence">
 
 **Setup.** Consider the Gaussian linear model $\mathbf{y} = \mathbf{X}\boldsymbol\beta + \boldsymbol\varepsilon$ with $\boldsymbol\varepsilon \sim \mathcal{N}_n(\mathbf{0}, \sigma^2\mathbf{I})$, fixed full-rank design $\mathbf{X}$ ($p+1$ columns). Let $\hat{\boldsymbol\beta}$ be OLS, $\hat y_i = (\mathbf{X}\hat{\boldsymbol\beta})_i$, $h_{ii}$ the hat-matrix diagonal $\mathbf{H} = \mathbf{X}(\mathbf{X}^\top\mathbf{X})^{-1}\mathbf{X}^\top$. Write $k = p + 2$ (coefficients + $\sigma^2$).
 
