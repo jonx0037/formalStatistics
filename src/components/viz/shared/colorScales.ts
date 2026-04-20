@@ -95,3 +95,23 @@ export const glmFamilyColors = {
 } as const;
 
 export type GLMFamilyColorKey = keyof typeof glmFamilyColors;
+
+/**
+ * Topic 23 — penalty-family palette (per brief §5.5). Used by every Topic 23
+ * interactive component (RegularizationPathExplorer, LevelSetExplorer,
+ * CoordinateDescentVisualizer, CrossValidationExplorer) and mirrors the
+ * notebook's `penalty_colors` dict so static figures and live components
+ * share the same color identity for ridge / lasso / elastic-net coefficient
+ * paths and level sets.
+ *
+ *   ridge      teal   — variance-reduction / stabilization
+ *   lasso      amber  — sparsity / variable selection
+ *   elasticnet mauve  — hybrid (grouping + sparsity)
+ */
+export const penaltyColors = {
+  ridge: '#2a9d8f',
+  lasso: '#e9c46a',
+  elasticnet: '#b07090',
+} as const;
+
+export type PenaltyColorKey = keyof typeof penaltyColors;
