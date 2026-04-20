@@ -37,7 +37,11 @@ import {
   looCV,
   type OLSFit,
 } from '../components/viz/shared/regression';
-import { polyDesign, polyFitOLS } from '../components/viz/shared/polynomial';
+import {
+  polyDesign,
+  polyEval,
+  polyFitOLS,
+} from '../components/viz/shared/polynomial';
 import { PROSTATE_CANCER_DATA } from './regularization-data';
 
 // Re-export so Topic-24 consumers can import everything from one module.
@@ -330,6 +334,176 @@ export interface PolyDGPPrecomputed {
     looCV: number;
   };
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Yang-race precompute (used by ConsistencyEfficiencyRace, §24.6)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Sample sizes swept across the Yang race. Trimmed from the brief's
+ * 7-point sweep `[50, 100, 200, 500, 1000, 2000, 5000]` to keep IIFE cost
+ * inside Topic 23's 50–150 ms budget — ConsistencyEfficiencyRace's whole
+ * value is the QUALITATIVE divergence trend, not the n=5000 tail.
+ */
+const YANG_N_SWEEP: readonly number[] = [50, 100, 200, 500, 1000];
+/** MC replicates per sample size. Deterministic seed sequence per rep. */
+const YANG_MC_REPS = 25;
+/** Test-set size for prediction-risk evaluation (Tab B). Fixed, large. */
+const YANG_N_TEST = 1000;
+
+export interface YangRacePrecomputed {
+  /** Reference to the underlying preset (well-specified or misspecified). */
+  preset: RacePreset;
+  /** Sample sizes plotted on the x-axis. */
+  nSweep: readonly number[];
+  /** MC replicates run per sample size. */
+  mcReps: number;
+  /** Candidate model degrees the race ranges over. */
+  candidateDegrees: readonly number[];
+  /**
+   * Selection-frequency tables. Tab A's primary readout.
+   * `selectionFrequency.aic[i][j]` = fraction of MC reps at sample size
+   * `nSweep[i]` for which AIC selected `candidateDegrees[j]`.
+   */
+  selectionFrequency: {
+    aic: number[][];
+    aicc: number[][];
+    bic: number[][];
+    cv10: number[][];
+  };
+  /**
+   * Mean prediction risk per criterion at each sample size. Tab B's primary
+   * readout. Risk = mean squared prediction error on a fresh n=1000 test set
+   * drawn from the same DGP, evaluated at the criterion's selected degree.
+   */
+  predictionRisk: {
+    aic: number[];
+    aicc: number[];
+    bic: number[];
+    cv10: number[];
+  };
+}
+
+/** True regression function for a Yang-race preset. */
+function trueFn(preset: RacePreset, x: number): number {
+  if (preset.trueModel === 'sin-2pi-x') return Math.sin(2 * Math.PI * x);
+  // 'polynomial-d3': trueCoefs is [β0, β1, β2, β3]
+  const c = preset.trueCoefs!;
+  let y = 0;
+  let pwr = 1;
+  for (let j = 0; j < c.length; j++) {
+    y += c[j] * pwr;
+    pwr *= x;
+  }
+  return y;
+}
+
+/** Argmin index of an array. Skips NaN entries. */
+function argminIndex(arr: number[]): number {
+  let best = -1;
+  for (let i = 0; i < arr.length; i++) {
+    if (!Number.isFinite(arr[i])) continue;
+    if (best === -1 || arr[i] < arr[best]) best = i;
+  }
+  return best;
+}
+
+function computeYangRace(preset: RacePreset): YangRacePrecomputed {
+  const nSweep = YANG_N_SWEEP;
+  const degrees = preset.candidateDegrees;
+  const initFreq = (): number[][] =>
+    nSweep.map(() => new Array<number>(degrees.length).fill(0));
+  const selectionFrequency = {
+    aic: initFreq(),
+    aicc: initFreq(),
+    bic: initFreq(),
+    cv10: initFreq(),
+  };
+  const initRisk = (): number[] => new Array<number>(nSweep.length).fill(0);
+  const predictionRisk = {
+    aic: initRisk(),
+    aicc: initRisk(),
+    bic: initRisk(),
+    cv10: initRisk(),
+  };
+  for (let ni = 0; ni < nSweep.length; ni++) {
+    const n = nSweep[ni];
+    for (let rep = 0; rep < YANG_MC_REPS; rep++) {
+      const trainSeed = preset.seed * 1000 + ni * YANG_MC_REPS + rep;
+      const testSeed = trainSeed + 7919; // disjoint stream for the test set
+      const trainRng = seededRandom(trainSeed);
+      const xTr: number[] = new Array(n);
+      const yTr: number[] = new Array(n);
+      for (let i = 0; i < n; i++) {
+        xTr[i] = trainRng();
+        yTr[i] = trueFn(preset, xTr[i]) + normalSample(0, preset.sigma, trainRng);
+      }
+      const testRng = seededRandom(testSeed);
+      const xTe: number[] = new Array(YANG_N_TEST);
+      const yTe: number[] = new Array(YANG_N_TEST);
+      for (let i = 0; i < YANG_N_TEST; i++) {
+        xTe[i] = testRng();
+        yTe[i] = trueFn(preset, xTe[i]) + normalSample(0, preset.sigma, testRng);
+      }
+      // Fit each candidate degree, compute IC values + 10-fold CV.
+      const fitsArr = degrees.map((d) => polyFitOLS(xTr, yTr, d));
+      const aicV = fitsArr.map((f) => aic(f));
+      const aiccV = fitsArr.map((f) => aicc(f, n));
+      const bicV = fitsArr.map((f) => bic(f, n));
+      // 10-fold CV — cheaper to evaluate than LOO at large n; matches Tab B's
+      // operational definition of "the empirical-CV criterion".
+      const cv10V = degrees.map((d) =>
+        kFoldCV(polyDesign(xTr, d), yTr, 10, undefined, trainSeed),
+      );
+      const argA = argminIndex(aicV);
+      const argAc = argminIndex(aiccV);
+      const argB = argminIndex(bicV);
+      const argC = argminIndex(cv10V);
+      if (argA >= 0) selectionFrequency.aic[ni][argA] += 1 / YANG_MC_REPS;
+      if (argAc >= 0) selectionFrequency.aicc[ni][argAc] += 1 / YANG_MC_REPS;
+      if (argB >= 0) selectionFrequency.bic[ni][argB] += 1 / YANG_MC_REPS;
+      if (argC >= 0) selectionFrequency.cv10[ni][argC] += 1 / YANG_MC_REPS;
+      // Prediction risk on the held-out test set, evaluated at each criterion's
+      // selected fit. polyEval ⊂ polynomial.ts gives the scalar predictions.
+      const testRiskAtDegree = (argIdx: number): number => {
+        if (argIdx < 0) return NaN;
+        const d = degrees[argIdx];
+        const beta = fitsArr[argIdx].beta;
+        let sse = 0;
+        for (let i = 0; i < YANG_N_TEST; i++) {
+          const yhat = polyEval(beta, xTe[i], d);
+          const r = yTe[i] - yhat;
+          sse += r * r;
+        }
+        return sse / YANG_N_TEST;
+      };
+      predictionRisk.aic[ni] += testRiskAtDegree(argA) / YANG_MC_REPS;
+      predictionRisk.aicc[ni] += testRiskAtDegree(argAc) / YANG_MC_REPS;
+      predictionRisk.bic[ni] += testRiskAtDegree(argB) / YANG_MC_REPS;
+      predictionRisk.cv10[ni] += testRiskAtDegree(argC) / YANG_MC_REPS;
+    }
+  }
+  return {
+    preset,
+    nSweep,
+    mcReps: YANG_MC_REPS,
+    candidateDegrees: degrees,
+    selectionFrequency,
+    predictionRisk,
+  };
+}
+
+/** Yang race precompute, Tab A: well-specified (truth = polynomial-d3). */
+export const YANG_RACE_WELL: YangRacePrecomputed =
+  computeYangRace(YANG_INCOMPAT_WELL);
+
+/** Yang race precompute, Tab B: misspecified (truth = sin(2πx)). */
+export const YANG_RACE_MIS: YangRacePrecomputed =
+  computeYangRace(YANG_INCOMPAT_MIS);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// POLY_DGP precompute (used by ICSelector, CVvsICComparator)
+// ─────────────────────────────────────────────────────────────────────────────
 
 export const POLY_DGP_PRECOMPUTED: PolyDGPPrecomputed = (() => {
   const { n, sigma, seed } = POLY_DGP;

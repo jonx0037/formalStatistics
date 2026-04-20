@@ -157,6 +157,7 @@ import ExternalLink from '../../components/ui/ExternalLink.astro';
 
 import ICSelector from '../../components/viz/ICSelector.tsx';
 import CVvsICComparator from '../../components/viz/CVvsICComparator.tsx';
+import ConsistencyEfficiencyRace from '../../components/viz/ConsistencyEfficiencyRace.tsx';
 
 ## 24.1 The model-selection problem
 
@@ -665,9 +666,7 @@ Shao (1993) showed that **leaving out $n_v = n - n^{1/2}$ observations per fold*
 Standard practice: **report both AIC and BIC**. Agreement is reassuring; disagreement is informative — it tells the reader which side of the consistency-vs-efficiency tradeoff matters for the application. For prediction-focused use cases, prefer the AIC argmin and report 10-fold CV as a sanity check; for inference-focused applications where parsimony matters (e.g. model identification in epidemiology), prefer the BIC argmin.
 </RemarkBlock>
 
-{/* Component embed (Task 9 — uncomment when ConsistencyEfficiencyRace ships):
 <ConsistencyEfficiencyRace client:visible />
-*/}
 
 <a id="section-24-7"></a>
 
