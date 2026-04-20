@@ -873,11 +873,105 @@ A reported "AIC $= X$" without the candidate set is uninterpretable — AIC is m
 
 ## 24.10 Forward map
 
-{/* TODO Task 7: §24.10 prose (~800 words) — Rems 19–27 forward-pointing to
-    Track 7 (BMA, MCMC, DIC/WAIC), Track 8 (nonparametric selection), formalml
-    (post-selection inference, debiased lasso, cross-fitting, SRM/VC), with
-    closing paragraph that reciprocally frames Topic 23 as a special case
-    of Topic 24's framework. Fig 9 (24-forward-map.png). */}
+{/* Section opening — TODO Task 7 prose: Topic 24 as Track 6 closer. The
+    candidate-family-comparison framework opens onto Bayesian model averaging,
+    high-dim selection, post-selection inference, structural risk
+    minimization. Each gets a one-paragraph forward-pointing remark; full
+    treatments are at Track 7 / Track 8 / formalml. */}
+
+Topic 24 closes Track 6's classical-regression toolkit and opens onto eight forward-pointing developments — each gets a one-paragraph remark below. The arc moves Bayesian (Track 7), then sparsity-aware (Track 8), then ML-native (formalml).
+
+<RemarkBlock number={19} title="Bayesian model averaging — full pointer (forward from §24.4 Rem 7)">
+{/* TODO Task 7: 5–6 sentences. The full BMA development. BIC weights as
+    unnormalized posterior model probabilities; predictive averaging
+    p(y_new | data) = Σ_k p(y_new | M_k, data) · w_k^BMA. Hoeting et al. 1999
+    survey + Track 7 detailed treatment + formalml ML-scale BMA. */}
+**Bayesian model averaging (BMA)** averages predictions over the candidate family weighted by posterior model probabilities. Using Thm 2's BIC approximation, $w_k^{\text{BIC}} \propto \exp(-\Delta\mathrm{BIC}_k/2)$ are the BMA weights for predictive averaging:
+
+$$p(y_{\text{new}} \mid \mathbf{y}) \;=\; \sum_{k=1}^M p(y_{\text{new}} \mid \mathcal{M}_k, \mathbf{y}) \cdot w_k^{\text{BMA}}.$$
+
+Hoeting et al. (1999) is the canonical methodology survey; Track 7 develops the full Bayesian framework (priors, MCMC for $p(y_{\text{new}} \mid \mathcal{M}_k, \mathbf{y})$, posterior model probabilities); formalml's [Bayesian Model Averaging](https://formalml.com/topics/bayesian-model-averaging) topic covers ML-scale BMA over deep-learning architectures and ensemble approaches.
+</RemarkBlock>
+
+<RemarkBlock number={20} title="Post-selection inference — full pointer">
+{/* TODO Task 7: 5–6 sentences. After AIC/BIC/CV selection, naive Wald CIs
+    are invalid. Berk-Brown-Buja 2013 PoSI, Lee-Sun-Sun-Taylor 2016 selective
+    conditioning, Zhang-Zhang 2014 debiased lasso, Chernozhukov 2018
+    cross-fitting / double ML. All formalml. */}
+A confidence interval reported after a model-selection step has no honest coverage guarantee under the standard frequentist framework — the selection event is data-dependent, so $\mathbb{P}(\theta \in \hat{\mathrm{CI}})$ is not the nominal $1 - \alpha$. **Post-selection inference** restores validity through several routes: PoSI (Berk–Brown–Buja 2013, simultaneous over all submodels), selective conditioning (Lee–Sun–Sun–Taylor 2016, conditioning on the selection event), debiased lasso (Zhang–Zhang 2014; Javanmard–Montanari 2014, one-step Newton correction), and cross-fitting / double ML (Chernozhukov et al. 2018, sample-splitting for valid causal inference after ML-selected nuisance models). All four directions live at formalml's [Post-Selection Inference](https://formalml.com/topics/post-selection-inference) and [Cross-Fitting](https://formalml.com/topics/cross-fitting) topics.
+</RemarkBlock>
+
+<RemarkBlock number={21} title="Stepwise / forward-backward selection — dismissed with citations">
+{/* TODO Task 7: 4–5 sentences. Dismissal with citations. Harrell 2015 §4.3
+    + Heinze-Wallisch-Dunkler 2018. Stepwise gives biased coefficient
+    estimates, invalid CIs, and unstable selection. Modern best practice:
+    use lasso (with debiasing for inference) or report the full IC ranking
+    rather than a single stepwise winner. */}
+**Stepwise selection** (forward, backward, or bidirectional, by AIC or by p-value threshold) is widely available in legacy tooling but is no longer recommended methodology. Harrell (2015) §4.3 and Heinze-Wallisch-Dunkler (2018) document the failure modes: biased coefficient estimates, invalid confidence intervals, and unstable selection across resamples. Modern best practice replaces stepwise with **lasso** (Topic 23) for the selection step, optionally followed by debiasing (Rem 20) for inference. We omit stepwise from Topic 24's main exposition for this reason.
+</RemarkBlock>
+
+<RemarkBlock number={22} title="DIC / WAIC / PSIS-LOO — Bayesian information criteria (single remark per Q5)">
+{/* TODO Task 7: 4–5 sentences. Three Bayesian analogs to AIC. DIC =
+    Spiegelhalter 2002, WAIC = Watanabe 2010, PSIS-LOO = Vehtari-Gelman-
+    Gabry 2017. All three estimate expected out-of-sample log-predictive in
+    the Bayesian framework. Track 7 develops; this remark is the pointer. */}
+Three Bayesian analogs of AIC have emerged. **DIC** (Spiegelhalter et al. 2002) estimates the expected predictive log-likelihood using posterior samples and an effective parameter count $p_D$. **WAIC** (Watanabe 2010) replaces the plug-in $p_D$ with a per-observation variance term that is invariant to reparameterization. **PSIS-LOO** (Vehtari–Gelman–Gabry 2017) computes leave-one-out cross-validation via Pareto-smoothed importance sampling on existing MCMC draws — the de facto standard in modern Bayesian model comparison. Track 7 develops all three; this single remark is the forward pointer.
+</RemarkBlock>
+
+<RemarkBlock number={23} title="MDL — minimum description length (Rissanen 1978)">
+{/* TODO Task 7: 3–4 sentences. MDL frames model selection as data-compression
+    problem: shortest joint description of (model, data | model). Universal
+    coding gives a code length proportional to BIC up to lower-order terms.
+    Rissanen 1978 origin; Grünwald 2007 modern textbook treatment. */}
+**Minimum description length** (Rissanen 1978) frames model selection as a data-compression problem: the best model is the one that gives the shortest joint description of (model, data $\mid$ model) using a universal code. Under regularity, the universal-code length of the data is asymptotically $\hat\ell + (k/2)\log n + O(1)$, recovering BIC up to additive constants — MDL and BIC give the same ranking. Grünwald (2007) is the canonical textbook treatment.
+</RemarkBlock>
+
+<RemarkBlock number={24} title="Time-series + graphical-model selection (one-sentences each)">
+{/* TODO Task 7: 2–3 sentences. HQIC for time series (Hannan-Quinn 1979).
+    BIC + tree priors for DAG selection (Heckerman-Geiger-Chickering 1995).
+    Both are domain-specific extensions; main framework still applies. */}
+Two domain-specific extensions: **HQIC** (Hannan–Quinn 1979) replaces $\log n$ with $2\log\log n$ for time-series model selection, giving a penalty that grows slower than BIC's but faster than AIC's. **Graphical-model / DAG selection** uses BIC with tree-structured priors over DAGs (Heckerman–Geiger–Chickering 1995); for protein-network and gene-regulatory inference, a substantial methodology has emerged on top of this core idea.
+</RemarkBlock>
+
+<RemarkBlock number={25} title="High-dimensional IC: Extended BIC, stability selection, knockoffs">
+{/* TODO Task 7: 4–5 sentences. When p ≫ n, classical IC degenerates.
+    Extended BIC (Chen-Chen 2008) adds a γ k log p term. Stability selection
+    (Meinshausen-Bühlmann 2010) bootstraps lasso to control selection
+    frequency. Knockoffs (Barber-Candès 2015) provide finite-sample FDR
+    control on selection. All formalml. */}
+When $p \gg n$, classical IC degenerates: the candidate set has $2^p$ subsets, and BIC's $k\log n$ penalty no longer compensates for the multiplicity. Three modern extensions: **Extended BIC** (Chen–Chen 2008) adds a $\gamma k \log p$ term to penalize the candidate-set size; **stability selection** (Meinshausen–Bühlmann 2010) bootstraps lasso to control variable-selection frequency under finite-sample bounds; **knockoffs** (Barber–Candès 2015) provide finite-sample FDR control on the selected variable set. All three live at formalml's [High-Dimensional Regression](https://formalml.com/topics/high-dimensional-regression) topic.
+</RemarkBlock>
+
+<RemarkBlock number={26} title="Structural risk minimization (VC theory, Rademacher complexity)">
+{/* TODO Task 7: 4–5 sentences. Vapnik's SRM generalizes IC from parametric
+    models to function classes. VC dimension or Rademacher complexity replaces
+    k. Bartlett-Mendelson 2002 give Rademacher bounds. Track 8 develops
+    nonparametric model selection; formalml has the SRM treatment. */}
+Vapnik's **structural risk minimization** generalizes information criteria from parametric models to function classes via complexity measures like VC dimension or Rademacher complexity. The penalty term $2k$ in AIC is replaced by a complexity-based bound on the gap between empirical and population risk; Bartlett & Mendelson (2002) give the Rademacher-complexity foundation. Track 8 develops nonparametric model selection in this language; formalml's [Structural Risk Minimization](https://formalml.com/topics/vc-dimension) topic covers the classical Vapnik–Chervonenkis theory.
+</RemarkBlock>
+
+<RemarkBlock number={27} title="Track 7 on-ramp: BIC → marginal likelihood → BMA → MCMC">
+{/* TODO Task 7: 5–6 sentences. The Track 7 paragraph (Q6 amplification land
+    here). BIC's Laplace approximation is the gateway to Bayesian model
+    comparison. Track 7 develops: priors on Θ and on the model space,
+    posterior computation via MCMC (Metropolis-Hastings, NUTS), marginal
+    likelihood via nested sampling/bridge sampling, predictive averaging
+    via posterior predictive checks. */}
+Thm 2's BIC-Laplace derivation is the gateway to the full Bayesian model-comparison machinery. Track 7 (Bayesian Foundations, upcoming) develops:
+- **Priors on $\Theta$ and on the model space** (Rems 8, 19): conjugate, weakly-informative, reference, intrinsic.
+- **Posterior computation via MCMC**: Metropolis–Hastings, Hamiltonian Monte Carlo, NUTS (Hoffman & Gelman 2014).
+- **Exact marginal likelihood**: nested sampling (Skilling 2006), bridge sampling (Meng–Wong 1996), thermodynamic integration.
+- **Predictive averaging via posterior predictive checks**: BMA (Rem 19), DIC / WAIC / PSIS-LOO (Rem 22).
+
+Topic 24 §24.4's BIC is the asymptotic shorthand for these computationally heavier procedures.
+</RemarkBlock>
+
+<img src="/images/topics/model-selection-and-information-criteria/24-forward-map.png"
+     alt="Forward-map diagram for Topic 24. Central hub of model selection (AIC, BIC, CV, IC ranking) with arrows out to Track 7 (Bayesian model averaging, MCMC, DIC/WAIC/PSIS-LOO, marginal likelihood), Track 8 (structural risk minimization, nonparametric selection, Rademacher complexity), and formalml.com (post-selection inference, debiased lasso, cross-fitting, double ML, high-dimensional selection, knockoffs). Back-arrows to Topic 14 (MLE), Topic 18 (LRT/Wilks), Topic 21 (linear regression), Topic 22 (GLM), Topic 23 (regularization). Track-color coded with Track 6 in blue, Track 7 in amber, Track 8 in green, formalml.com in purple."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+Topic 24 closes Track 6. Topic 21 was OLS as orthogonal projection; Topic 22 was IRLS on the exponential family; Topic 23 was penalized estimation as the rescue when those frameworks break; Topic 24 is the model-selection layer above all three. **Reciprocal framing of Topic 23**: with the effective-DOF generalization of §24.8, Topic 23's $\lambda$-indexed family becomes a continuous model space — every $\lambda > 0$ gives a model with effective parameter count $\operatorname{tr}(\mathbf{H}_\lambda)$, and Topic 23's CV-driven $\lambda$-selection is a special case of Topic 24's IC-driven model-selection framework. Topic 23 selects within a one-parameter family; Topic 24 selects across discrete or continuous candidate spaces, with a richer asymptotic theory. Track 6 ends here; the next topic shipped is Topic 25 — Track 7 opener — Bayesian Foundations.
 
 ---
 
