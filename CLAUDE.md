@@ -61,9 +61,11 @@ public/images/          # Static images organized by topic
 
 ## Commits
 
-ALWAYS create a new branch before making any commits or PRs. The branch should use a simple, descriptive naming convention for the topic being developed or the task you are assigned. Be as consistent as possible in the naming convention across topics/tasks.
+ALWAYS create a new branch before making any commits or PRs. The branch should use a simple, descriptive naming convention for the topic being developed or the task assigned to you. Be as consistent as possible in the naming convention across topics/tasks.
 
 ## Content Conventions
+
+Ask me clarification questions first, and whenever you have them during the process.
 
 ### Mathematical exposition style
 
