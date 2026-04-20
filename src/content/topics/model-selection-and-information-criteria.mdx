@@ -736,18 +736,138 @@ Thm 6 applies only to **nested** comparisons. For non-nested candidates (e.g. de
 
 ## 24.8 Effective degrees of freedom for penalized estimators
 
-{/* TODO Task 7: §24.8 prose (~800 words) — Def 7 (effective DOF),
-    Thm 7 embedded SVD derivation (ridge), Thm 8 stated (lasso, Tibshirani–Taylor 2012),
-    Ex 9 (T10.20–T10.25 ridge DOF table), Ex 10 + Fig 8 (24-lasso-aic-path.png)
-    using PROSTATE_CANCER_DATA, Rems 19–20. */}
+{/* Section opening — TODO Task 7 prose: Topic 23's penalized estimators don't
+    have an integer parameter count k — every λ shrinks the effective complexity.
+    Effective DOF generalizes k for penalized fits, allowing AIC/BIC/Cp to
+    apply to ridge and lasso paths. Discharges Topic 23 §23.8 Rem 20 (R2). */}
+
+Topic 23's penalized estimators don't have an integer parameter count: ridge shrinks every coefficient by an amount that depends on $\lambda$ and the design's singular values; lasso zeros out a data-dependent subset. **Effective degrees of freedom** generalizes the integer $k$ to a continuous notion of "how many parameters worth of freedom did the fit actually use", letting AIC/BIC/Cp apply to ridge and lasso paths. This section discharges Topic 23 §23.8 Rem 20.
+
+<DefinitionBlock number={7} title="Effective degrees of freedom (Efron 2004)">
+For a fitting procedure $\hat{\mathbf{f}}$ that maps data $\mathbf{y}$ to fitted values $\hat{\mathbf{f}}(\mathbf{y})$ on the same $n$ rows, the **effective degrees of freedom** is
+
+$$\mathrm{df}(\hat{\mathbf{f}}) \;:=\; \frac{1}{\sigma^2}\sum_{i=1}^n \operatorname{Cov}\!\left(\hat f_i, y_i\right).$$
+
+For OLS, $\mathrm{df} = p + 1$ (intercept + $p$ slopes — exactly the parameter count). For penalized estimators, $\mathrm{df}$ can be non-integer and depends continuously on the regularization parameter.
+</DefinitionBlock>
+
+<TheoremBlock number={7} title="Ridge effective DOF via SVD (embedded derivation)">
+For ridge regression on a centered design $\tilde{\mathbf{X}}$ with SVD $\tilde{\mathbf{X}} = \mathbf{U}\mathbf{D}\mathbf{V}^\top$ (singular values $d_1, \ldots, d_p > 0$), the smoother matrix is
+
+$$\mathbf{H}_\lambda \;=\; \tilde{\mathbf{X}}(\tilde{\mathbf{X}}^\top\tilde{\mathbf{X}} + \lambda\mathbf{I})^{-1}\tilde{\mathbf{X}}^\top.$$
+
+Substituting the SVD and using $\tilde{\mathbf{X}}^\top\tilde{\mathbf{X}} = \mathbf{V}\mathbf{D}^2\mathbf{V}^\top$ plus the rotational invariance of the trace:
+
+$$\mathrm{df}(\lambda) \;=\; \operatorname{tr}(\mathbf{H}_\lambda) \;=\; \sum_{j=1}^p \frac{d_j^2}{d_j^2 + \lambda}.$$
+
+The DOF is **monotone-decreasing in $\lambda$**: $\mathrm{df}(0) = p$ (unpenalized OLS), $\mathrm{df}(\lambda) \to 0$ as $\lambda \to \infty$. Equivalently and computationally cheaper, $\mathrm{df}(\lambda) = p - \lambda \cdot \operatorname{tr}((\tilde{\mathbf{X}}^\top\tilde{\mathbf{X}} + \lambda\mathbf{I})^{-1})$ via Cholesky inversion (the form `regression.ts`'s `hatMatrixTrace` uses).
+</TheoremBlock>
+
+<TheoremBlock number={8} title="Lasso effective DOF (stated; Tibshirani–Taylor 2012)">
+For lasso regression on a centered, orthonormal design (or under the more general restricted-eigenvalue conditions of WAI2019 Ch. 7), the active set $\mathcal{A}(\hat{\boldsymbol\beta})$ — the indices $j$ with $\hat\beta_j \neq 0$ — satisfies
+
+$$\mathbb{E}\!\left[\mathrm{df}(\hat{\boldsymbol\beta}_\lambda)\right] \;=\; \mathbb{E}\!\left[|\mathcal{A}(\hat{\boldsymbol\beta}_\lambda)|\right].$$
+
+The active-set size is an unbiased estimator of expected effective DOF. **Caveats:** the result fails at "knots" of the lasso path where the active set changes discontinuously, and ties in the optimization can make $|\mathcal{A}|$ data-dependent in a non-smooth way. Tibshirani & Taylor 2012 give the precise regularity statement.
+</TheoremBlock>
+
+<ExampleBlock number={9} title="Ridge effective DOF on poly $d=10$ design (T10.20–T10.25 pinned)">
+For the poly $d = 10$ design on $x \sim \mathcal{U}(0,1)$ at $n = 80$ (the canonical POLY_DGP $x$-values), the ridge effective DOF as $\lambda$ varies:
+
+| $\lambda$ | $\mathrm{df}(\lambda) = \operatorname{tr}(\mathbf{H}_\lambda)$ | Test |
+|---|---|---|
+| $0.0$ | $11.000000$ | T10.20 |
+| $0.01$ | $4.559080$ | T10.21 |
+| $0.1$ | $3.775848$ | T10.22 |
+| $1.0$ | $\mathbf{2.927366}$ | T10.23 |
+| $10.0$ | $1.961883$ | T10.24 |
+| $100.0$ | $0.851771$ | T10.25 |
+
+At $\lambda = 0$, $\mathrm{df} = 11$ exactly (intercept + 10 polynomial coefficients). Even modest regularization ($\lambda = 0.01$) drops the effective DOF by more than half — the high-order polynomial columns have small singular values and shrink rapidly under the ridge penalty.
+</ExampleBlock>
+
+<ExampleBlock number={10} title="AIC/BIC overlay on the prostate-cancer lasso path (discharges R2)">
+Refit the prostate-cancer lasso path of Topic 23 §23.9 Ex 14 ($n = 97$, $p = 8$, response `lpsa`) on a 100-point log-grid of $\lambda$. For each $\lambda$, compute $\mathrm{df}(\lambda) = |\mathcal{A}(\hat{\boldsymbol\beta}_\lambda)|$ (Thm 8) and apply
+
+$$\mathrm{AIC}(\lambda) \;=\; -2\hat\ell(\lambda) + 2\,(\mathrm{df}(\lambda) + 1), \qquad \mathrm{BIC}(\lambda) \;=\; -2\hat\ell(\lambda) + (\mathrm{df}(\lambda) + 1)\log n,$$
+
+with the $+1$ counting $\sigma^2$ per the parameter convention. Overlay the AIC, BIC, and 10-fold CV curves on the lasso path. The AIC argmin coincides with CV's $\hat\lambda_{\min}$ in the high-signal regime; BIC favors a sparser model with larger $\hat\lambda_{\text{BIC}} > \hat\lambda_{\min}$, recovering Yang's (Thm 5) consistency-vs-efficiency split on a worked example. This example is the practical fulfillment of Topic 23 §23.8 Rem 20.
+</ExampleBlock>
+
+<img src="/images/topics/model-selection-and-information-criteria/24-lasso-aic-path.png"
+     alt="Two-panel figure. Top: prostate-cancer lasso coefficient path over log λ — eight coefficient lines (lcavol, lweight, age, lbph, svi, lcp, gleason, pgg45), lcavol and lweight strongest. Bottom: AIC, BIC, and 10-fold CV curves over the same log-λ axis. Vertical reference lines at AIC argmin, BIC argmin (sparser, more right), and CV λ_min. Legend at bottom-right. Title: 'AIC and BIC overlay on the prostate-cancer lasso path'."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<RemarkBlock number={19} title="Lasso DOF caveats: ties, knots, non-smoothness">
+{/* TODO Task 7: 4–5 sentences. Tibshirani–Taylor 2012's result is asymptotic
+    and assumes regularity (RE conditions, no ties). At lasso path knots, the
+    active set transitions discontinuously and the DOF is not smoothly defined.
+    Practical implication: AIC/BIC on lasso paths are best computed at λ values
+    away from knots; some packages report a smoothed DOF instead. */}
+Thm 8's $\mathbb{E}[\mathrm{df}] = \mathbb{E}[|\mathcal{A}|]$ assumes the active set is well-defined — fine away from path knots, but at $\lambda$ values where a coefficient enters or leaves the active set, the cardinality is data-dependent in a non-smooth way. Practical AIC/BIC computations on lasso paths should evaluate at $\lambda$ values away from knots, or use a smoothed DOF estimator (e.g., debiased lasso DOF; Wainwright 2019 Ch. 11).
+</RemarkBlock>
+
+<RemarkBlock number={20} title="AIC for ridge — Li 1986 asymptotic equivalence to CV">
+{/* TODO Task 7: 3–4 sentences. Li 1986 proved AIC for ridge is asymptotically
+    equivalent to LOO-CV in the same Stone-1977 sense. So the §24.5 equivalence
+    extends from OLS to ridge. Practical implication: AIC-ridge is a valid
+    cheap alternative to CV-ridge for λ selection. */}
+Li (1986) proved an analog of Stone's Thm 4 for ridge: AIC computed with effective DOF $\operatorname{tr}(\mathbf{H}_\lambda)$ asymptotically agrees with LOO-CV for $\lambda$ selection on the Gaussian linear model. The practical implication is that AIC-ridge is a valid (and computationally cheap) alternative to CV-ridge: one fit per $\lambda$, no $n$-fold refits.
+</RemarkBlock>
 
 <a id="section-24-9"></a>
 
 ## 24.9 Worked examples
 
-{/* TODO Task 7: §24.9 prose (~1100 words) — Exs 11–13 spanning the three
-    workflows (polynomial sin DGP, nested Poisson, prostate lasso path with
-    AIC overlay), Rems 21–22. */}
+{/* Section opening — TODO Task 7 prose: three end-to-end workflows pulling
+    together everything from §§24.1–24.8. Each is the canonical applied use
+    case of one of the three procedures. */}
+
+Three end-to-end workflows pull the §§24.1–24.8 machinery into runnable applied form: a polynomial-degree comparison on simulated data (the Topic-24 canonical example), a nested-Poisson GLM (the §24.7 LRT-as-IC special case), and a lasso-path AIC/BIC overlay on the prostate-cancer dataset (§24.8 worked example).
+
+<ExampleBlock number={11} title="Polynomial sin(2πx): full ranking table">
+On POLY_DGP, the full $5 \times 13$ ranking table over $d \in [0, 12]$:
+
+| $d$ | $\mathrm{AIC}$ | $\mathrm{AICc}$ | $\mathrm{BIC}$ | $C_p$ | $\mathrm{LOO\text{-}CV}$ | $10$-fold CV |
+|---|---|---|---|---|---|---|
+| 0 | 179.0128 | — | 183.7768 | $\sim$ 859 | $\sim$ 0.522 | — |
+| 3 | 13.5077 | 14.3185 | $\mathbf{25.4179}$ | 28.3534 | 0.067936 | $\sim$ 0.069 |
+| 6 | $\mathbf{8.2633}$ | $\mathbf{10.2915}$ | 27.3196 | $\mathbf{21.4569}$ | $\mathbf{0.063835}$ | $\sim$ 0.066 |
+| 12 | 14.9845 | $\sim$ 21.45 | 48.3328 | $\sim$ 26.4 | n/a | n/a |
+
+(Bold cells are the per-criterion argmins; the $\sim$ entries are notebook-computed approximations not pinned in T10.) The argmin pattern is the canonical Yang signature: AIC, AICc, $C_p$, LOO-CV, and 10-fold CV all select $d = 6$; BIC alone selects the sparser $d = 3$. The pinned values come from T10.1–T10.11 (`regression.test.ts`).
+</ExampleBlock>
+
+<ExampleBlock number={12} title="Nested Poisson GLM walkthrough (T10.12–T10.19)">
+The nested-Poisson example of §24.7 Ex 8 is the canonical use case for the AIC ≡ LRT identification. Both AIC and BIC prefer the reduced model ($\Delta\mathrm{AIC} = 1.4453, \Delta\mathrm{BIC} = 4.7436$, both positive), and the LRT does not reject ($\mathrm{LR} = 0.5547, p \approx 0.46$). Reporting practice: state all three numbers — LR + p-value, $\Delta\mathrm{AIC}$, $\Delta\mathrm{BIC}$ — alongside the candidate-set description, so the reader can apply their own selection criterion.
+</ExampleBlock>
+
+<ExampleBlock number={13} title="Prostate lasso-path with CV vs AIC vs BIC argmins">
+Combining §24.8 Ex 10 with Topic 23 §23.9 Ex 14: on the 100-point log-grid lasso path of the prostate-cancer dataset ($n = 97$, $p = 8$), three argmin $\lambda$ values emerge:
+
+- $\hat\lambda_{\text{AIC}}$ — typically aligns with $\hat\lambda_{\min}$ from 10-fold CV (Stone-Li equivalence; §24.8 Rem 20).
+- $\hat\lambda_{\text{1SE}}$ — Topic 23's one-SE-rule choice; sparser than $\hat\lambda_{\min}$.
+- $\hat\lambda_{\text{BIC}}$ — sparser still; lies between $\hat\lambda_{\min}$ and the empty-active-set $\lambda_{\max}$.
+
+The corresponding active-set sizes order as $|\mathcal{A}(\hat\lambda_{\text{AIC}})| \geq |\mathcal{A}(\hat\lambda_{\text{1SE}})| \geq |\mathcal{A}(\hat\lambda_{\text{BIC}})|$, recovering the consistency-vs-efficiency tradeoff (§24.6 Thm 5) on a real dataset.
+</ExampleBlock>
+
+<RemarkBlock number={21} title="Production tooling">
+{/* TODO Task 7: 3–4 sentences. R: stats::AIC, stats::BIC, MASS::stepAIC.
+    Python: statsmodels.GLM.aic, sklearn.model_selection.cross_val_score +
+    KFold. Julia: StatsBase.aic, StatsBase.bic, MLBase.cross_validate.
+    All of these are wrappers around the same -2ℓ + penalty arithmetic. */}
+Standard implementations: **R** — `stats::AIC`, `stats::BIC`, `MASS::stepAIC`; **Python** — `statsmodels.GenericLikelihoodModel.aic` / `.bic`, `sklearn.model_selection.cross_val_score`; **Julia** — `StatsBase.aic`, `StatsBase.bic`, `MLBase.cross_validate`. All are wrappers around $-2\hat\ell + \text{penalty}$ with the parameter-count convention from the underlying fit object.
+</RemarkBlock>
+
+<RemarkBlock number={22} title="Reporting standards: criterion + candidate set must both be named">
+{/* TODO Task 7: 3–4 sentences. A reported "AIC = X" without the candidate set
+    is uninterpretable — AIC is only meaningful relative to the comparison set.
+    Always report the full candidate family + the criterion + the argmin index +
+    the per-criterion ranking table (or at least Δ values). */}
+A reported "AIC $= X$" without the candidate set is uninterpretable — AIC is meaningful only relative to the comparison family. Standard practice: state the candidate family, the criterion, the argmin index, and the full ranking (or at least the $\Delta$ values), so the reader can audit the selection. BUR2002 §2.6 and CLA2008 §1.2 give detailed reporting templates.
+</RemarkBlock>
 
 <a id="section-24-10"></a>
 
