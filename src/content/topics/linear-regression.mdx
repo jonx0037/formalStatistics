@@ -60,7 +60,7 @@ formalmlConnections:
     relationship: "Instrumental variables, difference-in-differences, regression discontinuity — all live in the linear-model framework where OLS + identifying restrictions give unbiased causal estimates. §21.10 Rem 27 points here; the prerequisite is §21.4's matrix form and §21.8's inference machinery."
   - topic: "high-dimensional-regression"
     site: "formalml"
-    relationship: "When $p > n$, $\\mathbf{X}^\\top \\mathbf{X}$ is singular and OLS fails. Topic 23 (ridge, lasso) is the Track-6 answer; the high-dimensional theory (double descent, minimax rates) lives at formalml. §21.10 Rem 28 states the forward pointer."
+    relationship: "When $p > n$, $\\mathbf{X}^\\top \\mathbf{X}$ is singular and OLS fails. [Topic 23](/topics/regularization-and-penalized-estimation) (ridge, lasso) is the Track-6 answer; the high-dimensional theory (double descent, minimax rates) lives at formalml. §21.10 Rem 28 states the forward pointer."
 connections:
   - topic: "likelihood-ratio-tests-and-np"
     relationship: "Topic 18 Thm 4 (Wilks, §18.6) is the asymptotic engine of §21.8's F-test. The §18.10 Track 6 promise that 'linear regression's F-test is exactly Wilks' theorem specialized to nested linear models' is the load-bearing forward-pointer this topic discharges: §21.8 Thm 9 states and proves the exact $F_{k, n-p-1}$ distribution under Normal errors as the finite-sample sharpening of Topic 18's $\\chi^2_k$ limit."
@@ -367,7 +367,7 @@ matching §21.3. The sufficient pair $(\mathbf{X}^\top \mathbf{X}, \mathbf{X}^\t
 </ExampleBlock>
 
 <RemarkBlock number={7} title="Full column rank is necessary">
-$(\mathbf{X}^\top \mathbf{X})^{-1}$ exists if and only if $\mathbf{X}$ has full column rank $p + 1$ — equivalently, no predictor is a linear combination of the others. When this fails (**perfect collinearity**), the normal equations have infinitely many solutions and OLS is undefined. In practice even near-collinearity (**multicollinearity**) destabilizes $\hat{\boldsymbol\beta}$: variances inflate, standard errors explode, individual coefficients become uninterpretable. The classical diagnostic is the **variance inflation factor** (VIF); the classical remedy is ridge regression ([Topic 23](/topics/regularization)). For Topic 21 we assume full column rank throughout.
+$(\mathbf{X}^\top \mathbf{X})^{-1}$ exists if and only if $\mathbf{X}$ has full column rank $p + 1$ — equivalently, no predictor is a linear combination of the others. When this fails (**perfect collinearity**), the normal equations have infinitely many solutions and OLS is undefined. In practice even near-collinearity (**multicollinearity**) destabilizes $\hat{\boldsymbol\beta}$: variances inflate, standard errors explode, individual coefficients become uninterpretable. The classical diagnostic is the **variance inflation factor** (VIF); the classical remedy is ridge regression ([Topic 23](/topics/regularization-and-penalized-estimation)). For Topic 21 we assume full column rank throughout.
 </RemarkBlock>
 
 <RemarkBlock number={8} title="Connection to conditional MVN — 'this is not an approximation'">
@@ -699,7 +699,7 @@ The Normal-errors assumption is the restrictive one. Binary outcomes (logistic r
 </RemarkBlock>
 
 <RemarkBlock number={23} title="Topic 23 — Ridge, Lasso, and Elastic Net">
-When $p$ is large or $\mathbf{X}$ is ill-conditioned, OLS variance explodes. **Ridge regression** adds $\lambda \|\boldsymbol\beta\|_2^2$ to the OLS objective, shrinking coefficients toward zero in exchange for bias — a direct bias-variance trade-off controlled by $\lambda$. **Lasso** uses $\lambda \|\boldsymbol\beta\|_1$ and produces exactly-zero coefficients (variable selection). **Elastic net** combines both. Topic 23 covers the penalized objective, coordinate descent solvers, the LARS path, and the cross-validated $\lambda$ selection.
+When $p$ is large or $\mathbf{X}$ is ill-conditioned, OLS variance explodes. **[Ridge regression](/topics/regularization-and-penalized-estimation#section-23-3)** adds $\lambda \|\boldsymbol\beta\|_2^2$ to the OLS objective, shrinking coefficients toward zero in exchange for bias — a direct bias-variance trade-off controlled by $\lambda$. **[Lasso](/topics/regularization-and-penalized-estimation#section-23-3)** uses $\lambda \|\boldsymbol\beta\|_1$ and produces exactly-zero coefficients (variable selection). **[Elastic net](/topics/regularization-and-penalized-estimation#section-23-5)** combines both. [Topic 23](/topics/regularization-and-penalized-estimation) covers the penalized objective, coordinate descent solvers, the LARS path, and the cross-validated $\lambda$ selection.
 </RemarkBlock>
 
 <RemarkBlock number={24} title="Topic 24 — Model Selection (AIC, BIC, CV)">
@@ -719,7 +719,7 @@ When the linearity assumption itself is too restrictive, **nonparametric regress
 </RemarkBlock>
 
 <RemarkBlock number={28} title="formalml.com — High-dimensional regression">
-When $p > n$, OLS fails and penalized methods (Topic 23) become essential. The theory of **high-dimensional regression** — sparsity rates, minimax bounds, double descent — lives at <ExternalLink site="formalml" topic="High-dimensional regression" href="https://formalml.com/topics/high-dimensional-regression" />. The modern regime where $p \gg n$ with kernel-like implicit regularization (neural networks, random features) is an active research area that Track 8 and formalml.com's theory topics touch.
+When $p > n$, OLS fails and penalized methods ([Topic 23](/topics/regularization-and-penalized-estimation)) become essential. The theory of **high-dimensional regression** — sparsity rates, minimax bounds, double descent — lives at <ExternalLink site="formalml" topic="High-dimensional regression" href="https://formalml.com/topics/high-dimensional-regression" />. The modern regime where $p \gg n$ with kernel-like implicit regularization (neural networks, random features) is an active research area that Track 8 and formalml.com's theory topics touch.
 </RemarkBlock>
 
 <img src="/images/topics/linear-regression/21-forward-map.png" alt="Track-6 spine of Topics 21–24 with forward arrows to Track 7 (Bayesian linear regression), Track 8 (nonparametric regression), formalml.com (mixed effects, causal inference, high-dimensional regression). Back-arrows to Topic 18 (Wilks) and Topic 19 (CI duality). Color-coded: Track 6 in blue, Tracks 7–8 in grey, formalml.com in amber." />

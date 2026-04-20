@@ -1,0 +1,890 @@
+---
+title: "Regularization & Penalized Estimation"
+subtitle: "When OLS and IRLS break under collinearity or separation, a penalty term on the loss restores well-posedness. Ridge gives MSE-improvement (Hoerl–Kennard 1970); lasso gives variable selection through soft-thresholding (Tibshirani 1996); elastic net combines them; coordinate descent (Tseng 2001) is the algorithmic engine, and cross-validation picks the penalty parameter."
+status: "published"
+difficulty: "intermediate"
+prerequisites:
+  - "linear-regression"
+  - "generalized-linear-models"
+  - "maximum-likelihood"
+  - "exponential-families"
+  - "hypothesis-testing"
+  - "sufficient-statistics"
+tags:
+  - "statistics"
+  - "regression"
+  - "regularization"
+  - "ridge"
+  - "lasso"
+  - "elastic-net"
+  - "soft-thresholding"
+  - "coordinate-descent"
+  - "glmnet"
+  - "cross-validation"
+  - "one-se-rule"
+  - "map-estimation"
+  - "bayesian-bridge"
+  - "weight-decay"
+  - "stein-shrinkage"
+  - "sparsity"
+  - "kkt"
+  - "subgradient"
+domain: "regression-linear-models"
+videoId: null
+notebookPath: "notebooks/regularization/23_regularization.ipynb"
+githubUrl: "https://github.com/jonx0037/formalStatistics/blob/main/src/content/topics/regularization-and-penalized-estimation.mdx"
+datePublished: 2026-04-19
+estimatedReadTime: 60
+abstract: "Track 6 opened with linear regression as orthogonal projection (Topic 21) and continued with GLMs as IRLS on the exponential family (Topic 22). Both rely on $\\mathbf{X}^\\top\\mathbf{X}$ (or $\\mathbf{X}^\\top\\mathbf{W}\\mathbf{X}$) being invertible; both fail the moment the design is collinear, rank-deficient, or near-separable. Topic 23 adds a penalty $\\lambda P(\\boldsymbol\\beta)$ to the objective and recovers everything. Ridge ($P = \\|\\boldsymbol\\beta\\|_2^2$) shrinks coefficients smoothly; lasso ($\\|\\boldsymbol\\beta\\|_1$) zeros them out; elastic net is a convex combination. The featured §23.3 pairs two theorems in the Topic-22 style: **Theorem 1 (full proof)** is Hoerl & Kennard's ridge MSE-improvement, the bias-variance tradeoff stated as a theorem; **Theorem 2 (full proof)** is Tibshirani's lasso KKT characterization, with soft-thresholding $S_\\lambda$ as the orthogonal-design corollary. §23.4 develops cyclic coordinate descent and proves Tseng's 2001 convergence theorem (full proof) — the algorithmic engine of `glmnet`. §23.5 adds elastic net and the grouping effect; §23.6 extends to penalized GLMs and demonstrates ridge restoring convergence on Topic 22's near-separation preset; §23.7 formalizes the MAP = penalized-MLE correspondence (Gaussian prior ⇒ ridge, Laplace prior ⇒ lasso) — discharging Topic 14 §14.11 Rem 9. §23.8 handles cross-validation with the one-SE rule. §23.9 runs the prostate-cancer and credit-default worked examples. §23.10 forward-maps to Topic 24 (model selection), Track 7 (Bayesian regularization), Track 8 (group / fused / sparse-group lasso), and formalml.com (high-dimensional theory, debiased lasso, weight decay, double descent). Scope: oracle inequalities, restricted-eigenvalue conditions, debiased lasso, group / fused / sparse-group lasso, SCAD / MCP, and neural-net implicit regularization are explicitly deferred."
+formalcalculusPrereqs:
+  - topic: "convex-optimization"
+    site: "formalcalculus"
+    relationship: "§23.3 Thm 2 (lasso KKT) and §23.4 Thm 6 (coord-descent convergence) both rely on subgradient calculus and the optimality conditions for convex non-smooth functions. The subgradient of $|\\beta_j|$ — single-valued $\\text{sign}(\\beta_j)$ for $\\beta_j \\neq 0$ and the interval $[-1, 1]$ at $\\beta_j = 0$ — is the load-bearing convex-analysis fact. Tseng 2001's coordinate-descent convergence theorem requires the separability hypothesis $f = g + \\sum_j h_j$ with $g$ smooth and each $h_j$ convex."
+  - topic: "matrix-calculus"
+    site: "formalcalculus"
+    relationship: "Ridge's closed-form $(\\mathbf{X}^\\top\\mathbf{X} + \\lambda\\mathbf{I})^{-1}\\mathbf{X}^\\top\\mathbf{y}$ uses the standard quadratic-form derivative $\\partial(\\mathbf{x}^\\top\\mathbf{A}\\mathbf{x})/\\partial\\mathbf{x} = (\\mathbf{A} + \\mathbf{A}^\\top)\\mathbf{x}$ from Topic 21. The §23.6 penalized-IRLS update reuses Topic 22's Hessian-of-log-likelihood machinery."
+  - topic: "multivariable-calculus"
+    site: "formalcalculus"
+    relationship: "MSE decomposition (§23.3 Proof 1) and the SVD-coordinate rotation $\\boldsymbol\\gamma = \\mathbf{V}^\\top\\boldsymbol\\beta$ require multivariate Taylor expansion and the rotational invariance of $\\|\\cdot\\|_2$. The ridge MSE-improvement proof's first-order Taylor at $\\lambda = 0$ uses the standard $f(\\lambda) = f(0) + f'(0)\\lambda + O(\\lambda^2)$ argument."
+formalmlConnections:
+  - topic: "regularization"
+    site: "formalml"
+    relationship: "§23.10 Rem 28 forward-points to the ML-scale treatment of regularization including weight decay, dropout (as implicit regularization), data augmentation, label smoothing, and early stopping. The penalty-as-prior framing of §23.7 Thm 5 generalizes: every regularizer in deep learning is a prior in disguise."
+  - topic: "weight-decay"
+    site: "formalml"
+    relationship: "§23.7 Rem 18 forward-points: weight decay in stochastic gradient descent and AdamW (decoupled weight decay) are MAP estimation with a Gaussian prior, exactly as Thm 5 says. The implementation difference between L² regularization and decoupled weight decay matters for Adam-family optimizers but not for vanilla SGD."
+  - topic: "high-dimensional-regression"
+    site: "formalml"
+    relationship: "§23.10 Rem 29 forward-points to the asymptotic theory under $p \\gg n$: oracle inequalities, restricted-eigenvalue conditions (Bickel–Ritov–Tsybakov 2009), the lasso $\\ell_2$-consistency rate (Wainwright 2019 Thm 7.13), debiased-lasso post-selection inference (Javanmard–Montanari 2014), and minimax bounds. Topic 23 stops at lasso $\\ell_2$-consistency stated-only (§23.10 Thm 7); the proofs and tightness arguments live at formalml."
+  - topic: "double-descent"
+    site: "formalml"
+    relationship: "Modern overparameterized regimes (neural networks, random-features models) violate Topic 23's $p < n$ assumption. The double-descent phenomenon — risk curve as a function of model complexity has a second descent past the interpolation threshold — is treated at formalml. Implicit regularization (SGD's bias toward minimum-norm solutions) plays the role of explicit ridge in those regimes."
+connections:
+  - topic: "linear-regression"
+    relationship: "Topic 21 established the matrix notation, OLS objective, and normal equations. §23.1 Ex 1 opens with the §21.5 multicollinearity remark failing on the prostate-cancer design — the VIF diagnostic Topic 21 prescribed motivates ridge. §23.10 Rem 25 closes by pointing back to Topic 24 for the model-selection extension. The §21.10 Rem 23 Topic-23 preview is the single most-load-bearing predecessor remark."
+  - topic: "generalized-linear-models"
+    relationship: "Topic 22 established IRLS and the canonical-link score identity. §23.6 generalizes to penalized log-likelihoods $\\ell(\\boldsymbol\\beta) - \\lambda P(\\boldsymbol\\beta)$: the IRLS outer loop is unchanged, the inner WLS is replaced by ridge or coord-descent. §23.6 Ex 8 reuses Topic 22's `EXAMPLE_10_GLM_DATA` near-separation preset to demonstrate ridge restoring convergence. §22.10 Rem 22 (full Topic 23 preview), Rem 28 (high-dim p≫n), and §22.4 Rem 8 (separation pointer) are all discharged."
+  - topic: "maximum-likelihood"
+    relationship: "Topic 14 §14.11 Rem 9 previewed the MAP-as-regularized-MLE correspondence in prose. §23.7 Thm 5 formalizes it: every prior is a penalty, every penalty is a prior. §14.7's separation warning is discharged at §23.6 Ex 8."
+  - topic: "exponential-families"
+    relationship: "Topic 7's framework underpins penalized GLMs. The Laplace prior used in §23.7 Ex 11 is itself an exponential-family member; the cumulant-function identity from Topic 7 §7.4 carries the Gaussian-prior $\\Rightarrow$ ridge calculation in §23.7 Ex 10."
+  - topic: "hypothesis-testing"
+    relationship: "Topic 17's Wald / Score / LRT trio returns in §23.6 Rem 15 as the caveat on penalized-GLM inference: standard Wald CIs are invalid under regularization (the estimator is biased), and profile-LRT CIs require care. The brief forward-points to debiased-lasso post-selection inference (formalml)."
+  - topic: "sufficient-statistics"
+    relationship: "Topic 16's framework is cited in §23.2 Rem 2 — ridge penalizes the coefficients, not the sufficient statistic; the penalty breaks equivariance under reparameterization, motivating the standardization convention (center + scale predictors before fitting)."
+references:
+  - type: "paper"
+    title: "Ridge regression: Biased estimation for nonorthogonal problems"
+    author: "Arthur E. Hoerl & Robert W. Kennard"
+    year: 1970
+    journal: "Technometrics"
+    volume: "12(1)"
+    pages: "55–67"
+    url: "https://www.jstor.org/stable/1267351"
+    note: "The foundational ridge paper. Introduces the estimator (X⊤X + λI)⁻¹ X⊤y, the ridge trace, and the MSE-improvement theorem."
+  - type: "paper"
+    title: "On the stability of inverse problems"
+    author: "Andrey N. Tikhonov"
+    year: 1943
+    journal: "Doklady Akademii Nauk SSSR"
+    volume: "39(5)"
+    pages: "195–198"
+    url: "https://mathscinet.ams.org/mathscinet-getitem?mr=0009685"
+    note: "Earliest derivation of (X⊤X + λI)⁻¹ for integral-equation regularization, 27 years before Hoerl–Kennard."
+  - type: "paper"
+    title: "Regression shrinkage and selection via the lasso"
+    author: "Robert Tibshirani"
+    year: 1996
+    journal: "Journal of the Royal Statistical Society, Series B"
+    volume: "58(1)"
+    pages: "267–288"
+    url: "https://www.jstor.org/stable/2346178"
+    note: "The lasso paper. Subgradient KKT characterization and soft-thresholding closed form."
+  - type: "paper"
+    title: "Regularization and variable selection via the elastic net"
+    author: "Hui Zou & Trevor Hastie"
+    year: 2005
+    journal: "Journal of the Royal Statistical Society, Series B"
+    volume: "67(2)"
+    pages: "301–320"
+    url: "https://www.jstor.org/stable/3647580"
+    note: "Elastic-net penalty α‖β‖₁ + (1-α)‖β‖₂² ; strict convexity for α < 1; grouping effect."
+  - type: "paper"
+    title: "Regularization paths for generalized linear models via coordinate descent"
+    author: "Jerome Friedman, Trevor Hastie & Robert Tibshirani"
+    year: 2010
+    journal: "Journal of Statistical Software"
+    volume: "33(1)"
+    pages: "1–22"
+    url: "https://www.jstatsoft.org/article/view/v033i01"
+    note: "The glmnet paper. Cyclic coordinate descent + warm-start path computation."
+  - type: "paper"
+    title: "Convergence of a block coordinate descent method for nondifferentiable minimization"
+    author: "Paul Tseng"
+    year: 2001
+    journal: "Journal of Optimization Theory and Applications"
+    volume: "109(3)"
+    pages: "475–494"
+    url: "https://doi.org/10.1023/A:1017501703105"
+    note: "Coordinate-descent convergence for convex separable-plus-smooth objectives — algorithmic foundation of §23.4 Thm 6."
+  - type: "book"
+    title: "The Elements of Statistical Learning"
+    author: "Trevor Hastie, Robert Tibshirani & Jerome Friedman"
+    year: 2009
+    edition: "2nd ed."
+    publisher: "Springer"
+    url: "https://hastie.su.domains/ElemStatLearn/"
+    note: "Ch. 3 covers ridge and lasso; Table 3.3 is the prostate-cancer dataset used in §23.9."
+  - type: "book"
+    title: "Statistical Learning with Sparsity: The Lasso and Generalizations"
+    author: "Trevor Hastie, Robert Tibshirani & Martin Wainwright"
+    year: 2015
+    publisher: "Chapman & Hall/CRC"
+    url: "https://trevorhastie.github.io/"
+    note: "Comprehensive sparse-regression monograph. Ch. 4 group lasso, Ch. 6 fused lasso — §23.10 Rem 25 deferral pointer."
+  - type: "paper"
+    title: "Inadmissibility of the usual estimator for the mean of a multivariate normal distribution"
+    author: "Charles Stein"
+    year: 1956
+    journal: "Proceedings of the Third Berkeley Symposium on Mathematical Statistics and Probability"
+    volume: "1"
+    pages: "197–206"
+    url: "https://projecteuclid.org/euclid.bsmsp/1200501656"
+    note: "Shrinkage origin — sample mean inadmissible under squared-error loss for p ≥ 3, anticipating ridge by 14 years."
+  - type: "paper"
+    title: "Bias reduction of maximum likelihood estimates"
+    author: "David Firth"
+    year: 1993
+    journal: "Biometrika"
+    volume: "80(1)"
+    pages: "27–38"
+    url: "https://doi.org/10.1093/biomet/80.1.27"
+    note: "Penalized likelihood via Jeffreys prior — alternative to ridge for separation in logistic regression."
+  - type: "paper"
+    title: "Variable selection via nonconcave penalized likelihood and its oracle properties"
+    author: "Jianqing Fan & Runze Li"
+    year: 2001
+    journal: "Journal of the American Statistical Association"
+    volume: "96(456)"
+    pages: "1348–1360"
+    url: "https://doi.org/10.1198/016214501753382273"
+    note: "SCAD non-convex penalty — §23.10 Rem 26 deferral pointer for non-convex regularization."
+  - type: "book"
+    title: "High-Dimensional Statistics: A Non-Asymptotic Viewpoint"
+    author: "Martin J. Wainwright"
+    year: 2019
+    publisher: "Cambridge University Press"
+    url: "https://www.cambridge.org/core/books/highdimensional-statistics/8A91ECEEC38F46DAB53E9FF8757C7A4E"
+    note: "Thm 7.13 gives the lasso ℓ₂-consistency rate cited at §23.10 Thm 7."
+  - type: "book"
+    title: "Testing Statistical Hypotheses"
+    author: "Erich L. Lehmann & Joseph P. Romano"
+    year: 2005
+    edition: "3rd ed."
+    publisher: "Springer"
+    url: "https://link.springer.com/book/10.1007/0-387-27605-X"
+    note: "Admissibility framework cited at §23.3 Rem 6 (ridge dominates OLS)."
+  - type: "book"
+    title: "Statistical Inference"
+    author: "George Casella & Roger L. Berger"
+    year: 2002
+    edition: "2nd ed."
+    publisher: "Duxbury"
+    url: "https://www.routledge.com/Statistical-Inference/Casella-Berger/p/book/9780534243128"
+    note: "Inherited from Topics 21–22; §7.3 (MLE), §10.1 (pivots) cited at §23.2 and §23.8."
+---
+
+import DefinitionBlock from '../../components/ui/DefinitionBlock.astro';
+import TheoremBlock from '../../components/ui/TheoremBlock.astro';
+import ProofBlock from '../../components/ui/ProofBlock.astro';
+import ExampleBlock from '../../components/ui/ExampleBlock.astro';
+import RemarkBlock from '../../components/ui/RemarkBlock.astro';
+import ExternalLink from '../../components/ui/ExternalLink.astro';
+import RegularizationPathExplorer from '../../components/viz/RegularizationPathExplorer.tsx';
+import LevelSetExplorer from '../../components/viz/LevelSetExplorer.tsx';
+import CoordinateDescentVisualizer from '../../components/viz/CoordinateDescentVisualizer.tsx';
+import CrossValidationExplorer from '../../components/viz/CrossValidationExplorer.tsx';
+
+## 23.1 When OLS and IRLS fail: collinearity and separation
+
+Topic 21 built the OLS framework on a single working assumption: $\mathbf{X}^\top\mathbf{X}$ is invertible. Topic 22 extended this to $\mathbf{X}^\top\mathbf{W}\mathbf{X}$ for IRLS. Both assumptions fail in production. The canonical failure modes are **multicollinearity** (predictors so correlated that $\det(\mathbf{X}^\top\mathbf{X}) \to 0$) and **separation** (a logistic-regression hyperplane that perfectly classifies the training data, sending $\|\hat{\boldsymbol\beta}\| \to \infty$). Both pathologies have one fix in common: add a penalty term $\lambda P(\boldsymbol\beta)$ that grows with $\|\boldsymbol\beta\|$, making the penalized objective coercive even when the unpenalized one is not.
+
+<ExampleBlock number={1} title="OLS blows up under collinearity (prostate-cancer design)">
+The prostate-cancer dataset (HTF Table 3.3, used as the running benchmark throughout this topic) has 97 patients and 8 predictors. Two of those predictors — `lcavol` (log cancer volume) and `lcp` (log capsular penetration) — are tightly correlated ($\rho \approx 0.68$). If we artificially amplify that correlation by replacing `lcp` with $\rho \cdot \text{lcavol} + \sqrt{1 - \rho^2} \cdot \text{lcp}$ for $\rho \to 1$, the OLS coefficient vector $\hat{\boldsymbol\beta}$ does not just become unstable — it diverges. The figure below tracks $\|\hat{\boldsymbol\beta}\|_2$ as a function of the artificial correlation strength: by $\rho = 0.999$ the L²-norm has grown by three orders of magnitude. Individual coefficients on `lcavol` and `lcp` swing in opposite directions, fitting noise.
+
+This is the §21.5 multicollinearity warning made concrete. The variance inflation factor (VIF) flags it; ridge regression fixes it. The cure works by adding $\lambda \|\boldsymbol\beta\|_2^2$ to the objective: the closed form $(\mathbf{X}^\top\mathbf{X} + \lambda\mathbf{I})^{-1}\mathbf{X}^\top\mathbf{y}$ is well-defined as long as $\lambda > 0$, no matter how singular $\mathbf{X}^\top\mathbf{X}$ becomes.
+</ExampleBlock>
+
+<ExampleBlock number={2} title="Logistic IRLS diverges under near-separation">
+Topic 22 §22.4 Rem 8 flagged separation as the second canonical pathology: when a hyperplane in predictor space perfectly classifies the binary response, the logistic log-likelihood is monotone-increasing along the direction $\boldsymbol\beta$, and IRLS iterates run away to $\pm\infty$. The brief promised the fix would arrive in Topic 23. Here it is.
+
+The `EXAMPLE_10_GLM_DATA` preset (n = 120, p = 2) is a near-separation problem: the two classes are almost linearly separable, with only a handful of overlap points. Bare `glmFit` from Topic 22 reports `converged = false` after the maximum iteration count — by iteration 50, $\|\boldsymbol\beta^{(t)}\|$ has crossed 100 and is still growing. Adding a ridge penalty with $\lambda = 0.1$ changes the picture immediately: convergence in around 10 outer iterations to a finite, well-determined estimate. The §23.6 Ex 8 worked example develops this in detail, but the punchline lands here in §23.1: regularization is not just a remedy for the squared-error case — it restores well-posedness for IRLS too.
+</ExampleBlock>
+
+<img src="/images/topics/regularization-and-penalized-estimation/23-motivation-ols-blowup.png"
+     alt="Two-panel motivation. Left: OLS coefficient L² norm vs artificial correlation strength on the prostate-cancer design — diverges sharply as correlation approaches 1. Right: logistic-IRLS coefficient L∞ norm vs iteration on the near-separation preset — runaway divergence past iteration 30. Both pathologies are repaired by adding a penalty term."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<RemarkBlock number={1} title="Historical note">
+Penalized estimation is older than computer-era statistics. **Tikhonov 1943** introduced $(\mathbf{X}^\top\mathbf{X} + \lambda\mathbf{I})^{-1}$ for integral-equation regularization in physics — 27 years before its statistical rediscovery. **Hoerl & Kennard 1970** put ridge on the statistical map with the MSE-improvement theorem (§23.3 Thm 1) and the ridge-trace diagnostic. **Tibshirani 1996** introduced the lasso, replacing $\|\cdot\|_2^2$ with $\|\cdot\|_1$ to obtain variable selection — a paper that has accumulated more than 40,000 citations. **Firth 1993** had earlier introduced a Jeffreys-prior penalty as a separation cure for logistic regression; it is one of two practical answers to the §23.1 Ex 2 pathology, with ridge being the other (§23.6 Rem 11). The unifying framework — penalty as additive term on the negative log-likelihood — is what we develop next.
+</RemarkBlock>
+
+<a id="section-23-2"></a>
+
+## 23.2 The penalized-objective framework
+
+> **Notation (extending §21.4 and §22.2).** Throughout Topic 23, $\lambda \ge 0$ is the **penalty parameter** and $P : \mathbb{R}^{p+1} \to \mathbb{R}_{\ge 0}$ is a convex **penalty function** ($P(\boldsymbol\beta) = \|\boldsymbol\beta\|_2^2$ for ridge, $\|\boldsymbol\beta\|_1$ for lasso, $\alpha\|\boldsymbol\beta\|_1 + (1-\alpha)\|\boldsymbol\beta\|_2^2/2$ for elastic net). The **soft-thresholding operator** is $S_\lambda(x) = \text{sign}(x)\max(|x| - \lambda, 0)$, applied componentwise to vectors. The **active set** is $\mathcal{A}(\boldsymbol\beta) = \{j : \beta_j \neq 0\}$. The **partial score** at coordinate $j$ is $s_j(\boldsymbol\beta) = \frac{1}{n}\mathbf{x}_j^\top(\mathbf{y} - \mathbf{X}\boldsymbol\beta)$. We write $\boldsymbol\beta^\star$ for the data-generating "true" coefficient and $\hat{\boldsymbol\beta}(\lambda)$ for the regularization path.
+
+<DefinitionBlock number={1} title="Ridge objective">
+The **ridge regression** estimator at penalty parameter $\lambda \ge 0$ is
+
+$$
+\hat{\boldsymbol\beta}_{\text{ridge}}(\lambda) \;=\; \arg\min_{\boldsymbol\beta \in \mathbb{R}^{p+1}}\; \tfrac12 \|\mathbf{y} - \mathbf{X}\boldsymbol\beta\|_2^2 \,+\, \tfrac{\lambda}{2} \|\boldsymbol\beta\|_2^2.
+$$
+
+The closed form, derivable by setting the gradient $-\mathbf{X}^\top(\mathbf{y} - \mathbf{X}\boldsymbol\beta) + \lambda\boldsymbol\beta$ to zero, is
+
+$$
+\hat{\boldsymbol\beta}_{\text{ridge}}(\lambda) \;=\; (\mathbf{X}^\top\mathbf{X} + \lambda\mathbf{I})^{-1}\mathbf{X}^\top\mathbf{y}.
+$$
+
+The matrix $\mathbf{X}^\top\mathbf{X} + \lambda\mathbf{I}$ is positive-definite for any $\lambda > 0$, so the estimator exists and is unique even when $\mathbf{X}$ is rank-deficient — the `regression.ts` `ridgeFit` implements exactly this closed form via Cholesky on the augmented Gram matrix. The $\tfrac{\lambda}{2}$ scaling on the penalty matches the lasso convention below ($\tfrac12$ on residuals throughout) and lines up with `sklearn.linear_model.Ridge(alpha=λ)` directly: `alpha = λ` gives identical fits.
+</DefinitionBlock>
+
+<DefinitionBlock number={2} title="Lasso objective">
+The **lasso** estimator at penalty parameter $\lambda \ge 0$ is
+
+$$
+\hat{\boldsymbol\beta}_{\text{lasso}}(\lambda) \;=\; \arg\min_{\boldsymbol\beta \in \mathbb{R}^{p+1}}\; \tfrac12 \|\mathbf{y} - \mathbf{X}\boldsymbol\beta\|_2^2 \,+\, \lambda \|\boldsymbol\beta\|_1.
+$$
+
+The `regression.ts` `lassoFit` adopts this convention (no $1/n$ on residuals); to get the same fit out of `sklearn.linear_model.Lasso(alpha)` — whose objective is $(2n)^{-1}\|\mathbf{y} - \mathbf{X}\mathbf{w}\|_2^2 + \alpha\|\mathbf{w}\|_1$ — call it with `alpha = λ/n`. There is no closed form in general; coordinate descent (§23.4) is the standard solver. Unlike ridge, the lasso produces **exact zeros** in $\hat{\boldsymbol\beta}$ — the variable-selection property, established formally in Thm 2 below.
+</DefinitionBlock>
+
+<DefinitionBlock number={3} title="Penalized MLE">
+For a general log-likelihood $\ell(\boldsymbol\beta)$ and a convex penalty $P : \mathbb{R}^{p+1} \to \mathbb{R}_{\ge 0}$, the **penalized maximum-likelihood estimator** is
+
+$$
+\hat{\boldsymbol\beta}(\lambda) \;=\; \arg\min_{\boldsymbol\beta}\; -\ell(\boldsymbol\beta) \,+\, \lambda P(\boldsymbol\beta).
+$$
+
+This is the unifying framework: ridge is the squared-error special case with $P = \|\cdot\|_2^2$; lasso is $P = \|\cdot\|_1$; penalized GLMs (§23.6) replace $-\ell$ with the GLM negative log-likelihood. The Bayesian reading via §23.7 Thm 5 is that $\lambda P(\boldsymbol\beta)$ is the negative log-prior, making penalized MLE identical to MAP estimation.
+</DefinitionBlock>
+
+<ExampleBlock number={3} title="Ridge closed-form derivation">
+Setting $\nabla_{\boldsymbol\beta}[\|\mathbf{y} - \mathbf{X}\boldsymbol\beta\|_2^2 + \lambda\|\boldsymbol\beta\|_2^2] = \mathbf{0}$:
+
+$$
+-2\mathbf{X}^\top(\mathbf{y} - \mathbf{X}\boldsymbol\beta) + 2\lambda\boldsymbol\beta = \mathbf{0}.
+$$
+
+Rearranging,
+
+$$
+(\mathbf{X}^\top\mathbf{X} + \lambda\mathbf{I})\boldsymbol\beta = \mathbf{X}^\top\mathbf{y}.
+$$
+
+The Hessian $\mathbf{X}^\top\mathbf{X} + \lambda\mathbf{I}$ is positive-definite for $\lambda > 0$, so the stationary point is the unique global minimum. Compare to OLS (Topic 21 §21.4 Thm 3): the only difference is the $\lambda\mathbf{I}$ term added to the diagonal. Geometrically, ridge replaces an ill-conditioned matrix with a well-conditioned one by inflating its smallest eigenvalues from near-zero up to at least $\lambda$.
+</ExampleBlock>
+
+<img src="/images/topics/regularization-and-penalized-estimation/23-penalty-objectives.png"
+     alt="Three penalty objective surfaces side-by-side on a 2D coefficient space (β₁, β₂). Left: ridge — circular contours center at OLS solution; the constrained solution (intersection with a circle of radius t) lies on a smooth curve. Middle: lasso — diamond contours, constrained solution lands on a corner of the L¹ ball, producing exact zeros. Right: elastic-net — egg-shaped contours combining both, smoother than lasso but still capable of corner selection."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<RemarkBlock number={2} title="Why standardization matters">
+Both ridge and lasso are **not** scale-equivariant: rescaling a predictor changes its penalty contribution. If $X_j$ is measured in centimeters, its coefficient is 100× the value it would be in meters; the lasso would shrink the centimeter-scale coefficient harder. Standard practice is to **standardize predictors before fitting** — center each $X_j$ at zero and scale to unit variance. The intercept is then absorbed by centering $y$, and the recovered coefficients are converted back to original units after the fit. The `regression.ts` implementation does this by default (`standardize: true`).
+
+This standardization preserves the geometric clarity of the penalty (every coefficient sits on the same scale) at the cost of breaking equivariance under reparameterization — the price of a penalty that ignores the model's sufficient statistic structure (Topic 16 §16.4). For genuine equivariance, one would need a scale-invariant penalty like $\sum_j |\beta_j| \cdot \text{sd}(X_j)$, which is rarely used in practice.
+</RemarkBlock>
+
+<RemarkBlock number={3} title="The intercept is never penalized">
+Standard convention — adopted by `glmnet`, sklearn, and `regression.ts` — is to **leave the intercept unpenalized**. The intuition: shifting all predictors by a constant should not change the model, but it would change the intercept; penalizing the intercept would couple the model to the location of the predictors. Mechanically, after centering $y$ and standardizing $\mathbf{X}$, the intercept becomes $\bar{y}$ and is recovered post-fit as $\hat\beta_0 = \bar{y} - \sum_j \hat\beta_j \cdot \text{mean}(X_j)$. The penalty applies only to the slope coefficients $j = 1, \dots, p$.
+</RemarkBlock>
+
+<RemarkBlock number={4} title="The SVD perspective on ridge">
+Write $\mathbf{X} = \mathbf{U}\mathbf{D}\mathbf{V}^\top$ with $\mathbf{D} = \text{diag}(d_1, \dots, d_{p+1})$ the singular values. The ridge fit can be written
+
+$$
+\hat{\boldsymbol\beta}_{\text{ridge}}(\lambda) \;=\; \mathbf{V} \cdot \text{diag}\!\left(\frac{d_j}{d_j^2 + \lambda}\right) \cdot \mathbf{U}^\top\mathbf{y}.
+$$
+
+OLS is the $\lambda = 0$ case: $\hat{\boldsymbol\beta}_{\text{OLS}} = \mathbf{V} \cdot \text{diag}(1/d_j) \cdot \mathbf{U}^\top\mathbf{y}$. Ridge replaces $1/d_j$ with $d_j/(d_j^2 + \lambda)$ — a smooth shrinkage that hits hardest where $d_j$ is small (the directions of low data variance). Lasso is non-uniform: its shrinkage acts in the original predictor coordinates, not the SVD coordinates, and produces exact zeros rather than smooth shrinkage. The two penalties differ both in *what* they shrink and *how*.
+</RemarkBlock>
+
+<a id="section-23-3"></a>
+
+## 23.3 Featured: ridge MSE-improvement and lasso KKT
+
+Topic 22's §22.3 paired two featured theorems — the canonical-link score identity and IRLS = Fisher scoring = Newton — and earned its place in the topic's structure as the load-bearing block. §23.3 mirrors that structure with two of its own.
+
+<TheoremBlock number={1} title="Ridge MSE-improvement (Hoerl–Kennard 1970)">
+Let $\boldsymbol\beta \neq \mathbf{0}$ be the true coefficient vector under the fixed-design Normal linear model $\mathbf{y} = \mathbf{X}\boldsymbol\beta + \boldsymbol\varepsilon$ with $\boldsymbol\varepsilon \sim \mathcal{N}_n(\mathbf{0}, \sigma^2\mathbf{I})$ and $\mathbf{X}$ of full column rank. Then there exists $\lambda^\star > 0$ such that for every coordinate $j$,
+
+$$
+\text{MSE}\!\left(\hat\beta_j^{\text{ridge}}(\lambda^\star)\right) \;<\; \text{MSE}\!\left(\hat\beta_j^{\text{OLS}}\right).
+$$
+
+The total MSE $\sum_j \text{MSE}(\hat\beta_j)$ is strictly smaller at $\lambda^\star$ than at $\lambda = 0$.
+</TheoremBlock>
+
+<ProofBlock>
+**Setup.** Fix $\boldsymbol\beta \neq \mathbf{0}$, $\sigma^2 > 0$, and a full-column-rank design $\mathbf{X}$. Let $\mathbf{A}(\lambda) = (\mathbf{X}^\top\mathbf{X} + \lambda\mathbf{I})^{-1}\mathbf{X}^\top\mathbf{X}$, so that $\mathbb{E}[\hat{\boldsymbol\beta}_{\text{ridge}}(\lambda)] = \mathbf{A}(\lambda)\boldsymbol\beta$ and $\text{Var}(\hat{\boldsymbol\beta}_{\text{ridge}}(\lambda)) = \sigma^2\mathbf{A}(\lambda)(\mathbf{X}^\top\mathbf{X})^{-1}\mathbf{A}(\lambda)^\top$. At $\lambda = 0$, $\mathbf{A}(0) = \mathbf{I}$ and we recover OLS: unbiased, with variance $\sigma^2(\mathbf{X}^\top\mathbf{X})^{-1}$.
+
+**Total MSE decomposition.** Writing $\text{MSE}_{\text{tot}}(\lambda) = \sum_j \mathbb{E}[(\hat\beta_j^{\text{ridge}} - \beta_j)^2] = \|\text{Bias}\|_2^2 + \text{tr}(\text{Var})$,
+
+$$
+\text{MSE}_{\text{tot}}(\lambda) \;=\; \underbrace{\|(\mathbf{A}(\lambda) - \mathbf{I})\boldsymbol\beta\|_2^2}_{\text{squared bias}} \;+\; \underbrace{\sigma^2\,\text{tr}\!\left[\mathbf{A}(\lambda)(\mathbf{X}^\top\mathbf{X})^{-1}\mathbf{A}(\lambda)^\top\right]}_{\text{total variance}}.
+$$
+
+**SVD coordinates.** Write $\mathbf{X} = \mathbf{U}\mathbf{D}\mathbf{V}^\top$ with $\mathbf{D} = \text{diag}(d_1, \dots, d_{p+1})$, $d_j > 0$. In the rotated coordinates $\boldsymbol\gamma = \mathbf{V}^\top\boldsymbol\beta$ (so $\|\boldsymbol\gamma\|_2 = \|\boldsymbol\beta\|_2$), the MSE decomposes coordinatewise:
+
+$$
+\text{MSE}_{\text{tot}}(\lambda) \;=\; \sum_{j=1}^{p+1}\!\left[\frac{\lambda^2\gamma_j^2}{(d_j^2 + \lambda)^2} \;+\; \frac{\sigma^2 d_j^2}{(d_j^2 + \lambda)^2}\right].
+$$
+
+**First-order Taylor at $\lambda = 0$.** Expanding each summand (holding $j$ fixed):
+
+- *Squared-bias contribution:* $\lambda^2\gamma_j^2 / (d_j^2 + \lambda)^2 = \lambda^2\gamma_j^2/d_j^4 + O(\lambda^3)$ — **$O(\lambda^2)$ at small $\lambda$**.
+- *Variance contribution:* $\sigma^2 d_j^2 / (d_j^2 + \lambda)^2 = \sigma^2/d_j^2 - 2\sigma^2\lambda/d_j^4 + O(\lambda^2)$ — **$O(\lambda)$ at small $\lambda$ with negative coefficient**.
+
+**Derivative at $\lambda = 0$.** Summing over $j$:
+
+$$
+\left.\frac{d\,\text{MSE}_{\text{tot}}}{d\lambda}\right|_{\lambda = 0} \;=\; -2\sigma^2 \sum_{j=1}^{p+1} \frac{1}{d_j^4} \;<\; 0.
+$$
+
+Because the derivative is strictly negative at $\lambda = 0$ and $\text{MSE}_{\text{tot}}$ is continuous (indeed smooth) in $\lambda$, there exists $\lambda^\star > 0$ with $\text{MSE}_{\text{tot}}(\lambda^\star) < \text{MSE}_{\text{tot}}(0)$.
+
+**Component-wise strengthening.** The same argument applied to each diagonal entry of the MSE matrix shows that every component $\text{MSE}(\hat\beta_j^{\text{ridge}})$ is strictly smaller than $\text{MSE}(\hat\beta_j^{\text{OLS}})$ at some $\lambda_j^\star$. Taking $\lambda^\star = \min_j \lambda_j^\star$ gives uniform strict improvement. ∎ — using the SVD decomposition of $\mathbf{X}$ (Topic 8 §8.5) and the MSE = bias² + variance decomposition (Topic 13 §13.2).
+</ProofBlock>
+
+The sign of the first-derivative term is the entire argument: variance shrinks linearly in $\lambda$ while bias grows quadratically, so for small $\lambda$ variance wins. The bias-variance tradeoff is not a vague principle but a precise inequality. The catch: $\lambda^\star$ depends on the unknown $\boldsymbol\beta$ and $\sigma^2$ — in practice, cross-validation (§23.8) picks it.
+
+<LevelSetExplorer client:visible />
+
+<TheoremBlock number={2} title="Lasso KKT characterization + soft-thresholding (Tibshirani 1996)">
+Let $\hat{\boldsymbol\beta} = \arg\min_{\boldsymbol\beta} \tfrac12\|\mathbf{y} - \mathbf{X}\boldsymbol\beta\|_2^2 + \lambda\|\boldsymbol\beta\|_1$. Define the partial score $s_j(\boldsymbol\beta) = \mathbf{x}_j^\top(\mathbf{y} - \mathbf{X}\boldsymbol\beta)$. The KKT optimality conditions are
+
+$$
+s_j(\hat{\boldsymbol\beta}) = \lambda \cdot \text{sign}(\hat\beta_j) \quad \text{for } j \in \mathcal{A}(\hat{\boldsymbol\beta}),
+$$
+
+$$
+|s_j(\hat{\boldsymbol\beta})| \le \lambda \quad \text{for } j \notin \mathcal{A}(\hat{\boldsymbol\beta}).
+$$
+
+For orthonormal designs $\mathbf{X}^\top\mathbf{X} = \mathbf{I}$, the solution has the closed form
+
+$$
+\hat\beta_j \;=\; S_\lambda\!\left(\mathbf{x}_j^\top\mathbf{y}\right),
+$$
+
+where $S_\lambda(x) = \text{sign}(x)\,\max(|x| - \lambda, 0)$ is the **soft-thresholding operator**.
+</TheoremBlock>
+
+<ProofBlock>
+**Setup.** Let $f(\boldsymbol\beta) = \tfrac12\|\mathbf{y} - \mathbf{X}\boldsymbol\beta\|_2^2 + \lambda\|\boldsymbol\beta\|_1$. The first term is convex and differentiable; the second is convex but non-differentiable at any $\beta_j = 0$. The global minimum exists (the objective is coercive and continuous) and is characterized by the subgradient optimality condition $\mathbf{0} \in \partial f(\hat{\boldsymbol\beta})$.
+
+**Subgradient of the L¹-norm.** The subgradient of $|\beta_j|$ at $\beta_j$ is
+
+$$
+\partial|\beta_j| \;=\; \begin{cases}\{\text{sign}(\beta_j)\} & \beta_j \neq 0, \\ [-1, 1] & \beta_j = 0.\end{cases}
+$$
+
+**Subgradient of $f$.** The gradient of the smooth part is $-\mathbf{X}^\top(\mathbf{y} - \mathbf{X}\boldsymbol\beta)$. Hence
+
+$$
+\partial f(\boldsymbol\beta)_j \;=\; -\mathbf{x}_j^\top(\mathbf{y} - \mathbf{X}\boldsymbol\beta) + \lambda \cdot \partial|\beta_j| \;=\; -s_j(\boldsymbol\beta) + \lambda \, \partial|\beta_j|.
+$$
+
+**KKT conditions.** Setting $\mathbf{0} \in \partial f(\hat{\boldsymbol\beta})$ coordinatewise:
+
+- *If $\hat\beta_j > 0$:*  $\;s_j(\hat{\boldsymbol\beta}) = \lambda$.
+- *If $\hat\beta_j < 0$:*  $\;s_j(\hat{\boldsymbol\beta}) = -\lambda$.
+- *If $\hat\beta_j = 0$:*  $\;s_j(\hat{\boldsymbol\beta}) \in [-\lambda, \lambda]$, i.e., $|s_j(\hat{\boldsymbol\beta})| \le \lambda$.
+
+Active coordinates carry sign-matched score equal to $\pm\lambda$; inactive coordinates have partial score bounded by $\lambda$.
+
+**Orthonormal-design corollary.** When $\mathbf{X}^\top\mathbf{X} = \mathbf{I}_{p+1}$, the partial score at $\boldsymbol\beta$ simplifies to $s_j(\boldsymbol\beta) = \mathbf{x}_j^\top\mathbf{y} - \beta_j$. Substituting into the KKT cases:
+
+- *$\hat\beta_j > 0$:*  $\;\hat\beta_j = \mathbf{x}_j^\top\mathbf{y} - \lambda$, valid when $\mathbf{x}_j^\top\mathbf{y} > \lambda$.
+- *$\hat\beta_j < 0$:*  $\;\hat\beta_j = \mathbf{x}_j^\top\mathbf{y} + \lambda$, valid when $\mathbf{x}_j^\top\mathbf{y} < -\lambda$.
+- *$\hat\beta_j = 0$:*  $\;|\mathbf{x}_j^\top\mathbf{y}| \le \lambda$.
+
+**Soft-thresholding formula.** The three cases collapse into
+
+$$
+\hat\beta_j \;=\; S_\lambda\!\left(\mathbf{x}_j^\top\mathbf{y}\right) \;=\; \text{sign}\!\left(\mathbf{x}_j^\top\mathbf{y}\right) \cdot \max\!\left(\left|\mathbf{x}_j^\top\mathbf{y}\right| - \lambda, \,0\right).
+$$
+
+(Under the standardization convention used by `lassoFit` — column-centered with $\|\mathbf{x}_j\|^2 = n$ — this generalizes to $\hat\beta_j = S_\lambda(\mathbf{x}_j^\top\mathbf{r}_{-j})/n$ on the partial residual; the algorithmic version is §23.4.) Every univariate coordinate-descent update for the lasso is one application of $S_\lambda$. ∎ — using subgradient calculus (formalCalculus: convex optimization).
+</ProofBlock>
+
+Step 4 is the headline result: the diamond-vs-circle picture in `LevelSetExplorer` literally shows active coordinates landing at $\pm\lambda$ on the diamond's edge, and inactive coordinates landing at a vertex (where the L¹-ball is non-differentiable). The §23.4 coordinate-descent algorithm is one application of the orthogonal-design formula per coordinate per sweep, using the *partial* residual instead of $\mathbf{y}$ directly.
+
+<img src="/images/topics/regularization-and-penalized-estimation/23-soft-thresholding.png"
+     alt="Soft-thresholding operator S_λ(x) plotted on the real line with the dead-zone |x| ≤ λ highlighted in light gray, and the two linear branches y = x − λ for x > λ and y = x + λ for x < −λ shown in color. The function is continuous but non-differentiable at ±λ."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<ExampleBlock number={4} title="Bias-variance decomposition on prostate-cancer">
+Plugging the prostate-cancer design into the SVD-coordinate MSE formula from Proof 1, we can compute the bias² and variance contributions to total MSE as a function of $\lambda$. At $\lambda = 0$ (OLS), bias² is zero and variance carries all the weight. As $\lambda$ grows, bias² rises quadratically while variance falls roughly proportionally to $\lambda \sum_j 1/d_j^4$. The total MSE traces a U-shape with minimum somewhere in the middle. For the prostate dataset, that minimum lies near $\lambda \approx 1$ — large enough to substantially reduce variance on the small singular values, small enough to keep bias modest.
+</ExampleBlock>
+
+<ExampleBlock number={5} title="Soft-thresholding on an orthogonal design">
+Take $\mathbf{X} = \mathbf{I}_4$ (so $\mathbf{X}^\top\mathbf{X}/n = \mathbf{I}/4$, scaling $\lambda$ by $1/4$ for cleanness — for the canonical orthogonal-design corollary). Suppose $\mathbf{y} = (3, -2, 0.5, 0.1)^\top$. Then $\frac{1}{n}\mathbf{X}^\top\mathbf{y} = (0.75, -0.5, 0.125, 0.025)^\top$. Apply soft-thresholding at $\lambda = 0.2$:
+
+$$
+\hat{\boldsymbol\beta} \;=\; S_{0.2}(0.75, -0.5, 0.125, 0.025) \;=\; (0.55, -0.3, 0, 0).
+$$
+
+The third and fourth coordinates land in the dead zone and are zeroed out — this is variable selection in action. As $\lambda$ grows, more coordinates fall into the dead zone; at $\lambda > 0.75$ the entire estimate is the zero vector. This is the geometric content of Thm 2's orthogonal-design corollary made concrete.
+</ExampleBlock>
+
+<RemarkBlock number={5} title="Bias-variance tradeoff as a theorem, not an aphorism">
+Statistics courses introduce the bias-variance tradeoff with the equation $\text{MSE} = \text{bias}^2 + \text{variance}$ and an exhortation to "find the right balance." Thm 1 sharpens this to a precise mathematical statement: for any design and any nonzero true $\boldsymbol\beta$, **some positive $\lambda$ strictly beats OLS** in total MSE — and component-wise, too. The tradeoff has a positive side: there is always free MSE on the table to be picked up by a small ridge penalty. The remaining question is how to find the right $\lambda$, which §23.8 answers.
+</RemarkBlock>
+
+<RemarkBlock number={6} title="Stein 1956: shrinkage's pre-history">
+The Hoerl–Kennard ridge MSE-improvement theorem has a 14-year-older sibling: Stein 1956's inadmissibility result. For the multivariate Normal mean problem $\mathbf{X} \sim \mathcal{N}_p(\boldsymbol\mu, \mathbf{I})$ with $p \ge 3$, the natural estimator $\bar{\mathbf{X}}$ is **inadmissible** under squared-error loss — there exist estimators (the James–Stein shrinkage family) with strictly smaller risk for every $\boldsymbol\mu$. Ridge is a covariate-version of the same idea. The Lehmann–Romano admissibility framework (LEH2005 Ch. 5) shows that in the regression setting, ridge dominates OLS for specific $\lambda$ ranges depending on $\sigma^2$ and the design. The §23.7 Rem 17 returns to the Hodges-superefficiency tie-in flagged at Topic 14 §14.6 Rem 6.
+</RemarkBlock>
+
+<RemarkBlock number={7} title="Geometric picture: ellipse vs circle, ellipse vs diamond">
+Both ridge and lasso can be re-cast as constrained optimization problems via Lagrangian duality:
+
+- *Ridge:* $\min \|\mathbf{y} - \mathbf{X}\boldsymbol\beta\|^2$ subject to $\|\boldsymbol\beta\|_2 \le t$ — minimize a quadratic on a Euclidean ball.
+- *Lasso:* $\min \|\mathbf{y} - \mathbf{X}\boldsymbol\beta\|^2$ subject to $\|\boldsymbol\beta\|_1 \le t$ — minimize a quadratic on an L¹ ball (a "diamond" in 2D, a cross-polytope in higher dimensions).
+
+The OLS solution is the center of the elliptical contours of the quadratic loss. Ridge's solution is the closest point on the Euclidean ball — a smooth shrinkage. Lasso's solution is the closest point on the diamond — and because the diamond has corners precisely where one or more coordinates are zero, the closest point typically lands on a corner. **Sparsity is the geometric consequence of the L¹ ball's vertices.** This is the picture the `LevelSetExplorer` makes interactive.
+</RemarkBlock>
+
+<img src="/images/topics/regularization-and-penalized-estimation/23-levelset-geometry.png"
+     alt="Side-by-side level-set diagrams in 2D coefficient space. Left: OLS contour ellipses tangent to a circle (ridge constraint) — tangent point is interior to the L² ball, both coefficients nonzero, smooth shrinkage. Right: same ellipses tangent to a diamond (lasso constraint) — tangent point lands on a vertex of the diamond, one coefficient exactly zero. The geometric origin of sparsity."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<RegularizationPathExplorer client:visible />
+
+<img src="/images/topics/regularization-and-penalized-estimation/23-regularization-path.png"
+     alt="Featured regularization-path figure. Two panels side-by-side: ridge coefficient trajectories β̂_j(λ) and lasso trajectories on the prostate-cancer dataset, with x-axis log(λ). Ridge paths shrink smoothly to zero as λ → ∞; lasso paths show piecewise-linear behavior with each coefficient hitting zero at its own entry-λ. Eight color-coded coefficient lines per panel, λ_min and λ_1SE markers from cross-validation."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<a id="section-23-4"></a>
+
+## 23.4 Coordinate descent and the glmnet algorithm
+
+Ridge has a closed form. Lasso does not. The standard solver is **cyclic coordinate descent** — update one coordinate at a time, holding the others fixed, sweep through all $p$ coordinates, and repeat until convergence. Friedman, Hastie & Tibshirani's `glmnet` paper (FRI2010) made this approach the production workhorse for penalized linear models and GLMs.
+
+<DefinitionBlock number={4} title="Active set">
+The **active set** of a coefficient vector $\boldsymbol\beta$ is
+
+$$
+\mathcal{A}(\boldsymbol\beta) \;=\; \{j \in \{1, \dots, p\} : \beta_j \neq 0\}.
+$$
+
+For a lasso fit $\hat{\boldsymbol\beta}_{\text{lasso}}(\lambda)$, $\mathcal{A}(\hat{\boldsymbol\beta})$ is the **selected variable set** — the predictors the procedure judges worth keeping. As $\lambda$ shrinks, $|\mathcal{A}|$ grows; at $\lambda = 0$, $\mathcal{A} = \{1, \dots, p\}$ recovers OLS.
+</DefinitionBlock>
+
+The cyclic-CD update for the lasso uses the soft-thresholding closed form (Thm 2's orthogonal-design corollary) on the *partial residual* $\mathbf{r}^{(j)} = \mathbf{y} - \mathbf{X}_{-j}\boldsymbol\beta_{-j}^{\text{current}}$:
+
+$$
+\beta_j^{\text{new}} \;=\; S_\lambda\!\left(\tfrac{1}{n}\mathbf{x}_j^\top\mathbf{r}^{(j)}\right) \,/\, \tfrac{1}{n}\|\mathbf{x}_j\|^2.
+$$
+
+Standardization makes $\|\mathbf{x}_j\|^2/n = 1$, so the denominator drops out and each coordinate update is one soft-thresholding step. A full sweep updates all $p$ coordinates; the algorithm terminates when the maximum coordinate change falls below a tolerance. With warm starts from a neighbouring $\lambda$, paths over a 100-point $\lambda$-grid are computed in essentially the time of one cold-start fit.
+
+<TheoremBlock number={6} title="Cyclic coordinate descent convergence (Tseng 2001)">
+Let $f(\boldsymbol\beta) = g(\boldsymbol\beta) + \sum_{j=1}^{p+1} h_j(\beta_j)$ where $g : \mathbb{R}^{p+1} \to \mathbb{R}$ is convex and continuously differentiable and each $h_j$ is convex (possibly non-differentiable). Assume $f$ is bounded below and coercive. Starting from $\boldsymbol\beta^{(0)}$ and updating coordinate-by-coordinate as
+
+$$
+\beta_j^{(t+1)} \;=\; \arg\min_{\beta_j} f\!\left(\beta_1^{(t+1)}, \dots, \beta_{j-1}^{(t+1)}, \beta_j, \beta_{j+1}^{(t)}, \dots, \beta_{p+1}^{(t)}\right),
+$$
+
+the sequence $\{\boldsymbol\beta^{(t)}\}$ converges to a global minimizer of $f$. The lasso objective satisfies the hypothesis with $g(\boldsymbol\beta) = \frac{1}{2n}\|\mathbf{y} - \mathbf{X}\boldsymbol\beta\|_2^2$ and $h_j(\beta_j) = \lambda|\beta_j|$.
+</TheoremBlock>
+
+<ProofBlock>
+**Setup.** $f = g + \sum_j h_j$ as in the theorem, with $g$ convex and $C^1$, each $h_j$ convex (possibly non-differentiable), and $f$ coercive. The cyclic-CD iterates are defined as in the theorem statement.
+
+**Monotone descent.** Each univariate update $\beta_j^{(t+1)} = \arg\min_{\beta_j} f(\dots, \beta_j, \dots)$ can only decrease the objective, $f(\boldsymbol\beta^{(t+1)}) \le f(\boldsymbol\beta^{(t)})$, with equality iff the previous $\beta_j^{(t)}$ already minimized the slice.
+
+**Boundedness of iterates.** Because $f$ is coercive and the iterates are monotone-descending, the sublevel set $\{\boldsymbol\beta : f(\boldsymbol\beta) \le f(\boldsymbol\beta^{(0)})\}$ is bounded. The sequence $\{\boldsymbol\beta^{(t)}\}$ is therefore bounded and admits a convergent subsequence $\boldsymbol\beta^{(t_k)} \to \boldsymbol\beta^\infty$ by Bolzano–Weierstrass.
+
+**Limit is a coordinatewise stationary point.** By continuity of the univariate $\arg\min$ map (which holds because the slices are strictly convex — $g$'s second partial in $\beta_j$ plus the $h_j$ convexity), the limit $\boldsymbol\beta^\infty$ satisfies
+
+$$
+\beta_j^\infty \;=\; \arg\min_{\beta_j} f(\beta_1^\infty, \dots, \beta_j, \dots, \beta_{p+1}^\infty)
+$$
+
+for every $j$. This is the coordinatewise stationarity condition.
+
+**Coordinatewise ⇒ global, via separability.** Because $f = g + \sum_j h_j$ with the non-smooth part **separable** (each $h_j$ depends on only one coordinate), the coordinatewise stationarity condition is equivalent to $\mathbf{0} \in \partial f(\boldsymbol\beta^\infty)$ — and for convex $f$, that is the global-minimum condition. The separability is essential: Tseng 2001 explicitly constructs counterexamples where cyclic CD on a non-separable non-smooth function fails to converge to the minimizer.
+
+**Full-sequence convergence.** Because the slice-minima are unique (strict convexity per coordinate), every convergent subsequence of $\{\boldsymbol\beta^{(t)}\}$ converges to the same global minimizer. By a standard sub-subsequence argument, the full sequence converges. ∎ — using Tseng 2001 Prop 5.1 and the lasso objective's separable structure.
+</ProofBlock>
+
+Step 5 is where the structural insight lives: coordinate descent works on the lasso because $\|\boldsymbol\beta\|_1 = \sum_j |\beta_j|$ is a sum of single-coordinate functions. It would fail on the **fused lasso** ($\sum_j |\beta_{j+1} - \beta_j|$, used for piecewise-constant signals), which couples adjacent coordinates and breaks the separability. For non-separable non-smooth penalties, proximal-gradient methods (ISTA, FISTA) take over.
+
+<CoordinateDescentVisualizer client:visible />
+
+<ExampleBlock number={6} title="Coordinate-descent trace on a 2D lasso toy">
+A two-coefficient lasso problem ($p = 2$) lets us visualize the iterate path directly. With $\mathbf{X}$ a small synthetic design and $\boldsymbol\beta^\star = (2, 1)$, the cold-start CD iterate trajectory makes a zigzag through coefficient space: each axis-aligned step minimizes one coordinate while holding the other fixed. The objective decreases monotonically (the right panel of the visualizer); the path converges to the global minimizer in around 47 coordinate updates (about 24 sweeps of 2 coordinates) at tolerance $10^{-6}$. With warm-start from the neighbouring $\lambda$, the same problem solves in 5–10 coordinate updates.
+</ExampleBlock>
+
+<img src="/images/topics/regularization-and-penalized-estimation/23-coord-descent-trace.png"
+     alt="Coordinate-descent iterate trace on a 2D lasso problem. Left panel: contour plot of the lasso objective with the iterate path overlaid as zigzag axis-aligned segments converging to the minimizer. Right panel: monotonically decreasing objective values per coordinate update step, with a logarithmic y-axis showing the rate of convergence."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<RemarkBlock number={8} title="LARS as the historical alternative">
+Before `glmnet`, the standard lasso solver was **LARS** (Least Angle Regression; Efron, Hastie, Johnstone & Tibshirani 2004). LARS computes the entire piecewise-linear regularization path exactly by tracking when each coordinate enters or leaves the active set as $\lambda$ decreases. It is elegant — the path *is* piecewise linear — but slower in practice than coordinate descent for large $p$, because each LARS step requires solving a linear system on the current active set. `glmnet` won out on engineering: cyclic CD is embarrassingly simple to vectorize, scales to $p$ in the millions, and supports any convex penalty (LARS is lasso-only). Topic 23 treats LARS as a historical pointer; for the algorithm itself, see HAS2009 §3.4.4.
+</RemarkBlock>
+
+<RemarkBlock number={9} title="Warm-start path computation">
+A defining feature of `glmnet` is **path computation with warm starts**: instead of solving for one $\lambda$ at a time from scratch, compute the path over a 100-point log-grid in one pass, using the solution at $\lambda_k$ as the starting point for $\lambda_{k+1}$. Because consecutive $\lambda$ values give nearby solutions, each warm-started fit needs only a few sweeps to converge — the per-$\lambda$ cost drops by roughly an order of magnitude. The grid runs from $\lambda_{\max} = \max_j |\mathbf{x}_j^\top\mathbf{y}/n|$ (the smallest $\lambda$ for which $\hat{\boldsymbol\beta} = \mathbf{0}$) down to $\lambda_{\min} = \lambda_{\max} \cdot 10^{-4}$. The `regularizationPath` function in `regression.ts` implements this scheme.
+</RemarkBlock>
+
+<RemarkBlock number={10} title="Strong-screening rules and proximal-gradient methods">
+For very large $p$ (gene-expression studies with $p = 10^5$ predictors), even cyclic CD becomes a bottleneck. Two acceleration techniques are widely deployed: **strong screening rules** (Tibshirani et al. 2012) eliminate predictors that the KKT conditions guarantee will be inactive at the next $\lambda$, before any coord-descent updates — a $10\times$–$100\times$ speedup. **Proximal-gradient methods** (ISTA, FISTA) take small gradient steps on the smooth part and apply soft-thresholding as the proximal operator; they generalize beyond separable non-smooth penalties (where coord descent fails) at the cost of slightly worse constants. `regression.ts` ships only the basic cyclic CD; production deployments should reach for `glmnet` or `sklearn.linear_model.{Lasso, LassoCV}` (also a CD implementation) with screening rules enabled.
+</RemarkBlock>
+
+<a id="section-23-5"></a>
+
+## 23.5 Elastic net
+
+Lasso and ridge each have a failure mode. Lasso, on highly correlated predictors, tends to pick one and zero out its companions arbitrarily — a coin-flip choice that destabilizes interpretation across bootstrap samples. Ridge gives stable weight to all correlated predictors but never produces sparsity. The **elastic net** (Zou & Hastie 2005) interpolates: a convex combination of L¹ and L² penalties.
+
+<DefinitionBlock number={5} title="Elastic-net penalty and objective">
+For $\alpha \in [0, 1]$ and $\lambda \ge 0$, the **elastic-net penalty** is
+
+$$
+P_\alpha(\boldsymbol\beta) \;=\; \alpha \|\boldsymbol\beta\|_1 \;+\; \tfrac{1 - \alpha}{2} \|\boldsymbol\beta\|_2^2,
+$$
+
+and the elastic-net objective is
+
+$$
+\hat{\boldsymbol\beta}_{\text{EN}}(\lambda, \alpha) \;=\; \arg\min_{\boldsymbol\beta}\; \tfrac12\|\mathbf{y} - \mathbf{X}\boldsymbol\beta\|_2^2 \;+\; \lambda P_\alpha(\boldsymbol\beta).
+$$
+
+$\alpha = 1$ recovers lasso ($\tfrac12\|\cdot\|^2 + \lambda\|\boldsymbol\beta\|_1$); $\alpha = 0$ recovers ridge with penalty $(\lambda/2)\|\boldsymbol\beta\|^2$ — matching Def 1's convention exactly. For $\alpha \in (0, 1)$, the penalty is strictly convex even when $\mathbf{X}^\top\mathbf{X}$ is rank-deficient — a property ridge has but lasso does not.
+</DefinitionBlock>
+
+<TheoremBlock number={3} title="Elastic-net strict convexity (Zou-Hastie 2005)">
+For any $\alpha \in [0, 1)$ and $\lambda > 0$, the elastic-net objective is strictly convex in $\boldsymbol\beta$, and the minimizer $\hat{\boldsymbol\beta}$ is unique — regardless of the rank of $\mathbf{X}$.
+
+*Brief argument:* the Hessian of the smooth part is $\frac{1}{n}\mathbf{X}^\top\mathbf{X} + \lambda(1-\alpha)\mathbf{I}$, which is positive-definite whenever $\lambda(1-\alpha) > 0$. The L¹ term is convex (subdifferentiably), so the full objective is strictly convex. ZOU2005 Thm 1.
+</TheoremBlock>
+
+<ExampleBlock number={7} title="Grouping effect on correlated features">
+Take a synthetic problem with three pairs of perfectly correlated predictors plus four independent ones (the `CORRELATED_FEATURES_DATA` preset). The true coefficient is nonzero only at $X_1$ and $X_3$ — both members of correlated pairs. Lasso, run at the CV-optimal $\lambda$, picks one predictor from each correlated pair and zeros the other — and which one it picks varies arbitrarily across bootstrap samples. Elastic net with $\alpha = 0.5$ at the same effective penalty strength assigns nonzero weight to all four members of the correlated pairs, distributing weight across the group. The grouping effect: correlated predictors get similar coefficients, and the active set is more stable.
+</ExampleBlock>
+
+<RemarkBlock number={11} title="Grouping effect formalized">
+Zou & Hastie 2005 prove that for any two predictors $X_j$ and $X_k$ with $\mathbf{X}^\top\mathbf{x}_j = \mathbf{X}^\top\mathbf{x}_k$ (a strong correlation condition), the elastic-net coefficients satisfy
+
+$$
+|\hat\beta_j - \hat\beta_k| \;\le\; \frac{\sqrt{2(1 - \rho)}}{\lambda(1-\alpha)} \cdot \frac{\|\mathbf{y}\|}{n}
+$$
+
+where $\rho$ is the correlation. As correlation $\rho \to 1$, the bound forces $\hat\beta_j \to \hat\beta_k$ — the coefficients are pulled together. For pure lasso ($\alpha = 1$), the bound is vacuous (denominator zero), which is why lasso lacks the grouping effect.
+</RemarkBlock>
+
+<RemarkBlock number={12} title="The (α, λ) parameter plane">
+Elastic net introduces a second hyperparameter, $\alpha$, on top of $\lambda$. Most production workflows fix a small grid of $\alpha$ values ($\alpha \in \{0.1, 0.5, 0.9\}$, say), run cross-validation to pick $\lambda$ for each, and choose the combination with smallest CV error. The 2D grid is more expensive than the 1D lasso/ridge search but rarely prohibitively so. The figure shows the $(\alpha, \lambda)$ parameter plane on the prostate-cancer data, with CV-error contours and the optimal point marked.
+</RemarkBlock>
+
+<img src="/images/topics/regularization-and-penalized-estimation/23-elasticnet-plane.png"
+     alt="Elastic-net (α, λ) parameter plane heatmap on the prostate-cancer dataset. X-axis: log λ; y-axis: α from 0 (ridge) to 1 (lasso); color encodes 10-fold CV mean squared error. Optimal (α*, λ*) marked with crosshairs. The lasso boundary (α = 1) and ridge boundary (α = 0) labeled."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<a id="section-23-6"></a>
+
+## 23.6 Penalized GLMs
+
+Topic 22's IRLS framework extends to penalized GLMs essentially unchanged. Replace the negative log-likelihood with the penalized version, and the inner WLS step becomes a penalized WLS step.
+
+<DefinitionBlock number={6} title="Penalized-GLM objective">
+For a GLM with log-likelihood $\ell(\boldsymbol\beta)$ (Topic 22 Def 3) and a convex penalty $P$, the **penalized-GLM estimator** is
+
+$$
+\hat{\boldsymbol\beta}(\lambda) \;=\; \arg\min_{\boldsymbol\beta}\; -\ell(\boldsymbol\beta) \;+\; \lambda P(\boldsymbol\beta).
+$$
+
+For ridge, $P = \|\boldsymbol\beta\|_2^2$; for lasso, $P = \|\boldsymbol\beta\|_1$; for elastic net, $P_\alpha$ as in Def 5. The unpenalized intercept convention applies as usual.
+</DefinitionBlock>
+
+<TheoremBlock number={4} title="Penalized-IRLS update">
+Under a canonical link and a convex sub-differentiable penalty $P$, the penalized-IRLS update at iteration $t$ solves
+
+$$
+\boldsymbol\beta^{(t+1)} \;=\; \arg\min_{\boldsymbol\beta}\; (\mathbf{z}^{(t)} - \mathbf{X}\boldsymbol\beta)^\top \mathbf{W}^{(t)} (\mathbf{z}^{(t)} - \mathbf{X}\boldsymbol\beta) \;+\; 2\lambda P(\boldsymbol\beta),
+$$
+
+where $\mathbf{W}^{(t)}$ and $\mathbf{z}^{(t)} = \boldsymbol\eta^{(t)} + \mathbf{W}^{(t)\,-1}(\mathbf{y} - \boldsymbol\mu^{(t)})$ are Topic 22 Thm 2's IRLS weights and adjusted response. For $P = \|\cdot\|_2^2$ this is a ridge-WLS problem with closed form $(\mathbf{X}^\top\mathbf{W}\mathbf{X} + 2\lambda\mathbf{I})^{-1}\mathbf{X}^\top\mathbf{W}\mathbf{z}$. For $P = \|\cdot\|_1$ it is a weighted-lasso coord-descent inner pass.
+
+*Brief derivation:* a second-order Taylor expansion of $-\ell$ around $\boldsymbol\beta^{(t)}$ produces the WLS quadratic surrogate exactly as in Topic 22 Proof 2; adding $2\lambda P(\boldsymbol\beta)$ gives the penalized surrogate. Minimizing the surrogate is the next IRLS step. Convergence proceeds as in Tseng 2001 with the surrogate playing the role of $f$.
+</TheoremBlock>
+
+<ExampleBlock number={8} title="Ridge-logistic restores convergence on near-separation">
+The `EXAMPLE_10_GLM_DATA` preset (n = 120, p = 2) is the near-separation problem from §23.1 Ex 2. Topic 22's bare `glmFit` reports `converged = false` after 50 iterations: $\|\boldsymbol\beta^{(t)}\|$ has crossed 100 and is still growing. Calling `penalizedGLMFit` with `family: 'binomial'`, `link: 'logit'`, `penalty: 'ridge'`, `lambda: 0.1` instead converges in around 10 outer IRLS iterations to a finite estimate $\hat{\boldsymbol\beta}$ with $\|\hat{\boldsymbol\beta}\|_\infty \approx 1$ — a small fraction of what the unpenalized fit would have produced. The ridge penalty makes the otherwise non-coercive objective coercive; the IRLS surrogate is then guaranteed to have a unique bounded minimizer at every step.
+</ExampleBlock>
+
+<img src="/images/topics/regularization-and-penalized-estimation/23-ridge-separation-fix.png"
+     alt="Side-by-side comparison of bare logistic IRLS (left) and ridge-logistic penalized IRLS (right) on the near-separation preset. Left panel: coefficient L∞ norm ‖β^(t)‖ vs IRLS iteration, growing without bound past iteration 30 in red. Right panel: same axes, ridge penalty (λ=0.1) applied — convergence to a bounded estimate around iteration 10 in green. Cross-symbols mark convergence."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<ExampleBlock number={9} title="Lasso-Poisson on polynomial-expanded credit-default">
+The Topic 22 `EXAMPLE_6_GLM_DATA` (credit-default logistic, n = 200, p = 2) becomes a high-dimensional problem when its predictors are expanded to degree 3 polynomials. The expanded design has p = 34 features (the `CREDIT_DEFAULT_EXPANDED_DATA` preset). Fitting a lasso-logistic at the CV-selected $\lambda$ produces a sparse $\hat{\boldsymbol\beta}$ with around 6–10 active coefficients, automatically selecting the polynomial terms that contribute predictive signal. Pure logistic regression on the expanded design overfits badly; lasso-logistic regularizes both selection and shrinkage in one pass.
+</ExampleBlock>
+
+<RemarkBlock number={11} title="Firth 1993 as the alternative for separation">
+Ridge is one cure for logistic-regression separation; **Firth's penalized likelihood** (FIR1993) is the other. Firth replaces the log-likelihood with $\ell(\boldsymbol\beta) + \tfrac12 \log|\mathbf{I}(\boldsymbol\beta)|$ where $\mathbf{I}$ is the Fisher information — equivalent to a Jeffreys prior on $\boldsymbol\beta$. This penalty bounds the estimator without requiring a tuning parameter. In practice, Firth is the default in many epidemiology workflows where a single hyperparameter-free fix is preferred; ridge wins when cross-validation is feasible and the user wants explicit control over the bias-variance tradeoff. Topic 23 develops only the ridge cure; `logistf` in R implements Firth.
+</RemarkBlock>
+
+<RemarkBlock number={12} title="Shrinkage as influence control">
+Topic 22 §22.9 Rem 19 flagged influential observations and outliers as a robustness concern, and pointed forward to two cures: M-estimation (defer to a future topic) and shrinkage. Ridge is the shrinkage answer: by penalizing $\|\boldsymbol\beta\|$, it limits the leverage that any single observation can exert on individual coefficients. The §22.9 Rem 19 promise is discharged here. Lasso gives a different kind of robustness: by zeroing weak signals, it makes the surviving coefficients depend on stronger structural patterns rather than noise-driven fluctuations.
+</RemarkBlock>
+
+<RemarkBlock number={13} title="Inference under regularization is hazardous">
+A standard mistake: read off Wald confidence intervals from a penalized estimator using $(\mathbf{X}^\top\mathbf{W}\mathbf{X})^{-1}$ as if the penalty did not exist. **This is wrong.** The penalty introduces bias $\mathbb{E}[\hat{\boldsymbol\beta}] - \boldsymbol\beta \neq 0$, breaking the central condition for Wald inference. Profile-likelihood CIs on penalized estimators have similar issues. The correct procedure for inference under regularization is **post-selection inference** — selecting variables with lasso, then refitting unpenalized OLS on the selected variables (with caveats), or using the **debiased lasso** (Javanmard–Montanari 2014). Topic 23 stops at the warning; the methodology lives at formalml's high-dimensional regression topic.
+</RemarkBlock>
+
+<a id="section-23-7"></a>
+
+## 23.7 The Bayesian bridge: MAP = penalized MLE
+
+Topic 14 §14.11 Rem 9 previewed the correspondence in prose: every penalty is a prior; every prior is a penalty. The §23.7 theorem makes that exact.
+
+<DefinitionBlock number={7} title="MAP estimate">
+For a likelihood $L(\boldsymbol\beta)$ and a prior $\pi(\boldsymbol\beta)$, the **maximum a-posteriori (MAP) estimate** is the mode of the posterior:
+
+$$
+\hat{\boldsymbol\beta}_{\text{MAP}} \;=\; \arg\max_{\boldsymbol\beta}\, p(\boldsymbol\beta \mid \mathbf{y}) \;=\; \arg\max_{\boldsymbol\beta}\, [\ell(\boldsymbol\beta) + \log\pi(\boldsymbol\beta)].
+$$
+
+The proportionality constant $p(\mathbf{y})$ drops out of the argmax. The MAP coincides with the posterior mean only for symmetric posteriors (e.g. Gaussian); otherwise the two diverge.
+</DefinitionBlock>
+
+<TheoremBlock number={5} title="MAP-penalization correspondence">
+Let the prior density be $\pi(\boldsymbol\beta) = C \exp(-\lambda P(\boldsymbol\beta))$ for normalizing constant $C$ and convex $P$. Then
+
+$$
+\hat{\boldsymbol\beta}_{\text{MAP}} \;=\; \arg\min_{\boldsymbol\beta}\, [-\ell(\boldsymbol\beta) + \lambda P(\boldsymbol\beta)] \;=\; \hat{\boldsymbol\beta}_{\text{penalized MLE}}.
+$$
+
+*Embedded derivation.* The posterior is $p(\boldsymbol\beta \mid \mathbf{y}) \propto L(\boldsymbol\beta) \pi(\boldsymbol\beta)$. Taking logs, $\log p(\boldsymbol\beta \mid \mathbf{y}) = \ell(\boldsymbol\beta) - \lambda P(\boldsymbol\beta) + \text{const}$. The MAP maximizes this expression — equivalently, minimizes $-\ell + \lambda P$, which is the penalized-MLE objective. ∎
+
+**Specializations.** The Gaussian prior $\pi(\boldsymbol\beta) = \mathcal{N}_{p+1}(\mathbf{0}, \tau^2\mathbf{I})$ gives $\log\pi(\boldsymbol\beta) = -\|\boldsymbol\beta\|_2^2/(2\tau^2) + \text{const}$ — that is, ridge with $\lambda = 1/(2\tau^2)$. The Laplace prior $\pi(\boldsymbol\beta) = \prod_j \frac{1}{2b}\exp(-|\beta_j|/b)$ gives $\log\pi(\boldsymbol\beta) = -\|\boldsymbol\beta\|_1/b + \text{const}$ — that is, lasso with $\lambda = 1/b$. Discharges Topic 14 §14.11 Rem 9.
+</TheoremBlock>
+
+<ExampleBlock number={10} title="Gaussian prior gives ridge">
+Suppose we observe $y_i = \mathbf{x}_i^\top\boldsymbol\beta + \varepsilon_i$ with $\varepsilon_i \overset{\text{iid}}{\sim} \mathcal{N}(0, \sigma^2)$, and place a Gaussian prior $\boldsymbol\beta \sim \mathcal{N}_{p+1}(\mathbf{0}, \tau^2\mathbf{I})$. The log-posterior is
+
+$$
+\log p(\boldsymbol\beta \mid \mathbf{y}) \;=\; -\tfrac{1}{2\sigma^2}\|\mathbf{y} - \mathbf{X}\boldsymbol\beta\|_2^2 \;-\; \tfrac{1}{2\tau^2}\|\boldsymbol\beta\|_2^2 \;+\; \text{const}.
+$$
+
+The MAP — equivalently, minimizing $-\log p$ — is the ridge solution with $\lambda = \sigma^2/\tau^2$. Smaller $\tau^2$ (tighter prior on coefficients) means larger $\lambda$ (heavier shrinkage). The ridge regularization parameter is the prior-precision-to-noise-precision ratio.
+</ExampleBlock>
+
+<ExampleBlock number={11} title="Laplace prior gives lasso">
+With the same likelihood but a Laplace prior $\beta_j \overset{\text{iid}}{\sim} \text{Laplace}(0, b)$, the log-posterior is
+
+$$
+\log p(\boldsymbol\beta \mid \mathbf{y}) \;=\; -\tfrac{1}{2\sigma^2}\|\mathbf{y} - \mathbf{X}\boldsymbol\beta\|_2^2 \;-\; \tfrac{1}{b}\|\boldsymbol\beta\|_1 \;+\; \text{const}.
+$$
+
+The MAP is the lasso solution with $\lambda = \sigma^2/b$. The Laplace prior — sharply peaked at zero with heavy tails — encodes the prior belief that "most coefficients are zero, but those that aren't can be large." That is exactly the sparsity intuition lasso operationalizes.
+</ExampleBlock>
+
+<img src="/images/topics/regularization-and-penalized-estimation/23-map-priors.png"
+     alt="Three prior densities side-by-side: Gaussian (smooth bell shape, peaked at 0), Laplace (sharp peak at 0 with exponential tails), and Cauchy (heavier tails than Laplace, no second moment). Each labeled with its corresponding penalty equivalence: Gaussian ⇒ ridge L², Laplace ⇒ lasso L¹, Cauchy ⇒ heavier-tailed shrinkage with no closed form."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<RemarkBlock number={14} title="Cauchy prior: heavier tails, no closed form">
+A natural extension of the Gaussian/Laplace pair is the **Cauchy prior** $\pi(\beta_j) \propto 1/(1 + (\beta_j/c)^2)$, used by Gelman et al. 2008 as a default weakly-informative prior for logistic-regression coefficients. Cauchy has heavier tails than Laplace, expressing greater prior tolerance for occasional large coefficients while still pulling small ones toward zero. The Cauchy MAP has no closed-form penalty equivalent — the resulting objective is non-convex — and requires numerical optimization. The general lesson: the Gaussian–Laplace dichotomy is the convex special case of a much richer prior-as-penalty correspondence.
+</RemarkBlock>
+
+<RemarkBlock number={15} title="Hodges superefficiency tie-back">
+Topic 14 §14.6 Rem 6 introduced **Hodges superefficiency**: an estimator that beats the Cramér–Rao bound at a single point (e.g. $\boldsymbol\beta = \mathbf{0}$) by being shrinkage-like there. Ridge and lasso are exactly such estimators — they have superior MSE near $\boldsymbol\beta = \mathbf{0}$ at the cost of bias elsewhere. Le Cam's discrediting of superefficient estimators in the 1950s was based on their pathological behavior at non-shrinkage targets; the modern MSE-improvement view (Thm 1) reframes the same algebra as a virtue. The Stein-shrinkage origin paper (STE1956) was the first to take the bias-for-variance trade seriously; ridge and lasso are its modern descendants.
+</RemarkBlock>
+
+<RemarkBlock number={16} title="The regularization parameter as prior precision">
+Thm 5 makes a crisp identification: $\lambda$ is the prior precision (inverse variance) per coefficient. The empirical-Bayes view says: choose $\lambda$ to maximize the marginal likelihood $p(\mathbf{y}) = \int L(\boldsymbol\beta)\pi(\boldsymbol\beta)\,d\boldsymbol\beta$, treating $\lambda$ as a hyperparameter of the prior. Cross-validation (§23.8) is a frequentist alternative that estimates predictive risk directly. Both procedures pick a $\lambda$ that adapts to the data; they typically agree to within an order of magnitude, with empirical-Bayes preferring slightly smaller $\lambda$ (less shrinkage).
+</RemarkBlock>
+
+<RemarkBlock number={17} title="Weight decay and AdamW">
+In neural-network training, the term **weight decay** denotes the addition of $\lambda \|\mathbf{w}\|_2^2$ to the loss — Gaussian prior MAP, by Thm 5. Equivalently, gradient-descent updates with multiplicative decay $\mathbf{w}_{t+1} = (1 - \eta\lambda)\mathbf{w}_t - \eta\nabla\mathcal{L}$ implement L² regularization for vanilla SGD (the implementation differs subtly for Adam-family optimizers, motivating decoupled weight decay in **AdamW**). Every modern deep-learning optimizer ships with a weight-decay knob; tuning it is one of the most reliable ways to improve generalization. Forward-pointer to formalml's weight-decay topic.
+</RemarkBlock>
+
+<a id="section-23-8"></a>
+
+## 23.8 Cross-validation for $\lambda$ selection
+
+The penalty parameter $\lambda$ controls the bias-variance tradeoff. Choosing it well requires an estimate of out-of-sample predictive performance — exactly what cross-validation provides.
+
+<DefinitionBlock number={8} title="k-fold cross-validation estimator">
+Partition the data into $k$ disjoint folds via a fold-assignment map $\kappa: \{1, \dots, n\} \to \{1, \dots, k\}$. Let $\hat{f}^{-\kappa}(\cdot ; \lambda)$ denote the penalized estimator trained on all data except fold $\kappa$. The **$k$-fold CV estimator** is
+
+$$
+\widehat{\text{CV}}_k(\lambda) \;=\; \frac{1}{n}\sum_{i=1}^n L\!\left(y_i, \hat{f}^{-\kappa(i)}(\mathbf{x}_i; \lambda)\right),
+$$
+
+where $L$ is the per-observation loss (squared error for regression, deviance for GLMs).
+</DefinitionBlock>
+
+The CV curve $\widehat{\text{CV}}_k(\lambda)$ traces a U-shape as a function of $\log\lambda$: high $\lambda$ over-shrinks (high bias), low $\lambda$ under-regularizes (high variance), and the minimum sits in the middle. Two standard rules pick $\lambda$ from the curve:
+
+- **$\hat\lambda_{\min}$** — the $\lambda$ minimizing $\widehat{\text{CV}}_k$. Usually chosen for prediction-focused workflows.
+- **$\hat\lambda_{\text{1SE}}$** — the largest $\lambda$ such that $\widehat{\text{CV}}_k(\lambda) \le \widehat{\text{CV}}_k(\hat\lambda_{\min}) + \widehat{\text{SE}}(\hat\lambda_{\min})$. Chooses a parsimonious model that is statistically indistinguishable from the best.
+
+<ExampleBlock number={12} title="$k = 5$ vs $k = 10$ on prostate-cancer">
+Running 5-fold and 10-fold CV on the prostate-cancer lasso path with seed 42 gives slightly different $\hat\lambda_{\min}$ values, but typically the same order of magnitude. 10-fold CV has lower bias (more data per fit) but higher variance (smaller test folds); 5-fold has the opposite tradeoff. For $n < 100$, the variance of $\hat\lambda_{\min}$ across CV runs is usually larger than the bias from choosing one $k$ over the other. 10-fold is the modern default.
+</ExampleBlock>
+
+<ExampleBlock number={13} title="One-SE rule in action">
+On the prostate dataset, 10-fold lasso CV identifies $\hat\lambda_{\min}$ at a small value where most of the 8 predictors enter the active set. Applying the one-SE rule shifts to a substantially larger $\hat\lambda_{\text{1SE}}$ where only 4–5 predictors remain — a sparser, more interpretable model whose CV performance is statistically indistinguishable. The one-SE rule's aggressive bias toward sparsity is a feature when interpretation matters (e.g. variable importance for medical research) and a bug when prediction is the only goal.
+</ExampleBlock>
+
+<img src="/images/topics/regularization-and-penalized-estimation/23-cv-curve.png"
+     alt="Cross-validation curve for lasso on prostate-cancer dataset. X-axis: log λ; y-axis: 10-fold mean squared error with one-SE error bars at each λ. U-shape with minimum at λ_min marked with a vertical dashed line; one-SE threshold horizontal line; λ_1SE marked with a second vertical dashed line at the largest λ within one SE of the minimum. Right panel shows active-set size as a function of λ — staircase descending from p = 8 to 0."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<CrossValidationExplorer client:visible />
+
+<RemarkBlock number={18} title="One-SE rule formal statement">
+Letting $\widehat{\text{SE}}(\lambda) = \text{sd}(\widehat{\text{CV}}_k^{(f)}(\lambda)) / \sqrt{k}$ be the empirical standard error of the per-fold deviances at $\lambda$, the one-SE rule is
+
+$$
+\hat\lambda_{\text{1SE}} \;=\; \max\!\left\{\lambda \;:\; \widehat{\text{CV}}_k(\lambda) \le \min_\lambda \widehat{\text{CV}}_k(\lambda) + \widehat{\text{SE}}\!\left(\hat\lambda_{\min}\right)\right\}.
+$$
+
+This is Breiman, Friedman, Olshen & Stone (CART 1984) Section 3.4. The rule is deliberately conservative — it picks the sparsest model whose predictive performance falls within sampling noise of the best.
+</RemarkBlock>
+
+<RemarkBlock number={19} title="Nested CV for honest generalization-error estimation">
+A subtle pitfall: if you choose $\lambda$ by CV and then report the same CV curve's minimum value as your "test error," you've leaked tuning information into the test estimate. **Nested cross-validation** fixes this: an outer CV loop estimates generalization error, and within each outer fold, an inner CV loop selects $\lambda$. The outer CV's mean error is then an honest estimate of generalization performance. Topic 24 develops nested CV in the broader model-selection context; it's mentioned here so the reader avoids the over-optimistic shortcut.
+</RemarkBlock>
+
+<RemarkBlock number={20} title="AIC, BIC, $C_p$ as alternative selectors">
+Cross-validation is one way to pick $\lambda$. Information criteria — AIC ($-2\ell + 2k$), BIC ($-2\ell + k\log n$), Mallow's $C_p$ — are alternatives that estimate out-of-sample risk via a complexity penalty rather than data-splitting. For penalized estimators, the effective number of parameters $k$ is replaced by the trace of the smoother matrix (ridge) or the size of the active set (lasso, with caveats). Topic 24 develops the asymptotic theory; for now the take-away is that AIC/BIC/CV typically give similar answers in the high-signal regime and diverge in the low-signal regime, with BIC favoring sparser models.
+</RemarkBlock>
+
+<a id="section-23-9"></a>
+
+## 23.9 Worked examples: prostate-cancer and credit-default
+
+This section closes the loop on the running examples by walking through two complete penalized-regression workflows.
+
+<ExampleBlock number={14} title="Prostate-cancer ridge + lasso paths (HTF Table 3.3)">
+The HTF Table 3.3 prostate-cancer dataset has 97 patients and 8 predictors; the response is `lpsa`. The standard workflow:
+
+1. Standardize predictors (centered and scaled to unit variance).
+2. Compute the regularization path on a 100-point log-grid $\lambda_{\min} = 10^{-4} \cdot \lambda_{\max}$.
+3. Run 10-fold CV with seed 42 to identify $\hat\lambda_{\min}$ and $\hat\lambda_{\text{1SE}}$.
+4. Refit on the full data at each chosen $\lambda$ to get the final coefficient estimates.
+
+The ridge path shows smooth shrinkage: every coefficient starts near OLS at small $\lambda$ and decays smoothly toward zero. The lasso path is piecewise linear: each coefficient enters the active set at its own $\lambda$, with the strongest signals (`lcavol`, `lweight`) entering first and weaker ones (`gleason`, `pgg45`) entering only at small $\lambda$. At $\hat\lambda_{\text{1SE}}$, the lasso retains 4–5 predictors; ridge keeps all 8 with shrunken weights. The two estimators agree on the leading coefficients but diverge in their treatment of the marginal predictors.
+</ExampleBlock>
+
+<img src="/images/topics/regularization-and-penalized-estimation/23-prostate-paths.png"
+     alt="Full prostate-cancer worked-example figure. Two-panel ridge and lasso regularization paths, eight coefficient lines per panel, x-axis log λ, vertical dashed lines at λ_min (shorter) and λ_1SE (longer) from 10-fold CV. Coefficient labels at the right edge of each panel showing predictor names (lcavol, lweight, age, lbph, svi, lcp, gleason, pgg45). Active-set size annotated below the x-axis."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<ExampleBlock number={15} title="Lasso-Poisson on credit-default polynomial expansion">
+Topic 22's `EXAMPLE_6_GLM_DATA` has 200 observations and 2 raw predictors. Expanding to degree-3 polynomial features gives 34 columns — a high-dimensional regime where unpenalized logistic regression would overfit. Lasso-logistic regression at the CV-optimal $\lambda$ selects 6–10 features automatically: the linear and squared terms in the original predictors, a handful of cross-terms, and a few cubic terms. The remaining $\sim 24$ polynomial features are zeroed out. This is the practical workflow that justifies the brief's "high-dimensional p ≫ n" promise from Topic 22 §22.10 Rem 28: penalized GLMs make polynomial-feature expansion a viable modeling strategy.
+</ExampleBlock>
+
+<RemarkBlock number={21} title="Coefficient interpretation under shrinkage">
+A standard error: reading $\hat\beta_j^{\text{ridge}}$ as if it were an unbiased estimate of $\beta_j$. **It is not.** The ridge estimator is biased toward zero by design — that is the source of its variance reduction. The right interpretation: $\hat\beta_j^{\text{ridge}}$ is a posterior mode under a Gaussian prior with mean zero, telling you the predictor's contribution *after* regularizing for likely small effects. Lasso is even more aggressive: $\hat\beta_j = 0$ does not mean the predictor has no effect, just that the data doesn't provide enough evidence to overcome the L¹ penalty's threshold. Selected variables can be reported as "the lasso identified these as relevant," but their numerical coefficient values should be interpreted with the bias caveat.
+</RemarkBlock>
+
+<RemarkBlock number={22} title="Production tooling">
+The penalized-estimation universe has a small number of canonical implementations:
+
+- **`glmnet`** (R, also Python via `glmnet-python`) — Friedman, Hastie & Tibshirani's reference implementation. Cyclic coord descent + warm-start path + screening rules + auto CV. The benchmark.
+- **`sklearn.linear_model.{Ridge, Lasso, ElasticNet, RidgeCV, LassoCV, ElasticNetCV}`** (Python) — coord-descent (lasso/elasticnet) and direct solver (ridge); CV variants automate $\lambda$ selection. Slightly slower than `glmnet` for very large $p$ but vastly more convenient for sklearn pipelines.
+- **`MLJLinearModels.jl`** (Julia) — fast, supports a wider variety of penalties.
+- **`regression.ts`** (this codebase) — a faithful reimplementation of the core algorithms for browser-side computation in interactive components. Not a production solver — for real workloads, use one of the above.
+</RemarkBlock>
+
+<a id="section-23-10"></a>
+
+## 23.10 Forward Map
+
+Topic 23 establishes penalized estimation as a unifying framework for stabilizing OLS and IRLS, with three penalty families (ridge, lasso, elastic net), one core algorithm (cyclic coord descent), and one selection procedure (cross-validation). The forward map below catalogs where the framework leads.
+
+<TheoremBlock number={7} title="Lasso ℓ₂-consistency under sparsity (stated, Wainwright 2019)">
+Let $\boldsymbol\beta^\star$ have at most $s$ nonzero components and assume $\mathbf{X}/\sqrt{n}$ satisfies the **restricted eigenvalue condition** with constant $\kappa > 0$. Then for $\lambda \asymp \sigma\sqrt{\log p / n}$, the lasso estimator satisfies
+
+$$
+\|\hat{\boldsymbol\beta} - \boldsymbol\beta^\star\|_2^2 \;=\; O_p\!\left(\frac{s \sigma^2 \log p}{n \kappa^2}\right).
+$$
+
+The rate $s\log p / n$ is information-theoretically optimal up to constants — the **lasso is minimax-rate optimal under sparsity**. WAI2019 Thm 7.13 (statement adapted). Not proved here; the full development (RIP, RE conditions, dual certificates) is at formalml.
+</TheoremBlock>
+
+<RemarkBlock number={23} title="Topic 24 — model selection (AIC, BIC, $C_p$, CV theory)">
+The next Track 6 topic generalizes $\lambda$ selection to a broader **model selection** framework. AIC ($-2\ell + 2k$) estimates expected out-of-sample log-likelihood; BIC ($-2\ell + k\log n$) approximates the Bayesian marginal likelihood; Mallow's $C_p$ is the Gaussian special case of AIC. Cross-validation, AIC, and BIC give similar choices when signals are strong and diverge when signals are weak; BIC favors sparser models, AIC and CV give similar predictions. Topic 24 develops the asymptotic theory and the trade-offs.
+</RemarkBlock>
+
+<RemarkBlock number={24} title="Track 7 — Bayesian regularization, hierarchical priors, horseshoe">
+Thm 5's MAP-as-penalized-MLE correspondence is the gateway to the Bayesian treatment of regularization. Track 7 develops conjugate priors for linear and GLM regression (Normal–inverse-gamma for linear, weakly-informative Cauchy for logistic), hierarchical priors that learn $\lambda$ from the data (empirical-Bayes ridge), and modern continuous shrinkage priors like the **horseshoe** (Carvalho–Polson–Scott 2010), which approximate lasso's sparsity behavior with a globally adaptive scale. The horseshoe is, in a sense, the "lasso of priors."
+</RemarkBlock>
+
+<RemarkBlock number={25} title="Track 8 — group, fused, and sparse-group lasso">
+Several practical generalizations of lasso are catalogued in HTW2015:
+
+- **Group lasso** (Yuan & Lin 2006): penalty $\lambda \sum_g \|\boldsymbol\beta_g\|_2$ for predefined predictor groups, performing group-level selection.
+- **Fused lasso** (Tibshirani et al. 2005): penalty $\lambda_1 \sum_j |\beta_{j+1} - \beta_j|$ for ordered coefficients, encouraging piecewise-constant fits — used in genomics and signal denoising.
+- **Sparse-group lasso** (Simon et al. 2013): combines L¹ within groups and L² across groups.
+
+These are non-separable penalties (the fused-lasso term couples adjacent coefficients), so cyclic CD doesn't apply directly — proximal-gradient or ADMM is the standard solver. Track 8 covers the algorithms and theory.
+</RemarkBlock>
+
+<RemarkBlock number={26} title="Non-convex penalties: SCAD and MCP">
+Lasso has known biases at large coefficients — its constant L¹ shrinkage applies even when the data overwhelmingly support a strong nonzero effect. **SCAD** (Smoothly Clipped Absolute Deviation; Fan & Li 2001) and **MCP** (Minimax Concave Penalty; Zhang 2010) are non-convex penalties designed to give lasso-like sparsity for small coefficients but **no shrinkage** for large ones. The trade-off is computational: the resulting objective is non-convex, requiring local-linear-approximation algorithms or proximal-gradient methods with careful initialization. SCAD/MCP estimators have the **oracle property** — they perform as if the true active set were known a priori — under regularity conditions. The methodology is mature; Topic 23 leaves it as a deferral pointer (FAN2001).
+</RemarkBlock>
+
+<RemarkBlock number={27} title="formalml.com — high-dimensional theory and debiased lasso">
+The asymptotic theory of penalized estimation in $p \gg n$ regimes is the domain of high-dimensional statistics. The key tools are oracle inequalities (Bickel–Ritov–Tsybakov 2009), restricted-eigenvalue conditions (Bickel et al. 2009), and the dual-certificate technique. The **debiased lasso** (Javanmard–Montanari 2014; van de Geer et al. 2014) gives valid post-selection confidence intervals by adding a one-step Newton correction to the lasso estimate. **Double descent** (Belkin et al. 2019) shows that predictive risk can have a second descent past the interpolation threshold — overparameterization is not always overfitting. All of this lives at formalml's high-dimensional regression topic.
+</RemarkBlock>
+
+<RemarkBlock number={28} title="formalml.com — neural-net weight decay, SGD-with-decay, AdamW">
+Modern deep learning training relies heavily on weight decay — Thm 5's Gaussian-prior MAP applied to neural-network weights. The SGD-with-decay update $\mathbf{w}_{t+1} = (1 - \eta\lambda)\mathbf{w}_t - \eta \nabla\mathcal{L}$ implements L² regularization; the more-complicated AdamW decoupling separates weight decay from the adaptive learning rate. Implicit regularization — the bias of SGD toward minimum-norm solutions in overparameterized regimes — plays the role of explicit ridge in modern practice, often with no tuning required. The connection to Topic 23 is direct: every deep-learning regularizer is a penalty, every penalty is a prior, and the bias-variance tradeoff still rules.
+</RemarkBlock>
+
+<img src="/images/topics/regularization-and-penalized-estimation/23-forward-map.png"
+     alt="Forward-map diagram for Topic 23. Central hub of penalized estimation with arrows out to Topic 24 (model selection), Track 7 (Bayesian regularization, horseshoe priors, GLMMs), Track 8 (group/fused/sparse-group lasso, non-convex penalties), and formalml.com (high-dim theory, debiased lasso, weight decay, double descent). Back-arrows to Topics 14 (MLE), 21 (linear regression), 22 (GLMs). Track-color coded with Track 6 in blue, Tracks 7–8 in amber, formalml.com in purple."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+Topic 23 closes Track 6's main framework. Linear regression (Topic 21) is OLS as orthogonal projection. GLMs (Topic 22) are IRLS on the exponential family. Penalized estimation (this topic) is what you reach for when those frameworks break — collinearity, separation, $p \gg n$. Topic 24 closes Track 6 with the model-selection layer that picks which features to include in the first place. Together, Topics 21–24 cover the full classical-regression toolkit; Tracks 7–8 and formalml.com take it from there.
+
+---
+
+### References
+
+1. Hoerl, A. E. & Kennard, R. W. (1970). [*Ridge regression: Biased estimation for nonorthogonal problems*](https://www.jstor.org/stable/1267351). *Technometrics*, 12(1), 55–67.
+2. Tikhonov, A. N. (1943). [*On the stability of inverse problems*](https://mathscinet.ams.org/mathscinet-getitem?mr=0009685). *Doklady Akademii Nauk SSSR*, 39(5), 195–198.
+3. Tibshirani, R. (1996). [*Regression shrinkage and selection via the lasso*](https://www.jstor.org/stable/2346178). *Journal of the Royal Statistical Society, Series B*, 58(1), 267–288.
+4. Zou, H. & Hastie, T. (2005). [*Regularization and variable selection via the elastic net*](https://www.jstor.org/stable/3647580). *Journal of the Royal Statistical Society, Series B*, 67(2), 301–320.
+5. Friedman, J., Hastie, T. & Tibshirani, R. (2010). [*Regularization paths for generalized linear models via coordinate descent*](https://www.jstatsoft.org/article/view/v033i01). *Journal of Statistical Software*, 33(1), 1–22.
+6. Tseng, P. (2001). [*Convergence of a block coordinate descent method for nondifferentiable minimization*](https://doi.org/10.1023/A:1017501703105). *Journal of Optimization Theory and Applications*, 109(3), 475–494.
+7. Hastie, T., Tibshirani, R. & Friedman, J. (2009). [*The Elements of Statistical Learning*](https://hastie.su.domains/ElemStatLearn/) (2nd ed.). Springer.
+8. Hastie, T., Tibshirani, R. & Wainwright, M. (2015). [*Statistical Learning with Sparsity: The Lasso and Generalizations*](https://trevorhastie.github.io/). Chapman & Hall/CRC.
+9. Stein, C. (1956). [*Inadmissibility of the usual estimator for the mean of a multivariate normal distribution*](https://projecteuclid.org/euclid.bsmsp/1200501656). *Proceedings of the Third Berkeley Symposium on Mathematical Statistics and Probability*, Vol. 1, 197–206. University of California Press.
+10. Firth, D. (1993). [*Bias reduction of maximum likelihood estimates*](https://doi.org/10.1093/biomet/80.1.27). *Biometrika*, 80(1), 27–38.
+11. Fan, J. & Li, R. (2001). [*Variable selection via nonconcave penalized likelihood and its oracle properties*](https://doi.org/10.1198/016214501753382273). *Journal of the American Statistical Association*, 96(456), 1348–1360.
+12. Wainwright, M. J. (2019). [*High-Dimensional Statistics: A Non-Asymptotic Viewpoint*](https://www.cambridge.org/core/books/highdimensional-statistics/8A91ECEEC38F46DAB53E9FF8757C7A4E). Cambridge University Press.
+13. Lehmann, E. L. & Romano, J. P. (2005). [*Testing Statistical Hypotheses*](https://link.springer.com/book/10.1007/0-387-27605-X) (3rd ed.). Springer.
+14. Casella, G. & Berger, R. L. (2002). [*Statistical Inference*](https://www.routledge.com/Statistical-Inference/Casella-Berger/p/book/9780534243128) (2nd ed.). Duxbury.

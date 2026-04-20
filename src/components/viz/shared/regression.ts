@@ -2001,3 +2001,1331 @@ export function coverageSimulatorGLM(
   if (nValid === 0) return new Array<number>(m).fill(NaN);
   return hits.map((h) => h / nValid);
 }
+
+// ════════════════════════════════════════════════════════════════════════════
+// Topic 23 — Regularization & Penalized Estimation (extends Topic 21–22 seed)
+// ════════════════════════════════════════════════════════════════════════════
+//
+// Surface (brief §6.1):
+//   §6.1.M  Penalty functions + soft-thresholding (atomic operators)
+//   §6.1.N  Ridge / lasso / elastic-net fits + regularization paths (warm-start)
+//   §6.1.O  k-fold cross-validation harness with one-SE rule
+//   §6.1.P  Penalized GLM fit (outer IRLS + penalized inner solve)
+//   §6.1.Q  Lasso KKT-condition checker (used by T9 tests)
+//
+// All routines reuse Topic 21's QR / Cholesky primitives (qrSolve, xtx, xty,
+// choleskyInverse, matVec) and Topic 22's IRLS infrastructure (LINKS, FAMILIES,
+// glmFit). No new linear-algebra code is introduced. The intercept is always
+// unpenalized (glmnet / sklearn convention); standardization centers + scales
+// each column so ‖X[:,j]‖² = n (sd with ddof = 0 — matches sklearn so T9.2 /
+// T9.4 / T9.9 numerical agreement holds), and the intercept is recovered
+// post-fit via β₀ = ȳ − Σ_j β_j · mean(X[:,j]).
+//
+// Loss conventions (½ on the residual sum throughout; consistent with the
+// MDX Def 1/Def 2/Def 5 statements and avoids the n-dependent λ-rescaling
+// that sklearn's Lasso(alpha = λ/n) imposes):
+//   ridge       :  ½‖y − Xβ‖² + (λ/2) ‖β‖₂²       → (XᵀX + λI) β = Xᵀy
+//   lasso       :  ½‖y − Xβ‖² + λ ‖β‖₁           → KKT: |Xⱼᵀ(y-Xβ)| ≤ λ
+//   elastic-net :  ½‖y − Xβ‖² + λ [α ‖β‖₁ + ½(1−α) ‖β‖₂²]
+//   penalized GLM (deviance scale): −2 ℓ(β) + 2 λ P(β)
+// sklearn equivalences: Ridge(alpha=λ) (same convention); Lasso(alpha=λ/n)
+// (sklearn divides residuals by n; our λ rescales by n to get the same fit).
+
+// ── §6.1.M  Penalty functions + soft-thresholding ──────────────────────────
+
+/**
+ * Soft-thresholding operator — the coordinate-wise identity that powers every
+ * lasso coord-descent step:
+ *
+ *   𝒮_λ(x) = sign(x) · max(|x| − λ, 0).
+ *
+ * Used by: lassoFit (inner loop), lassoCoordStep (single-pass for animation),
+ * elasticNetFit (numerator term), kktCheck (subgradient verification),
+ * §5.4 CoordinateDescentVisualizer (step animation).
+ * Derived in: Topic 23 §23.3 Thm 2 Proof 2 step 6.
+ */
+export function softThreshold(x: number, lambda: number): number {
+  if (x > lambda) return x - lambda;
+  if (x < -lambda) return x + lambda;
+  return 0;
+}
+
+/** Vectorized soft-thresholding (componentwise application of 𝒮_λ). */
+export function softThresholdVec(x: number[], lambda: number): number[] {
+  return x.map((xi) => softThreshold(xi, lambda));
+}
+
+/**
+ * Ridge penalty value λ ‖β‖₂² (excludes the unpenalized intercept at index 0).
+ * No ½ factor — matches §23.2 Def 1; ridgeFit's loss carries the ½ separately.
+ */
+export function ridgePenalty(beta: number[], lambda: number): number {
+  let s = 0;
+  for (let j = 1; j < beta.length; j++) s += beta[j] * beta[j];
+  return lambda * s;
+}
+
+/** Lasso penalty value λ ‖β‖₁ (excludes the unpenalized intercept). */
+export function lassoPenalty(beta: number[], lambda: number): number {
+  let s = 0;
+  for (let j = 1; j < beta.length; j++) s += Math.abs(beta[j]);
+  return lambda * s;
+}
+
+/**
+ * Elastic-net penalty value λ [α ‖β‖₁ + ½(1−α) ‖β‖₂²].
+ * α = 1 ⇒ lasso; α = 0 ⇒ ridge with the ½ factor (matches Zou-Hastie 2005).
+ */
+export function elasticNetPenalty(
+  beta: number[],
+  lambda: number,
+  alpha: number,
+): number {
+  if (alpha < 0 || alpha > 1) {
+    throw new Error(`elasticNetPenalty: alpha ${alpha} not in [0, 1]`);
+  }
+  let l1 = 0;
+  let l2 = 0;
+  for (let j = 1; j < beta.length; j++) {
+    l1 += Math.abs(beta[j]);
+    l2 += beta[j] * beta[j];
+  }
+  return lambda * (alpha * l1 + 0.5 * (1 - alpha) * l2);
+}
+
+// ── Standardization helpers (private — used by every penalized fit routine) ─
+
+interface StandardizedDesign {
+  Xs: number[][];        // standardized predictors, no intercept column
+  ys: number[];          // centered y (length n)
+  meanX: number[];       // per-column means (length p)
+  sdX: number[];         // per-column sd with ddof = 0 (length p)
+  meanY: number;
+  n: number;
+  p: number;
+}
+
+/**
+ * Standardize the design so that every column has mean 0 and ‖X[:,j]‖² = n
+ * (sd with ddof = 0, matching sklearn). Centers y. Throws if any column has
+ * zero variance — caller must drop the dead predictor before retrying.
+ *
+ * Recovery of the original-scale parameter vector after the fit:
+ *   β_j = β̃_j / sdX[j]   (j = 1, …, p)
+ *   β₀  = meanY − Σ_j β_j · meanX[j]   (unpenalized intercept)
+ */
+function standardizeDesign(X: number[][], y: number[]): StandardizedDesign {
+  const n = X.length;
+  if (n === 0) throw new Error('standardizeDesign: empty design');
+  const p = X[0].length;
+  if (y.length !== n) {
+    throw new Error(
+      `standardizeDesign: y length ${y.length} != n=${n}`,
+    );
+  }
+  const meanX = new Array<number>(p).fill(0);
+  const sdX = new Array<number>(p).fill(0);
+  for (let j = 0; j < p; j++) {
+    let s = 0;
+    for (let i = 0; i < n; i++) s += X[i][j];
+    meanX[j] = s / n;
+  }
+  for (let j = 0; j < p; j++) {
+    let ss = 0;
+    for (let i = 0; i < n; i++) {
+      const d = X[i][j] - meanX[j];
+      ss += d * d;
+    }
+    const v = ss / n;
+    if (v < 1e-24) {
+      throw new Error(
+        `standardizeDesign: column ${j} has zero variance (drop it before fitting)`,
+      );
+    }
+    sdX[j] = Math.sqrt(v);
+  }
+  const Xs: number[][] = Array.from({ length: n }, () => new Array<number>(p));
+  for (let i = 0; i < n; i++) {
+    for (let j = 0; j < p; j++) Xs[i][j] = (X[i][j] - meanX[j]) / sdX[j];
+  }
+  let meanY = 0;
+  for (let i = 0; i < n; i++) meanY += y[i];
+  meanY /= n;
+  const ys = y.map((yi) => yi - meanY);
+  return { Xs, ys, meanX, sdX, meanY, n, p };
+}
+
+/**
+ * Given standardized-scale slope coefficients β̃ (length p), recover the
+ * full original-scale (β₀, β₁, …, β_p) vector of length p + 1.
+ */
+function unstandardizeBeta(
+  betaTilde: number[],
+  meanX: number[],
+  sdX: number[],
+  meanY: number,
+): number[] {
+  const p = betaTilde.length;
+  const beta = new Array<number>(p + 1);
+  let intercept = meanY;
+  for (let j = 0; j < p; j++) {
+    beta[j + 1] = betaTilde[j] / sdX[j];
+    intercept -= beta[j + 1] * meanX[j];
+  }
+  beta[0] = intercept;
+  return beta;
+}
+
+// ── §6.1.N  Ridge / lasso / elastic-net fits + regularization paths ────────
+
+export interface RidgeFitResult {
+  /** Coefficients of length p + 1; beta[0] = intercept (unpenalized). */
+  beta: number[];
+  lambda: number;
+  /** Effective degrees of freedom = p − λ · trace((X̃ᵀX̃ + λI)⁻¹). */
+  dof: number;
+  /** ŷ = X β̂ in the original y scale (length n). */
+  fitted: number[];
+  /** y − ŷ residuals on the original scale (length n). */
+  residuals: number[];
+}
+
+/**
+ * Ridge regression via closed-form normal equations on the standardized design:
+ *
+ *   β̃ = (X̃ᵀX̃ + λ I)⁻¹ X̃ᵀ ỹ
+ *
+ * (X̃ᵀX̃ + λI) is positive-definite for any λ > 0 — even when X̃ᵀX̃ alone is
+ * singular. That is the algebraic content of §23.3 Thm 1 Proof step 1.
+ *
+ * Reuses Topic 21's `choleskyInverse`. The intercept is unpenalized and
+ * recovered post-fit from the centering of ỹ.
+ */
+export function ridgeFit(
+  X: number[][],
+  y: number[],
+  lambda: number,
+  options?: { standardize?: boolean; intercept?: boolean },
+): RidgeFitResult {
+  const standardize = options?.standardize ?? true;
+  const intercept = options?.intercept ?? true;
+
+  const n = X.length;
+  if (n === 0) throw new Error('ridgeFit: empty design');
+  const p = X[0].length;
+  if (lambda < 0) throw new Error(`ridgeFit: negative lambda ${lambda}`);
+
+  // Standardization and intercept are now decoupled (PR #27 review). The
+  // intercept is always handled by centering when `intercept: true`, even
+  // if `standardize: false` — otherwise asking for an unscaled fit would
+  // silently zero out the intercept. When `intercept: false`, X is used
+  // verbatim and beta[0] = 0 in the result.
+  let Xs: number[][];
+  let ys: number[];
+  let meanX: number[];
+  let sdX: number[];
+  let meanY: number;
+
+  if (intercept) {
+    const std = standardizeDesign(X, y);
+    if (standardize) {
+      // Center + scale: full glmnet-style standardization.
+      Xs = std.Xs;
+      sdX = std.sdX;
+    } else {
+      // Center only: keep original column scale, but center each column at 0
+      // and y at 0 so the intercept can be recovered from meanY/meanX.
+      sdX = new Array<number>(p).fill(1);
+      Xs = Array.from({ length: n }, (_, i) =>
+        Array.from({ length: p }, (_, j) => X[i][j] - std.meanX[j]),
+      );
+    }
+    ys = std.ys;
+    meanX = std.meanX;
+    meanY = std.meanY;
+  } else {
+    Xs = X;
+    ys = y;
+    meanX = new Array<number>(p).fill(0);
+    sdX = new Array<number>(p).fill(1);
+    meanY = 0;
+  }
+
+  // Form (X̃ᵀX̃ + λ I) and X̃ᵀ ỹ.
+  const xtxMat = xtx(Xs);
+  for (let j = 0; j < p; j++) xtxMat[j][j] += lambda;
+  const xtyVec = xty(Xs, ys);
+
+  // Solve via choleskyInverse — PSD whenever λ > 0 or X̃ᵀX̃ is full rank.
+  const inv = choleskyInverse(xtxMat);
+  const betaTilde = matVec(inv, xtyVec);
+
+  // Effective DOF = trace[(X̃ᵀX̃ + λI)⁻¹ X̃ᵀX̃] = p − λ · trace(inv).
+  let traceInv = 0;
+  for (let j = 0; j < p; j++) traceInv += inv[j][j];
+  const dof = p - lambda * traceInv;
+
+  // Recover original-scale beta vector with intercept at index 0.
+  const beta = intercept
+    ? unstandardizeBeta(betaTilde, meanX, sdX, meanY)
+    : [0, ...betaTilde];
+
+  // Fitted on the ORIGINAL design (caller-friendly).
+  const fitted = new Array<number>(n).fill(beta[0]);
+  for (let i = 0; i < n; i++) {
+    for (let j = 0; j < p; j++) fitted[i] += beta[j + 1] * X[i][j];
+  }
+  const residuals = y.map((yi, i) => yi - fitted[i]);
+
+  return { beta, lambda, dof, fitted, residuals };
+}
+
+export interface LassoFitResult {
+  /** Coefficients of length p + 1; beta[0] = intercept (unpenalized). */
+  beta: number[];
+  lambda: number;
+  /** Indices j ∈ {1, …, p} where β̂_j ≠ 0 (excludes intercept). */
+  activeSet: number[];
+  nIter: number;
+  converged: boolean;
+  fitted: number[];
+  residuals: number[];
+}
+
+/**
+ * Lasso regression via cyclic coordinate descent (the §23.3 Thm 2 algorithm,
+ * convergence guaranteed by §23.4 Thm 6 / Tseng 2001).
+ *
+ * Loss: ½‖y − Xβ‖² + λ‖β‖₁ (no 1/n on residuals — glmnet / HTF convention).
+ *
+ * Inner update on the working design (per-column normalization keeps the
+ * algorithm correct whether or not the caller standardizes):
+ *   r_{−j} ← r + X̃[:,j] · β̃_j                  (partial residual)
+ *   z_j    ← X̃[:,j]ᵀ r_{−j}
+ *   β̃_j   ← S_λ(z_j) / ‖X̃[:,j]‖²                ← per-column denom (PR #27)
+ *   r      ← r_{−j} − X̃[:,j] · β̃_j
+ *
+ * Convergence: max_j |Δβ̃_j| < tol (the standard glmnet criterion).
+ * Warm-start: pass `previousBeta` to seed β̃ from a neighbouring λ (used by
+ * regularizationPath for an ~10× speedup vs. cold-start).
+ *
+ * Intercept and standardization are independent (PR #27): when intercept is
+ * true, X is column-centered and y is centered regardless of standardize.
+ * standardize=true additionally scales each column to ‖X[:,j]‖² = n.
+ */
+export function lassoFit(
+  X: number[][],
+  y: number[],
+  lambda: number,
+  options?: {
+    standardize?: boolean;
+    intercept?: boolean;
+    maxIter?: number;
+    tol?: number;
+    previousBeta?: number[];
+  },
+): LassoFitResult {
+  const standardize = options?.standardize ?? true;
+  const intercept = options?.intercept ?? true;
+  const maxIter = options?.maxIter ?? 10000;
+  const tol = options?.tol ?? 1e-7;
+
+  const n = X.length;
+  if (n === 0) throw new Error('lassoFit: empty design');
+  const p = X[0].length;
+  if (lambda < 0) throw new Error(`lassoFit: negative lambda ${lambda}`);
+
+  let Xs: number[][];
+  let ys: number[];
+  let meanX: number[];
+  let sdX: number[];
+  let meanY: number;
+
+  if (intercept) {
+    const std = standardizeDesign(X, y);
+    if (standardize) {
+      Xs = std.Xs;
+      sdX = std.sdX;
+    } else {
+      sdX = new Array<number>(p).fill(1);
+      Xs = Array.from({ length: n }, (_, i) =>
+        Array.from({ length: p }, (_, j) => X[i][j] - std.meanX[j]),
+      );
+    }
+    ys = std.ys;
+    meanX = std.meanX;
+    meanY = std.meanY;
+  } else {
+    Xs = X;
+    ys = y;
+    meanX = new Array<number>(p).fill(0);
+    sdX = new Array<number>(p).fill(1);
+    meanY = 0;
+  }
+
+  // Per-column squared-norm — the denominator in the soft-threshold update.
+  // For standardized data this equals n exactly; for unscaled / unstandardized
+  // data it varies per column. Computing it once keeps the inner loop O(np).
+  const colNorm2 = new Array<number>(p).fill(0);
+  for (let j = 0; j < p; j++) {
+    let s = 0;
+    for (let i = 0; i < n; i++) s += Xs[i][j] * Xs[i][j];
+    if (s < 1e-24) {
+      throw new Error(
+        `lassoFit: column ${j} has zero variance (drop it before fitting)`,
+      );
+    }
+    colNorm2[j] = s;
+  }
+
+  // Initialize β̃ from warm start (in standardized scale) or zeros.
+  // Warm-start convention: previousBeta is in ORIGINAL scale, length p + 1;
+  // convert via β̃_j = β_{j+1} · sdX[j].
+  const betaTilde = new Array<number>(p).fill(0);
+  if (options?.previousBeta) {
+    if (options.previousBeta.length !== p + 1) {
+      throw new Error(
+        `lassoFit: previousBeta length ${options.previousBeta.length} != p+1=${p + 1}`,
+      );
+    }
+    for (let j = 0; j < p; j++) {
+      betaTilde[j] = options.previousBeta[j + 1] * sdX[j];
+    }
+  }
+
+  // Maintain residuals r = ỹ − X̃ β̃ throughout (avoids O(np) recompute per coord).
+  const r = ys.slice();
+  for (let j = 0; j < p; j++) {
+    if (betaTilde[j] === 0) continue;
+    for (let i = 0; i < n; i++) r[i] -= Xs[i][j] * betaTilde[j];
+  }
+
+  let converged = false;
+  let iter = 0;
+  for (; iter < maxIter; iter++) {
+    let maxDelta = 0;
+    for (let j = 0; j < p; j++) {
+      const oldBetaJ = betaTilde[j];
+      // z_j = X̃[:,j]ᵀ r_{−j} = X̃[:,j]ᵀ r + ‖X̃[:,j]‖² · β̃_j.
+      let zj = 0;
+      for (let i = 0; i < n; i++) zj += Xs[i][j] * r[i];
+      zj += colNorm2[j] * oldBetaJ;
+      const newBetaJ = softThreshold(zj, lambda) / colNorm2[j];
+      const delta = newBetaJ - oldBetaJ;
+      if (delta !== 0) {
+        for (let i = 0; i < n; i++) r[i] -= Xs[i][j] * delta;
+        betaTilde[j] = newBetaJ;
+        const ad = Math.abs(delta);
+        if (ad > maxDelta) maxDelta = ad;
+      }
+    }
+    if (maxDelta < tol) {
+      converged = true;
+      iter++;
+      break;
+    }
+  }
+
+  const beta = intercept
+    ? unstandardizeBeta(betaTilde, meanX, sdX, meanY)
+    : [0, ...betaTilde];
+
+  const activeSet: number[] = [];
+  for (let j = 1; j < beta.length; j++) {
+    if (beta[j] !== 0) activeSet.push(j);
+  }
+
+  const fitted = new Array<number>(n).fill(beta[0]);
+  for (let i = 0; i < n; i++) {
+    for (let j = 0; j < p; j++) fitted[i] += beta[j + 1] * X[i][j];
+  }
+  const residuals = y.map((yi, i) => yi - fitted[i]);
+
+  return { beta, lambda, activeSet, nIter: iter, converged, fitted, residuals };
+}
+
+export interface ElasticNetFitResult extends LassoFitResult {
+  alpha: number;
+}
+
+/**
+ * Elastic-net regression via cyclic coordinate descent with a ridge-adjusted
+ * univariate step. α = 1 reduces to lasso; α = 0 reduces to ridge (use
+ * `ridgeFit` directly when α = 0 — it's faster via the closed form).
+ *
+ * The coordinate update is
+ *   β̃_j  ←  𝒮_{λα}(z_j) / (n + λ(1 − α)).
+ */
+export function elasticNetFit(
+  X: number[][],
+  y: number[],
+  lambda: number,
+  alpha: number,
+  options?: {
+    standardize?: boolean;
+    intercept?: boolean;
+    maxIter?: number;
+    tol?: number;
+    previousBeta?: number[];
+  },
+): ElasticNetFitResult {
+  if (alpha < 0 || alpha > 1) {
+    throw new Error(`elasticNetFit: alpha ${alpha} not in [0, 1]`);
+  }
+  const standardize = options?.standardize ?? true;
+  const intercept = options?.intercept ?? true;
+  const maxIter = options?.maxIter ?? 10000;
+  const tol = options?.tol ?? 1e-7;
+
+  const n = X.length;
+  if (n === 0) throw new Error('elasticNetFit: empty design');
+  const p = X[0].length;
+  if (lambda < 0) throw new Error(`elasticNetFit: negative lambda ${lambda}`);
+
+  // Decoupled standardization + intercept (PR #27 review): same as ridgeFit /
+  // lassoFit. When intercept is true we always center, scaling only when
+  // standardize is true.
+  let Xs: number[][];
+  let ys: number[];
+  let meanX: number[];
+  let sdX: number[];
+  let meanY: number;
+
+  if (intercept) {
+    const std = standardizeDesign(X, y);
+    if (standardize) {
+      Xs = std.Xs;
+      sdX = std.sdX;
+    } else {
+      sdX = new Array<number>(p).fill(1);
+      Xs = Array.from({ length: n }, (_, i) =>
+        Array.from({ length: p }, (_, j) => X[i][j] - std.meanX[j]),
+      );
+    }
+    ys = std.ys;
+    meanX = std.meanX;
+    meanY = std.meanY;
+  } else {
+    Xs = X;
+    ys = y;
+    meanX = new Array<number>(p).fill(0);
+    sdX = new Array<number>(p).fill(1);
+    meanY = 0;
+  }
+
+  // Per-column squared norm — the L² piece of the elastic-net denominator
+  // varies per column when the design isn't standardized (PR #27).
+  const colNorm2 = new Array<number>(p).fill(0);
+  for (let j = 0; j < p; j++) {
+    let s = 0;
+    for (let i = 0; i < n; i++) s += Xs[i][j] * Xs[i][j];
+    if (s < 1e-24) {
+      throw new Error(
+        `elasticNetFit: column ${j} has zero variance (drop it before fitting)`,
+      );
+    }
+    colNorm2[j] = s;
+  }
+
+  const betaTilde = new Array<number>(p).fill(0);
+  if (options?.previousBeta) {
+    if (options.previousBeta.length !== p + 1) {
+      throw new Error(
+        `elasticNetFit: previousBeta length ${options.previousBeta.length} != p+1=${p + 1}`,
+      );
+    }
+    for (let j = 0; j < p; j++) {
+      betaTilde[j] = options.previousBeta[j + 1] * sdX[j];
+    }
+  }
+
+  const r = ys.slice();
+  for (let j = 0; j < p; j++) {
+    if (betaTilde[j] === 0) continue;
+    for (let i = 0; i < n; i++) r[i] -= Xs[i][j] * betaTilde[j];
+  }
+
+  const lassoCoef = lambda * alpha;
+  const ridgeCoef = lambda * (1 - alpha);
+
+  let converged = false;
+  let iter = 0;
+  for (; iter < maxIter; iter++) {
+    let maxDelta = 0;
+    for (let j = 0; j < p; j++) {
+      const oldBetaJ = betaTilde[j];
+      let zj = 0;
+      for (let i = 0; i < n; i++) zj += Xs[i][j] * r[i];
+      zj += colNorm2[j] * oldBetaJ;
+      const denom = colNorm2[j] + ridgeCoef;
+      const newBetaJ = softThreshold(zj, lassoCoef) / denom;
+      const delta = newBetaJ - oldBetaJ;
+      if (delta !== 0) {
+        for (let i = 0; i < n; i++) r[i] -= Xs[i][j] * delta;
+        betaTilde[j] = newBetaJ;
+        const ad = Math.abs(delta);
+        if (ad > maxDelta) maxDelta = ad;
+      }
+    }
+    if (maxDelta < tol) {
+      converged = true;
+      iter++;
+      break;
+    }
+  }
+
+  const beta = intercept
+    ? unstandardizeBeta(betaTilde, meanX, sdX, meanY)
+    : [0, ...betaTilde];
+
+  const activeSet: number[] = [];
+  for (let j = 1; j < beta.length; j++) {
+    if (beta[j] !== 0) activeSet.push(j);
+  }
+
+  const fitted = new Array<number>(n).fill(beta[0]);
+  for (let i = 0; i < n; i++) {
+    for (let j = 0; j < p; j++) fitted[i] += beta[j + 1] * X[i][j];
+  }
+  const residuals = y.map((yi, i) => yi - fitted[i]);
+
+  return {
+    beta,
+    lambda,
+    alpha,
+    activeSet,
+    nIter: iter,
+    converged,
+    fitted,
+    residuals,
+  };
+}
+
+/**
+ * One full cyclic-coord-descent sweep — exposed for the §5.4
+ * CoordinateDescentVisualizer's animation loop. Pass α to switch to the
+ * elastic-net update; default α = 1 (pure lasso). Returns the updated
+ * standardized-scale β̃ vector after one sweep.
+ *
+ * Note: caller is responsible for standardizing X / centering y before
+ * calling, and for tracking residuals between sweeps. This is the low-level
+ * primitive — most callers should use `lassoFit` / `elasticNetFit` instead.
+ */
+export function lassoCoordStep(
+  X: number[][],
+  y: number[],
+  beta: number[],
+  lambda: number,
+  options?: { alpha?: number },
+): number[] {
+  const alpha = options?.alpha ?? 1;
+  const n = X.length;
+  if (n === 0) return beta.slice();
+  const p = X[0].length;
+  if (beta.length !== p) {
+    throw new Error(`lassoCoordStep: beta length ${beta.length} != p=${p}`);
+  }
+  const lassoCoef = lambda * alpha;
+  const ridgeCoef = lambda * (1 - alpha);
+  const out = beta.slice();
+  // Maintain residuals r = y − X β.
+  const r = y.slice();
+  for (let j = 0; j < p; j++) {
+    if (out[j] === 0) continue;
+    for (let i = 0; i < n; i++) r[i] -= X[i][j] * out[j];
+  }
+  for (let j = 0; j < p; j++) {
+    // Per-column squared norm — caller may not have standardized to ‖·‖²=n
+    // (PR #27). The denominator is colNorm² + λ(1−α) (elastic-net adjustment).
+    let colNorm2 = 0;
+    for (let i = 0; i < n; i++) colNorm2 += X[i][j] * X[i][j];
+    if (colNorm2 < 1e-24) continue; // skip dead columns
+    const oldBetaJ = out[j];
+    let zj = 0;
+    for (let i = 0; i < n; i++) zj += X[i][j] * r[i];
+    zj += colNorm2 * oldBetaJ;
+    const denom = colNorm2 + ridgeCoef;
+    const newBetaJ = softThreshold(zj, lassoCoef) / denom;
+    const delta = newBetaJ - oldBetaJ;
+    if (delta !== 0) {
+      for (let i = 0; i < n; i++) r[i] -= X[i][j] * delta;
+      out[j] = newBetaJ;
+    }
+  }
+  return out;
+}
+
+export interface RegularizationPathResult {
+  /** λ-grid, log-spaced descending from λ_max → λ_min. */
+  lambdas: number[];
+  /** betas[i] is β̂(lambdas[i]); shape (lambdas.length, p + 1). */
+  betas: number[][];
+  /** Active-set indices (in {1, …, p}) at each λ. */
+  activeSets: number[][];
+  /** Effective degrees of freedom at each λ (lasso: |active set|; ridge: trace formula). */
+  dof: number[];
+}
+
+/**
+ * Compute a full regularization path over a log-spaced λ-grid using warm
+ * starts. The λ_max convention (smallest λ for which β̂ = 0 in the lasso
+ * setting — i.e. λ_max = max_j |X̃[:,j]ᵀ ỹ|) matches glmnet.
+ *
+ * For ridge, λ_max is still computed from the same first-derivative bound
+ * (purely to give a reasonable upper end of the grid; ridge doesn't have a
+ * sparsity threshold).
+ */
+export function regularizationPath(
+  X: number[][],
+  y: number[],
+  options?: {
+    penalty?: 'ridge' | 'lasso' | 'elasticnet';
+    alpha?: number;
+    nLambda?: number;
+    lambdaMinRatio?: number;
+    lambdas?: number[];
+    standardize?: boolean;
+    intercept?: boolean;
+  },
+): RegularizationPathResult {
+  const penalty = options?.penalty ?? 'lasso';
+  const alpha = options?.alpha ?? (penalty === 'ridge' ? 0 : 1);
+  const nLambda = options?.nLambda ?? 100;
+  const lambdaMinRatio = options?.lambdaMinRatio ?? 1e-4;
+  const standardize = options?.standardize ?? true;
+  const intercept = options?.intercept ?? true;
+
+  if (penalty === 'elasticnet' && (alpha < 0 || alpha > 1)) {
+    throw new Error(`regularizationPath: elastic-net alpha ${alpha} not in [0, 1]`);
+  }
+
+  const n = X.length;
+  if (n === 0) throw new Error('regularizationPath: empty design');
+  const p = X[0].length;
+
+  // Choose λ-grid.
+  let lambdas: number[];
+  if (options?.lambdas) {
+    lambdas = options.lambdas.slice();
+  } else {
+    // Compute λ_max from the standardized design.
+    const std =
+      standardize && intercept
+        ? standardizeDesign(X, y)
+        : ({
+            Xs: X,
+            ys: y,
+            meanX: new Array<number>(p).fill(0),
+            sdX: new Array<number>(p).fill(1),
+            meanY: 0,
+            n,
+            p,
+          } as StandardizedDesign);
+    let lambdaMax = 0;
+    for (let j = 0; j < p; j++) {
+      let dot = 0;
+      for (let i = 0; i < n; i++) dot += std.Xs[i][j] * std.ys[i];
+      const a = Math.abs(dot);
+      if (a > lambdaMax) lambdaMax = a;
+    }
+    // Elastic-net λ_max scales by α (penalty mass on the L1 part).
+    if (penalty === 'elasticnet' && alpha > 0) lambdaMax /= alpha;
+    if (penalty === 'ridge') {
+      // For ridge there is no exact λ_max; use the same scale as lasso for a
+      // comparable upper bound on the grid (the path is everywhere nonzero).
+      lambdaMax = Math.max(lambdaMax, 1e-3);
+    }
+    if (lambdaMax <= 0) lambdaMax = 1;
+    const lambdaMin = lambdaMax * lambdaMinRatio;
+    const logMax = Math.log(lambdaMax);
+    const logMin = Math.log(lambdaMin);
+    lambdas = new Array<number>(nLambda);
+    for (let k = 0; k < nLambda; k++) {
+      const t = nLambda === 1 ? 0 : k / (nLambda - 1);
+      lambdas[k] = Math.exp(logMax + t * (logMin - logMax));
+    }
+  }
+
+  const betas: number[][] = new Array(lambdas.length);
+  const activeSets: number[][] = new Array(lambdas.length);
+  const dof: number[] = new Array(lambdas.length);
+
+  let warm: number[] | undefined;
+  for (let k = 0; k < lambdas.length; k++) {
+    const lam = lambdas[k];
+    if (penalty === 'ridge') {
+      const fit = ridgeFit(X, y, lam, { standardize, intercept });
+      betas[k] = fit.beta;
+      activeSets[k] = []; // ridge has no exact zeros
+      for (let j = 1; j < fit.beta.length; j++) {
+        if (Math.abs(fit.beta[j]) > 1e-12) activeSets[k].push(j);
+      }
+      dof[k] = fit.dof;
+    } else if (penalty === 'lasso') {
+      const fit = lassoFit(X, y, lam, {
+        standardize,
+        intercept,
+        previousBeta: warm,
+      });
+      betas[k] = fit.beta;
+      activeSets[k] = fit.activeSet.slice();
+      dof[k] = fit.activeSet.length; // standard lasso DOF = |active set| (Zou-Hastie-Tibshirani 2007)
+      warm = fit.beta;
+    } else {
+      const fit = elasticNetFit(X, y, lam, alpha, {
+        standardize,
+        intercept,
+        previousBeta: warm,
+      });
+      betas[k] = fit.beta;
+      activeSets[k] = fit.activeSet.slice();
+      dof[k] = fit.activeSet.length;
+      warm = fit.beta;
+    }
+  }
+
+  return { lambdas, betas, activeSets, dof };
+}
+
+// ── §6.1.O  k-fold cross-validation harness with one-SE rule ───────────────
+
+export interface CVResult {
+  lambdas: number[];
+  cvMean: number[];
+  cvSE: number[];
+  lambdaMin: number;
+  lambdaOneSE: number;
+  /** Raw per-fold loss matrix, shape (k, lambdas.length). */
+  foldDeviances: number[][];
+  /** β̂ refit on the full data at λ_min (length p + 1, includes intercept). */
+  pathAtLambdaMin: number[];
+  /** β̂ refit on the full data at λ_1SE. */
+  pathAtLambdaOneSE: number[];
+}
+
+/**
+ * k-fold CV for penalized linear regression. Loss = mean squared error.
+ * Fold assignment is deterministic given the seed via Topic-21's
+ * `seededRandom` LCG (the brief mentions mulberry32; any deterministic
+ * PRNG satisfies the reproducibility requirement).
+ *
+ * One-SE rule: λ̂_{1SE} = max{λ : cvMean(λ) ≤ cvMean(λ̂_min) + cvSE(λ̂_min)}.
+ *
+ * Family handling (PR #27 review): only `gaussian` is supported. Earlier
+ * iterations accepted `binomial` / `poisson` and computed deviance loss,
+ * but the per-fold fit was always least-squares (`regularizationPath` is
+ * Gaussian-only) — silently producing wrong CV curves for GLMs. For
+ * penalized-GLM cross-validation, drive `penalizedGLMFit` directly per
+ * fold per λ; that wiring lands in a follow-up.
+ */
+export function crossValidate(
+  X: number[][],
+  y: number[],
+  options?: {
+    penalty?: 'ridge' | 'lasso' | 'elasticnet';
+    alpha?: number;
+    nLambda?: number;
+    lambdaMinRatio?: number;
+    lambdas?: number[];
+    k?: number;
+    seed?: number;
+    family?: 'gaussian';
+  },
+): CVResult {
+  const penalty = options?.penalty ?? 'lasso';
+  const alpha = options?.alpha ?? (penalty === 'ridge' ? 0 : 1);
+  const k = options?.k ?? 10;
+  const seed = options?.seed ?? 42;
+  const family = options?.family ?? 'gaussian';
+  if (family !== 'gaussian') {
+    throw new Error(
+      `crossValidate: family '${family}' not supported. Only 'gaussian' is implemented; ` +
+        `penalized-GLM CV (binomial / poisson) requires looping penalizedGLMFit per fold ` +
+        `per λ — wire that pattern in caller code or open a follow-up issue.`,
+    );
+  }
+
+  const n = X.length;
+  if (n === 0) throw new Error('crossValidate: empty design');
+  if (k < 2 || k > n) {
+    throw new Error(`crossValidate: k=${k} outside [2, n=${n}]`);
+  }
+
+  // Build the λ-grid once on the full data so all folds share it (necessary
+  // for fold-comparable CV curves; otherwise per-fold paths drift).
+  const fullPath = regularizationPath(X, y, {
+    penalty,
+    alpha,
+    nLambda: options?.nLambda,
+    lambdaMinRatio: options?.lambdaMinRatio,
+    lambdas: options?.lambdas,
+  });
+  const lambdas = fullPath.lambdas;
+  const nLambdaGrid = lambdas.length;
+
+  // Shuffled fold assignment via the in-tree LCG.
+  const rng = seededRandom(seed);
+  const indices = Array.from({ length: n }, (_, i) => i);
+  for (let i = n - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [indices[i], indices[j]] = [indices[j], indices[i]];
+  }
+  const foldAssignment = new Array<number>(n);
+  for (let i = 0; i < n; i++) foldAssignment[indices[i]] = i % k;
+
+  // Per-fold loss matrix.
+  const foldDeviances: number[][] = Array.from({ length: k }, () =>
+    new Array<number>(nLambdaGrid).fill(0),
+  );
+
+  for (let f = 0; f < k; f++) {
+    const trainIdx: number[] = [];
+    const testIdx: number[] = [];
+    for (let i = 0; i < n; i++) {
+      if (foldAssignment[i] === f) testIdx.push(i);
+      else trainIdx.push(i);
+    }
+    const Xtrain = trainIdx.map((i) => X[i]);
+    const ytrain = trainIdx.map((i) => y[i]);
+    const Xtest = testIdx.map((i) => X[i]);
+    const ytest = testIdx.map((i) => y[i]);
+
+    const trainPath = regularizationPath(Xtrain, ytrain, {
+      penalty,
+      alpha,
+      lambdas, // share the grid across folds
+    });
+
+    for (let l = 0; l < nLambdaGrid; l++) {
+      const beta = trainPath.betas[l];
+      const ntest = ytest.length;
+      let loss = 0;
+      for (let i = 0; i < ntest; i++) {
+        let eta = beta[0];
+        for (let jj = 0; jj < Xtest[i].length; jj++) eta += beta[jj + 1] * Xtest[i][jj];
+        // Gaussian / squared-error loss only — family-guard at the top of
+        // crossValidate ensures this is the only branch reached.
+        const e = ytest[i] - eta;
+        loss += e * e;
+      }
+      foldDeviances[f][l] = loss / Math.max(ntest, 1);
+    }
+  }
+
+  // Aggregate CV mean and SE across folds.
+  const cvMean = new Array<number>(nLambdaGrid).fill(0);
+  const cvSE = new Array<number>(nLambdaGrid).fill(0);
+  for (let l = 0; l < nLambdaGrid; l++) {
+    let m = 0;
+    for (let f = 0; f < k; f++) m += foldDeviances[f][l];
+    m /= k;
+    cvMean[l] = m;
+    let v = 0;
+    for (let f = 0; f < k; f++) {
+      const d = foldDeviances[f][l] - m;
+      v += d * d;
+    }
+    cvSE[l] = Math.sqrt(v / Math.max(k - 1, 1) / k);
+  }
+
+  // λ_min = argmin cvMean. Resolve ties by choosing the LARGEST λ (sparser model).
+  let argMin = 0;
+  for (let l = 1; l < nLambdaGrid; l++) {
+    if (
+      cvMean[l] < cvMean[argMin] ||
+      (cvMean[l] === cvMean[argMin] && lambdas[l] > lambdas[argMin])
+    ) {
+      argMin = l;
+    }
+  }
+  const lambdaMin = lambdas[argMin];
+  const threshold = cvMean[argMin] + cvSE[argMin];
+  // λ_1SE = the largest λ with cvMean ≤ threshold.
+  let lambdaOneSE = lambdaMin;
+  for (let l = 0; l < nLambdaGrid; l++) {
+    if (cvMean[l] <= threshold && lambdas[l] > lambdaOneSE) lambdaOneSE = lambdas[l];
+  }
+
+  // Refit on full data at the two chosen λ.
+  const fullAtMin =
+    penalty === 'ridge'
+      ? ridgeFit(X, y, lambdaMin)
+      : penalty === 'lasso'
+      ? lassoFit(X, y, lambdaMin)
+      : elasticNetFit(X, y, lambdaMin, alpha);
+  const fullAt1SE =
+    penalty === 'ridge'
+      ? ridgeFit(X, y, lambdaOneSE)
+      : penalty === 'lasso'
+      ? lassoFit(X, y, lambdaOneSE)
+      : elasticNetFit(X, y, lambdaOneSE, alpha);
+
+  return {
+    lambdas,
+    cvMean,
+    cvSE,
+    lambdaMin,
+    lambdaOneSE,
+    foldDeviances,
+    pathAtLambdaMin: fullAtMin.beta,
+    pathAtLambdaOneSE: fullAt1SE.beta,
+  };
+}
+
+// ── §6.1.P  Penalized GLM (outer IRLS + penalized inner solve) ─────────────
+
+export interface PenalizedGLMFit {
+  beta: number[];
+  lambda: number;
+  family: string;
+  link: string;
+  penalty: 'ridge' | 'lasso' | 'elasticnet';
+  alpha: number;
+  converged: boolean;
+  nOuterIter: number;
+  /** Final fitted η = Xβ + offset. */
+  eta: number[];
+  /** Final fitted μ = g⁻¹(η). */
+  mu: number[];
+  /** Penalized deviance −2 ℓ(β̂) + 2 λ P(β̂). */
+  deviance: number;
+}
+
+/**
+ * Penalized GLM fit. Extends Topic 22's `glmFit` by adding a penalty term to
+ * the IRLS objective. Outer loop is standard IRLS (re-weights and relinearizes
+ * per Topic 22 §22.3 Thm 2); inner loop solves the penalized weighted-least-
+ * squares (WLS) problem:
+ *
+ *   minimize  ½ (z − Xβ)ᵀ W (z − Xβ)  +  λ P(β)
+ *
+ * where z = η + (y − μ) g'(μ) is the working response and W = diag(weights).
+ * For ridge, this admits a closed-form WLS solution; for lasso / elastic-net,
+ * one full coordinate-descent sweep on the WLS objective per outer step
+ * (matches glmnet's behaviour and converges quickly thanks to warm starts).
+ */
+export function penalizedGLMFit(
+  X: number[][],
+  y: number[],
+  lambda: number,
+  options?: {
+    family?: 'binomial' | 'poisson' | 'gamma';
+    link?: 'logit' | 'probit' | 'log' | 'inverse';
+    penalty?: 'ridge' | 'lasso' | 'elasticnet';
+    alpha?: number;
+    offset?: number[];
+    standardize?: boolean;
+    maxOuterIter?: number;
+    maxInnerIter?: number;
+    tol?: number;
+    previousBeta?: number[];
+  },
+): PenalizedGLMFit {
+  const familyArg = options?.family ?? 'binomial';
+  // Translate brief's `binomial` to Topic 22's `bernoulli` registry key.
+  const familyName = familyArg === 'binomial' ? 'bernoulli' : familyArg;
+  const linkName =
+    options?.link ??
+    (familyArg === 'binomial' ? 'logit' : familyArg === 'poisson' ? 'log' : 'inverse');
+  const penalty = options?.penalty ?? 'ridge';
+  const alpha = options?.alpha ?? (penalty === 'lasso' ? 1 : penalty === 'ridge' ? 0 : 0.5);
+  const standardize = options?.standardize ?? true;
+  const maxOuterIter = options?.maxOuterIter ?? 50;
+  const maxInnerIter = options?.maxInnerIter ?? 100;
+  const tol = options?.tol ?? 1e-7;
+
+  const family = FAMILIES[familyName];
+  const link = LINKS[linkName];
+  if (!family) throw new Error(`penalizedGLMFit: unknown family ${familyName}`);
+  if (!link) throw new Error(`penalizedGLMFit: unknown link ${linkName}`);
+
+  const n = X.length;
+  if (n === 0) throw new Error('penalizedGLMFit: empty design');
+  const p = X[0].length;
+  const offset = options?.offset ?? new Array<number>(n).fill(0);
+
+  // Standardize predictors (intercept handled via the synthetic constant column).
+  let meanX: number[];
+  let sdX: number[];
+  if (standardize) {
+    meanX = new Array<number>(p).fill(0);
+    sdX = new Array<number>(p).fill(1);
+    for (let j = 0; j < p; j++) {
+      let s = 0;
+      for (let i = 0; i < n; i++) s += X[i][j];
+      meanX[j] = s / n;
+    }
+    for (let j = 0; j < p; j++) {
+      let ss = 0;
+      for (let i = 0; i < n; i++) {
+        const d = X[i][j] - meanX[j];
+        ss += d * d;
+      }
+      const v = ss / n;
+      if (v < 1e-24) {
+        throw new Error(`penalizedGLMFit: column ${j} has zero variance`);
+      }
+      sdX[j] = Math.sqrt(v);
+    }
+  } else {
+    meanX = new Array<number>(p).fill(0);
+    sdX = new Array<number>(p).fill(1);
+  }
+
+  // Build standardized design with leading intercept column.
+  const Xa: number[][] = Array.from({ length: n }, () => new Array<number>(p + 1));
+  for (let i = 0; i < n; i++) {
+    Xa[i][0] = 1;
+    for (let j = 0; j < p; j++) Xa[i][j + 1] = (X[i][j] - meanX[j]) / sdX[j];
+  }
+
+  // Initial β: warm-start (in standardized scale) or zeros + intercept-only init.
+  const beta = new Array<number>(p + 1).fill(0);
+  if (options?.previousBeta) {
+    if (options.previousBeta.length !== p + 1) {
+      throw new Error(
+        `penalizedGLMFit: previousBeta length ${options.previousBeta.length} != p+1=${p + 1}`,
+      );
+    }
+    beta[0] = options.previousBeta[0];
+    for (let j = 0; j < p; j++) beta[j + 1] = options.previousBeta[j + 1] * sdX[j];
+    // Add back the intercept shift the standardization absorbed.
+    for (let j = 0; j < p; j++) beta[0] += options.previousBeta[j + 1] * meanX[j];
+  } else {
+    let yMean = 0;
+    for (let i = 0; i < n; i++) yMean += y[i];
+    yMean /= n;
+    // Initialize η₀ at link(ȳ) (clip ȳ for binomial / poisson).
+    let mu0 = yMean;
+    if (familyName === 'bernoulli') mu0 = Math.min(Math.max(yMean, 0.001), 0.999);
+    else if (familyName === 'poisson') mu0 = Math.max(yMean, 0.5);
+    else if (familyName === 'gamma') mu0 = Math.max(yMean, 1e-3);
+    beta[0] = link.g(mu0);
+  }
+
+  let converged = false;
+  let outerIter = 0;
+  let prevDeviance = Infinity;
+  let mu = new Array<number>(n);
+  let eta = new Array<number>(n);
+
+  // Clip η before passing through link.gInv: Math.exp(η) overflows past
+  // ~709 (log link → Infinity μ → NaN deviance), and the same applies to
+  // any unbounded inverse link. Symmetric ±700 keeps every standard link
+  // numerically safe without distorting realistic GLM fits.
+  const clipEta = (e: number): number => (e < -700 ? -700 : e > 700 ? 700 : e);
+
+  for (; outerIter < maxOuterIter; outerIter++) {
+    // ── Compute current η, μ, working response z, weights w ────────────
+    eta = new Array<number>(n);
+    for (let i = 0; i < n; i++) {
+      let e = offset[i];
+      for (let j = 0; j < p + 1; j++) e += Xa[i][j] * beta[j];
+      eta[i] = e;
+    }
+    mu = eta.map((e) => link.gInv(clipEta(e)));
+    const w = new Array<number>(n);
+    const z = new Array<number>(n);
+    for (let i = 0; i < n; i++) {
+      const gp = link.gPrime(mu[i]);
+      const v = family.variance.V(mu[i]);
+      // W_ii = 1 / [V(μ) · g'(μ)²].
+      const gp2v = gp * gp * v;
+      const wi = gp2v > 1e-15 ? 1 / gp2v : 1e15;
+      w[i] = wi;
+      // z_i = η_i + (y_i − μ_i) · g'(μ_i) − offset_i.
+      z[i] = eta[i] + (y[i] - mu[i]) * gp - offset[i];
+    }
+
+    // ── Inner penalized-WLS solve ──────────────────────────────────────
+    if (penalty === 'ridge') {
+      // Closed-form: β = (Xᵀ W X + Λ)⁻¹ Xᵀ W z, with Λ = 2λ on slopes only.
+      const xtwxMat = xtwx(Xa, w);
+      for (let j = 1; j < p + 1; j++) xtwxMat[j][j] += 2 * lambda;
+      const xtwzVec = xtwz(Xa, w, z);
+      let solved: number[];
+      try {
+        solved = choleskySolve(xtwxMat, xtwzVec);
+      } catch {
+        // Severe ill-conditioning even with the ridge: bail out.
+        converged = false;
+        break;
+      }
+      // Damped update: β_new = β + 1·(solved − β); already Newton step.
+      for (let j = 0; j < p + 1; j++) beta[j] = solved[j];
+    } else {
+      // Coord-descent on weighted residuals.
+      // Pre-compute per-column weighted sum-of-squares S_j = Σ w_i X_a[i,j]²
+      // and current weighted residual r_w_i = w_i (z_i − Xa β_i)  [used as pseudo-resid].
+      const Sj = new Array<number>(p + 1).fill(0);
+      for (let j = 0; j < p + 1; j++) {
+        let s = 0;
+        for (let i = 0; i < n; i++) s += w[i] * Xa[i][j] * Xa[i][j];
+        Sj[j] = s;
+      }
+      // Working residual r = z − Xa β.
+      const r = new Array<number>(n);
+      for (let i = 0; i < n; i++) {
+        let xb = 0;
+        for (let j = 0; j < p + 1; j++) xb += Xa[i][j] * beta[j];
+        r[i] = z[i] - xb;
+      }
+      const lassoCoef = 2 * lambda * alpha;
+      const ridgeCoef = 2 * lambda * (1 - alpha);
+      for (let inner = 0; inner < maxInnerIter; inner++) {
+        let maxDelta = 0;
+        for (let j = 0; j < p + 1; j++) {
+          const oldBetaJ = beta[j];
+          let zj = 0;
+          for (let i = 0; i < n; i++) zj += w[i] * Xa[i][j] * r[i];
+          zj += Sj[j] * oldBetaJ;
+          let newBetaJ: number;
+          if (j === 0) {
+            // Intercept: unpenalized.
+            newBetaJ = Sj[j] > 1e-15 ? zj / Sj[j] : oldBetaJ;
+          } else {
+            const denom = Sj[j] + ridgeCoef;
+            newBetaJ = denom > 1e-15 ? softThreshold(zj, lassoCoef) / denom : 0;
+          }
+          const delta = newBetaJ - oldBetaJ;
+          if (delta !== 0) {
+            for (let i = 0; i < n; i++) r[i] -= Xa[i][j] * delta;
+            beta[j] = newBetaJ;
+            const ad = Math.abs(delta);
+            if (ad > maxDelta) maxDelta = ad;
+          }
+        }
+        if (maxDelta < tol) break;
+      }
+    }
+
+    // ── Convergence check on penalized deviance ────────────────────────
+    let etaNew = new Array<number>(n);
+    for (let i = 0; i < n; i++) {
+      let e = offset[i];
+      for (let j = 0; j < p + 1; j++) e += Xa[i][j] * beta[j];
+      etaNew[i] = e;
+    }
+    const muNew = etaNew.map((e) => link.gInv(clipEta(e)));
+    let dev = 0;
+    for (let i = 0; i < n; i++) dev += family.devianceContribution(y[i], muNew[i]);
+    let pen = 0;
+    for (let j = 1; j < p + 1; j++) {
+      pen += alpha * Math.abs(beta[j]) + 0.5 * (1 - alpha) * beta[j] * beta[j];
+    }
+    const penDev = dev + 2 * lambda * pen;
+    if (Math.abs(prevDeviance - penDev) < tol * Math.max(1, Math.abs(penDev))) {
+      converged = true;
+      eta = etaNew;
+      mu = muNew;
+      outerIter++;
+      break;
+    }
+    prevDeviance = penDev;
+    eta = etaNew;
+    mu = muNew;
+  }
+
+  // Recover original-scale coefficients.
+  const betaOut = new Array<number>(p + 1);
+  betaOut[0] = beta[0];
+  for (let j = 0; j < p; j++) {
+    betaOut[j + 1] = beta[j + 1] / sdX[j];
+    betaOut[0] -= betaOut[j + 1] * meanX[j];
+  }
+
+  // Final deviance on original scale.
+  let finalDev = 0;
+  for (let i = 0; i < n; i++) finalDev += family.devianceContribution(y[i], mu[i]);
+  let finalPen = 0;
+  for (let j = 1; j < p + 1; j++) {
+    finalPen += alpha * Math.abs(beta[j]) + 0.5 * (1 - alpha) * beta[j] * beta[j];
+  }
+
+  return {
+    beta: betaOut,
+    lambda,
+    family: familyName,
+    link: linkName,
+    penalty,
+    alpha,
+    converged,
+    nOuterIter: outerIter,
+    eta,
+    mu,
+    deviance: finalDev + 2 * lambda * finalPen,
+  };
+}
+
+// ── §6.1.Q  Lasso KKT-condition checker ────────────────────────────────────
+
+export interface KKTCheckResult {
+  satisfied: boolean;
+  violations: { j: number; required: number; actual: number }[];
+  maxViolation: number;
+}
+
+/**
+ * Verify that β̂ satisfies the lasso KKT (subgradient) optimality conditions:
+ *
+ *   j ∈ A:   |X[:,j]ᵀ (y − Xβ̂)| = λ                (active — boundary)
+ *   j ∉ A:   |X[:,j]ᵀ (y − Xβ̂)| ≤ λ                (inactive — interior)
+ *
+ * Tolerance is applied symmetrically. Used by the T9.6, T9.16, T9.17 tests
+ * and by §23.3 Proof 2's textual walkthrough of the KKT characterization.
+ *
+ * Caller may pass the standardized design + standardized β̃ for a clean
+ * λ-comparison; passing the original-scale (X, β) works but the equality on
+ * active coordinates uses the original-scale residual correlation.
+ */
+export function kktCheck(
+  X: number[][],
+  y: number[],
+  beta: number[],
+  lambda: number,
+  options?: { tol?: number; activeTol?: number },
+): KKTCheckResult {
+  const tol = options?.tol ?? 1e-6;
+  const activeTol = options?.activeTol ?? 1e-8;
+  const n = X.length;
+  if (n === 0) throw new Error('kktCheck: empty design');
+  const p = X[0].length;
+  if (beta.length !== p + 1 && beta.length !== p) {
+    throw new Error(
+      `kktCheck: beta length ${beta.length} != p (${p}) or p+1 (${p + 1})`,
+    );
+  }
+  const hasIntercept = beta.length === p + 1;
+  const slope = hasIntercept ? beta.slice(1) : beta;
+  const intercept = hasIntercept ? beta[0] : 0;
+  // Compute residual r = y − Xβ.
+  const r = y.slice();
+  for (let i = 0; i < n; i++) {
+    let xb = intercept;
+    for (let j = 0; j < p; j++) xb += slope[j] * X[i][j];
+    r[i] -= xb;
+  }
+  const violations: { j: number; required: number; actual: number }[] = [];
+  let maxViolation = 0;
+  for (let j = 0; j < p; j++) {
+    let s = 0;
+    for (let i = 0; i < n; i++) s += X[i][j] * r[i];
+    const abs = Math.abs(s);
+    if (Math.abs(slope[j]) > activeTol) {
+      // Active: |s| should equal λ.
+      const v = Math.abs(abs - lambda);
+      if (v > tol) {
+        violations.push({ j, required: lambda, actual: abs });
+        if (v > maxViolation) maxViolation = v;
+      }
+    } else {
+      // Inactive: |s| should be ≤ λ.
+      if (abs > lambda + tol) {
+        const v = abs - lambda;
+        violations.push({ j, required: lambda, actual: abs });
+        if (v > maxViolation) maxViolation = v;
+      }
+    }
+  }
+  return { satisfied: violations.length === 0, violations, maxViolation };
+}

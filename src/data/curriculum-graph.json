@@ -27,7 +27,7 @@
 
     { "id": "linear-regression", "label": "Simple & Multiple Linear Regression", "domain": "regression-linear-models", "status": "published", "url": "/topics/linear-regression" },
     { "id": "generalized-linear-models", "label": "Generalized Linear Models", "domain": "regression-linear-models", "status": "published", "url": "/topics/generalized-linear-models" },
-    { "id": "regularization", "label": "Regularization & Penalized Estimation", "domain": "regression-linear-models", "status": "planned", "url": "/topics/regularization" },
+    { "id": "regularization", "label": "Regularization & Penalized Estimation", "domain": "regression-linear-models", "status": "published", "url": "/topics/regularization-and-penalized-estimation" },
     { "id": "model-selection", "label": "Model Selection & Information Criteria", "domain": "regression-linear-models", "status": "planned", "url": "/topics/model-selection" },
 
     { "id": "bayesian-foundations", "label": "Bayesian Foundations & Prior Selection", "domain": "bayesian-statistics", "status": "planned", "url": "/topics/bayesian-foundations" },
