@@ -119,9 +119,13 @@ export type PenaltyColorKey = keyof typeof penaltyColors;
 /**
  * Topic 24 — information-criteria palette. Five distinct hues for the AIC /
  * AICc / BIC / Cp / LOO-CV overlay used by ICSelector, CVvsICComparator, and
- * the §24.5 Stone-equivalence figure. Hue choices avoid clashing with Topic
- * 22's GLM palette (poisson=#2563eb appears here as `aic` because both anchor
- * the "default expected-loss criterion" — a deliberate visual link).
+ * the §24.5 Stone-equivalence figure. Mirrors the CSS variables
+ * `--color-ic-aic` … `--color-ic-loo` defined in `src/styles/global.css`,
+ * matching Topic 22's `glmFamilyColors` ↔ `--color-bernoulli` themed pattern.
+ *
+ * Hue choices share anchors with the Topic-22 GLM palette: `aic = poisson
+ * blue` (default expected-loss criterion), `loo = gamma amber` (empirical-loss
+ * criterion).
  *
  * `informationCriteriaLineStyles` provides matching SVG `stroke-dasharray`
  * fallbacks so color-blind viewers can still distinguish criteria via
@@ -131,15 +135,14 @@ export type PenaltyColorKey = keyof typeof penaltyColors;
  *   aicc  indigo     — small-sample correction
  *   bic   violet     — selection consistency
  *   cp    emerald    — Gaussian-linear historical predecessor
- *   loo   amber      — empirical cross-validation (matches the
- *                      "empirical-loss" amber shared with Topic 22 gamma)
+ *   loo   amber      — empirical cross-validation
  */
 export const informationCriteriaColors = {
-  aic:  '#2563eb',
-  aicc: '#6366f1',
-  bic:  '#7c3aed',
-  cp:   '#059669',
-  loo:  '#d97706',
+  aic:  'var(--color-ic-aic)',
+  aicc: 'var(--color-ic-aicc)',
+  bic:  'var(--color-ic-bic)',
+  cp:   'var(--color-ic-cp)',
+  loo:  'var(--color-ic-loo)',
 } as const;
 
 export type InformationCriteriaColorKey = keyof typeof informationCriteriaColors;

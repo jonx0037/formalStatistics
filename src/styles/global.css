@@ -57,6 +57,16 @@
   --color-gamma:     #d97706;
   --color-normal:    #6b7280;
 
+  /* Information-criteria palette (Topic 24) — five distinct hues for AIC,
+     AICc, BIC, Mallows' Cp, and 10-fold CV overlays. Hue choices share
+     anchors with the Topic-22 GLM palette: aic = poisson blue (default
+     expected-loss), loo = gamma amber (empirical-loss). */
+  --color-ic-aic:  #2563eb;
+  --color-ic-aicc: #6366f1;
+  --color-ic-bic:  #7c3aed;
+  --color-ic-cp:   #059669;
+  --color-ic-loo:  #d97706;
+
   /* Typography */
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
   --font-serif: 'Merriweather', 'Georgia', serif;
@@ -86,6 +96,13 @@
 
     --color-viz-bg: #1F2937;
     --color-viz-grid: #374151;
+
+    /* IC palette dark — slightly lighter hues for contrast on dark surface */
+    --color-ic-aic:  #60a5fa;
+    --color-ic-aicc: #818cf8;
+    --color-ic-bic:  #c084fc;
+    --color-ic-cp:   #34d399;
+    --color-ic-loo:  #fbbf24;
   }
 }
 
@@ -110,6 +127,13 @@
 
   --color-viz-bg: #1F2937;
   --color-viz-grid: #374151;
+
+  /* IC palette dark — matches @media block above */
+  --color-ic-aic:  #60a5fa;
+  --color-ic-aicc: #818cf8;
+  --color-ic-bic:  #c084fc;
+  --color-ic-cp:   #34d399;
+  --color-ic-loo:  #fbbf24;
 }
 
 /* ============================================================
