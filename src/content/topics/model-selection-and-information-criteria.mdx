@@ -166,19 +166,111 @@ import ExternalLink from '../../components/ui/ExternalLink.astro';
 
 ## 24.1 The model-selection problem
 
-{/* TODO Task 7: §24.1 prose (~700 words) — motivation, in-sample vs out-of-sample,
-    optimism gap formalized. Defs 1–2, Ex 1 + Fig 1 (24-optimism.png), Rems 1–2. */}
+{/* Section opening — TODO Task 7 prose: motivation paragraph on in-sample vs
+    out-of-sample fit, the running sin(2πx) example, and why "smaller training
+    loss" is not enough. */}
 
-<DefinitionBlock number={1} title="Candidate model family">
-A **candidate model family** is a finite collection $\{\mathcal{M}_1, \mathcal{M}_2, \ldots, \mathcal{M}_M\}$ of statistical models, each defining a parameter space $\Theta_k$ and a likelihood $L_k(\theta_k; \mathbf{y})$. The **model-selection problem** is to choose one model from this family, given the data $\mathbf{y}$, by a procedure that has a defensible asymptotic justification.
+Given data $\mathbf{y}$ and a candidate family $\{\mathcal{M}_1, \mathcal{M}_2, \ldots, \mathcal{M}_M\}$ of statistical models — each with parameter space $\Theta_k$ and likelihood $L_k(\theta_k; \mathbf{y})$ — the **model-selection problem** is to choose one model from the family by a procedure that has a defensible asymptotic justification. Maximum log-likelihood $\hat\ell$ alone is not such a procedure: $\hat\ell$ is monotone in model complexity, so it always picks the largest candidate.
+
+<DefinitionBlock number={1} title="Prediction risk">
+For an estimator $\hat\theta$ trained on $\mathbf{y} = (Y_1, \ldots, Y_n)$ and a fresh observation $Y_{\text{new}} \sim f_0$ from the same data-generating distribution, the **prediction risk** under loss $L$ is
+
+$$R(\hat\theta) \;:=\; \mathbb{E}_{Y_{\text{new}}}\!\left[L(\hat\theta;\, Y_{\text{new}})\right].$$
+
+For log-likelihood loss $L(\hat\theta; y) = -\log f(y; \hat\theta)$, the risk is the negative expected log-predictive
+
+$$R(\hat\theta) \;=\; -\mathbb{E}_{Y_{\text{new}}}\!\left[\log f(Y_{\text{new}}; \hat\theta)\right] \;=\; -\mathrm{EL}(\hat\theta).$$
 </DefinitionBlock>
+
+<DefinitionBlock number={2} title="Optimism gap">
+The **training empirical risk** is $\hat R(\hat\theta) = (1/n)\sum_{i=1}^n L(\hat\theta; Y_i)$. The **optimism gap** measures how much in-sample loss underestimates out-of-sample loss in expectation:
+
+$$\mathrm{opt} \;:=\; \mathbb{E}\!\left[R(\hat\theta)\right] - \mathbb{E}\!\left[\hat R(\hat\theta)\right].$$
+
+For correctly-specified parametric models satisfying Topic 14's regularity conditions, $\mathrm{opt} = k/n + o(1/n)$ where $k = \dim(\theta)$ — the optimism is exactly the parameter count divided by sample size, to leading order.
+</DefinitionBlock>
+
+<ExampleBlock number={1} title="Polynomial fit on sin(2πx): in-sample lies, out-of-sample doesn't">
+Generate $n=80$ observations from $y = \sin(2\pi x) + \mathcal{N}(0, 0.25^2)$ with $x \sim \mathcal{U}(0, 1)$. Fit polynomials of degree $d = 0, 1, \ldots, 12$ by ordinary least squares. The training $\mathrm{RSS}$ is monotone-decreasing in $d$ (every extra coefficient can only reduce the in-sample residual sum). The out-of-sample prediction risk, however, follows a U-shape: it falls as $d$ rises from $0$ to $\sim 6$ (model approximates the sine well), then climbs as $d$ exceeds $\sim 8$ (the polynomial wiggles to fit noise). Figure 1 shows the gap.
+</ExampleBlock>
+
+<img src="/images/topics/model-selection-and-information-criteria/24-optimism.png"
+     alt="Two-panel figure. Left: training RSS vs polynomial degree d on the sin DGP, monotone-decreasing from d=0 to d=12. Right: out-of-sample prediction risk on a fresh test set of size 1000, U-shaped with minimum near d=6. Vertical reference line at d=6 in both panels. Title: 'In-sample fit lies; out-of-sample risk does not'."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<RemarkBlock number={1} title="Selection as a decision problem">
+{/* TODO Task 7: 2–3 sentences on why model selection is a *decision* over $\mathcal{M}$,
+    contrasting with parameter estimation within a single model. Frame the AIC/BIC/CV
+    triple as three different loss functions on the model space. */}
+Model selection is a decision problem over the candidate set $\{\mathcal{M}_1, \ldots, \mathcal{M}_M\}$ — distinct from parameter estimation, which decides over $\Theta_k$ for a fixed $\mathcal{M}_k$. AIC, BIC, and cross-validation correspond to three different loss functions on the model space, each with its own asymptotic guarantee.
+</RemarkBlock>
+
+<RemarkBlock number={2} title="Three question families: consistency, efficiency, sparsity recovery">
+{/* TODO Task 7: 4–5 sentences distinguishing (1) selection consistency
+    (BIC's target), (2) prediction efficiency (AIC's target), (3) sparsity
+    recovery (Topic 23 lasso's target). Stress that each is a different
+    asymptotic regime and the procedures align with their respective targets. */}
+Three asymptotic targets organize the literature: **selection consistency** ($\mathbb{P}(\hat{\mathcal{M}} = \mathcal{M}_*) \to 1$ when the truth is in the candidate set — BIC's target), **prediction efficiency** (minimax-rate optimal $L^2$ risk in the misspecified-nonparametric regime — AIC and CV's target), and **sparsity recovery** (correctly identifying $\mathrm{supp}(\boldsymbol\beta_*)$ — Topic 23's lasso target). §24.6 Thm 5 shows the first two are formally incompatible.
+</RemarkBlock>
 
 <a id="section-24-2"></a>
 
-## 24.2 Mallows' Cp — the Gaussian-linear predecessor
+## 24.2 Mallows' $C_p$ — the Gaussian-linear predecessor
 
-{/* TODO Task 7: §24.2 prose (~600 words, shortest section) — Def 3 (Cp),
-    Ex 2 embedded derivation, Rems 3–4, Ex 3 + Fig 2 (24-cp-polynomial.png). */}
+{/* Section opening — TODO Task 7 prose: 2–3 sentences placing Cp historically
+    (Mallows 1973, eight years before Akaike's 1974 AIC paper, eleven years
+    before Schwarz 1978's BIC). The Gaussian-linear setting is the simplest
+    place to see the optimism-correction logic that AIC will generalize. */}
+
+Before Akaike's information-theoretic framework, Mallows (1973) proposed a Gaussian-linear-specific criterion that estimates expected scaled prediction risk via a complexity penalty calibrated against a reference variance.
+
+<DefinitionBlock number={3} title="Mallows' $C_p$">
+For an OLS fit of a candidate model with $k$ free parameters (intercept + slopes + $\sigma^2$) to $n$ observations under the Gaussian linear model $\mathbf{y} = \mathbf{X}\boldsymbol\beta + \mathcal{N}(\mathbf{0}, \sigma^2\mathbf{I})$, with residual sum of squares $\mathrm{RSS}_k$, **Mallows' $C_p$** is
+
+$$C_p \;:=\; \frac{\mathrm{RSS}_k}{\hat\sigma^2_{\text{ref}}} + 2k - n,$$
+
+where $\hat\sigma^2_{\text{ref}}$ is the MLE error variance from the **largest** candidate model (the conventional reference).
+</DefinitionBlock>
+
+<ExampleBlock number={2} title="$C_p$ unbiasedness for scaled prediction risk (embedded derivation)">
+Under the Gaussian linear model with $\hat\sigma^2_{\text{ref}}$ known (or treated as known via the reference convention), the expected scaled in-sample residual sum is
+
+$$\mathbb{E}\!\left[\mathrm{RSS}_k / \sigma^2\right] \;=\; n - k.$$
+
+Adding $2k - n$ to both sides:
+
+$$\mathbb{E}[C_p] \;=\; (n - k) + 2k - n \;=\; k.$$
+
+A separate calculation (Mallows 1973 §3) gives the expected scaled prediction risk on a fresh test set of size $n$:
+
+$$\mathbb{E}\!\left[\mathrm{R}_{\text{scaled}}\right] \;=\; k + (\text{model bias term}).$$
+
+Under correct specification (model bias $= 0$), $\mathbb{E}[C_p] = \mathbb{E}[\mathrm{R}_{\text{scaled}}] = k$. Otherwise $C_p$ overestimates the parameter count by exactly the model bias — making $C_p$ minus its parameter count a calibrated estimator of model bias, the original use case Mallows 1973 §3 emphasized.
+</ExampleBlock>
+
+<RemarkBlock number={3} title="$C_p$ ≡ AIC under Gaussian-linear errors">
+{/* TODO Task 7: 3–4 sentences showing the $C_p$/AIC equivalence. Both estimate
+    the same expected scaled prediction risk to leading order; AIC generalizes
+    away from Gaussian. */}
+Under the Gaussian linear model, $\mathrm{AIC} = n\log(\mathrm{RSS}/n) + 2k$ (dropping additive constants), and a Taylor expansion of $\log(\mathrm{RSS}/n)$ around $\sigma^2_{\text{ref}}$ recovers $C_p$ up to higher-order terms. The two criteria rank candidates identically under Gaussian-homoscedastic errors; AIC is the strict generalization to other exponential families (§24.3 Thm 1).
+</RemarkBlock>
+
+<RemarkBlock number={4} title="Choice of $\hat\sigma^2_{\text{ref}}$">
+{/* TODO Task 7: 4–5 sentences on the practical question of which model gives
+    the reference variance. Mallows recommended the largest candidate; HAS2009
+    §7.5 discusses the bias if the largest is itself misspecified. */}
+The convention $\hat\sigma^2_{\text{ref}} = \mathrm{RSS}_{\text{full}}/(n - k_{\text{full}})$ — using the unbiased estimator from the largest candidate — has the cleanest theory: $\hat\sigma^2_{\text{ref}}$ is unbiased for $\sigma^2$ if the largest model is correctly specified, and $C_p$'s argmin then targets the bias-variance-optimal submodel. T10.8 in `regression.test.ts` pins $\hat\sigma^2_{\text{ref}} = 0.0497586381$ for the canonical POLY_DGP at $n=80$, giving $\arg\min_d C_p = 6$.
+</RemarkBlock>
+
+<ExampleBlock number={3} title="$C_p$ on the polynomial DGP (T10 pinned)">
+On the canonical POLY_DGP ($n=80$, $\sigma=0.25$, seed $42$), with $\hat\sigma^2_{\text{ref}} = 0.0497586381$ from the $d = 12$ fit, the Mallows $C_p$ values for $d = 0, 1, \ldots, 12$ have argmin at **$d = 6$ with $C_p = 21.4569$** (T10.8). The argmin coincides with AIC's argmin (T10.3), illustrating Rem 3's $C_p \equiv \mathrm{AIC}$ equivalence on the Gaussian linear model. Figure 2 plots the $C_p$ curve alongside the in-sample $\mathrm{RSS}/\hat\sigma^2_{\text{ref}}$ to make the $+2k - n$ correction visually concrete.
+</ExampleBlock>
+
+<img src="/images/topics/model-selection-and-information-criteria/24-cp-polynomial.png"
+     alt="Two curves over polynomial degree d=0..12 on the POLY_DGP. Bottom curve: scaled RSS (RSS/sigma^2_ref) — monotone-decreasing. Top curve: Mallows Cp = scaled RSS + 2k - n — U-shaped with argmin at d=6. Vertical reference at argmin Cp. Title: 'Mallows Cp adds the +2k - n optimism correction'."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
 
 <a id="section-24-3"></a>
 
