@@ -3417,13 +3417,13 @@ export function bic(fit: OLSFit | GLMFit, n: number): number {
 /**
  * Mallows' Cp = SSE/σ̂²_ref + 2 k − n.
  * Reference σ̂²_ref is conventionally the MLE from the largest candidate
- * model (Brief Appendix B). Gaussian-only (throws for GLM fits — use AIC/BIC/TIC
- * for GLM model selection).
+ * model (Brief Appendix B). Gaussian-only — the parameter type is `OLSFit`
+ * so the TypeScript compiler enforces the Gaussian-only constraint at the
+ * call site (use AIC/BIC/TIC for GLM model selection). The runtime
+ * `sigmaSqRef > 0` check remains because that's a value-domain
+ * constraint TypeScript cannot enforce.
  */
 export function mallowsCp(fit: OLSFit, sigmaSqRef: number): number {
-  if (!isOLSFit(fit)) {
-    throw new Error('mallowsCp: only defined for OLSFit; use aic/bic/tic for GLM fits');
-  }
   if (sigmaSqRef <= 0) {
     throw new Error(`mallowsCp: sigmaSqRef must be > 0, got ${sigmaSqRef}`);
   }
@@ -3796,22 +3796,19 @@ export function kFoldCV(
   const fitter =
     fitFn ?? ((Xs: number[][], ys: number[]) => ({ beta: qrSolve(Xs, ys) }));
 
-  // Deterministic shuffle.
+  // Deterministic shuffle. Uses the codebase's shared seededRandom so CV
+  // partition seeding stays consistent with crossValidate, simulators, and
+  // the rest of the regression-module RNG calls.
+  const rng = seededRandom(seed);
   const idx: number[] = Array.from({ length: n }, (_, i) => i);
-  // Local LCG to avoid pulling in seededRandom from probability.ts (which
-  // would create a cycle; regression.ts is a leaf module).
-  let state = seed >>> 0;
-  const rand = (): number => {
-    state = (state * 1664525 + 1013904223) >>> 0;
-    return state / 0x100000000;
-  };
   for (let i = n - 1; i > 0; i--) {
-    const j = Math.floor(rand() * (i + 1));
+    const j = Math.floor(rng() * (i + 1));
     [idx[i], idx[j]] = [idx[j], idx[i]];
   }
 
   const foldSize = Math.ceil(n / k);
   let sse = 0;
+  let nTested = 0;
   for (let f = 0; f < k; f++) {
     const lo = f * foldSize;
     const hi = Math.min(lo + foldSize, n);
@@ -3826,21 +3823,34 @@ export function kFoldCV(
         ytrain.push(y[i]);
       }
     }
-    if (Xtrain.length <= m) continue; // can't fit
+    if (Xtrain.length <= m) {
+      throw new Error(
+        `kFoldCV: fold ${f} has Xtrain.length = ${Xtrain.length} ≤ m = ${m}; ` +
+          `pick smaller k or use a richer design`,
+      );
+    }
     let beta: number[];
     try {
       beta = fitter(Xtrain, ytrain).beta;
-    } catch {
-      continue;
+    } catch (e) {
+      throw new Error(
+        `kFoldCV: fitter threw on fold ${f} (Xtrain ${Xtrain.length}×${m}): ${
+          (e as Error).message
+        }`,
+      );
     }
     for (const i of testIdx) {
       let yhat = 0;
       for (let j = 0; j < m; j++) yhat += X[i][j] * beta[j];
       const r = y[i] - yhat;
       sse += r * r;
+      nTested++;
     }
   }
-  return sse / n;
+  // nTested === n in practice (every row appears in exactly one fold given
+  // foldSize = ceil(n/k)), but we divide by nTested to be defensive against
+  // empty trailing folds and to keep the result interpretable as mean SSE.
+  return nTested > 0 ? sse / nTested : NaN;
 }
 
 /**
@@ -3874,11 +3884,18 @@ export function predictionRisk(
     }
     return sse / nTest;
   }
-  // GLM: predict η_test → μ_test via canonical-link inverse; sum scaled deviance.
+  // GLM: predict η_test → μ_test via canonical-link inverse; sum scaled
+  // deviance. η is clipped to [-ETA_CLIP, ETA_CLIP] before the inverse-link
+  // call to prevent Math.exp overflow (Math.exp(710) = Infinity), which
+  // would produce NaN deviance contributions. Same convention as glmFit's
+  // internal IRLS clip per Topic-22 brief gotcha G5.
+  const ETA_CLIP = 700;
   let dev = 0;
   for (let i = 0; i < nTest; i++) {
     let eta = 0;
     for (let j = 0; j < fit.beta.length; j++) eta += fit.beta[j] * XTest[i][j];
+    if (eta > ETA_CLIP) eta = ETA_CLIP;
+    else if (eta < -ETA_CLIP) eta = -ETA_CLIP;
     const mu = fit.link.gInv(eta);
     dev += fit.family.devianceContribution(yTest[i], mu);
   }

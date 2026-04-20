@@ -45,8 +45,13 @@ const LABEL: Record<Series, string> = {
   aic: 'AIC',
   cp: 'Cp',
 };
-/** Map series → palette key. CV variants share the empirical-CV "loo" hue
- *  via stroke-dasharray to distinguish them. */
+/** Map series → palette key. The three CV variants (LOO, 5-fold, 10-fold)
+ *  use distinct hues — overlapping a single hue per CV variety would force
+ *  reliance on dash patterns alone for distinction, which is harder to read
+ *  on the curve-overlay layout this component renders. LOO keeps the
+ *  empirical-CV "loo" hue (amber); 5-fold borrows the AICc indigo and
+ *  10-fold borrows the BIC violet so each CV curve has its own
+ *  hue-and-dash signature. The IC curves keep their own hues. */
 const PALETTE: Record<Series, 'aic' | 'aicc' | 'bic' | 'cp' | 'loo'> = {
   looCV: 'loo',
   cv5: 'aicc',

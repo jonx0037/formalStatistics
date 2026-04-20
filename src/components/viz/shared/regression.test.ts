@@ -2030,6 +2030,33 @@ const polyFit = polyFitOLS;
   );
 }
 
+// ── T10.28 — effectiveDOF dispatches correctly across fit types ─────────────
+{
+  // OLS branch: effectiveDOF = beta.length = d + 1 (intercept + d coefs).
+  const olsAtD6 = polyFit(POLY_X_MAIN, POLY_Y_MAIN, 6);
+  check(
+    'T10.28a effectiveDOF(OLSFit d=6) = 7 (intercept + 6 coefs)',
+    effectiveDOF(olsAtD6) === 7,
+    effectiveDOF(olsAtD6),
+    7,
+  );
+
+  // Ridge branch: effectiveDOF returns fit.dof. Ridge dof at λ=1 on a
+  // standardized poly d=10 design is ≈ 2.93 (matches T10.23's hatMatrixTrace
+  // pin within the standardization-induced shift; both quantities are the
+  // smoother trace, evaluated at slightly different design scalings).
+  const X10 = polyDesign(POLY_X_MAIN, 10);
+  // Drop the intercept column — ridgeFit adds intercept handling internally.
+  const X10NoIntercept = X10.map((row) => row.slice(1));
+  const ridgeAt1 = ridgeFit(X10NoIntercept, POLY_Y_MAIN, 1.0);
+  check(
+    'T10.28b effectiveDOF(RidgeFit λ=1) returns finite fit.dof',
+    Number.isFinite(effectiveDOF(ridgeAt1)) && effectiveDOF(ridgeAt1) > 0 && effectiveDOF(ridgeAt1) < 11,
+    effectiveDOF(ridgeAt1).toFixed(4),
+    'in (0, 11) — ridge effective DOF on standardized poly-d10 design',
+  );
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Summary.
 // ─────────────────────────────────────────────────────────────────────────────
