@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useResizeObserver } from './shared/useResizeObserver';
 import { penaltyColors } from './shared/colorScales';
-import { CV_RESULTS } from '../../data/regression-data';
+import { CV_RESULTS } from '../../data/regularization-data';
 import type { CVResult } from './shared/regression';
 
 const PANEL_H = 320;
@@ -68,7 +68,7 @@ export default function CrossValidationExplorer() {
             <button
               key={tabDef.key}
               role="tab"
-              aria-pressed={tab === tabDef.key}
+              aria-selected={tab === tabDef.key}
               onClick={() => setTab(tabDef.key)}
               className={
                 'rounded px-3 py-1 text-xs transition-colors ' +

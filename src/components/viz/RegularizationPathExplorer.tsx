@@ -6,7 +6,7 @@ import {
   PROSTATE_CANCER_DATA,
   PROSTATE_RIDGE_PATH,
   PROSTATE_LASSO_PATH,
-} from '../../data/regression-data';
+} from '../../data/regularization-data';
 
 const MARGIN = { top: 24, right: 96, bottom: 44, left: 56 };
 const PANEL_H = 320;
@@ -122,9 +122,10 @@ export default function RegularizationPathExplorer() {
       <div className="mt-3 text-xs text-gray-600">
         <strong>Reading the figure.</strong> Each colored curve is one
         coefficient β̂<sub>j</sub>(λ) as λ varies. The vertical line marks
-        the current λ. Hover (or focus) a curve to highlight one feature.
-        Lasso curves enter the active set one at a time (piecewise linear,
-        each elbow is an active-set change); ridge curves shrink smoothly.
+        the current λ. Hover a curve or its legend swatch to highlight one
+        feature. Lasso curves enter the active set one at a time (piecewise
+        linear, each elbow is an active-set change); ridge curves shrink
+        smoothly.
       </div>
     </div>
   );

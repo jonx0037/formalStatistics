@@ -186,7 +186,7 @@ export default function LevelSetExplorer() {
             <button
               key={tabDef.key}
               role="tab"
-              aria-pressed={tab === tabDef.key}
+              aria-selected={tab === tabDef.key}
               onClick={() => setTab(tabDef.key)}
               className={
                 'rounded px-3 py-1 text-xs transition-colors ' +
