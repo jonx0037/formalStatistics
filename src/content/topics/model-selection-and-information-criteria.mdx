@@ -402,11 +402,110 @@ with $\hat{\mathcal{J}}$ the empirical score outer product and $\hat{\mathcal{K}
 
 ## 24.4 Schwarz's BIC and the Bayesian bridge
 
-{/* TODO Task 7: §24.4 prose (~1700 words, LONGEST) — Def 5 (BIC), Thm 2 + Proof 2
-    (4 steps, verbatim), Thm 3 (BIC consistency, stated), Ex 5 + Fig 4
-    (24-bic-laplace.png), Rems 7–10 (Track-7 amplification per Appendix B #15:
-    Rem 7 BMA flag, Rem 8 prior on model space, Rem 10 marginal likelihood
-    computation). */}
+{/* Section opening — TODO Task 7 prose: Bayesian framing of model comparison
+    via marginal likelihood; Schwarz 1978's four-page derivation; the
+    significance of the +k log n penalty (vs AIC's +2k) for selection
+    consistency. This section is amplified +400 words per Appendix B #15 to
+    serve as the Track 7 on-ramp. */}
+
+Where AIC asks "which model has the best expected out-of-sample predictive accuracy?", BIC asks the parallel Bayesian question: "which model has the highest posterior probability given the data, under a uniform prior over the model space?". The answer reduces to Laplace-approximating the marginal likelihood, and the $-2\hat\ell + k\log n$ form follows.
+
+<DefinitionBlock number={5} title="Bayesian marginal likelihood">
+For a model $\mathcal{M}$ with parameter $\theta \in \Theta$, prior $\pi(\theta)$, and likelihood $L(\theta;\mathbf{y})$, the **marginal likelihood** of the data under $\mathcal{M}$ is
+
+$$m(\mathbf{y}) \;:=\; \int_\Theta \pi(\theta)\, L(\theta;\mathbf{y})\,\mathrm d\theta.$$
+
+The **Bayes factor** comparing two models $\mathcal{M}_1, \mathcal{M}_2$ is the ratio $m_1(\mathbf{y})/m_2(\mathbf{y})$. Combined with prior model odds $\pi(\mathcal{M}_1)/\pi(\mathcal{M}_2)$, it gives posterior model odds.
+</DefinitionBlock>
+
+<TheoremBlock number={2} title="BIC as Laplace approximation (Schwarz 1978)">
+Let $f(\mathbf{y};\theta)$ be a smooth parametric model with $\Theta \subset \mathbb{R}^k$ and prior $\pi(\theta)$ continuous and strictly positive at the MLE $\hat\theta$. Let $\hat\ell = \ell(\hat\theta;\mathbf{y})$. Define $\mathrm{BIC} := -2\hat\ell + k\log n$. Then under standard regularity conditions,
+
+$$-2\log m(\mathbf{y}) \;=\; \mathrm{BIC} + O_p(1).$$
+
+The leading-order discrepancy between $-2\log m(\mathbf{y})$ and $\mathrm{BIC}$ is constant in $n$ (depending on the prior and Fisher information), so model rankings by BIC and by $-2\log m(\mathbf{y})$ agree asymptotically.
+</TheoremBlock>
+
+<ProofBlock>
+
+**Setup.** Let $f(\mathbf{y};\theta)$ be a smooth parametric model with $\Theta \subset \mathbb{R}^k$ and prior $\pi(\theta)$ continuous and strictly positive at the MLE $\hat\theta$. The marginal likelihood is
+
+$$m(\mathbf{y}) = \int_\Theta \pi(\theta) L(\theta;\mathbf{y})\,\mathrm d\theta = \int_\Theta \exp\{\ell(\theta;\mathbf{y}) + \log\pi(\theta)\}\,\mathrm d\theta.$$
+
+**Step 1 — Laplace approximation.** Expand $\ell$ to second order around $\hat\theta$ (where $\nabla\ell(\hat\theta) = 0$):
+
+$$\ell(\theta) = \ell(\hat\theta) - \tfrac12(\theta - \hat\theta)^\top \hat{\mathcal{K}}_n (\theta - \hat\theta) + o(\|\theta - \hat\theta\|^2),$$
+
+with $\hat{\mathcal{K}}_n = -\nabla^2\ell(\hat\theta)$ the observed Fisher information. For iid data, $\hat{\mathcal{K}}_n = n\hat{\mathcal{K}}_1$ (per-observation information, consistent for $\mathcal{K}(\theta_0)$). The quadratic approximation is tight on a shrinking $n^{-1/2}$-neighborhood of $\hat\theta$; error $O_p(n^{-1/2})$.
+
+**Step 2 — Gaussian integral.** Treating $\pi(\theta) \approx \pi(\hat\theta)$ on the shrinking neighborhood (valid by continuity + posterior concentration):
+
+$$m(\mathbf{y}) \approx \pi(\hat\theta)\exp(\hat\ell)\int\exp\!\left\{-\tfrac12(\theta - \hat\theta)^\top \hat{\mathcal{K}}_n (\theta - \hat\theta)\right\}\,\mathrm d\theta.$$
+
+The Gaussian integral evaluates to $(2\pi)^{k/2}|\hat{\mathcal{K}}_n|^{-1/2}$. Substituting $|\hat{\mathcal{K}}_n| = n^k|\hat{\mathcal{K}}_1|$:
+
+$$m(\mathbf{y}) \approx \pi(\hat\theta)\exp(\hat\ell)(2\pi)^{k/2} n^{-k/2} |\hat{\mathcal{K}}_1|^{-1/2}.$$
+
+**Step 3 — Take logs.** Applying $-2\log$:
+
+$$-2\log m(\mathbf{y}) \approx -2\hat\ell + k\log n - k\log(2\pi) + \log|\hat{\mathcal{K}}_1| - 2\log\pi(\hat\theta).$$
+
+**Step 4 — Drop $O_p(1)$ terms.** Under fixed $k$, as $n \to \infty$: $\hat{\mathcal{K}}_1 \to \mathcal{K}(\theta_0)$ (nonrandom); $\pi(\hat\theta) \to \pi(\theta_0)$; both are $O(1)$. Therefore
+
+$$-2\log m(\mathbf{y}) = -2\hat\ell + k\log n + O_p(1) = \mathrm{BIC} + O_p(1). \quad\blacksquare$$
+
+∎ — using Topic 14 Thm 2 (observed/expected information consistency) and the multivariate Laplace approximation (CAS2002 §7.2.3, CLA2008 §3.3). The $O_p(1)$ gap is why BIC is prior-free: the prior's contribution is constant across candidate models and cancels in the ranking.
+
+</ProofBlock>
+
+<TheoremBlock number={3} title="BIC selection consistency (stated; CLA2008 §3.2, HAS2009 §7.7)">
+Suppose the true model $\mathcal{M}_*$ is in the candidate set $\{\mathcal{M}_1, \ldots, \mathcal{M}_M\}$, and standard regularity conditions hold (smooth log-likelihood, identifiable parameter, positive-definite Fisher information at $\theta_0$). Let $\hat{\mathcal{M}}_{\text{BIC}} = \arg\min_k \mathrm{BIC}(\mathcal{M}_k)$ be the BIC-selected model. Then
+
+$$\mathbb{P}\!\left(\hat{\mathcal{M}}_{\text{BIC}} = \mathcal{M}_*\right) \;\longrightarrow\; 1 \quad \text{as } n \to \infty.$$
+
+BIC is **selection-consistent**: it identifies the true model with probability $1$ in the large-$n$ limit, when the true model is in the candidate set. Proof outline in CLA2008 §3.2; uses BIC's $O_p(1)$ gap to log marginal likelihood (Thm 2) plus the asymptotic comparison of nested-model marginal likelihoods.
+</TheoremBlock>
+
+<ExampleBlock number={5} title="BIC on the polynomial DGP (T10 pinned)">
+On the canonical POLY_DGP, BIC values for $d = 0, 1, \ldots, 12$ have argmin at **$d = 3$ with $\mathrm{BIC} = 25.4179$** (T10.6) — strictly below AIC's argmin at $d = 6$. The shift reflects BIC's $\log n$ vs AIC's $2$ per-parameter penalty: at $n = 80$, $\log 80 \approx 4.38$, more than double AIC's penalty. BIC favors a sparser model. This is a core part of the AIC/BIC tension §24.6 Thm 5 will formalize. Figure 4 visualizes the Laplace approximation underlying BIC.
+</ExampleBlock>
+
+<img src="/images/topics/model-selection-and-information-criteria/24-bic-laplace.png"
+     alt="Two-panel figure. Left: 1D toy log-posterior (orange curve) overlaid with its quadratic Laplace approximation (dashed) at the MAP, with the Gaussian-integral interpretation of BIC as -2 log m(y) ≈ -2 log f(MAP) + k log n. Right: AIC vs BIC curves on POLY_DGP, BIC penalty (k log n) plotted as a faint background line — argmin BIC at d=3, argmin AIC at d=6. Title: 'BIC = Laplace approximation to -2 log marginal likelihood'."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<RemarkBlock number={7} title="Bayes factors, Akaike weights, and BMA (forward to §24.10 Rem 19)">
+{/* TODO Task 7: 4–5 sentences. The Q6 amplification: BIC ≈ -2 log marginal likelihood,
+    so exp(-BIC/2) is proportional to the unnormalized posterior model probability.
+    Akaike weights w_k = exp(-ΔAIC_k/2) / Σ exp(-ΔAIC_j/2) (BUR2002 §2.6) play the
+    same role for AIC. Both are special cases of Bayesian model averaging (BMA);
+    full forward-pointer at §24.10 Rem 19 + Track 7. */}
+$\exp(-\mathrm{BIC}/2)$ is proportional (asymptotically, by Thm 2) to the unnormalized posterior model probability; normalizing across the candidate set gives BIC weights $w_k^{\text{BIC}} = \exp(-\Delta\mathrm{BIC}_k/2) / \sum_j \exp(-\Delta\mathrm{BIC}_j/2)$. Burnham & Anderson 2002 §2.6 popularized the AIC analog $w_k^{\text{AIC}} = \exp(-\Delta\mathrm{AIC}_k/2) / \sum_j \exp(-\Delta\mathrm{AIC}_j/2)$ as Akaike weights. Both are the discrete-model special case of **Bayesian model averaging** (BMA), where predictions are weighted by posterior model mass instead of conditioning on a single $\hat{\mathcal{M}}$. Full forward-pointer to BMA at §24.10 Rem 19 + Track 7.
+</RemarkBlock>
+
+<RemarkBlock number={8} title="Priors on the model space — Track 7 territory">
+{/* TODO Task 7: 3–4 sentences on prior model probabilities π(M_k). The "uniform
+    prior" implicit in BIC is one choice; reference priors (Berger–Pericchi),
+    spike-and-slab (George–McCulloch), and intrinsic priors (Berger–Pericchi) are
+    others. Full development Track 7. */}
+Thm 2's BIC derivation implicitly assumes a uniform prior on the candidate set $\{\mathcal{M}_1, \ldots, \mathcal{M}_M\}$. Bayesian model comparison admits richer priors — reference priors (Berger–Pericchi), spike-and-slab priors (George–McCulloch 1993), intrinsic priors (Berger–Pericchi 1996) — each tilting the ranking toward sparser or denser models. Full development at Track 7 (Bayesian Foundations).
+</RemarkBlock>
+
+<RemarkBlock number={9} title="AIC vs BIC: the $n = e^2 \approx 7.39$ crossover">
+{/* TODO Task 7: 2–3 sentences on the crossover. AIC penalty 2k = BIC penalty k log n
+    when log n = 2, i.e. n = e^2. For n > 7.39, BIC is more conservative.
+    The shipped code/test pins reflect this. */}
+The per-parameter AIC penalty is $2$; the per-parameter BIC penalty is $\log n$. They equalize at $n = e^2 \approx 7.39$. For all practical sample sizes ($n \geq 10$), BIC penalizes complexity more aggressively than AIC; for $n = 80$ (the POLY_DGP), the BIC per-parameter penalty $\log 80 \approx 4.38$ is more than double AIC's, explaining T10.6's argmin shift from $d = 6$ (AIC) to $d = 3$ (BIC).
+</RemarkBlock>
+
+<RemarkBlock number={10} title="Computing the exact marginal likelihood is hard">
+{/* TODO Task 7: 4–5 sentences on why BIC is popular: the alternative is to compute
+    m(y) exactly via nested sampling (Skilling 2006), thermodynamic integration, or
+    bridge sampling. Each is a Track-7 topic on its own. BIC's accuracy is "good
+    enough for ranking" but not for posterior reporting. */}
+The Laplace approximation underlying Thm 2 has $O_p(1)$ error — fine for ranking ($\arg\min$ stable up to monotone transforms) but not for reporting a numerical posterior probability. Exact marginal-likelihood computation requires **nested sampling** (Skilling 2006), **thermodynamic integration**, or **bridge sampling** (Meng & Wong 1996); each is a Track-7 topic on its own. BIC's appeal is that the asymptotic approximation is prior-free and computationally trivial — only $\hat\ell$ and $k$ are needed.
+</RemarkBlock>
 
 <a id="section-24-5"></a>
 
