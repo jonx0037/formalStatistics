@@ -3022,7 +3022,7 @@ export function penalizedGLMFit(
     yMean /= n;
     // Initialize η₀ at link(ȳ) (clip ȳ for binomial / poisson).
     let mu0 = yMean;
-    if (familyName === 'binomial') mu0 = Math.min(Math.max(yMean, 0.001), 0.999);
+    if (familyName === 'bernoulli') mu0 = Math.min(Math.max(yMean, 0.001), 0.999);
     else if (familyName === 'poisson') mu0 = Math.max(yMean, 0.5);
     else if (familyName === 'gamma') mu0 = Math.max(yMean, 1e-3);
     beta[0] = link.g(mu0);
