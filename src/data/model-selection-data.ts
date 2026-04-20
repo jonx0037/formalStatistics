@@ -1,5 +1,5 @@
 /**
- * model-selection-data.ts — Topic 24 data presets.
+ * model-selection-data.ts — Topic 24 data presets + precomputed IC paths.
  *
  * Surface (brief §7):
  *   POLY_DGP                   — sin(2πx) + N(0,σ²); the canonical Topic-24 example,
@@ -11,6 +11,12 @@
  *   YANG_INCOMPAT_MIS          — Yang-race Tab B: truth = sin(2πx) (polynomial-
  *                                misspecified), AIC minimax-rate dominates
  *   NESTED_POISSON             — §24.7 Ex 8: η = 1 + 0.8 x₁ - 0.5 x₂; x₃ null
+ *   POLY_DGP_PRECOMPUTED       — IIFE-materialized POLY_DGP sample, per-degree
+ *                                fits, and AIC/AICc/BIC/Cp/CV value arrays.
+ *                                Computed once at module load (~50–150 ms);
+ *                                ICSelector and CVvsICComparator import the
+ *                                precomputed object verbatim and re-render in
+ *                                O(1) on slider/toggle changes.
  *
  * Why this lives in its own file (not `regression-data.ts` or `regularization-
  * data.ts`): Topic 23's PR #27 split set the precedent — Topic-N data lives in
@@ -20,6 +26,17 @@
  * AIC-overlay, which re-imports PROSTATE_CANCER_DATA from regularization-data.ts.
  */
 
+import { seededRandom } from '../components/viz/shared/probability';
+import { normalSample } from '../components/viz/shared/convergence';
+import {
+  aic,
+  aicc,
+  bic,
+  mallowsCp,
+  kFoldCV,
+  type OLSFit,
+} from '../components/viz/shared/regression';
+import { polyDesign, polyFitOLS } from '../components/viz/shared/polynomial';
 import { PROSTATE_CANCER_DATA } from './regularization-data';
 
 // Re-export so Topic-24 consumers can import everything from one module.
@@ -249,3 +266,113 @@ export const YANG_RACE_PRESETS: readonly RacePreset[] = [
   YANG_INCOMPAT_WELL,
   YANG_INCOMPAT_MIS,
 ] as const;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Precomputed POLY_DGP sample + per-degree fits + IC paths
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Inclusive degree range used for IC computation across components. */
+const POLY_DEG_MIN = 0;
+const POLY_DEG_MAX = 12;
+/** Number of CV folds. Modern default per HAS2009 §7.10. */
+const POLY_CV_FOLDS = 10;
+/** Deterministic seed for the CV fold partition. Held constant across renders. */
+const POLY_CV_SEED = 1234;
+
+/**
+ * Materialized POLY_DGP sample + the full IC ranking machinery the §24.3 / §24.5
+ * components consume. Computed once at module load via the IIFE pattern that
+ * Topic 23's `PROSTATE_RIDGE_PATH` / `PROSTATE_LASSO_PATH` established. Cost
+ * for n=80 / 13 fits / 10-fold CV is ≈ 150 OLS solves per IIFE entry, well
+ * inside Topic 23's 50–150 ms budget.
+ *
+ * The raw `x` and `y` vectors are also exposed so the components can render
+ * scatter plots of the underlying data without re-generating it from the seed.
+ */
+export interface PolyDGPPrecomputed {
+  /** Predictor sample (length n), uniform on [0, 1]. */
+  x: number[];
+  /** Response sample (length n) from sin(2πx) + N(0, σ²). */
+  y: number[];
+  /** Sample size n (= POLY_DGP.n). */
+  n: number;
+  /** Noise standard deviation σ (= POLY_DGP.sigma). */
+  sigma: number;
+  /** Candidate polynomial degrees [0, 1, …, 12]. */
+  degrees: number[];
+  /** OLSFit per degree. fits[i] is the fit at degrees[i]. */
+  fits: OLSFit[];
+  /** σ̂²_ref = MLE σ² from the largest-degree fit (used by Mallows' Cp). */
+  sigmaSqRef: number;
+  /** Per-degree IC values (parallel arrays indexed by `degrees`). */
+  values: {
+    aic: number[];
+    aicc: number[];
+    bic: number[];
+    cp: number[];
+    /** 10-fold CV mean squared error per degree. */
+    loo: number[];
+  };
+  /** Argmin degree per criterion. */
+  argmins: {
+    aic: number;
+    aicc: number;
+    bic: number;
+    cp: number;
+    loo: number;
+  };
+}
+
+export const POLY_DGP_PRECOMPUTED: PolyDGPPrecomputed = (() => {
+  const { n, sigma, seed } = POLY_DGP;
+  const rng = seededRandom(seed);
+  const x: number[] = new Array(n);
+  for (let i = 0; i < n; i++) x[i] = rng();
+  const y: number[] = new Array(n);
+  for (let i = 0; i < n; i++) {
+    y[i] = Math.sin(2 * Math.PI * x[i]) + normalSample(0, sigma, rng);
+  }
+  const degrees = Array.from(
+    { length: POLY_DEG_MAX - POLY_DEG_MIN + 1 },
+    (_, i) => POLY_DEG_MIN + i,
+  );
+  const fits = degrees.map((d) => polyFitOLS(x, y, d));
+  // σ̂²_ref: MLE from the largest model (Mallows' Cp convention).
+  const lastFit = fits[fits.length - 1];
+  const sigmaSqRef = lastFit.sse / lastFit.n;
+  const aicArr = fits.map((f) => aic(f));
+  const aiccArr = fits.map((f) => aicc(f, n));
+  const bicArr = fits.map((f) => bic(f, n));
+  const cpArr = fits.map((f) => mallowsCp(f, sigmaSqRef));
+  const looArr = degrees.map((d) =>
+    kFoldCV(polyDesign(x, d), y, POLY_CV_FOLDS, undefined, POLY_CV_SEED),
+  );
+  const argmin = (arr: number[]): number => {
+    let best = 0;
+    for (let i = 1; i < arr.length; i++) if (arr[i] < arr[best]) best = i;
+    return degrees[best];
+  };
+  return {
+    x,
+    y,
+    n,
+    sigma,
+    degrees,
+    fits,
+    sigmaSqRef,
+    values: {
+      aic: aicArr,
+      aicc: aiccArr,
+      bic: bicArr,
+      cp: cpArr,
+      loo: looArr,
+    },
+    argmins: {
+      aic: argmin(aicArr),
+      aicc: argmin(aiccArr),
+      bic: argmin(bicArr),
+      cp: argmin(cpArr),
+      loo: argmin(looArr),
+    },
+  };
+})();
