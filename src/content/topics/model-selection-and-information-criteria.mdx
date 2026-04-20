@@ -624,17 +624,113 @@ Thm 4 identifies LOO-CV with AIC; **no analogous result exists for BIC at fixed 
 
 ## 24.6 Yang's incompatibility theorem
 
-{/* TODO Task 7: §24.6 prose (~900 words) — Thm 5 (stated only, proof outside
-    scope), Ex 7 + Fig 6 (24-yang-race.png), Rems 14–16,
-    <ConsistencyEfficiencyRace client:visible /> embed. */}
+{/* Section opening — TODO Task 7 prose: Yang 2005's central insight that
+    selection consistency (BIC's property) and minimax-rate-optimal prediction
+    (AIC/CV's property) are formally incompatible — no single procedure can
+    have both. The result is a deep impossibility, not a tradeoff that can
+    be designed around. */}
+
+The three procedures of §§24.3–24.5 carry different asymptotic guarantees: BIC is selection-consistent (Thm 3), AIC and CV are minimax-rate-optimal for prediction (under regularity). Yang (2005) proved these properties are not just *different* — they are formally **incompatible**: no single procedure can deliver both. The asymptotic philosophy must choose.
+
+<TheoremBlock number={5} title="Yang's incompatibility (Yang 2005, stated)">
+Let $\hat{\mathcal{M}}$ be a model-selection procedure operating on a candidate family $\{\mathcal{M}_1, \ldots, \mathcal{M}_M\}$. Suppose $\hat{\mathcal{M}}$ is **selection-consistent** in the well-specified regime: when $\mathcal{M}_*$ is in the candidate set, $\mathbb{P}(\hat{\mathcal{M}} = \mathcal{M}_*) \to 1$. Then $\hat{\mathcal{M}}$ is **not** minimax-rate-optimal in the misspecified-nonparametric regime: there exists a family of underlying truths and a sample-size sequence on which the prediction risk of $\hat{\mathcal{M}}$ achieves a strictly worse rate than the minimax-optimal procedure (e.g., AIC or CV).
+
+Proof: Yang 2005 §2–3, via a minimax lower-bound argument outside the scope of Topic 24.
+</TheoremBlock>
+
+<ExampleBlock number={7} title="Two-regime simulation: BIC consistent, AIC efficient">
+The Yang race compares procedures across two DGP regimes:
+
+- **Tab A — well-specified.** Truth is a degree-3 polynomial; candidate set $d \in [0, 8]$ contains the truth. As $n$ grows, BIC's selection frequency at $d = 3$ tends to $1$ (consistency); AIC's selection frequency at $d \geq 4$ persists at $\sim 25\%$ (asymptotic over-fit). Prediction risks are similar at any finite $n$.
+- **Tab B — misspecified.** Truth is $\sin(2\pi x)$; candidate set is polynomials $d \in [0, 12]$ (truth not in the candidate set). AIC's minimax-optimal selection adapts $d$ to $n$; BIC's $\log n$ penalty over-shrinks toward sparsity, giving worse prediction risk on the polynomial scale of the truth's smoothness. The risks diverge in $n$.
+
+Figure 6 plots both regimes side by side.
+</ExampleBlock>
+
+<img src="/images/topics/model-selection-and-information-criteria/24-yang-race.png"
+     alt="Two-panel race figure. Left (Tab A, truth = polynomial-d3): selection frequency of BIC at d=3 climbs from ~80% at n=50 to ~99% at n=5000, AIC plateaus at ~75% (with persistent tail at d≥4). Right (Tab B, truth = sin, polynomial-misspecified): prediction risk vs n for BIC, AIC, and 10-fold CV — BIC plateaus higher than AIC and CV, the gap widening with n. Title: 'Selection consistency and prediction efficiency are incompatible (Yang 2005)'."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<RemarkBlock number={14} title="Philosophical implication: a value judgment, not an empirical question">
+{/* TODO Task 7: 4–5 sentences. Yang's theorem says you can't have both; you
+    must choose. The choice is a value judgment about the use case (selection
+    for understanding vs prediction for downstream use). Reference Shao 1997
+    + BUR2002 §2.10 for the methodological discussion. */}
+Thm 5 forces a choice the practitioner cannot duck: **either prioritize identifying the right model (BIC) or prioritize accurate predictions (AIC, CV)**. The choice is not an empirical question to be settled by simulation but a value judgment about the use case — interpretive parsimony vs predictive accuracy. Shao 1997 and Burnham & Anderson 2002 §2.10 give complementary discussions of how to pick a side in a given application context.
+</RemarkBlock>
+
+<RemarkBlock number={15} title="Shao 1993's $k\log\log n$ penalty — limited positive result">
+{/* TODO Task 7: 3–4 sentences. Shao 1993 proposed a CV variant that is
+    asymptotically consistent in restricted (linear-Gaussian, bounded p) settings
+    via a specific held-out fraction. Limited positive result — does not
+    contradict Yang's broader incompatibility. */}
+Shao (1993) showed that **leaving out $n_v = n - n^{1/2}$ observations per fold** (held-out fraction shrinking to zero asymptotically) gives a CV variant that is selection-consistent on Gaussian linear models with bounded $p$. The result is a limited positive: Shao's CV variant is not minimax-rate-optimal for prediction in the nonparametric regime, so it lives on the BIC side of Yang's split rather than circumventing the incompatibility.
+</RemarkBlock>
+
+<RemarkBlock number={16} title="Practical recommendation: report both">
+{/* TODO Task 7: 3–4 sentences. The applied advice: report AIC and BIC side
+    by side. Disagreement is informative — it signals which side of the Yang
+    tradeoff matters for the application. */}
+Standard practice: **report both AIC and BIC**. Agreement is reassuring; disagreement is informative — it tells the reader which side of the consistency-vs-efficiency tradeoff matters for the application. For prediction-focused use cases, prefer the AIC argmin and report 10-fold CV as a sanity check; for inference-focused applications where parsimony matters (e.g. model identification in epidemiology), prefer the BIC argmin.
+</RemarkBlock>
+
+{/* Component embed (Task 9 — uncomment when ConsistencyEfficiencyRace ships):
+<ConsistencyEfficiencyRace client:visible />
+*/}
 
 <a id="section-24-7"></a>
 
 ## 24.7 Nested-model selection: AIC ≡ LRT with default threshold
 
-{/* TODO Task 7: §24.7 prose (~700 words) — Thm 6 embedded derivation (4 lines:
-    ΔAIC = 2q - 2Δℓ̂ via -2ℓ + 2k), Ex 8 + Fig 7 (24-nested-glm.png) using
-    pinned T10.12–T10.19 values, Rems 17–18. */}
+{/* Section opening — TODO Task 7 prose: AIC's threshold $2\Delta\hat\ell > 2q$
+    for preferring the full model is a default-LRT rule. Connects Topic 18 Wilks
+    to Topic 24 model-selection vocabulary. */}
+
+For nested models — the smaller obtained by setting $q$ parameters of the larger to zero — AIC's preference for the full model is equivalent to a likelihood-ratio test with a *fixed default threshold* of $2q$, irrespective of $\alpha$. This identifies AIC as a default-threshold LRT and connects Topic 18's Wilks machinery to the model-selection vocabulary of Topic 24.
+
+<TheoremBlock number={6} title="AIC ≡ LRT with default threshold (embedded derivation)">
+Let $\mathcal{M}_{\text{full}}$ and $\mathcal{M}_{\text{red}}$ be nested with $k_{\text{full}} = k_{\text{red}} + q$ free parameters ($q \geq 1$). Let $\hat\ell_{\text{full}}, \hat\ell_{\text{red}}$ be their MLE log-likelihoods on the same data. Then
+
+$$\Delta\mathrm{AIC} \;:=\; \mathrm{AIC}(\mathcal{M}_{\text{full}}) - \mathrm{AIC}(\mathcal{M}_{\text{red}}) \;=\; (-2\hat\ell_{\text{full}} + 2k_{\text{full}}) - (-2\hat\ell_{\text{red}} + 2k_{\text{red}}) \;=\; 2q - 2\Delta\hat\ell,$$
+
+with $\Delta\hat\ell = \hat\ell_{\text{full}} - \hat\ell_{\text{red}}$. **AIC prefers the full model** iff $\Delta\mathrm{AIC} < 0$ iff $2\Delta\hat\ell > 2q$ — exactly the LRT rejection rule with threshold $2q$ instead of the chi-square critical value $\chi^2_{q,1-\alpha}$. **BIC** uses the analogous threshold $q\log n$ in place of $2q$: BIC prefers the full model iff $2\Delta\hat\ell > q\log n$.
+</TheoremBlock>
+
+<ExampleBlock number={8} title="Nested Poisson GLM (T10.12–T10.19 pinned)">
+On the nested-Poisson DGP ($n = 200$, $\eta_{\text{true}} = 1.0 + 0.8 x_1 - 0.5 x_2$, $x_3$ has no true effect, `default_rng(123)`), fit the reduced model with $\{1, x_1, x_2\}$ and the full model with $\{1, x_1, x_2, x_3\}$. The pinned values: $\hat\beta_{\text{red}} \approx (0.9815, 0.8216, -0.5769)$ (T10.12–T10.14); $\hat\beta_{\text{full}}[3] \approx -0.0535$ (T10.15, near-zero as expected). The likelihood ratio is
+
+$$\mathrm{LR} \;=\; 2\Delta\hat\ell \;\approx\; 0.5547 \quad (\text{T10.16}).$$
+
+Since $q = 1$ and the LRT critical value at $\alpha = 0.05$ is $\chi^2_{1, 0.95} \approx 3.84$, the LRT does NOT reject (p-value $\approx 0.46$).
+
+Now apply Thm 6:
+
+$$\Delta\mathrm{AIC} \;=\; 2(1) - \mathrm{LR} \;=\; 2 - 0.5547 \;\approx\; 1.4453 > 0 \quad (\text{T10.17}).$$
+
+$$\Delta\mathrm{BIC} \;=\; (1)\log(200) - \mathrm{LR} \;\approx\; 5.298 - 0.5547 \;\approx\; 4.7436 > 0 \quad (\text{T10.18}).$$
+
+Both AIC and BIC prefer the **reduced** model. T10.19 verifies the algebraic identity $\Delta\mathrm{AIC} = 2 - \mathrm{LR}$ to within $10^{-10}$. Figure 7 plots the chi-square null density with the observed LR and both AIC/BIC thresholds for visual comparison.
+</ExampleBlock>
+
+<img src="/images/topics/model-selection-and-information-criteria/24-nested-glm.png"
+     alt="Two-panel figure. Top: scatter of fitted μ_i vs observed y_i for the reduced Poisson model on n=200, with y=μ̂ reference line. Bottom: chi-square_1 null density with observed LR=0.5547 marked (in the bulk, p≈0.46 — not rejected); vertical reference lines at AIC threshold (LR=2) and BIC threshold (LR=log 200 ≈ 5.30). Title: 'Nested LRT chi^2_1 null vs observed LR; AIC/BIC thresholds — both prefer reduced'."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<RemarkBlock number={17} title="AIC's effective $\alpha$ depends on $q$">
+{/* TODO Task 7: 3–4 sentences. AIC's threshold 2q corresponds to the LRT
+    p-value at chi^2_q ≥ 2q. For q=1 → α ≈ 0.157; for q=5 → α ≈ 0.42; for q=10
+    → α ≈ 0.55. So AIC is increasingly liberal as q grows. */}
+Thm 6's identification of AIC with a fixed-threshold LRT means AIC has an **effective $\alpha$** that depends on $q$. For $q = 1$, $\mathbb{P}(\chi^2_1 \geq 2) \approx 0.157$; for $q = 5$, $\mathbb{P}(\chi^2_5 \geq 10) \approx 0.075$; for $q = 10$, $\mathbb{P}(\chi^2_{10} \geq 20) \approx 0.029$. AIC is *more liberal* (admits more parameters) at small $q$, *more conservative* at large $q$ — the opposite of the LRT-with-fixed-$\alpha$ rule, which has fixed type-I error regardless of $q$.
+</RemarkBlock>
+
+<RemarkBlock number={18} title="Nested-only caveat — non-nested requires direct IC comparison">
+{/* TODO Task 7: 2–3 sentences. Thm 6 only applies to NESTED model comparisons.
+    For non-nested (e.g. polynomial vs spline at the same effective dimension),
+    the LRT is undefined and one must compare AIC values directly. */}
+Thm 6 applies only to **nested** comparisons. For non-nested candidates (e.g. degree-5 polynomial vs degree-3 spline with the same effective dimension), the likelihood-ratio statistic is undefined and the LRT framework breaks down. The IC framework still applies: compute $\mathrm{AIC}$ or $\mathrm{BIC}$ for each candidate and rank by the smaller value, no chi-square reference needed.
+</RemarkBlock>
 
 <a id="section-24-8"></a>
 
