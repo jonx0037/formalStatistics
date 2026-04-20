@@ -240,26 +240,26 @@ Penalized estimation is older than computer-era statistics. **Tikhonov 1943** in
 The **ridge regression** estimator at penalty parameter $\lambda \ge 0$ is
 
 $$
-\hat{\boldsymbol\beta}_{\text{ridge}}(\lambda) \;=\; \arg\min_{\boldsymbol\beta \in \mathbb{R}^{p+1}}\; \tfrac12 \|\mathbf{y} - \mathbf{X}\boldsymbol\beta\|_2^2 \,+\, \lambda \|\boldsymbol\beta\|_2^2.
+\hat{\boldsymbol\beta}_{\text{ridge}}(\lambda) \;=\; \arg\min_{\boldsymbol\beta \in \mathbb{R}^{p+1}}\; \tfrac12 \|\mathbf{y} - \mathbf{X}\boldsymbol\beta\|_2^2 \,+\, \tfrac{\lambda}{2} \|\boldsymbol\beta\|_2^2.
 $$
 
-The closed form, derivable by setting the gradient to zero, is
+The closed form, derivable by setting the gradient $-\mathbf{X}^\top(\mathbf{y} - \mathbf{X}\boldsymbol\beta) + \lambda\boldsymbol\beta$ to zero, is
 
 $$
-\hat{\boldsymbol\beta}_{\text{ridge}}(\lambda) \;=\; (\mathbf{X}^\top\mathbf{X} + 2\lambda\mathbf{I})^{-1}\mathbf{X}^\top\mathbf{y}.
+\hat{\boldsymbol\beta}_{\text{ridge}}(\lambda) \;=\; (\mathbf{X}^\top\mathbf{X} + \lambda\mathbf{I})^{-1}\mathbf{X}^\top\mathbf{y}.
 $$
 
-(Sources differ on the factor of two — when the penalty is written without the $\tfrac12$ on residuals, the diagonal addition is just $\lambda\mathbf{I}$. We adopt the convention used by the `regression.ts` implementation, which solves $(\mathbf{X}^\top\mathbf{X} + \lambda\mathbf{I})\boldsymbol\beta = \mathbf{X}^\top\mathbf{y}$ — equivalently the loss $\|\mathbf{y} - \mathbf{X}\boldsymbol\beta\|_2^2 + \lambda\|\boldsymbol\beta\|_2^2$ without the $\tfrac12$ on residuals.) The matrix $\mathbf{X}^\top\mathbf{X} + \lambda\mathbf{I}$ is positive-definite for any $\lambda > 0$, so the estimator exists and is unique even when $\mathbf{X}$ is rank-deficient.
+The matrix $\mathbf{X}^\top\mathbf{X} + \lambda\mathbf{I}$ is positive-definite for any $\lambda > 0$, so the estimator exists and is unique even when $\mathbf{X}$ is rank-deficient — the `regression.ts` `ridgeFit` implements exactly this closed form via Cholesky on the augmented Gram matrix. The $\tfrac{\lambda}{2}$ scaling on the penalty matches the lasso convention below ($\tfrac12$ on residuals throughout) and lines up with `sklearn.linear_model.Ridge(alpha=λ)` directly: `alpha = λ` gives identical fits.
 </DefinitionBlock>
 
 <DefinitionBlock number={2} title="Lasso objective">
 The **lasso** estimator at penalty parameter $\lambda \ge 0$ is
 
 $$
-\hat{\boldsymbol\beta}_{\text{lasso}}(\lambda) \;=\; \arg\min_{\boldsymbol\beta \in \mathbb{R}^{p+1}}\; \tfrac{1}{2n} \|\mathbf{y} - \mathbf{X}\boldsymbol\beta\|_2^2 \,+\, \lambda \|\boldsymbol\beta\|_1.
+\hat{\boldsymbol\beta}_{\text{lasso}}(\lambda) \;=\; \arg\min_{\boldsymbol\beta \in \mathbb{R}^{p+1}}\; \tfrac12 \|\mathbf{y} - \mathbf{X}\boldsymbol\beta\|_2^2 \,+\, \lambda \|\boldsymbol\beta\|_1.
 $$
 
-The $\frac{1}{n}$ scaling on the residual sum matches the `glmnet` convention; sklearn's `Lasso(alpha)` uses the same convention with `alpha = λ`. There is no closed form in general — coordinate descent (§23.4) is the standard solver. Unlike ridge, the lasso produces **exact zeros** in $\hat{\boldsymbol\beta}$: this is the variable-selection property, established formally in Thm 2 below.
+The `regression.ts` `lassoFit` adopts this convention (no $1/n$ on residuals); to get the same fit out of `sklearn.linear_model.Lasso(alpha)` — whose objective is $(2n)^{-1}\|\mathbf{y} - \mathbf{X}\mathbf{w}\|_2^2 + \alpha\|\mathbf{w}\|_1$ — call it with `alpha = λ/n`. There is no closed form in general; coordinate descent (§23.4) is the standard solver. Unlike ridge, the lasso produces **exact zeros** in $\hat{\boldsymbol\beta}$ — the variable-selection property, established formally in Thm 2 below.
 </DefinitionBlock>
 
 <DefinitionBlock number={3} title="Penalized MLE">
@@ -365,7 +365,7 @@ The sign of the first-derivative term is the entire argument: variance shrinks l
 <LevelSetExplorer client:visible />
 
 <TheoremBlock number={2} title="Lasso KKT characterization + soft-thresholding (Tibshirani 1996)">
-Let $\hat{\boldsymbol\beta} = \arg\min_{\boldsymbol\beta} \tfrac{1}{2n}\|\mathbf{y} - \mathbf{X}\boldsymbol\beta\|_2^2 + \lambda\|\boldsymbol\beta\|_1$. Define the partial score $s_j(\boldsymbol\beta) = \frac{1}{n}\mathbf{x}_j^\top(\mathbf{y} - \mathbf{X}\boldsymbol\beta)$. The KKT optimality conditions are
+Let $\hat{\boldsymbol\beta} = \arg\min_{\boldsymbol\beta} \tfrac12\|\mathbf{y} - \mathbf{X}\boldsymbol\beta\|_2^2 + \lambda\|\boldsymbol\beta\|_1$. Define the partial score $s_j(\boldsymbol\beta) = \mathbf{x}_j^\top(\mathbf{y} - \mathbf{X}\boldsymbol\beta)$. The KKT optimality conditions are
 
 $$
 s_j(\hat{\boldsymbol\beta}) = \lambda \cdot \text{sign}(\hat\beta_j) \quad \text{for } j \in \mathcal{A}(\hat{\boldsymbol\beta}),
@@ -375,17 +375,17 @@ $$
 |s_j(\hat{\boldsymbol\beta})| \le \lambda \quad \text{for } j \notin \mathcal{A}(\hat{\boldsymbol\beta}).
 $$
 
-For orthogonal designs $\mathbf{X}^\top\mathbf{X}/n = \mathbf{I}$, the solution has the closed form
+For orthonormal designs $\mathbf{X}^\top\mathbf{X} = \mathbf{I}$, the solution has the closed form
 
 $$
-\hat\beta_j \;=\; S_\lambda\!\left(\tfrac{1}{n}\mathbf{x}_j^\top\mathbf{y}\right),
+\hat\beta_j \;=\; S_\lambda\!\left(\mathbf{x}_j^\top\mathbf{y}\right),
 $$
 
 where $S_\lambda(x) = \text{sign}(x)\,\max(|x| - \lambda, 0)$ is the **soft-thresholding operator**.
 </TheoremBlock>
 
 <ProofBlock>
-**Setup.** Let $f(\boldsymbol\beta) = \frac{1}{2n}\|\mathbf{y} - \mathbf{X}\boldsymbol\beta\|_2^2 + \lambda\|\boldsymbol\beta\|_1$. The first term is convex and differentiable; the second is convex but non-differentiable at any $\beta_j = 0$. The global minimum exists (the objective is coercive and continuous) and is characterized by the subgradient optimality condition $\mathbf{0} \in \partial f(\hat{\boldsymbol\beta})$.
+**Setup.** Let $f(\boldsymbol\beta) = \tfrac12\|\mathbf{y} - \mathbf{X}\boldsymbol\beta\|_2^2 + \lambda\|\boldsymbol\beta\|_1$. The first term is convex and differentiable; the second is convex but non-differentiable at any $\beta_j = 0$. The global minimum exists (the objective is coercive and continuous) and is characterized by the subgradient optimality condition $\mathbf{0} \in \partial f(\hat{\boldsymbol\beta})$.
 
 **Subgradient of the L¹-norm.** The subgradient of $|\beta_j|$ at $\beta_j$ is
 
@@ -393,10 +393,10 @@ $$
 \partial|\beta_j| \;=\; \begin{cases}\{\text{sign}(\beta_j)\} & \beta_j \neq 0, \\ [-1, 1] & \beta_j = 0.\end{cases}
 $$
 
-**Subgradient of $f$.** The gradient of the smooth part is $-\frac{1}{n}\mathbf{X}^\top(\mathbf{y} - \mathbf{X}\boldsymbol\beta)$. Hence
+**Subgradient of $f$.** The gradient of the smooth part is $-\mathbf{X}^\top(\mathbf{y} - \mathbf{X}\boldsymbol\beta)$. Hence
 
 $$
-\partial f(\boldsymbol\beta)_j \;=\; -\tfrac{1}{n}\mathbf{x}_j^\top(\mathbf{y} - \mathbf{X}\boldsymbol\beta) + \lambda \cdot \partial|\beta_j| \;=\; -s_j(\boldsymbol\beta) + \lambda \, \partial|\beta_j|.
+\partial f(\boldsymbol\beta)_j \;=\; -\mathbf{x}_j^\top(\mathbf{y} - \mathbf{X}\boldsymbol\beta) + \lambda \cdot \partial|\beta_j| \;=\; -s_j(\boldsymbol\beta) + \lambda \, \partial|\beta_j|.
 $$
 
 **KKT conditions.** Setting $\mathbf{0} \in \partial f(\hat{\boldsymbol\beta})$ coordinatewise:
@@ -407,19 +407,19 @@ $$
 
 Active coordinates carry sign-matched score equal to $\pm\lambda$; inactive coordinates have partial score bounded by $\lambda$.
 
-**Orthogonal-design corollary.** When $\mathbf{X}^\top\mathbf{X}/n = \mathbf{I}_{p+1}$, the partial score at $\boldsymbol\beta$ simplifies to $s_j(\boldsymbol\beta) = \tfrac{1}{n}\mathbf{x}_j^\top\mathbf{y} - \beta_j$. Substituting into the KKT cases:
+**Orthonormal-design corollary.** When $\mathbf{X}^\top\mathbf{X} = \mathbf{I}_{p+1}$, the partial score at $\boldsymbol\beta$ simplifies to $s_j(\boldsymbol\beta) = \mathbf{x}_j^\top\mathbf{y} - \beta_j$. Substituting into the KKT cases:
 
-- *$\hat\beta_j > 0$:*  $\;\hat\beta_j = \tfrac{1}{n}\mathbf{x}_j^\top\mathbf{y} - \lambda$, valid when $\tfrac{1}{n}\mathbf{x}_j^\top\mathbf{y} > \lambda$.
-- *$\hat\beta_j < 0$:*  $\;\hat\beta_j = \tfrac{1}{n}\mathbf{x}_j^\top\mathbf{y} + \lambda$, valid when $\tfrac{1}{n}\mathbf{x}_j^\top\mathbf{y} < -\lambda$.
-- *$\hat\beta_j = 0$:*  $\;|\tfrac{1}{n}\mathbf{x}_j^\top\mathbf{y}| \le \lambda$.
+- *$\hat\beta_j > 0$:*  $\;\hat\beta_j = \mathbf{x}_j^\top\mathbf{y} - \lambda$, valid when $\mathbf{x}_j^\top\mathbf{y} > \lambda$.
+- *$\hat\beta_j < 0$:*  $\;\hat\beta_j = \mathbf{x}_j^\top\mathbf{y} + \lambda$, valid when $\mathbf{x}_j^\top\mathbf{y} < -\lambda$.
+- *$\hat\beta_j = 0$:*  $\;|\mathbf{x}_j^\top\mathbf{y}| \le \lambda$.
 
 **Soft-thresholding formula.** The three cases collapse into
 
 $$
-\hat\beta_j \;=\; S_\lambda\!\left(\tfrac{1}{n}\mathbf{x}_j^\top\mathbf{y}\right) \;=\; \text{sign}\!\left(\tfrac{1}{n}\mathbf{x}_j^\top\mathbf{y}\right) \cdot \max\!\left(\left|\tfrac{1}{n}\mathbf{x}_j^\top\mathbf{y}\right| - \lambda, \,0\right).
+\hat\beta_j \;=\; S_\lambda\!\left(\mathbf{x}_j^\top\mathbf{y}\right) \;=\; \text{sign}\!\left(\mathbf{x}_j^\top\mathbf{y}\right) \cdot \max\!\left(\left|\mathbf{x}_j^\top\mathbf{y}\right| - \lambda, \,0\right).
 $$
 
-Every univariate coordinate-descent update for the lasso is one application of $S_\lambda$ to the current partial residual. ∎ — using subgradient calculus (formalCalculus: convex optimization).
+(Under the standardization convention used by `lassoFit` — column-centered with $\|\mathbf{x}_j\|^2 = n$ — this generalizes to $\hat\beta_j = S_\lambda(\mathbf{x}_j^\top\mathbf{r}_{-j})/n$ on the partial residual; the algorithmic version is §23.4.) Every univariate coordinate-descent update for the lasso is one application of $S_\lambda$. ∎ — using subgradient calculus (formalCalculus: convex optimization).
 </ProofBlock>
 
 Step 4 is the headline result: the diamond-vs-circle picture in `LevelSetExplorer` literally shows active coordinates landing at $\pm\lambda$ on the diamond's edge, and inactive coordinates landing at a vertex (where the L¹-ball is non-differentiable). The §23.4 coordinate-descent algorithm is one application of the orthogonal-design formula per coordinate per sweep, using the *partial* residual instead of $\mathbf{y}$ directly.
@@ -567,10 +567,10 @@ $$
 and the elastic-net objective is
 
 $$
-\hat{\boldsymbol\beta}_{\text{EN}}(\lambda, \alpha) \;=\; \arg\min_{\boldsymbol\beta}\; \tfrac{1}{2n}\|\mathbf{y} - \mathbf{X}\boldsymbol\beta\|_2^2 \;+\; \lambda P_\alpha(\boldsymbol\beta).
+\hat{\boldsymbol\beta}_{\text{EN}}(\lambda, \alpha) \;=\; \arg\min_{\boldsymbol\beta}\; \tfrac12\|\mathbf{y} - \mathbf{X}\boldsymbol\beta\|_2^2 \;+\; \lambda P_\alpha(\boldsymbol\beta).
 $$
 
-$\alpha = 1$ recovers lasso; $\alpha = 0$ recovers ridge (with the $\tfrac12$ factor). For $\alpha \in (0, 1)$, the penalty is strictly convex even when $\mathbf{X}^\top\mathbf{X}$ is rank-deficient — a property ridge has but lasso does not.
+$\alpha = 1$ recovers lasso ($\tfrac12\|\cdot\|^2 + \lambda\|\boldsymbol\beta\|_1$); $\alpha = 0$ recovers ridge with penalty $(\lambda/2)\|\boldsymbol\beta\|^2$ — matching Def 1's convention exactly. For $\alpha \in (0, 1)$, the penalty is strictly convex even when $\mathbf{X}^\top\mathbf{X}$ is rank-deficient — a property ridge has but lasso does not.
 </DefinitionBlock>
 
 <TheoremBlock number={3} title="Elastic-net strict convexity (Zou-Hastie 2005)">

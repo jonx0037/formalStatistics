@@ -2021,11 +2021,15 @@ export function coverageSimulatorGLM(
 // T9.4 / T9.9 numerical agreement holds), and the intercept is recovered
 // post-fit via β₀ = ȳ − Σ_j β_j · mean(X[:,j]).
 //
-// Loss conventions (no 1/n on the residual sum; matches glmnet & ESL Ch. 3):
-//   ridge       :  ½‖y − Xβ‖² + λ ‖β‖₂²
-//   lasso       :  ½‖y − Xβ‖² + λ ‖β‖₁
+// Loss conventions (½ on the residual sum throughout; consistent with the
+// MDX Def 1/Def 2/Def 5 statements and avoids the n-dependent λ-rescaling
+// that sklearn's Lasso(alpha = λ/n) imposes):
+//   ridge       :  ½‖y − Xβ‖² + (λ/2) ‖β‖₂²       → (XᵀX + λI) β = Xᵀy
+//   lasso       :  ½‖y − Xβ‖² + λ ‖β‖₁           → KKT: |Xⱼᵀ(y-Xβ)| ≤ λ
 //   elastic-net :  ½‖y − Xβ‖² + λ [α ‖β‖₁ + ½(1−α) ‖β‖₂²]
 //   penalized GLM (deviance scale): −2 ℓ(β) + 2 λ P(β)
+// sklearn equivalences: Ridge(alpha=λ) (same convention); Lasso(alpha=λ/n)
+// (sklearn divides residuals by n; our λ rescales by n to get the same fit).
 
 // ── §6.1.M  Penalty functions + soft-thresholding ──────────────────────────
 
@@ -2211,21 +2215,35 @@ export function ridgeFit(
   const p = X[0].length;
   if (lambda < 0) throw new Error(`ridgeFit: negative lambda ${lambda}`);
 
+  // Standardization and intercept are now decoupled (PR #27 review). The
+  // intercept is always handled by centering when `intercept: true`, even
+  // if `standardize: false` — otherwise asking for an unscaled fit would
+  // silently zero out the intercept. When `intercept: false`, X is used
+  // verbatim and beta[0] = 0 in the result.
   let Xs: number[][];
   let ys: number[];
   let meanX: number[];
   let sdX: number[];
   let meanY: number;
 
-  if (standardize && intercept) {
+  if (intercept) {
     const std = standardizeDesign(X, y);
-    Xs = std.Xs;
+    if (standardize) {
+      // Center + scale: full glmnet-style standardization.
+      Xs = std.Xs;
+      sdX = std.sdX;
+    } else {
+      // Center only: keep original column scale, but center each column at 0
+      // and y at 0 so the intercept can be recovered from meanY/meanX.
+      sdX = new Array<number>(p).fill(1);
+      Xs = Array.from({ length: n }, (_, i) =>
+        Array.from({ length: p }, (_, j) => X[i][j] - std.meanX[j]),
+      );
+    }
     ys = std.ys;
     meanX = std.meanX;
-    sdX = std.sdX;
     meanY = std.meanY;
   } else {
-    // Caller takes responsibility for centering / scaling; X used verbatim.
     Xs = X;
     ys = y;
     meanX = new Array<number>(p).fill(0);
@@ -2248,10 +2266,9 @@ export function ridgeFit(
   const dof = p - lambda * traceInv;
 
   // Recover original-scale beta vector with intercept at index 0.
-  const beta =
-    standardize && intercept
-      ? unstandardizeBeta(betaTilde, meanX, sdX, meanY)
-      : [0, ...betaTilde];
+  const beta = intercept
+    ? unstandardizeBeta(betaTilde, meanX, sdX, meanY)
+    : [0, ...betaTilde];
 
   // Fitted on the ORIGINAL design (caller-friendly).
   const fitted = new Array<number>(n).fill(beta[0]);
@@ -2281,15 +2298,20 @@ export interface LassoFitResult {
  *
  * Loss: ½‖y − Xβ‖² + λ‖β‖₁ (no 1/n on residuals — glmnet / HTF convention).
  *
- * Inner update on the standardized design (where ‖X̃[:,j]‖² = n exactly):
- *   r_{−j} ← r + X̃[:,j] · β̃_j         (partial residual)
+ * Inner update on the working design (per-column normalization keeps the
+ * algorithm correct whether or not the caller standardizes):
+ *   r_{−j} ← r + X̃[:,j] · β̃_j                  (partial residual)
  *   z_j    ← X̃[:,j]ᵀ r_{−j}
- *   β̃_j   ← 𝒮_λ(z_j) / n
+ *   β̃_j   ← S_λ(z_j) / ‖X̃[:,j]‖²                ← per-column denom (PR #27)
  *   r      ← r_{−j} − X̃[:,j] · β̃_j
  *
  * Convergence: max_j |Δβ̃_j| < tol (the standard glmnet criterion).
  * Warm-start: pass `previousBeta` to seed β̃ from a neighbouring λ (used by
  * regularizationPath for an ~10× speedup vs. cold-start).
+ *
+ * Intercept and standardization are independent (PR #27): when intercept is
+ * true, X is column-centered and y is centered regardless of standardize.
+ * standardize=true additionally scales each column to ‖X[:,j]‖² = n.
  */
 export function lassoFit(
   X: number[][],
@@ -2319,12 +2341,19 @@ export function lassoFit(
   let sdX: number[];
   let meanY: number;
 
-  if (standardize && intercept) {
+  if (intercept) {
     const std = standardizeDesign(X, y);
-    Xs = std.Xs;
+    if (standardize) {
+      Xs = std.Xs;
+      sdX = std.sdX;
+    } else {
+      sdX = new Array<number>(p).fill(1);
+      Xs = Array.from({ length: n }, (_, i) =>
+        Array.from({ length: p }, (_, j) => X[i][j] - std.meanX[j]),
+      );
+    }
     ys = std.ys;
     meanX = std.meanX;
-    sdX = std.sdX;
     meanY = std.meanY;
   } else {
     Xs = X;
@@ -2332,6 +2361,21 @@ export function lassoFit(
     meanX = new Array<number>(p).fill(0);
     sdX = new Array<number>(p).fill(1);
     meanY = 0;
+  }
+
+  // Per-column squared-norm — the denominator in the soft-threshold update.
+  // For standardized data this equals n exactly; for unscaled / unstandardized
+  // data it varies per column. Computing it once keeps the inner loop O(np).
+  const colNorm2 = new Array<number>(p).fill(0);
+  for (let j = 0; j < p; j++) {
+    let s = 0;
+    for (let i = 0; i < n; i++) s += Xs[i][j] * Xs[i][j];
+    if (s < 1e-24) {
+      throw new Error(
+        `lassoFit: column ${j} has zero variance (drop it before fitting)`,
+      );
+    }
+    colNorm2[j] = s;
   }
 
   // Initialize β̃ from warm start (in standardized scale) or zeros.
@@ -2362,11 +2406,11 @@ export function lassoFit(
     let maxDelta = 0;
     for (let j = 0; j < p; j++) {
       const oldBetaJ = betaTilde[j];
-      // z_j = X̃[:,j]ᵀ r_{−j} = X̃[:,j]ᵀ r + ‖X̃[:,j]‖² · β̃_j = X̃[:,j]ᵀ r + n · β̃_j.
+      // z_j = X̃[:,j]ᵀ r_{−j} = X̃[:,j]ᵀ r + ‖X̃[:,j]‖² · β̃_j.
       let zj = 0;
       for (let i = 0; i < n; i++) zj += Xs[i][j] * r[i];
-      zj += n * oldBetaJ;
-      const newBetaJ = softThreshold(zj, lambda) / n;
+      zj += colNorm2[j] * oldBetaJ;
+      const newBetaJ = softThreshold(zj, lambda) / colNorm2[j];
       const delta = newBetaJ - oldBetaJ;
       if (delta !== 0) {
         for (let i = 0; i < n; i++) r[i] -= Xs[i][j] * delta;
@@ -2382,10 +2426,9 @@ export function lassoFit(
     }
   }
 
-  const beta =
-    standardize && intercept
-      ? unstandardizeBeta(betaTilde, meanX, sdX, meanY)
-      : [0, ...betaTilde];
+  const beta = intercept
+    ? unstandardizeBeta(betaTilde, meanX, sdX, meanY)
+    : [0, ...betaTilde];
 
   const activeSet: number[] = [];
   for (let j = 1; j < beta.length; j++) {
@@ -2439,18 +2482,28 @@ export function elasticNetFit(
   const p = X[0].length;
   if (lambda < 0) throw new Error(`elasticNetFit: negative lambda ${lambda}`);
 
+  // Decoupled standardization + intercept (PR #27 review): same as ridgeFit /
+  // lassoFit. When intercept is true we always center, scaling only when
+  // standardize is true.
   let Xs: number[][];
   let ys: number[];
   let meanX: number[];
   let sdX: number[];
   let meanY: number;
 
-  if (standardize && intercept) {
+  if (intercept) {
     const std = standardizeDesign(X, y);
-    Xs = std.Xs;
+    if (standardize) {
+      Xs = std.Xs;
+      sdX = std.sdX;
+    } else {
+      sdX = new Array<number>(p).fill(1);
+      Xs = Array.from({ length: n }, (_, i) =>
+        Array.from({ length: p }, (_, j) => X[i][j] - std.meanX[j]),
+      );
+    }
     ys = std.ys;
     meanX = std.meanX;
-    sdX = std.sdX;
     meanY = std.meanY;
   } else {
     Xs = X;
@@ -2458,6 +2511,20 @@ export function elasticNetFit(
     meanX = new Array<number>(p).fill(0);
     sdX = new Array<number>(p).fill(1);
     meanY = 0;
+  }
+
+  // Per-column squared norm — the L² piece of the elastic-net denominator
+  // varies per column when the design isn't standardized (PR #27).
+  const colNorm2 = new Array<number>(p).fill(0);
+  for (let j = 0; j < p; j++) {
+    let s = 0;
+    for (let i = 0; i < n; i++) s += Xs[i][j] * Xs[i][j];
+    if (s < 1e-24) {
+      throw new Error(
+        `elasticNetFit: column ${j} has zero variance (drop it before fitting)`,
+      );
+    }
+    colNorm2[j] = s;
   }
 
   const betaTilde = new Array<number>(p).fill(0);
@@ -2478,8 +2545,8 @@ export function elasticNetFit(
     for (let i = 0; i < n; i++) r[i] -= Xs[i][j] * betaTilde[j];
   }
 
-  const denom = n + lambda * (1 - alpha);
   const lassoCoef = lambda * alpha;
+  const ridgeCoef = lambda * (1 - alpha);
 
   let converged = false;
   let iter = 0;
@@ -2489,7 +2556,8 @@ export function elasticNetFit(
       const oldBetaJ = betaTilde[j];
       let zj = 0;
       for (let i = 0; i < n; i++) zj += Xs[i][j] * r[i];
-      zj += n * oldBetaJ;
+      zj += colNorm2[j] * oldBetaJ;
+      const denom = colNorm2[j] + ridgeCoef;
       const newBetaJ = softThreshold(zj, lassoCoef) / denom;
       const delta = newBetaJ - oldBetaJ;
       if (delta !== 0) {
@@ -2506,10 +2574,9 @@ export function elasticNetFit(
     }
   }
 
-  const beta =
-    standardize && intercept
-      ? unstandardizeBeta(betaTilde, meanX, sdX, meanY)
-      : [0, ...betaTilde];
+  const beta = intercept
+    ? unstandardizeBeta(betaTilde, meanX, sdX, meanY)
+    : [0, ...betaTilde];
 
   const activeSet: number[] = [];
   for (let j = 1; j < beta.length; j++) {
@@ -2558,8 +2625,8 @@ export function lassoCoordStep(
   if (beta.length !== p) {
     throw new Error(`lassoCoordStep: beta length ${beta.length} != p=${p}`);
   }
-  const denom = n + lambda * (1 - alpha);
   const lassoCoef = lambda * alpha;
+  const ridgeCoef = lambda * (1 - alpha);
   const out = beta.slice();
   // Maintain residuals r = y − X β.
   const r = y.slice();
@@ -2568,10 +2635,16 @@ export function lassoCoordStep(
     for (let i = 0; i < n; i++) r[i] -= X[i][j] * out[j];
   }
   for (let j = 0; j < p; j++) {
+    // Per-column squared norm — caller may not have standardized to ‖·‖²=n
+    // (PR #27). The denominator is colNorm² + λ(1−α) (elastic-net adjustment).
+    let colNorm2 = 0;
+    for (let i = 0; i < n; i++) colNorm2 += X[i][j] * X[i][j];
+    if (colNorm2 < 1e-24) continue; // skip dead columns
     const oldBetaJ = out[j];
     let zj = 0;
     for (let i = 0; i < n; i++) zj += X[i][j] * r[i];
-    zj += n * oldBetaJ;
+    zj += colNorm2 * oldBetaJ;
+    const denom = colNorm2 + ridgeCoef;
     const newBetaJ = softThreshold(zj, lassoCoef) / denom;
     const delta = newBetaJ - oldBetaJ;
     if (delta !== 0) {
@@ -2731,13 +2804,19 @@ export interface CVResult {
 }
 
 /**
- * k-fold CV for penalized regression / GLM. Loss = mean squared error
- * (gaussian) or unit deviance (binomial / poisson). Fold assignment is
- * deterministic given the seed via Topic-21's `seededRandom` LCG (the brief
- * mentions mulberry32; any deterministic PRNG satisfies the reproducibility
- * requirement and `seededRandom` is the in-tree primitive).
+ * k-fold CV for penalized linear regression. Loss = mean squared error.
+ * Fold assignment is deterministic given the seed via Topic-21's
+ * `seededRandom` LCG (the brief mentions mulberry32; any deterministic
+ * PRNG satisfies the reproducibility requirement).
  *
  * One-SE rule: λ̂_{1SE} = max{λ : cvMean(λ) ≤ cvMean(λ̂_min) + cvSE(λ̂_min)}.
+ *
+ * Family handling (PR #27 review): only `gaussian` is supported. Earlier
+ * iterations accepted `binomial` / `poisson` and computed deviance loss,
+ * but the per-fold fit was always least-squares (`regularizationPath` is
+ * Gaussian-only) — silently producing wrong CV curves for GLMs. For
+ * penalized-GLM cross-validation, drive `penalizedGLMFit` directly per
+ * fold per λ; that wiring lands in a follow-up.
  */
 export function crossValidate(
   X: number[][],
@@ -2750,7 +2829,7 @@ export function crossValidate(
     lambdas?: number[];
     k?: number;
     seed?: number;
-    family?: 'gaussian' | 'binomial' | 'poisson';
+    family?: 'gaussian';
   },
 ): CVResult {
   const penalty = options?.penalty ?? 'lasso';
@@ -2758,6 +2837,13 @@ export function crossValidate(
   const k = options?.k ?? 10;
   const seed = options?.seed ?? 42;
   const family = options?.family ?? 'gaussian';
+  if (family !== 'gaussian') {
+    throw new Error(
+      `crossValidate: family '${family}' not supported. Only 'gaussian' is implemented; ` +
+        `penalized-GLM CV (binomial / poisson) requires looping penalizedGLMFit per fold ` +
+        `per λ — wire that pattern in caller code or open a follow-up issue.`,
+    );
+  }
 
   const n = X.length;
   if (n === 0) throw new Error('crossValidate: empty design');
@@ -2817,21 +2903,10 @@ export function crossValidate(
       for (let i = 0; i < ntest; i++) {
         let eta = beta[0];
         for (let jj = 0; jj < Xtest[i].length; jj++) eta += beta[jj + 1] * Xtest[i][jj];
-        if (family === 'gaussian') {
-          const e = ytest[i] - eta;
-          loss += e * e;
-        } else if (family === 'binomial') {
-          // Logistic deviance: −2[y log p + (1−y) log(1−p)].
-          const p = 1 / (1 + Math.exp(-eta));
-          const pe = Math.min(Math.max(p, 1e-15), 1 - 1e-15);
-          loss -= 2 * (ytest[i] * Math.log(pe) + (1 - ytest[i]) * Math.log(1 - pe));
-        } else {
-          // Poisson deviance with log link: 2[y log(y/μ) − (y − μ)].
-          const mu = Math.max(Math.exp(eta), 1e-15);
-          const yi = ytest[i];
-          const yLogTerm = yi > 0 ? yi * Math.log(yi / mu) : 0;
-          loss += 2 * (yLogTerm - (yi - mu));
-        }
+        // Gaussian / squared-error loss only — family-guard at the top of
+        // crossValidate ensures this is the only branch reached.
+        const e = ytest[i] - eta;
+        loss += e * e;
       }
       foldDeviances[f][l] = loss / Math.max(ntest, 1);
     }
@@ -3034,6 +3109,12 @@ export function penalizedGLMFit(
   let mu = new Array<number>(n);
   let eta = new Array<number>(n);
 
+  // Clip η before passing through link.gInv: Math.exp(η) overflows past
+  // ~709 (log link → Infinity μ → NaN deviance), and the same applies to
+  // any unbounded inverse link. Symmetric ±700 keeps every standard link
+  // numerically safe without distorting realistic GLM fits.
+  const clipEta = (e: number): number => (e < -700 ? -700 : e > 700 ? 700 : e);
+
   for (; outerIter < maxOuterIter; outerIter++) {
     // ── Compute current η, μ, working response z, weights w ────────────
     eta = new Array<number>(n);
@@ -3042,7 +3123,7 @@ export function penalizedGLMFit(
       for (let j = 0; j < p + 1; j++) e += Xa[i][j] * beta[j];
       eta[i] = e;
     }
-    mu = eta.map((e) => link.gInv(e));
+    mu = eta.map((e) => link.gInv(clipEta(e)));
     const w = new Array<number>(n);
     const z = new Array<number>(n);
     for (let i = 0; i < n; i++) {
@@ -3125,7 +3206,7 @@ export function penalizedGLMFit(
       for (let j = 0; j < p + 1; j++) e += Xa[i][j] * beta[j];
       etaNew[i] = e;
     }
-    const muNew = etaNew.map((e) => link.gInv(e));
+    const muNew = etaNew.map((e) => link.gInv(clipEta(e)));
     let dev = 0;
     for (let i = 0; i < n; i++) dev += family.devianceContribution(y[i], muNew[i]);
     let pen = 0;
