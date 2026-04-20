@@ -55,7 +55,8 @@ import {
   penalizedGLMFit,
   kktCheck,
 } from './regression';
-import { PROSTATE_CANCER_DATA, EXAMPLE_10_GLM_DATA } from '../../../data/regression-data';
+import { EXAMPLE_10_GLM_DATA } from '../../../data/regression-data';
+import { PROSTATE_CANCER_DATA } from '../../../data/regularization-data';
 import { seededRandom } from './probability';
 import { normalSample } from './convergence';
 
