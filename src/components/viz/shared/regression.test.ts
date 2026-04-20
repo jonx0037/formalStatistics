@@ -68,6 +68,7 @@ import { EXAMPLE_10_GLM_DATA } from '../../../data/regression-data';
 import { PROSTATE_CANCER_DATA } from '../../../data/regularization-data';
 import { seededRandom } from './probability';
 import { normalSample } from './convergence';
+import { polyDesign, polyFitOLS } from './polynomial';
 
 let passed = 0;
 let failed = 0;
@@ -1814,51 +1815,14 @@ const NP_Y: number[] = [
   1, 2, 6, 1, 2, 4, 4, 0, 1, 5, 5, 0, 5, 3, 2, 5, 5, 2, 2, 3, 2, 0, 0, 0, 3,
 ];
 
-/** Build a polynomial design matrix [1, x, x², …, x^d] of shape (n, d+1). */
-function polyDesign(x: number[], d: number): number[][] {
-  return x.map((xi) => {
-    const row = new Array<number>(d + 1);
-    let pwr = 1;
-    for (let j = 0; j <= d; j++) {
-      row[j] = pwr;
-      pwr *= xi;
-    }
-    return row;
-  });
-}
-
 /**
- * QR-based polynomial fit, returning the minimal OLSFit-shaped object that
- * aic/aicc/bic/mallowsCp/nestedICRanking actually consume (beta, sse, n,
- * sigmaSquared). Avoids olsFit's choleskyInverse-on-(XᵀX) step, which is
- * numerically PD-fragile on monomial Vandermonde at d ≥ 12 (the notebook
- * uses numpy's SVD-based lstsq, so this helper restores parity).
+ * Helpers `polyDesign` and `polyFit` (aliased to `polyFitOLS`) live in
+ * `./polynomial` so the components and the test harness share a single
+ * polynomial-fitting code path. The QR-based `polyFitOLS` sidesteps the
+ * monomial Vandermonde PD-check failure that `olsFit`'s choleskyInverse
+ * hits at d ≥ 12.
  */
-function polyFit(x: number[], y: number[], d: number) {
-  const X = polyDesign(x, d);
-  const beta = qrSolve(X, y);
-  const fitted = X.map((row) => row.reduce((s, xij, j) => s + xij * beta[j], 0));
-  const residuals = y.map((yi, i) => yi - fitted[i]);
-  let sse = 0;
-  for (const r of residuals) sse += r * r;
-  const n = y.length;
-  const m = X[0].length;
-  const sigmaSquared = n - m > 0 ? sse / (n - m) : sse / n;
-  return {
-    beta,
-    residuals,
-    fitted,
-    sigmaSquared,
-    sse,
-    sst: 0,
-    ssr: 0,
-    xtxInv: [] as number[][],
-    rSquared: 0,
-    adjustedRSquared: 0,
-    n,
-    p: m - 1,
-  };
-}
+const polyFit = polyFitOLS;
 
 // ── T10.1–T10.11 — IC tests on POLY_DGP ─────────────────────────────────────
 {

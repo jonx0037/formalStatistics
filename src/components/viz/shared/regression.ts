@@ -3758,6 +3758,92 @@ export function looCV(
 }
 
 /**
+ * Generic k-fold cross-validation for OLS-style fits. Companion to `looCV`:
+ * `looCV` is the n-fold special case via the hat-matrix shortcut; `kFoldCV`
+ * is the finite-fold case via explicit refits, suitable when k = 5 or 10
+ * (the modern defaults per HAS2009 §7.10) or when the OLS shortcut is
+ * unstable (high-leverage cases).
+ *
+ * Folds are produced by a deterministic Fisher–Yates shuffle of the row
+ * indices using the supplied seed (default 1234) — same seed gives the
+ * same fold partition across calls, supporting reproducible CV reporting.
+ *
+ * @param X      design matrix, shape (n, p+1) including intercept column
+ * @param y      response vector, length n
+ * @param k      number of folds (must satisfy 2 ≤ k ≤ n)
+ * @param fitFn  fit function returning at least `{ beta }`. Default: OLS
+ *               via `qrSolve` (numerically more robust than Cholesky on
+ *               near-singular designs).
+ * @param seed   PRNG seed for the shuffle (default 1234)
+ * @returns      mean squared prediction error across all folds
+ */
+export function kFoldCV(
+  X: number[][],
+  y: number[],
+  k: number,
+  fitFn?: (X: number[][], y: number[]) => { beta: number[] },
+  seed: number = 1234,
+): number {
+  const n = X.length;
+  if (n !== y.length) {
+    throw new Error(`kFoldCV: X.length (${n}) !== y.length (${y.length})`);
+  }
+  if (k < 2) throw new Error(`kFoldCV: need k ≥ 2, got k = ${k}`);
+  if (k > n) throw new Error(`kFoldCV: need k ≤ n, got k = ${k} > n = ${n}`);
+  const m = X[0].length;
+
+  // Default fit: OLS via qrSolve (avoids olsFit's choleskyInverse PD-check).
+  const fitter =
+    fitFn ?? ((Xs: number[][], ys: number[]) => ({ beta: qrSolve(Xs, ys) }));
+
+  // Deterministic shuffle.
+  const idx: number[] = Array.from({ length: n }, (_, i) => i);
+  // Local LCG to avoid pulling in seededRandom from probability.ts (which
+  // would create a cycle; regression.ts is a leaf module).
+  let state = seed >>> 0;
+  const rand = (): number => {
+    state = (state * 1664525 + 1013904223) >>> 0;
+    return state / 0x100000000;
+  };
+  for (let i = n - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [idx[i], idx[j]] = [idx[j], idx[i]];
+  }
+
+  const foldSize = Math.ceil(n / k);
+  let sse = 0;
+  for (let f = 0; f < k; f++) {
+    const lo = f * foldSize;
+    const hi = Math.min(lo + foldSize, n);
+    const testIdx = idx.slice(lo, hi);
+    if (testIdx.length === 0) continue;
+    const testMask = new Set(testIdx);
+    const Xtrain: number[][] = [];
+    const ytrain: number[] = [];
+    for (let i = 0; i < n; i++) {
+      if (!testMask.has(i)) {
+        Xtrain.push(X[i]);
+        ytrain.push(y[i]);
+      }
+    }
+    if (Xtrain.length <= m) continue; // can't fit
+    let beta: number[];
+    try {
+      beta = fitter(Xtrain, ytrain).beta;
+    } catch {
+      continue;
+    }
+    for (const i of testIdx) {
+      let yhat = 0;
+      for (let j = 0; j < m; j++) yhat += X[i][j] * beta[j];
+      const r = y[i] - yhat;
+      sse += r * r;
+    }
+  }
+  return sse / n;
+}
+
+/**
  * Mean squared (or deviance-scaled, for GLM) prediction risk on held-out data.
  * Used by ConsistencyEfficiencyRace Tab B and §24.1 Ex 1 + Figure 1.
  *
