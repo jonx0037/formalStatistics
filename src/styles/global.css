@@ -67,6 +67,16 @@
   --color-ic-cp:   #059669;
   --color-ic-loo:  #d97706;
 
+  /* Bayesian palette (Topic 25, Track 7) — prior/likelihood/posterior trio
+     matches the standard Bayesian-textbook visual grammar and is inherited
+     by Topics 26–28. Two utility vars support the BvM animator's dual-
+     reference plot (θ₀ vs θ̂_MLE). */
+  --color-prior:          #3B82F6;  /* blue-500 */
+  --color-likelihood:     #F59E0B;  /* amber-500 */
+  --color-posterior:      #8B5CF6;  /* violet-500 */
+  --color-true-parameter: #10B981;  /* emerald-500 */
+  --color-mle:            #F97316;  /* orange-500 */
+
   /* Typography */
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
   --font-serif: 'Merriweather', 'Georgia', serif;
