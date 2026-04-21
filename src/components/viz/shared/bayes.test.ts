@@ -33,9 +33,21 @@ import {
   hpdIntervalBeta,
   mapEstimate,
   jeffreysPrior,
+  // Topic 26 additions
+  createSeededRng,
+  metropolisHastings,
+  gibbsSampler,
+  hmcLeapfrog,
+  hamiltonianMonteCarlo,
+  rHat,
+  effectiveSampleSize,
+  autocorrelation,
+  batchMeansVariance,
   type PriorHyperparams,
   type SuffStats,
   type PosteriorHyperparams,
+  type ProposalKernel,
+  type SeededRng,
 } from './bayes';
 
 let passed = 0;
@@ -345,6 +357,347 @@ console.log('========================================\n');
 {
   const v = pdfBeta(0.5, 1, 1);
   check('S3 pdfBeta(0.5, 1, 1) = 1 (uniform)', approx(v, 1, 1e-10), v, 1, 'tol 1e-10');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Topic 26 · bayes.ts verification — MCMC samplers + diagnostics
+//
+// Translated from brief §6.2 (drafted Jest-style) into this file's tsx +
+// check()/approx() harness per repo CLAUDE.md. Tolerances:
+//   • 1e-1 for acceptance rates
+//   • 5e-2 for posterior means
+//   • 1e-1 for variances
+//   • 1e-3 exact-equal for RNG determinism (T26.15)
+// Ground-truth values come from notebook Cell 13.
+// ═══════════════════════════════════════════════════════════════════════════
+console.log('\n========================================');
+console.log(' Topic 26 · bayes.ts verification');
+console.log('========================================\n');
+
+// T26.1 — MH acceptance rate on N(0,1) with optimal random-walk scale.
+// RWM with σ_prop = 2.4 on d=1 Gaussian hits ~0.44 acceptance (RGG 1997).
+{
+  const rng = createSeededRng(42);
+  const logPi = (x: number) => -0.5 * x * x;
+  const kernel: ProposalKernel<number> = {
+    propose: (x, r) => ({ xPrime: x + 2.4 * r.normal(), logQRatio: 0 }),
+  };
+  const chain = metropolisHastings(0, logPi, kernel, 10000, 500, 1, rng);
+  check(
+    'T26.1 MH acceptance on N(0,1), σ=2.4 ≈ 0.44',
+    approx(chain.acceptanceRate, 0.44, 0.1),
+    chain.acceptanceRate.toFixed(4),
+    '≈ 0.44',
+    'tol 1e-1 (RGG 1997 optimal)',
+  );
+}
+
+// T26.2 — MH chain mean on N(0,1) within MCMC SE.
+{
+  const rng = createSeededRng(42);
+  const logPi = (x: number) => -0.5 * x * x;
+  const kernel: ProposalKernel<number> = {
+    propose: (x, r) => ({ xPrime: x + 2.4 * r.normal(), logQRatio: 0 }),
+  };
+  const chain = metropolisHastings(0, logPi, kernel, 10000, 500, 1, rng);
+  const mean =
+    chain.samples.reduce((a, b) => a + b, 0) / chain.samples.length;
+  check(
+    'T26.2 MH chain mean ≈ 0 on N(0,1) (|mean| < 0.05)',
+    Math.abs(mean) < 0.05,
+    mean.toFixed(4),
+    '|·| < 0.05',
+    'tol 5e-2',
+  );
+}
+
+// T26.3 — Gibbs on bivariate Normal ρ=0.8: posterior mean ≈ (0, 0).
+{
+  const rng = createSeededRng(42);
+  const rho = 0.8;
+  const sd = Math.sqrt(1 - rho * rho);
+  const conditionals = [
+    (th: number[], r: SeededRng) => rho * th[1] + sd * r.normal(),
+    (th: number[], r: SeededRng) => rho * th[0] + sd * r.normal(),
+  ];
+  const chain = gibbsSampler([-2, -2], conditionals, 5000, 500, 1, rng);
+  const m0 =
+    chain.samples.reduce((a, b) => a + b[0], 0) / chain.samples.length;
+  const m1 =
+    chain.samples.reduce((a, b) => a + b[1], 0) / chain.samples.length;
+  check(
+    'T26.3 Gibbs ρ=0.8 posterior mean ≈ (0, 0) (|·| < 0.05 each)',
+    Math.abs(m0) < 0.05 && Math.abs(m1) < 0.05,
+    `(${m0.toFixed(3)}, ${m1.toFixed(3)})`,
+    '(0, 0)',
+    'tol 5e-2',
+  );
+}
+
+// T26.4 — Gibbs marginal variance ≈ 1.0 (stationary on standard MVN).
+{
+  const rng = createSeededRng(42);
+  const rho = 0.8;
+  const sd = Math.sqrt(1 - rho * rho);
+  const conditionals = [
+    (th: number[], r: SeededRng) => rho * th[1] + sd * r.normal(),
+    (th: number[], r: SeededRng) => rho * th[0] + sd * r.normal(),
+  ];
+  const chain = gibbsSampler([0, 0], conditionals, 5000, 500, 1, rng);
+  const xs = chain.samples.map((s) => s[0]);
+  const mean = xs.reduce((a, b) => a + b, 0) / xs.length;
+  const variance =
+    xs.reduce((a, b) => a + (b - mean) ** 2, 0) / (xs.length - 1);
+  check(
+    'T26.4 Gibbs marginal variance ≈ 1.0',
+    approx(variance, 1.0, 0.15),
+    variance.toFixed(4),
+    '≈ 1.0',
+    'tol 1e-1',
+  );
+}
+
+// T26.5 — HMC leapfrog energy conservation over L=50 steps on N(0,1).
+//         |ΔH| < 0.05 for ε=0.1 — symplectic O(ε²) bound.
+{
+  const rng = createSeededRng(42);
+  const q0 = [0];
+  const p0 = [rng.normal()];
+  const gradU = (q: number[]) => [q[0]]; // U = 0.5 q² ⇒ ∇U = q
+  const H0 = 0.5 * q0[0] ** 2 + 0.5 * p0[0] ** 2;
+  const { qStar, pStar } = hmcLeapfrog(q0, p0, gradU, {
+    epsilon: 0.1,
+    steps: 50,
+  });
+  const HStar = 0.5 * qStar[0] ** 2 + 0.5 * pStar[0] ** 2;
+  const dH = Math.abs(HStar - H0);
+  check(
+    'T26.5 HMC leapfrog |ΔH| < 0.05 on N(0,1), ε=0.1, L=50',
+    dH < 0.05,
+    dH.toFixed(5),
+    '< 0.05',
+    'symplectic O(ε²)',
+  );
+}
+
+// T26.6 — Leapfrog Jacobian det ≈ 1 via finite difference.
+//         Volume preservation is the geometric ingredient of HMC symmetry.
+{
+  const gradU = (q: number[]) => [q[0]];
+  const params = { epsilon: 0.1, steps: 10 };
+  const eps = 1e-5;
+  const end = (q: number[], p: number[]) => hmcLeapfrog(q, p, gradU, params);
+  const dqq =
+    (end([0.5 + eps], [1.0]).qStar[0] - end([0.5 - eps], [1.0]).qStar[0]) /
+    (2 * eps);
+  const dqp =
+    (end([0.5], [1.0 + eps]).qStar[0] - end([0.5], [1.0 - eps]).qStar[0]) /
+    (2 * eps);
+  const dpq =
+    (end([0.5 + eps], [1.0]).pStar[0] - end([0.5 - eps], [1.0]).pStar[0]) /
+    (2 * eps);
+  const dpp =
+    (end([0.5], [1.0 + eps]).pStar[0] - end([0.5], [1.0 - eps]).pStar[0]) /
+    (2 * eps);
+  const det = dqq * dpp - dqp * dpq;
+  check(
+    'T26.6 Leapfrog Jacobian det ≈ 1 (volume preservation)',
+    approx(det, 1.0, 1e-2),
+    det.toFixed(6),
+    '≈ 1',
+    'finite-diff, tol 1e-2',
+  );
+}
+
+// T26.7 — R̂ < 1.05 for 4 well-mixed chains on N(0,1).
+{
+  const starts = [-3, -1, 1, 3];
+  const chains = starts.map((x0, idx) => {
+    const rng = createSeededRng(42 + idx);
+    const logPi = (x: number) => -0.5 * x * x;
+    const kernel: ProposalKernel<number> = {
+      propose: (x, r) => ({ xPrime: x + 2.4 * r.normal(), logQRatio: 0 }),
+    };
+    return metropolisHastings(x0, logPi, kernel, 2000, 500, 1, rng).samples;
+  });
+  const r = rHat(chains);
+  check(
+    'T26.7 R̂ < 1.05 for 4 dispersed MH chains of length 2000',
+    r < 1.05,
+    r.toFixed(4),
+    '< 1.05',
+    'GEL1992 diagnostic',
+  );
+}
+
+// T26.8 — ESS for AR(1) with φ=0.9 lies in [40, 400] (far below N=5000).
+//         Theoretical τ = (1+φ)/(1-φ) = 19, so N/τ ≈ 263.
+{
+  const rng = createSeededRng(42);
+  const phi = 0.9;
+  const chain: number[] = [0];
+  for (let i = 0; i < 5000; i++) {
+    chain.push(phi * chain[i] + Math.sqrt(1 - phi * phi) * rng.normal());
+  }
+  const ess = effectiveSampleSize(chain.slice(500));
+  check(
+    'T26.8 ESS for AR(1) φ=0.9 in [40, 400]',
+    ess > 40 && ess < 400,
+    ess.toFixed(1),
+    '∈ [40, 400]',
+    'τ_theory = 19 ⇒ N/τ ≈ 263',
+  );
+}
+
+// T26.9 — Batch-means σ²_MC for iid N(0, 1), N=5000 ≈ 1.0 ± 0.2.
+{
+  const rng = createSeededRng(42);
+  const chain = Array.from({ length: 5000 }, () => rng.normal());
+  const sigmaMC2 = batchMeansVariance(chain);
+  check(
+    'T26.9 batchMeansVariance for iid N(0,1) ≈ 1.0',
+    sigmaMC2 > 0.8 && sigmaMC2 < 1.2,
+    sigmaMC2.toFixed(4),
+    '∈ [0.8, 1.2]',
+    'tol ±0.2',
+  );
+}
+
+// T26.10 — Batch-means σ²_MC for AR(1) φ=0.9 inflates above 10.
+//          Theoretical σ²_MC ≈ (1+φ)/(1-φ) · Var(X) = 19.
+{
+  const rng = createSeededRng(42);
+  const phi = 0.9;
+  const chain: number[] = [0];
+  for (let i = 0; i < 10000; i++) {
+    chain.push(phi * chain[i] + Math.sqrt(1 - phi * phi) * rng.normal());
+  }
+  const sigmaMC2 = batchMeansVariance(chain.slice(1000));
+  check(
+    'T26.10 batchMeansVariance for AR(1) φ=0.9 > 10',
+    sigmaMC2 > 10,
+    sigmaMC2.toFixed(3),
+    '> 10',
+    'theoretical ≈ 19',
+  );
+}
+
+// T26.11 — Autocorrelation at lag 1 for AR(1) φ=0.9 ≈ 0.9.
+{
+  const rng = createSeededRng(42);
+  const phi = 0.9;
+  const chain: number[] = [0];
+  for (let i = 0; i < 10000; i++) {
+    chain.push(phi * chain[i] + Math.sqrt(1 - phi * phi) * rng.normal());
+  }
+  const rho1 = autocorrelation(chain.slice(500), 1);
+  check(
+    'T26.11 autocorrelation lag-1 for AR(1) φ=0.9 ≈ 0.9',
+    approx(rho1, 0.9, 0.05),
+    rho1.toFixed(4),
+    '≈ 0.9',
+    'tol 5e-2',
+  );
+}
+
+// T26.12 — MH on a discrete 3-state target matches π within 3%.
+//          π = [0.2, 0.3, 0.5] on {0, 1, 2}; RW ±1 with absorbing boundaries.
+{
+  const rng = createSeededRng(42);
+  const pi = [0.2, 0.3, 0.5];
+  const logPi = (x: number) => Math.log(pi[x]);
+  const kernel: ProposalKernel<number> = {
+    propose: (x, r) => {
+      const step = r.random() < 0.5 ? -1 : 1;
+      const xPrime = Math.max(0, Math.min(2, x + step));
+      return { xPrime, logQRatio: 0 };
+    },
+  };
+  const chain = metropolisHastings(0, logPi, kernel, 50000, 1000, 1, rng);
+  const counts = [0, 0, 0];
+  chain.samples.forEach((x) => counts[x]++);
+  const empirical = counts.map((c) => c / chain.samples.length);
+  const maxErr = Math.max(...empirical.map((e, i) => Math.abs(e - pi[i])));
+  check(
+    'T26.12 MH on 3-state target matches π within 3%',
+    maxErr < 0.03,
+    `max|ε| = ${maxErr.toFixed(4)}`,
+    '< 0.03',
+    'π = [0.2, 0.3, 0.5]',
+  );
+}
+
+// T26.13 — Gibbs marginal mean/variance match N(0, 1) within tolerance (ρ=0.5).
+{
+  const rng = createSeededRng(42);
+  const rho = 0.5;
+  const sd = Math.sqrt(1 - rho * rho);
+  const conditionals = [
+    (th: number[], r: SeededRng) => rho * th[1] + sd * r.normal(),
+    (th: number[], r: SeededRng) => rho * th[0] + sd * r.normal(),
+  ];
+  const chain = gibbsSampler([0, 0], conditionals, 10000, 500, 1, rng);
+  const xs = chain.samples.map((s) => s[0]);
+  const mean = xs.reduce((a, b) => a + b, 0) / xs.length;
+  const variance =
+    xs.reduce((a, b) => a + (b - mean) ** 2, 0) / (xs.length - 1);
+  check(
+    'T26.13 Gibbs ρ=0.5 marginal ≈ N(0, 1)',
+    Math.abs(mean) < 0.05 && Math.abs(variance - 1) < 0.1,
+    `(mean ${mean.toFixed(3)}, var ${variance.toFixed(3)})`,
+    '≈ (0, 1)',
+    'tol 5e-2 / 1e-1',
+  );
+}
+
+// T26.14 — HMC on Rosenbrock banana accepts well (acc > 0.6).
+{
+  const rng = createSeededRng(42);
+  const logPi = (q: number[]) =>
+    -0.5 * ((1 - q[0]) ** 2 + 10 * (q[1] - q[0] ** 2) ** 2);
+  const gradU = (q: number[]) => [
+    -(1 - q[0]) + 20 * (q[1] - q[0] ** 2) * (-2 * q[0]),
+    20 * (q[1] - q[0] ** 2),
+  ];
+  const chain = hamiltonianMonteCarlo(
+    [0, 0],
+    logPi,
+    gradU,
+    { epsilon: 0.05, steps: 25 },
+    2000,
+    500,
+    rng,
+  );
+  check(
+    'T26.14 HMC on banana ε=0.05 L=25, acc > 0.6',
+    chain.acceptanceRate > 0.6,
+    chain.acceptanceRate.toFixed(4),
+    '> 0.6',
+    'symplectic integrator + MH',
+  );
+}
+
+// T26.15 — Seeded RNG determinism: same seed → same sequence (exact).
+{
+  const r1 = createSeededRng(42);
+  const r2 = createSeededRng(42);
+  let allEqual = true;
+  const first10r1: number[] = [];
+  const first10r2: number[] = [];
+  for (let i = 0; i < 10; i++) {
+    const a = r1.random();
+    const b = r2.random();
+    first10r1.push(a);
+    first10r2.push(b);
+    if (a !== b) allEqual = false;
+  }
+  check(
+    'T26.15 createSeededRng(42) deterministic across instances',
+    allEqual,
+    allEqual ? '10/10 identical' : 'diverged',
+    '10/10 identical',
+    'exact equality (tol 1e-3 not needed)',
+  );
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
