@@ -11,7 +11,7 @@
  * bimodal mixture, Student-t(ν=3). All operate on the same MH driver
  * (`metropolisHastings` from bayes.ts) with a symmetric Gaussian proposal.
  */
-import { useMemo, useState } from 'react';
+import { useDeferredValue, useMemo, useState } from 'react';
 import { useResizeObserver } from './shared/useResizeObserver';
 import {
   createSeededRng,
@@ -66,7 +66,13 @@ export default function MetropolisHastingsTuner() {
   const [seed, setSeed] = useState(42);
 
   const preset = mhTunerPresets[presetIdx];
-  const scale = sliderToScale(scaleSlider);
+  // Immediate value for the slider readout (no lag in the label as user drags).
+  const immediateScale = sliderToScale(scaleSlider);
+  // Deferred value for the expensive chain recompute: React commits this
+  // only when the slider drag pauses. Keeps the slider responsive instead
+  // of janking the main thread on every onChange (5000-iter MH chain).
+  const deferredScaleSlider = useDeferredValue(scaleSlider);
+  const scale = sliderToScale(deferredScaleSlider);
   const isMobile = (width ?? 800) < MOBILE_BREAKPOINT;
 
   const chartW = Math.max(280, Math.min(640, (width ?? 600) - 16));
@@ -331,7 +337,7 @@ export default function MetropolisHastingsTuner() {
         <label className="flex flex-col gap-1 text-sm">
           <div className="flex items-center justify-between">
             <span className="font-medium">
-              Proposal scale σ = {scale.toFixed(2)} (log-scale slider)
+              Proposal scale σ = {immediateScale.toFixed(2)} (log-scale slider)
             </span>
             <span
               className="font-mono text-xs"
@@ -351,7 +357,7 @@ export default function MetropolisHastingsTuner() {
             value={scaleSlider}
             onChange={(e) => setScaleSlider(Number(e.target.value))}
             aria-label="Proposal scale (log)"
-            aria-valuetext={`σ = ${scale.toFixed(2)}, acceptance ${(chain.acceptanceRate * 100).toFixed(1)}%`}
+            aria-valuetext={`σ = ${immediateScale.toFixed(2)}, acceptance ${(chain.acceptanceRate * 100).toFixed(1)}%`}
             className="w-full"
           />
         </label>

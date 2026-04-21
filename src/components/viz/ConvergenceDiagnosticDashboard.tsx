@@ -14,7 +14,7 @@
  * modes — and the happy path where R̂ drops from ≈ 1.3 to < 1.01 within
  * ~200 iterations.
  */
-import { useMemo, useState } from 'react';
+import { useDeferredValue, useMemo, useState } from 'react';
 import { useResizeObserver } from './shared/useResizeObserver';
 import {
   autocorrelation,
@@ -127,9 +127,18 @@ export default function ConvergenceDiagnosticDashboard() {
   const target = pickTarget(preset.targetId);
   const isMobile = (width ?? 900) < MOBILE_BREAKPOINT;
 
+  // Defer slider values so the expensive `runChains` (up to 8 chains × 4000
+  // iterations of MH) only runs after the user pauses the drag. The slider
+  // thumbs themselves still update synchronously via setM / setDispersion /
+  // setN; only the chain recompute is debounced.
+  const deferredM = useDeferredValue(M);
+  const deferredDispersion = useDeferredValue(dispersion);
+  const deferredN = useDeferredValue(N);
+  const deferredSeed = useDeferredValue(seed);
+
   const chains = useMemo(
-    () => runChains(target, M, dispersion, N, seed),
-    [target, M, dispersion, N, seed],
+    () => runChains(target, deferredM, deferredDispersion, deferredN, deferredSeed),
+    [target, deferredM, deferredDispersion, deferredN, deferredSeed],
   );
   const rhatSeries = useMemo(() => runningRhat(chains), [chains]);
   const finalRhat = rhatSeries.at(-1)?.r ?? 1;
@@ -148,7 +157,10 @@ export default function ConvergenceDiagnosticDashboard() {
   const plotH = panelH - MARGIN.top - MARGIN.bottom;
 
   // ── Trace plot ──────────────────────────────────────────────────────────
-  const traceXMax = N;
+  // Use deferredN so the X-axis matches the chains we just built (avoids a
+  // one-frame mismatch when the slider has updated but chains haven't yet
+  // recomputed against the new N).
+  const traceXMax = deferredN;
   const traceRange = useMemo(() => {
     const vals = chains.flat();
     return [

@@ -18,7 +18,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useResizeObserver } from './shared/useResizeObserver';
 import {
-  conditionalMVN,
   createSeededRng,
   type SeededRng,
 } from './shared/bayes';
@@ -211,21 +210,6 @@ export default function GibbsStepper() {
       </svg>
     );
   }, [chain.path, chartW, chartH, plotW, plotH]);
-
-  // Verify our closed-form matches conditionalMVN (sanity; no runtime cost past first mount).
-  useMemo(() => {
-    const { muCond, sigmaCond } = conditionalMVN(
-      [0, 0],
-      [
-        [1, preset.rho],
-        [preset.rho, 1],
-      ],
-      [1],
-      [lastPoint[1]],
-    );
-    // Used implicitly; discarded (React won't fire without a consumer, but memo captures for debug).
-    return [muCond, sigmaCond] as const;
-  }, [preset.rho, lastPoint]);
 
   return (
     <div ref={ref} className="my-6 rounded-lg border p-4" style={{ borderColor: 'var(--color-border)' }}>

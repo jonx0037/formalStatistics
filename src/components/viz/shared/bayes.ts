@@ -1007,17 +1007,25 @@ export function metropolisHastings<T>(
   let x = x0;
   const samples: T[] = [];
   const accepted: boolean[] = [];
+  let totalAccept = 0;
+  let totalDecisions = 0;
   const total = burnIn + N;
   for (let i = 0; i < total; i++) {
     const step = metropolisHastingsStep(x, logPi, proposal, rng);
     x = step.xNext;
     if (i >= burnIn) {
-      if ((i - burnIn) % thin === 0) samples.push(x);
-      accepted.push(step.accepted);
+      totalDecisions++;
+      if (step.accepted) totalAccept++;
+      // `accepted` stays index-aligned with `samples` (post-thinning) per
+      // the MarkovChain<T> docstring contract; `acceptanceRate` is computed
+      // over ALL post-burn-in decisions independent of thinning.
+      if ((i - burnIn) % thin === 0) {
+        samples.push(x);
+        accepted.push(step.accepted);
+      }
     }
   }
-  const acceptanceRate =
-    accepted.length > 0 ? accepted.filter(Boolean).length / accepted.length : 0;
+  const acceptanceRate = totalDecisions > 0 ? totalAccept / totalDecisions : 0;
   return { samples, accepted, acceptanceRate };
 }
 
@@ -1061,8 +1069,9 @@ export function gibbsSampler(
   const total = burnIn + N;
   for (let i = 0; i < total; i++) {
     theta = gibbsStep(theta, conditionals, rng);
-    if (i >= burnIn) {
-      if ((i - burnIn) % thin === 0) samples.push([...theta]);
+    if (i >= burnIn && (i - burnIn) % thin === 0) {
+      // `accepted` index-aligned with `samples` per MarkovChain<T> contract.
+      samples.push([...theta]);
       accepted.push(true);
     }
   }
@@ -1120,6 +1129,78 @@ function matVec(A: number[][], v: number[]): number[] {
 }
 
 /**
+ * Lower-triangular Cholesky factor L of an SPD matrix M (so L · Lᵀ = M).
+ * Used for the HMC momentum resample: if z ∼ 𝒩(0, I), then p = L · z ∼ 𝒩(0, M).
+ * Throws if M is not positive definite (negative pivot encountered).
+ */
+function choleskyLower(M: number[][]): number[][] {
+  const n = M.length;
+  const L: number[][] = Array.from({ length: n }, () => new Array(n).fill(0));
+  for (let i = 0; i < n; i++) {
+    for (let j = 0; j <= i; j++) {
+      let s = M[i][j];
+      for (let k = 0; k < j; k++) s -= L[i][k] * L[j][k];
+      if (i === j) {
+        if (s <= 0) {
+          throw new Error('choleskyLower: matrix is not positive definite');
+        }
+        L[i][i] = Math.sqrt(s);
+      } else {
+        L[i][j] = s / L[j][j];
+      }
+    }
+  }
+  return L;
+}
+
+/**
+ * Sample p ∼ 𝒩(0, M) via Cholesky: draw z ∼ 𝒩(0, I), return L · z.
+ * If `L` is null (M = I), return z directly.
+ */
+function sampleMomentum(
+  L: number[][] | null,
+  d: number,
+  rng: SeededRng,
+): number[] {
+  const z = new Array<number>(d);
+  for (let i = 0; i < d; i++) z[i] = rng.normal();
+  if (!L) return z;
+  const p = new Array<number>(d).fill(0);
+  for (let i = 0; i < d; i++) {
+    let s = 0;
+    for (let j = 0; j <= i; j++) s += L[i][j] * z[j];
+    p[i] = s;
+  }
+  return p;
+}
+
+/**
+ * Inner leapfrog driver — takes a precomputed M⁻¹ (or null for M = I) so
+ * callers in a loop don't pay an O(d³) inversion per step.
+ */
+function leapfrogWithInverse(
+  q0: number[],
+  p0: number[],
+  gradU: (q: number[]) => number[],
+  epsilon: number,
+  steps: number,
+  mInv: number[][] | null,
+): { qStar: number[]; pStar: number[] } {
+  const d = q0.length;
+  const q = [...q0];
+  const p = [...p0];
+  for (let k = 0; k < steps; k++) {
+    const g0 = gradU(q);
+    for (let i = 0; i < d; i++) p[i] -= 0.5 * epsilon * g0[i];
+    const v = mInv ? matVec(mInv, p) : p;
+    for (let i = 0; i < d; i++) q[i] += epsilon * v[i];
+    const g1 = gradU(q);
+    for (let i = 0; i < d; i++) p[i] -= 0.5 * epsilon * g1[i];
+  }
+  return { qStar: q, pStar: p };
+}
+
+/**
  * Leapfrog integrator for Hamiltonian dynamics. One call = L leapfrog
  * steps of size ε, producing the end state (q*, p*).
  *
@@ -1132,6 +1213,11 @@ function matVec(A: number[][], v: number[]): number[] {
  * reversible after momentum-flip — the two properties that make HMC's
  * extended-state proposal symmetric (§26.4 Proof 3).
  *
+ * Performance note: when used in a chain loop, M⁻¹ is recomputed every
+ * call. The `hamiltonianMonteCarlo` driver precomputes it via
+ * `leapfrogWithInverse` directly to avoid the O(d³) per-iteration cost.
+ * Standalone callers pay it once per call.
+ *
  * @param q0      starting position
  * @param p0      starting momentum
  * @param gradU   gradient of U(q) = -log π(q)
@@ -1143,38 +1229,31 @@ export function hmcLeapfrog(
   gradU: (q: number[]) => number[],
   params: HMCParams,
 ): { qStar: number[]; pStar: number[] } {
-  const { epsilon, steps } = params;
-  const d = q0.length;
-  const q = [...q0];
-  let p = [...p0];
-
   const mInv = params.massMatrix ? invertSymmetric(params.massMatrix) : null;
-  const applyMInv = (v: number[]): number[] => (mInv ? matVec(mInv, v) : v);
-
-  for (let k = 0; k < steps; k++) {
-    // Half-step p
-    const g0 = gradU(q);
-    for (let i = 0; i < d; i++) p[i] -= 0.5 * epsilon * g0[i];
-    // Full-step q via M⁻¹ p
-    const v = applyMInv(p);
-    for (let i = 0; i < d; i++) q[i] += epsilon * v[i];
-    // Half-step p
-    const g1 = gradU(q);
-    for (let i = 0; i < d; i++) p[i] -= 0.5 * epsilon * g1[i];
-  }
-  return { qStar: q, pStar: p };
+  return leapfrogWithInverse(q0, p0, gradU, params.epsilon, params.steps, mInv);
 }
 
 /**
  * Full HMC chain driver. Each iteration:
- *   (i)   Resample p ~ N(0, M)   — Gibbs on p, preserves joint π̃(q, p)
+ *   (i)   Resample p ∼ 𝒩(0, M)   — Gibbs on p, preserves joint π̃(q, p)
  *   (ii)  Leapfrog L steps with step size ε
  *   (iii) Flip p → -p (makes the proposal symmetric in extended space)
- *   (iv)  Accept with probability min{1, exp(H_start - H_end)}
+ *   (iv)  Accept with probability min{1, exp(H_start − H_end)}
  *
- * H(q, p) = -log π(q) + ½ p^T M⁻¹ p. For M = I, the quadratic simplifies
- * to ½ Σ p_i². Energy conservation along exact Hamiltonian flow would give
+ * H(q, p) = -log π(q) + ½ p^T M⁻¹ p. For M = I the quadratic simplifies to
+ * ½ Σ pᵢ². Energy conservation along exact Hamiltonian flow would give
  * α ≡ 1; leapfrog introduces O(ε²) oscillation that the accept step corrects.
+ *
+ * Mass matrix M (when set in params): inverse and Cholesky factor are
+ * precomputed once outside the loop, so per-iteration cost is O(d²) (the
+ * matrix-vector products), not O(d³). Momentum is resampled correctly as
+ * p = L · z with z ∼ 𝒩(0, I), preserving the 𝒩(0, M) marginal that
+ * detailed balance on the extended state requires.
+ *
+ * Returns a MarkovChain whose `metadata.proposedEnergies[i]` is the
+ * Hamiltonian of the *proposal* on iteration i (regardless of accept /
+ * reject). This is the right quantity for energy-drift diagnostics; do
+ * NOT confuse with the energy of the kept sample.
  */
 export function hamiltonianMonteCarlo(
   q0: number[],
@@ -1189,9 +1268,12 @@ export function hamiltonianMonteCarlo(
   let q = [...q0];
   const samples: number[][] = [];
   const accepted: boolean[] = [];
-  const energies: number[] = [];
+  const proposedEnergies: number[] = [];
 
+  // Precompute M⁻¹ and Cholesky factor L once.
   const mInv = params.massMatrix ? invertSymmetric(params.massMatrix) : null;
+  const L = params.massMatrix ? choleskyLower(params.massMatrix) : null;
+
   const kinetic = (p: number[]): number => {
     if (!mInv) {
       let s = 0;
@@ -1204,154 +1286,55 @@ export function hamiltonianMonteCarlo(
     return 0.5 * s;
   };
 
-  // Momentum resampling: p ~ N(0, M). For M = I, directly standard Normal.
-  // For M != I, we would need Cholesky factor of M; simplified toy assumes
-  // users pass M = I (brief §6.1 default).
+  let totalAccept = 0;
+  let totalDecisions = 0;
   const total = burnIn + N;
   for (let iter = 0; iter < total; iter++) {
-    const p0 = Array.from({ length: d }, () => rng.normal());
+    const p0 = sampleMomentum(L, d, rng);
     const H0 = -logPi(q) + kinetic(p0);
-    const { qStar, pStar } = hmcLeapfrog(q, p0, gradU, params);
+    const { qStar, pStar } = leapfrogWithInverse(
+      q,
+      p0,
+      gradU,
+      params.epsilon,
+      params.steps,
+      mInv,
+    );
     const HStar = -logPi(qStar) + kinetic(pStar);
     const logAlpha = H0 - HStar;
     const u = rng.random();
     const accept = Math.log(u < 1e-300 ? 1e-300 : u) < logAlpha;
     if (accept) q = qStar;
     if (iter >= burnIn) {
+      totalDecisions++;
+      if (accept) totalAccept++;
       samples.push([...q]);
       accepted.push(accept);
-      energies.push(HStar);
+      proposedEnergies.push(HStar);
     }
   }
-  const acceptanceRate =
-    accepted.length > 0 ? accepted.filter(Boolean).length / accepted.length : 0;
+  const acceptanceRate = totalDecisions > 0 ? totalAccept / totalDecisions : 0;
   return {
     samples,
     accepted,
     acceptanceRate,
-    metadata: { energies },
+    metadata: { proposedEnergies },
   };
 }
 
-// ─── Toy NUTS ─────────────────────────────────────────────────────────────
-
-/**
- * Toy No-U-Turn Sampler. Implements binary doubling with U-turn termination
- * per Hoffman-Gelman 2014 Alg 3, then **samples uniformly from visited
- * states** (simplification relative to HOF2014 Alg 6's weighted-multinomial
- * sampling scheme).
- *
- * @note This is a pedagogical implementation — sufficient for Figure 5 and
- *       §26.9 Ex 11 (8-schools). Production NUTS (dual-averaging ε adaptation,
- *       divergence detection, slice-sampling validity test) lives in Stan /
- *       PyMC; §26.5 Rem 14–15 point readers there.
- *
- * The U-turn criterion terminates doubling when the position difference
- * (q_+ - q_-) loses alignment with either endpoint's momentum — a sign that
- * further extension would retrace the trajectory.
- *
- * @param q0           starting position
- * @param logPi        log target density
- * @param gradU        gradient of U(q) = -log π(q)
- * @param N            post-warmup samples to return
- * @param warmup       warmup iterations (discarded)
- * @param maxTreeDepth cap on doubling depth (2^maxTreeDepth leaf nodes)
- * @param rng          seeded RNG
- */
-export function nutsSample(
-  q0: number[],
-  logPi: (q: number[]) => number,
-  gradU: (q: number[]) => number[],
-  N: number,
-  warmup: number,
-  maxTreeDepth: number,
-  rng: SeededRng,
-): MarkovChain<number[]> {
-  const d = q0.length;
-  let q = [...q0];
-  const samples: number[][] = [];
-  const accepted: boolean[] = [];
-  const stepParams: HMCParams = { epsilon: 0.05, steps: 1 };
-
-  const kinetic = (p: number[]): number => {
-    let s = 0;
-    for (const pi of p) s += pi * pi;
-    return 0.5 * s;
-  };
-
-  const total = warmup + N;
-  for (let iter = 0; iter < total; iter++) {
-    // Resample momentum.
-    const p = Array.from({ length: d }, () => rng.normal());
-    const H0 = -logPi(q) + kinetic(p);
-
-    type Node = { q: number[]; p: number[] };
-    const candidates: Node[] = [{ q: [...q], p: [...p] }];
-
-    // Track endpoints: minus (backward-most) and plus (forward-most).
-    let qMinus = [...q];
-    let pMinus = [...p];
-    let qPlus = [...q];
-    let pPlus = [...p];
-
-    let uTurn = false;
-    for (let depth = 0; depth < maxTreeDepth && !uTurn; depth++) {
-      const dir = rng.random() < 0.5 ? -1 : 1;
-      const nLeaves = 1 << depth; // 2^depth leapfrog steps to add
-
-      if (dir > 0) {
-        // Extend forward from (qPlus, pPlus).
-        for (let s = 0; s < nLeaves; s++) {
-          const { qStar, pStar } = hmcLeapfrog(qPlus, pPlus, gradU, stepParams);
-          qPlus = qStar;
-          pPlus = pStar;
-          candidates.push({ q: [...qPlus], p: [...pPlus] });
-        }
-      } else {
-        // Extend backward: reverse momentum, integrate forward, re-reverse.
-        let qCur = qMinus;
-        let pCur = pMinus.map((x) => -x);
-        for (let s = 0; s < nLeaves; s++) {
-          const { qStar, pStar } = hmcLeapfrog(qCur, pCur, gradU, stepParams);
-          qCur = qStar;
-          pCur = pStar;
-          candidates.push({ q: [...qCur], p: pCur.map((x) => -x) });
-        }
-        qMinus = qCur;
-        pMinus = pCur.map((x) => -x);
-      }
-
-      // U-turn check: ⟨q_+ - q_-, p_-⟩ < 0 or ⟨q_+ - q_-, p_+⟩ < 0.
-      let dotMinus = 0;
-      let dotPlus = 0;
-      for (let i = 0; i < d; i++) {
-        const diff = qPlus[i] - qMinus[i];
-        dotMinus += diff * pMinus[i];
-        dotPlus += diff * pPlus[i];
-      }
-      if (dotMinus < 0 || dotPlus < 0) uTurn = true;
-    }
-
-    // Uniform sample from visited states (simplification of HOF2014 Alg 6).
-    const idx = Math.floor(rng.random() * candidates.length);
-    const picked = candidates[Math.min(idx, candidates.length - 1)];
-
-    // Extended-state MH accept/reject.
-    const HNew = -logPi(picked.q) + kinetic(picked.p);
-    const logAlpha = H0 - HNew;
-    const u = rng.random();
-    const accept = Math.log(u < 1e-300 ? 1e-300 : u) < logAlpha;
-    if (accept) q = picked.q;
-
-    if (iter >= warmup) {
-      samples.push([...q]);
-      accepted.push(accept);
-    }
-  }
-  const acceptanceRate =
-    accepted.length > 0 ? accepted.filter(Boolean).length / accepted.length : 0;
-  return { samples, accepted, acceptanceRate };
-}
+// ─── NUTS — intentionally not implemented ────────────────────────────────
+//
+// PR #30 review (Gemini high-priority): a "toy NUTS" that omits slice
+// sampling + recursive subtree U-turn checks doesn't preserve π — the
+// uniform-from-tree shortcut yields a non-symmetric proposal that the
+// tail MH step cannot correct in general. Rather than ship a sampler
+// labelled "NUTS" with a known-broken acceptance argument, Topic 26 ships
+// no JavaScript NUTS at all: §26.5 states Thm 4 (NUTS correctness) and
+// cites HOF2014 Thm 1 stated-only, the §26.9 8-schools workflow uses
+// conjugate Gibbs in the notebook (per brief Gotcha G3), and production
+// NUTS is delegated to Stan / PyMC / NumPyro. The hand-written Park-Miller
+// LCG above suffices for MH / Gibbs / HMC tests; NUTS adaptive doubling
+// is genuinely non-trivial and out of scope for a pedagogical TS module.
 
 // ─── Diagnostics ──────────────────────────────────────────────────────────
 
@@ -1443,8 +1426,24 @@ export function effectiveSampleSize(
   const N = chain.length;
   if (N < 4) return N;
   const maxT = maxLag ?? Math.floor(N / 4);
+
+  // Precompute mean and centered-sum-of-squares (denominator) ONCE — calling
+  // autocorrelation(chain, t) per lag would recompute both each call,
+  // making the loop O(N · maxT) with a 3× constant-factor overhead from
+  // re-walks of the chain. After this hoist, each lag is O(N − t).
+  const mean = chain.reduce((s, x) => s + x, 0) / N;
+  let den = 0;
+  for (let i = 0; i < N; i++) den += (chain[i] - mean) ** 2;
+  if (den <= 0) return N;
+
   const rhos: number[] = [1];
-  for (let t = 1; t <= maxT; t++) rhos.push(autocorrelation(chain, t));
+  for (let t = 1; t <= maxT; t++) {
+    let num = 0;
+    for (let i = 0; i < N - t; i++) {
+      num += (chain[i] - mean) * (chain[i + t] - mean);
+    }
+    rhos.push(num / den);
+  }
 
   // Geyer IPS: accumulate pairs Γ_m = ρ_{2m} + ρ_{2m+1}; stop at first ≤ 0.
   let sumPairs = 0;

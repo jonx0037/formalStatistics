@@ -105,10 +105,16 @@ export default function HamiltonianTrajectoryAnimator() {
   const preset = hmcAnimatorPresets[presetIdx];
   const isMobile = (width ?? 1000) < MOBILE_BREAKPOINT;
 
-  // Resample momentum when seed / preset / start changes via a derived RNG.
-  const p0 = useMemo(() => {
+  // Resample momentum + draw the MH accept-uniform from a SINGLE seeded
+  // RNG stream — same RNG that a real HMC iteration would use. Splitting
+  // these into separate streams (an earlier version used `seed + 10_000`
+  // for the accept draw) was flagged in PR-30 review as confusing for
+  // pedagogy: the displayed accept/reject would not be reproducible from
+  // the same seed users see in the input.
+  const { p0, acceptU } = useMemo(() => {
     const rng = createSeededRng(seed);
-    return [rng.normal(), rng.normal()] as [number, number];
+    const p = [rng.normal(), rng.normal()] as [number, number];
+    return { p0: p, acceptU: rng.random() };
   }, [seed, presetIdx, start]);
 
   const trajectory = useMemo(
@@ -390,8 +396,7 @@ export default function HamiltonianTrajectoryAnimator() {
   const dH = trajectory[trajectory.length - 1].H - trajectory[0].H;
   const mhRatio = Math.exp(-dH);
   const accepted =
-    currentStep >= trajectory.length - 1 &&
-    mhRatio > createSeededRng(seed + 10_000).random();
+    currentStep >= trajectory.length - 1 && mhRatio > acceptU;
 
   return (
     <div ref={ref} className="my-6 rounded-lg border p-4" style={{ borderColor: 'var(--color-border)' }}>
