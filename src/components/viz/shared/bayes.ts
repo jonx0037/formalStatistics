@@ -826,3 +826,794 @@ export function posteriorPredictive(
     }
   }
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Topic 26 — Bayesian Computation & MCMC
+//
+// This section extends bayes.ts with Markov-chain Monte Carlo machinery:
+// Metropolis-Hastings, Gibbs sampling, Hamiltonian Monte Carlo, toy NUTS,
+// convergence diagnostics (R-hat, ESS, autocorrelation, batch means), and
+// a closed-form conditional-MVN utility used by GibbsStepper.
+//
+// All sampling functions are deterministic given an injected SeededRng — no
+// Math.random, no module-level state. Handwritten Park-Miller LCG replaces
+// the seedrandom dependency (see createSeededRng below and brief §6.1.2 /
+// Appendix B.7 for the rationale).
+//
+// Notation extensions to §25.3 (brief §3.3):
+//   q(· | ·)  proposal kernel        α(x, x')  acceptance probability
+//   K(x, dx') transition kernel      π         invariant distribution
+//   R̂         Gelman-Rubin diag.    N_eff     effective sample size
+//   ρ_t       autocorr at lag t      (q, p)    HMC position-momentum pair
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ─── New types ─────────────────────────────────────────────────────────────
+
+/**
+ * Seeded RNG interface — the bayes.ts contract for reproducible MCMC.
+ * Implemented by `createSeededRng` (handwritten LCG) below.
+ */
+export interface SeededRng {
+  /** Uniform on [0, 1). */
+  random(): number;
+  /** Standard Normal via Box-Muller with paired-value cache. */
+  normal(): number;
+  /** Re-seed (resets internal LCG state and clears the normal cache). */
+  reseed(seed: number): void;
+}
+
+/**
+ * A Markov chain: sequence of states of type T, plus per-iteration
+ * diagnostics. `samples` has burn-in already removed; `accepted` is
+ * index-aligned with `samples` (post-burn-in decisions only).
+ */
+export interface MarkovChain<T> {
+  samples: T[];
+  accepted: boolean[];
+  acceptanceRate: number;
+  /** Optional per-algorithm diagnostic payload (e.g., HMC energies). */
+  metadata?: Record<string, unknown>;
+}
+
+/**
+ * An MH proposal kernel. `propose` generates a new state x' given the
+ * current state x; returns x' plus the log-density ratio
+ *   logQRatio = log q(x | x') - log q(x' | x)
+ * which is 0 for symmetric proposals and enters the MH acceptance.
+ */
+export interface ProposalKernel<T> {
+  propose(x: T, rng: SeededRng): { xPrime: T; logQRatio: number };
+}
+
+/**
+ * HMC configuration.
+ *   epsilon     leapfrog step size (ε)
+ *   steps       number of leapfrog steps (L)
+ *   massMatrix  positive-definite mass matrix M; default identity
+ */
+export interface HMCParams {
+  epsilon: number;
+  steps: number;
+  massMatrix?: number[][];
+}
+
+// ─── Seeded RNG (handwritten Park-Miller MINSTD LCG) ──────────────────────
+
+/**
+ * Park-Miller MINSTD parameters. State space is integers in [1, m-1].
+ * Uses Schrage's algorithm to keep intermediate products in safe-integer
+ * range (a * state would overflow at state ≈ 2^31; Schrage factors the
+ * update as a * (s % q) - r * (s / q)).
+ */
+const LCG_M = 2147483647; // 2^31 - 1 (Mersenne prime)
+const LCG_A = 48271;
+const LCG_Q = 44488; // floor(M / A)
+const LCG_R = 3399;  // M - A * Q
+
+/**
+ * Handwritten seeded RNG for reproducible MCMC.
+ *
+ * Park-Miller MINSTD LCG (a=48271, m=2^31-1) with Schrage factoring for
+ * safe-integer arithmetic in JavaScript's 64-bit-float number type.
+ * Normal sampling uses Box-Muller with a single-value cache (each u₁/u₂
+ * uniform pair yields two independent standard Normals).
+ *
+ * Matches `np.random.default_rng(42)` for *chain-statistic* level agreement
+ * (acceptance rates ~1e-2, posterior means ~5e-2, variances ~1e-1). NOT
+ * bit-identical — PCG64 is not ported. Tolerance bands are specified in
+ * `bayes.test.ts` T26.X tests.
+ *
+ * @param seed 32-bit integer; nonzero. Seed 0 is mapped to 1 to avoid the
+ *             absorbing state.
+ */
+export function createSeededRng(seed: number): SeededRng {
+  let state: number;
+  let cachedNormal: number | null = null;
+
+  const reseed = (s: number): void => {
+    // Normalize to a valid LCG state in [1, m-1].
+    let v = Math.floor(Math.abs(s)) % LCG_M;
+    if (v === 0) v = 1;
+    state = v;
+    cachedNormal = null;
+  };
+
+  reseed(seed);
+
+  const random = (): number => {
+    // Schrage-factored step: avoids integer overflow.
+    const hi = Math.floor(state! / LCG_Q);
+    const lo = state! - hi * LCG_Q; // state % Q
+    state = LCG_A * lo - LCG_R * hi;
+    if (state < 0) state += LCG_M;
+    return (state - 1) / (LCG_M - 1); // map to [0, 1)
+  };
+
+  const normal = (): number => {
+    if (cachedNormal !== null) {
+      const z = cachedNormal;
+      cachedNormal = null;
+      return z;
+    }
+    // Box-Muller: two uniforms → two independent standard Normals.
+    let u1 = random();
+    if (u1 < 1e-15) u1 = 1e-15; // guard log(0)
+    const u2 = random();
+    const mag = Math.sqrt(-2 * Math.log(u1));
+    cachedNormal = mag * Math.sin(2 * Math.PI * u2);
+    return mag * Math.cos(2 * Math.PI * u2);
+  };
+
+  return { random, normal, reseed };
+}
+
+// ─── Metropolis-Hastings ──────────────────────────────────────────────────
+
+/**
+ * Single MH step. Given current state x, proposal kernel q, and log-target
+ * log π, returns next state and accept flag. Uses log-space acceptance to
+ * avoid numerical underflow on low-probability regions.
+ *
+ * Acceptance: α(x, x') = min{1, π(x') q(x|x') / [π(x) q(x'|x)]}
+ * Log form:   log α = logπ(x') - logπ(x) + logQRatio
+ */
+export function metropolisHastingsStep<T>(
+  x: T,
+  logPi: (x: T) => number,
+  proposal: ProposalKernel<T>,
+  rng: SeededRng,
+): { xNext: T; accepted: boolean } {
+  const { xPrime, logQRatio } = proposal.propose(x, rng);
+  const logAlpha = logPi(xPrime) - logPi(x) + logQRatio;
+  const u = rng.random();
+  const accepted = Math.log(u < 1e-300 ? 1e-300 : u) < logAlpha;
+  return { xNext: accepted ? xPrime : x, accepted };
+}
+
+/**
+ * Full MH chain driver. Runs `burnIn + N` iterations, discards burn-in,
+ * thins by `thin` (keeps every `thin`-th post-burn-in sample; `thin = 1`
+ * keeps all). Acceptance rate is computed over post-burn-in decisions only.
+ */
+export function metropolisHastings<T>(
+  x0: T,
+  logPi: (x: T) => number,
+  proposal: ProposalKernel<T>,
+  N: number,
+  burnIn: number,
+  thin: number,
+  rng: SeededRng,
+): MarkovChain<T> {
+  let x = x0;
+  const samples: T[] = [];
+  const accepted: boolean[] = [];
+  let totalAccept = 0;
+  let totalDecisions = 0;
+  const total = burnIn + N;
+  for (let i = 0; i < total; i++) {
+    const step = metropolisHastingsStep(x, logPi, proposal, rng);
+    x = step.xNext;
+    if (i >= burnIn) {
+      totalDecisions++;
+      if (step.accepted) totalAccept++;
+      // `accepted` stays index-aligned with `samples` (post-thinning) per
+      // the MarkovChain<T> docstring contract; `acceptanceRate` is computed
+      // over ALL post-burn-in decisions independent of thinning.
+      if ((i - burnIn) % thin === 0) {
+        samples.push(x);
+        accepted.push(step.accepted);
+      }
+    }
+  }
+  const acceptanceRate = totalDecisions > 0 ? totalAccept / totalDecisions : 0;
+  return { samples, accepted, acceptanceRate };
+}
+
+// ─── Gibbs sampling ───────────────────────────────────────────────────────
+
+/**
+ * Single systematic-scan Gibbs sweep. For i = 0..d-1, updates θ_i via its
+ * user-supplied full-conditional sampler (which draws from π(θ_i | θ_{-i})
+ * using the current value of every other coordinate).
+ *
+ * Mutates a local copy; returns the fully-updated vector. Thm 2 (§26.3)
+ * proves each sub-step is an MH step with α ≡ 1.
+ */
+export function gibbsStep(
+  theta: number[],
+  conditionals: Array<(theta: number[], rng: SeededRng) => number>,
+  rng: SeededRng,
+): number[] {
+  const next = [...theta];
+  for (let i = 0; i < conditionals.length; i++) {
+    next[i] = conditionals[i](next, rng);
+  }
+  return next;
+}
+
+/**
+ * Full Gibbs chain driver. Each iteration = one systematic-scan sweep.
+ * Gibbs always accepts (α ≡ 1 by Thm 2), so `accepted[i] = true` for all i.
+ */
+export function gibbsSampler(
+  theta0: number[],
+  conditionals: Array<(theta: number[], rng: SeededRng) => number>,
+  N: number,
+  burnIn: number,
+  thin: number,
+  rng: SeededRng,
+): MarkovChain<number[]> {
+  let theta = [...theta0];
+  const samples: number[][] = [];
+  const accepted: boolean[] = [];
+  const total = burnIn + N;
+  for (let i = 0; i < total; i++) {
+    theta = gibbsStep(theta, conditionals, rng);
+    if (i >= burnIn && (i - burnIn) % thin === 0) {
+      // `accepted` index-aligned with `samples` per MarkovChain<T> contract.
+      samples.push([...theta]);
+      accepted.push(true);
+    }
+  }
+  return { samples, accepted, acceptanceRate: 1 };
+}
+
+// ─── Hamiltonian Monte Carlo ──────────────────────────────────────────────
+
+/**
+ * Invert a symmetric positive-definite matrix via Gauss-Jordan. Used for
+ * HMC mass-matrix handling when M ≠ I. For M = I, callers skip this path.
+ */
+function invertSymmetric(M: number[][]): number[][] {
+  const n = M.length;
+  const A: number[][] = M.map((row, i) => {
+    const augmented = [...row];
+    for (let j = 0; j < n; j++) augmented.push(i === j ? 1 : 0);
+    return augmented;
+  });
+  for (let i = 0; i < n; i++) {
+    let pivot = A[i][i];
+    if (Math.abs(pivot) < 1e-14) {
+      for (let r = i + 1; r < n; r++) {
+        if (Math.abs(A[r][i]) > 1e-14) {
+          [A[i], A[r]] = [A[r], A[i]];
+          pivot = A[i][i];
+          break;
+        }
+      }
+    }
+    if (Math.abs(pivot) < 1e-14) {
+      throw new Error('invertSymmetric: matrix is singular.');
+    }
+    for (let j = 0; j < 2 * n; j++) A[i][j] /= pivot;
+    for (let r = 0; r < n; r++) {
+      if (r === i) continue;
+      const factor = A[r][i];
+      for (let j = 0; j < 2 * n; j++) A[r][j] -= factor * A[i][j];
+    }
+  }
+  return A.map((row) => row.slice(n));
+}
+
+/**
+ * Matrix-vector product; returns new array. Assumes dimensions match.
+ */
+function matVec(A: number[][], v: number[]): number[] {
+  const out = new Array(A.length).fill(0);
+  for (let i = 0; i < A.length; i++) {
+    let s = 0;
+    for (let j = 0; j < v.length; j++) s += A[i][j] * v[j];
+    out[i] = s;
+  }
+  return out;
+}
+
+/**
+ * Lower-triangular Cholesky factor L of an SPD matrix M (so L · Lᵀ = M).
+ * Used for the HMC momentum resample: if z ∼ 𝒩(0, I), then p = L · z ∼ 𝒩(0, M).
+ * Throws if M is not positive definite (negative pivot encountered).
+ */
+function choleskyLower(M: number[][]): number[][] {
+  const n = M.length;
+  const L: number[][] = Array.from({ length: n }, () => new Array(n).fill(0));
+  for (let i = 0; i < n; i++) {
+    for (let j = 0; j <= i; j++) {
+      let s = M[i][j];
+      for (let k = 0; k < j; k++) s -= L[i][k] * L[j][k];
+      if (i === j) {
+        if (s <= 0) {
+          throw new Error('choleskyLower: matrix is not positive definite');
+        }
+        L[i][i] = Math.sqrt(s);
+      } else {
+        L[i][j] = s / L[j][j];
+      }
+    }
+  }
+  return L;
+}
+
+/**
+ * Sample p ∼ 𝒩(0, M) via Cholesky: draw z ∼ 𝒩(0, I), return L · z.
+ * If `L` is null (M = I), return z directly.
+ */
+function sampleMomentum(
+  L: number[][] | null,
+  d: number,
+  rng: SeededRng,
+): number[] {
+  const z = new Array<number>(d);
+  for (let i = 0; i < d; i++) z[i] = rng.normal();
+  if (!L) return z;
+  const p = new Array<number>(d).fill(0);
+  for (let i = 0; i < d; i++) {
+    let s = 0;
+    for (let j = 0; j <= i; j++) s += L[i][j] * z[j];
+    p[i] = s;
+  }
+  return p;
+}
+
+/**
+ * Inner leapfrog driver — takes a precomputed M⁻¹ (or null for M = I) so
+ * callers in a loop don't pay an O(d³) inversion per step.
+ */
+function leapfrogWithInverse(
+  q0: number[],
+  p0: number[],
+  gradU: (q: number[]) => number[],
+  epsilon: number,
+  steps: number,
+  mInv: number[][] | null,
+): { qStar: number[]; pStar: number[] } {
+  const d = q0.length;
+  const q = [...q0];
+  const p = [...p0];
+  for (let k = 0; k < steps; k++) {
+    const g0 = gradU(q);
+    for (let i = 0; i < d; i++) p[i] -= 0.5 * epsilon * g0[i];
+    const v = mInv ? matVec(mInv, p) : p;
+    for (let i = 0; i < d; i++) q[i] += epsilon * v[i];
+    const g1 = gradU(q);
+    for (let i = 0; i < d; i++) p[i] -= 0.5 * epsilon * g1[i];
+  }
+  return { qStar: q, pStar: p };
+}
+
+/**
+ * Leapfrog integrator for Hamiltonian dynamics. One call = L leapfrog
+ * steps of size ε, producing the end state (q*, p*).
+ *
+ * Per step (Störmer-Verlet, brief §3.2 Proof 3):
+ *   p^{k+1/2} = p^k - (ε/2) ∇U(q^k)
+ *   q^{k+1}   = q^k + ε M⁻¹ p^{k+1/2}
+ *   p^{k+1}   = p^{k+1/2} - (ε/2) ∇U(q^{k+1})
+ *
+ * The map is volume-preserving (Jacobian det = 1; see T26.6) and time-
+ * reversible after momentum-flip — the two properties that make HMC's
+ * extended-state proposal symmetric (§26.4 Proof 3).
+ *
+ * Performance note: when used in a chain loop, M⁻¹ is recomputed every
+ * call. The `hamiltonianMonteCarlo` driver precomputes it via
+ * `leapfrogWithInverse` directly to avoid the O(d³) per-iteration cost.
+ * Standalone callers pay it once per call.
+ *
+ * @param q0      starting position
+ * @param p0      starting momentum
+ * @param gradU   gradient of U(q) = -log π(q)
+ * @param params  { epsilon, steps, massMatrix? }. massMatrix default = I.
+ */
+export function hmcLeapfrog(
+  q0: number[],
+  p0: number[],
+  gradU: (q: number[]) => number[],
+  params: HMCParams,
+): { qStar: number[]; pStar: number[] } {
+  const mInv = params.massMatrix ? invertSymmetric(params.massMatrix) : null;
+  return leapfrogWithInverse(q0, p0, gradU, params.epsilon, params.steps, mInv);
+}
+
+/**
+ * Full HMC chain driver. Each iteration:
+ *   (i)   Resample p ∼ 𝒩(0, M)   — Gibbs on p, preserves joint π̃(q, p)
+ *   (ii)  Leapfrog L steps with step size ε
+ *   (iii) Flip p → -p (makes the proposal symmetric in extended space)
+ *   (iv)  Accept with probability min{1, exp(H_start − H_end)}
+ *
+ * H(q, p) = -log π(q) + ½ p^T M⁻¹ p. For M = I the quadratic simplifies to
+ * ½ Σ pᵢ². Energy conservation along exact Hamiltonian flow would give
+ * α ≡ 1; leapfrog introduces O(ε²) oscillation that the accept step corrects.
+ *
+ * Mass matrix M (when set in params): inverse and Cholesky factor are
+ * precomputed once outside the loop, so per-iteration cost is O(d²) (the
+ * matrix-vector products), not O(d³). Momentum is resampled correctly as
+ * p = L · z with z ∼ 𝒩(0, I), preserving the 𝒩(0, M) marginal that
+ * detailed balance on the extended state requires.
+ *
+ * Returns a MarkovChain whose `metadata.proposedEnergies[i]` is the
+ * Hamiltonian of the *proposal* on iteration i (regardless of accept /
+ * reject). This is the right quantity for energy-drift diagnostics; do
+ * NOT confuse with the energy of the kept sample.
+ */
+export function hamiltonianMonteCarlo(
+  q0: number[],
+  logPi: (q: number[]) => number,
+  gradU: (q: number[]) => number[],
+  params: HMCParams,
+  N: number,
+  burnIn: number,
+  rng: SeededRng,
+): MarkovChain<number[]> {
+  const d = q0.length;
+  let q = [...q0];
+  const samples: number[][] = [];
+  const accepted: boolean[] = [];
+  const proposedEnergies: number[] = [];
+
+  // Precompute M⁻¹ and Cholesky factor L once.
+  const mInv = params.massMatrix ? invertSymmetric(params.massMatrix) : null;
+  const L = params.massMatrix ? choleskyLower(params.massMatrix) : null;
+
+  const kinetic = (p: number[]): number => {
+    if (!mInv) {
+      let s = 0;
+      for (const pi of p) s += pi * pi;
+      return 0.5 * s;
+    }
+    const v = matVec(mInv, p);
+    let s = 0;
+    for (let i = 0; i < d; i++) s += p[i] * v[i];
+    return 0.5 * s;
+  };
+
+  let totalAccept = 0;
+  let totalDecisions = 0;
+  const total = burnIn + N;
+  for (let iter = 0; iter < total; iter++) {
+    const p0 = sampleMomentum(L, d, rng);
+    const H0 = -logPi(q) + kinetic(p0);
+    const { qStar, pStar } = leapfrogWithInverse(
+      q,
+      p0,
+      gradU,
+      params.epsilon,
+      params.steps,
+      mInv,
+    );
+    const HStar = -logPi(qStar) + kinetic(pStar);
+    const logAlpha = H0 - HStar;
+    const u = rng.random();
+    const accept = Math.log(u < 1e-300 ? 1e-300 : u) < logAlpha;
+    if (accept) q = qStar;
+    if (iter >= burnIn) {
+      totalDecisions++;
+      if (accept) totalAccept++;
+      samples.push([...q]);
+      accepted.push(accept);
+      proposedEnergies.push(HStar);
+    }
+  }
+  const acceptanceRate = totalDecisions > 0 ? totalAccept / totalDecisions : 0;
+  return {
+    samples,
+    accepted,
+    acceptanceRate,
+    metadata: { proposedEnergies },
+  };
+}
+
+// ─── NUTS — intentionally not implemented ────────────────────────────────
+//
+// PR #30 review (Gemini high-priority): a "toy NUTS" that omits slice
+// sampling + recursive subtree U-turn checks doesn't preserve π — the
+// uniform-from-tree shortcut yields a non-symmetric proposal that the
+// tail MH step cannot correct in general. Rather than ship a sampler
+// labelled "NUTS" with a known-broken acceptance argument, Topic 26 ships
+// no JavaScript NUTS at all: §26.5 states Thm 4 (NUTS correctness) and
+// cites HOF2014 Thm 1 stated-only, the §26.9 8-schools workflow uses
+// conjugate Gibbs in the notebook (per brief Gotcha G3), and production
+// NUTS is delegated to Stan / PyMC / NumPyro. The hand-written Park-Miller
+// LCG above suffices for MH / Gibbs / HMC tests; NUTS adaptive doubling
+// is genuinely non-trivial and out of scope for a pedagogical TS module.
+
+// ─── Diagnostics ──────────────────────────────────────────────────────────
+
+/**
+ * Gelman-Rubin R̂ (1992) for M chains of length N on a scalar parameter.
+ *
+ *   R̂ = sqrt{ (N-1)/N  +  B / (N · W) }
+ *
+ * where B = (N / (M-1)) · Σ_i (x̄_i - x̄)²   (between-chain variance of means),
+ *       W = (1 / M) · Σ_i s_i²               (mean of within-chain variances,
+ *                                            using the unbiased estimator).
+ *
+ * R̂ → 1 as chains mix. Stan's practical threshold is R̂ < 1.01 per chain.
+ */
+export function rHat(chains: number[][]): number {
+  const M = chains.length;
+  if (M < 2) return 1;
+  const N = chains[0].length;
+  if (N < 2) return 1;
+  const chainMeans = chains.map((c) => c.reduce((s, x) => s + x, 0) / c.length);
+  const grandMean = chainMeans.reduce((s, m) => s + m, 0) / M;
+  const B =
+    (N / (M - 1)) *
+    chainMeans.reduce((s, m) => s + (m - grandMean) ** 2, 0);
+  const chainVars = chains.map((c, i) => {
+    const mu = chainMeans[i];
+    return c.reduce((s, x) => s + (x - mu) ** 2, 0) / (c.length - 1);
+  });
+  const W = chainVars.reduce((s, v) => s + v, 0) / M;
+  if (W <= 0) return Number.POSITIVE_INFINITY;
+  const varHat = ((N - 1) / N) * W + B / N;
+  return Math.sqrt(varHat / W);
+}
+
+/**
+ * Coordinate-wise R̂ for vector-valued chains.
+ *
+ * @param chains [M chains][N iterations][d coordinates]
+ * @returns     array of d R̂ values.
+ */
+export function rHatMultivariate(chains: number[][][]): number[] {
+  if (chains.length === 0 || chains[0].length === 0) return [];
+  const d = chains[0][0].length;
+  const result: number[] = [];
+  for (let k = 0; k < d; k++) {
+    const slice = chains.map((c) => c.map((v) => v[k]));
+    result.push(rHat(slice));
+  }
+  return result;
+}
+
+/**
+ * Sample autocorrelation at lag t. Uses a single chain-wide mean and
+ * normalizes by the full-chain variance (standard time-series estimator;
+ * biased toward 0 at large lags but sufficient for ESS truncation).
+ *
+ *   ρ̂_t = Σ_{i=0..N-t-1} (x_i - x̄)(x_{i+t} - x̄)  /  Σ_{i=0..N-1} (x_i - x̄)²
+ */
+export function autocorrelation(chain: number[], lag: number): number {
+  const N = chain.length;
+  if (lag <= 0 || lag >= N) return lag === 0 ? 1 : 0;
+  const mean = chain.reduce((s, x) => s + x, 0) / N;
+  let num = 0;
+  let den = 0;
+  for (let i = 0; i < N - lag; i++) {
+    num += (chain[i] - mean) * (chain[i + lag] - mean);
+  }
+  for (let i = 0; i < N; i++) {
+    den += (chain[i] - mean) ** 2;
+  }
+  return den > 0 ? num / den : 0;
+}
+
+/**
+ * Effective sample size via Geyer's initial-positive-sequence estimator.
+ *
+ *   N_eff = N / τ,   τ = 1 + 2 · Σ_{t=1..∞} ρ_t
+ *
+ * Geyer IPS truncates the sum when the running pair Γ_m = ρ_{2m} + ρ_{2m+1}
+ * first hits zero or turns negative. This produces a monotone non-increasing
+ * truncation for reversible chains and avoids the noisy negative-ρ tail.
+ *
+ * For AR(1) with φ=0.9, the theoretical τ = (1+φ)/(1-φ) = 19, so N_eff ≈ N/19.
+ */
+export function effectiveSampleSize(
+  chain: number[],
+  maxLag?: number,
+): number {
+  const N = chain.length;
+  if (N < 4) return N;
+  const maxT = maxLag ?? Math.floor(N / 4);
+
+  // Precompute mean and centered-sum-of-squares (denominator) ONCE — calling
+  // autocorrelation(chain, t) per lag would recompute both each call,
+  // making the loop O(N · maxT) with a 3× constant-factor overhead from
+  // re-walks of the chain. After this hoist, each lag is O(N − t).
+  const mean = chain.reduce((s, x) => s + x, 0) / N;
+  let den = 0;
+  for (let i = 0; i < N; i++) den += (chain[i] - mean) ** 2;
+  if (den <= 0) return N;
+
+  const rhos: number[] = [1];
+  for (let t = 1; t <= maxT; t++) {
+    let num = 0;
+    for (let i = 0; i < N - t; i++) {
+      num += (chain[i] - mean) * (chain[i + t] - mean);
+    }
+    rhos.push(num / den);
+  }
+
+  // Geyer IPS: accumulate pairs Γ_m = ρ_{2m} + ρ_{2m+1}; stop at first ≤ 0.
+  let sumPairs = 0;
+  for (let m = 0; 2 * m + 1 < rhos.length; m++) {
+    const pair = rhos[2 * m] + rhos[2 * m + 1];
+    if (pair <= 0) break;
+    sumPairs += pair;
+  }
+  const tau = 2 * sumPairs - 1; // converts Γ-pair sum to 1 + 2·Σρ_t
+  return N / Math.max(tau, 1);
+}
+
+/**
+ * Batch-means estimator of Monte Carlo variance σ²_MC for a single chain.
+ *
+ * Splits the chain into b batches of equal size ⌊N/b⌋, computes per-batch
+ * means, then σ²_MC ≈ (N/b) · Var(batch means). Default b = ⌊√N⌋ (Jones
+ * et al. 2006 recommendation). Returns σ²_MC, not σ²_MC / N.
+ *
+ * For iid N(0, 1) with N=5000, σ²_MC ≈ 1. For AR(1) φ=0.9, σ²_MC inflates
+ * to ≈ 19 · Var(X) = 19.
+ */
+export function batchMeansVariance(chain: number[], nBatches?: number): number {
+  const N = chain.length;
+  const b = nBatches ?? Math.max(2, Math.floor(Math.sqrt(N)));
+  const batchSize = Math.floor(N / b);
+  if (batchSize < 1 || b < 2) return Number.NaN;
+  const batchMeans: number[] = [];
+  for (let k = 0; k < b; k++) {
+    let s = 0;
+    for (let i = 0; i < batchSize; i++) s += chain[k * batchSize + i];
+    batchMeans.push(s / batchSize);
+  }
+  const grand = batchMeans.reduce((s, m) => s + m, 0) / b;
+  const bVar =
+    batchMeans.reduce((s, m) => s + (m - grand) ** 2, 0) / (b - 1);
+  return batchSize * bVar;
+}
+
+/**
+ * Descriptive trace summary. Works on scalar-valued or vector-valued chains;
+ * for vector-valued chains, returns per-coordinate arrays.
+ */
+export function traceSummary(chain: MarkovChain<number | number[]>): {
+  mean: number | number[];
+  std: number | number[];
+  first: number | number[];
+  last: number | number[];
+  acceptanceRate: number;
+  acf1: number | number[];
+} {
+  const { samples, acceptanceRate } = chain;
+  if (samples.length === 0) {
+    return {
+      mean: 0, std: 0, first: 0, last: 0, acceptanceRate, acf1: 0,
+    };
+  }
+  const isVector = Array.isArray(samples[0]);
+  if (!isVector) {
+    const s = samples as number[];
+    const N = s.length;
+    const mean = s.reduce((a, b) => a + b, 0) / N;
+    const variance = s.reduce((a, b) => a + (b - mean) ** 2, 0) / Math.max(N - 1, 1);
+    return {
+      mean,
+      std: Math.sqrt(variance),
+      first: s[0],
+      last: s[N - 1],
+      acceptanceRate,
+      acf1: autocorrelation(s, 1),
+    };
+  }
+  const vec = samples as number[][];
+  const d = vec[0].length;
+  const N = vec.length;
+  const mean = new Array(d).fill(0);
+  const std = new Array(d).fill(0);
+  const acf1 = new Array(d).fill(0);
+  for (let k = 0; k < d; k++) {
+    const col = vec.map((v) => v[k]);
+    const mu = col.reduce((a, b) => a + b, 0) / N;
+    const va = col.reduce((a, b) => a + (b - mu) ** 2, 0) / Math.max(N - 1, 1);
+    mean[k] = mu;
+    std[k] = Math.sqrt(va);
+    acf1[k] = autocorrelation(col, 1);
+  }
+  return {
+    mean,
+    std,
+    first: [...vec[0]],
+    last: [...vec[N - 1]],
+    acceptanceRate,
+    acf1,
+  };
+}
+
+// ─── Conditional MVN (Topic 8 Thm 3 closed form) ──────────────────────────
+
+/**
+ * Conditional multivariate Normal. Given joint MVN(μ, Σ) for X partitioned
+ * into free coords A and fixed coords B with X_B = v_B, returns the
+ * conditional MVN parameters on X_A:
+ *
+ *   μ_{A|B} = μ_A + Σ_{AB} Σ_{BB}⁻¹ (v_B - μ_B)
+ *   Σ_{A|B} = Σ_{AA} - Σ_{AB} Σ_{BB}⁻¹ Σ_{BA}
+ *
+ * Used by GibbsStepper (§26.3 Ex 3) to draw θ_i | θ_{-i} in closed form,
+ * and available for any Gibbs-on-Gaussian construction.
+ *
+ * @param mu           length-d mean vector
+ * @param sigma        d×d covariance matrix (positive definite)
+ * @param fixedIndices indices in 0..d-1 of the coordinates being conditioned on
+ * @param fixedValues  values at those indices (same length as fixedIndices)
+ */
+export function conditionalMVN(
+  mu: number[],
+  sigma: number[][],
+  fixedIndices: number[],
+  fixedValues: number[],
+): { muCond: number[]; sigmaCond: number[][] } {
+  const d = mu.length;
+  const fixedSet = new Set(fixedIndices);
+  const freeIndices: number[] = [];
+  for (let i = 0; i < d; i++) if (!fixedSet.has(i)) freeIndices.push(i);
+
+  const muA = freeIndices.map((i) => mu[i]);
+  const muB = fixedIndices.map((i) => mu[i]);
+
+  const pick = (rows: number[], cols: number[]): number[][] =>
+    rows.map((r) => cols.map((c) => sigma[r][c]));
+
+  const SigmaAA = pick(freeIndices, freeIndices);
+  const SigmaAB = pick(freeIndices, fixedIndices);
+  const SigmaBB = pick(fixedIndices, fixedIndices);
+  // Symmetric ⇒ SigmaBA = SigmaAB^T.
+
+  const SigmaBBinv = invertSymmetric(SigmaBB);
+
+  // μ_cond = μ_A + Σ_{AB} Σ_{BB}⁻¹ (v_B - μ_B)
+  const diff = fixedValues.map((v, i) => v - muB[i]);
+  const shift = matVec(SigmaAB, matVec(SigmaBBinv, diff));
+  const muCond = muA.map((x, i) => x + shift[i]);
+
+  // Σ_cond = Σ_{AA} - Σ_{AB} Σ_{BB}⁻¹ Σ_{BA}
+  // Compute Σ_{AB} · Σ_{BB}⁻¹ first, then multiply by Σ_{BA} = Σ_{AB}^T.
+  const nFree = freeIndices.length;
+  const nFix = fixedIndices.length;
+  const ABBinv: number[][] = Array.from({ length: nFree }, () =>
+    new Array(nFix).fill(0),
+  );
+  for (let i = 0; i < nFree; i++) {
+    for (let j = 0; j < nFix; j++) {
+      let s = 0;
+      for (let k = 0; k < nFix; k++) s += SigmaAB[i][k] * SigmaBBinv[k][j];
+      ABBinv[i][j] = s;
+    }
+  }
+  const correction: number[][] = Array.from({ length: nFree }, () =>
+    new Array(nFree).fill(0),
+  );
+  for (let i = 0; i < nFree; i++) {
+    for (let j = 0; j < nFree; j++) {
+      let s = 0;
+      for (let k = 0; k < nFix; k++) s += ABBinv[i][k] * SigmaAB[j][k]; // Σ_{BA}[k][j] = Σ_{AB}[j][k]
+      correction[i][j] = s;
+    }
+  }
+  const sigmaCond = SigmaAA.map((row, i) =>
+    row.map((v, j) => v - correction[i][j]),
+  );
+
+  return { muCond, sigmaCond };
+}

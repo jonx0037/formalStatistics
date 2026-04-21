@@ -229,3 +229,256 @@ export const prior3WayPresets = [
 ] as const;
 
 export type Prior3WayPreset = typeof prior3WayPresets[number];
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Topic 26 — Bayesian Computation & MCMC presets
+//
+// Four preset groups (one per interactive component). Target densities and
+// gradients are function literals (not strings) — typed callbacks that the
+// components invoke directly; no runtime eval / code-string compilation.
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ── MetropolisHastingsTuner presets ─────────────────────────────────────────
+
+export interface MHTunerPreset {
+  readonly id: string;
+  readonly label: string;
+  /** log π(x) — 1-D accepts a scalar, 2-D accepts a 2-vector. */
+  readonly logPi: (x: number | number[]) => number;
+  readonly dimension: 1 | 2;
+  /** Plot support; scalar for 1-D, pair for 2-D. */
+  readonly support: [number, number] | [[number, number], [number, number]];
+  readonly optimalScale: number;
+  readonly optimalAcceptance: number;
+  readonly description: string;
+}
+
+export const mhTunerPresets: readonly MHTunerPreset[] = [
+  {
+    id: 'standard-normal',
+    label: 'Standard Normal 𝒩(0, 1)',
+    logPi: (x) => {
+      const v = x as number;
+      return -0.5 * v * v;
+    },
+    dimension: 1,
+    support: [-5, 5],
+    optimalScale: 2.38,
+    optimalAcceptance: 0.44,
+    description:
+      'Canonical 1-D target. Roberts-Gelman-Gilks optimal scale 2.38 gives ~44% acceptance.',
+  },
+  {
+    id: 'banana',
+    label: 'Banana (Rosenbrock, d=2)',
+    logPi: (q) => {
+      const v = q as number[];
+      return -0.5 * ((1 - v[0]) ** 2 + 10 * (v[1] - v[0] ** 2) ** 2);
+    },
+    dimension: 2,
+    support: [
+      [-2, 2],
+      [-1, 3],
+    ],
+    optimalScale: 0.5,
+    optimalAcceptance: 0.234,
+    description:
+      'Curved ridge — RWM struggles. Illustrates why HMC / gradient-aware samplers win on correlated geometries.',
+  },
+  {
+    id: 'bimodal-mixture',
+    label: 'Bimodal 0.5·𝒩(−2, 0.5²) + 0.5·𝒩(2, 0.5²)',
+    logPi: (x) => {
+      const v = x as number;
+      return Math.log(
+        0.5 * Math.exp(-2 * (v + 2) ** 2) +
+          0.5 * Math.exp(-2 * (v - 2) ** 2),
+      );
+    },
+    dimension: 1,
+    support: [-6, 6],
+    optimalScale: 1.5,
+    optimalAcceptance: 0.25,
+    description:
+      'Two equally-weighted modes separated by a low-density valley. Stuck-chain failure mode (§26.8 Ex 10).',
+  },
+  {
+    id: 't-distribution-df3',
+    label: 'Heavy-tail Student-t (ν = 3)',
+    logPi: (x) => {
+      const v = x as number;
+      return -2 * Math.log(1 + (v * v) / 3);
+    },
+    dimension: 1,
+    support: [-10, 10],
+    optimalScale: 3.0,
+    optimalAcceptance: 0.35,
+    description:
+      'Polynomial tails challenge geometric ergodicity (ROB2004 §7.3 — non-geometrically ergodic under Gaussian proposals).',
+  },
+];
+
+// ── GibbsStepper presets (bivariate Normal) ─────────────────────────────────
+
+export interface GibbsStepperPreset {
+  readonly id: string;
+  readonly label: string;
+  readonly rho: number;
+  readonly description: string;
+}
+
+export const gibbsStepperPresets: readonly GibbsStepperPreset[] = [
+  {
+    id: 'weak',
+    label: 'ρ = 0.3 (weak correlation)',
+    rho: 0.3,
+    description:
+      'Near-decorrelated; Gibbs mixes quickly — each coordinate update is nearly independent of the previous.',
+  },
+  {
+    id: 'moderate',
+    label: 'ρ = 0.6',
+    rho: 0.6,
+    description:
+      'Moderate correlation; mixing slows but full-conditionals remain distinct enough for standard Gibbs.',
+  },
+  {
+    id: 'strong',
+    label: 'ρ = 0.8 (canonical demo)',
+    rho: 0.8,
+    description:
+      'Brief §3.1 Ex 3 canonical setup — strong correlation; axis-aligned Gibbs moves show visible staircase pattern.',
+  },
+  {
+    id: 'extreme',
+    label: 'ρ = 0.95 (slow mixing)',
+    rho: 0.95,
+    description:
+      'Near-degenerate ridge; Gibbs crawls along the diagonal. Reparameterization or block-update would be better.',
+  },
+];
+
+// ── HamiltonianTrajectoryAnimator presets (FEATURED component) ──────────────
+
+export interface HMCAnimatorPreset {
+  readonly id: string;
+  readonly label: string;
+  readonly logPi: (q: number[]) => number;
+  /** Gradient of U(q) = -log π(q). */
+  readonly gradU: (q: number[]) => number[];
+  readonly dimension: 2;
+  readonly defaultStart: readonly [number, number];
+  readonly recommendedEpsilon: number;
+  readonly recommendedSteps: number;
+  readonly description: string;
+}
+
+export const hmcAnimatorPresets: readonly HMCAnimatorPreset[] = [
+  {
+    id: 'standard-normal-2d',
+    label: '2-D Standard Normal',
+    logPi: (q) => -0.5 * (q[0] ** 2 + q[1] ** 2),
+    gradU: (q) => [q[0], q[1]],
+    dimension: 2,
+    defaultStart: [1, 1],
+    recommendedEpsilon: 0.1,
+    recommendedSteps: 25,
+    description:
+      'Rotational trajectory on a radially symmetric target. Energy oscillates as O(ε²) per Störmer-Verlet.',
+  },
+  {
+    id: 'banana',
+    label: 'Banana (Rosenbrock)',
+    logPi: (q) => -0.5 * ((1 - q[0]) ** 2 + 10 * (q[1] - q[0] ** 2) ** 2),
+    gradU: (q) => [
+      -(1 - q[0]) + 20 * (q[1] - q[0] ** 2) * (-2 * q[0]),
+      20 * (q[1] - q[0] ** 2),
+    ],
+    dimension: 2,
+    defaultStart: [-1, 1],
+    recommendedEpsilon: 0.05,
+    recommendedSteps: 25,
+    description:
+      'Curved ridge — HMC flows along curvature where RWM rejects. Featured-figure geometry (§26.4 Fig 4).',
+  },
+  {
+    id: 'donut',
+    label: 'Donut (ring-shaped target)',
+    logPi: (q) => {
+      const r = Math.sqrt(q[0] ** 2 + q[1] ** 2);
+      return -10 * (r - 1) ** 2;
+    },
+    gradU: (q) => {
+      const r = Math.max(Math.sqrt(q[0] ** 2 + q[1] ** 2), 1e-6);
+      return [(20 * (r - 1) * q[0]) / r, (20 * (r - 1) * q[1]) / r];
+    },
+    dimension: 2,
+    defaultStart: [1, 0],
+    recommendedEpsilon: 0.05,
+    recommendedSteps: 30,
+    description:
+      'Unimodal but non-convex support. HMC orbits the ring; RWM diffuses slowly across the hole.',
+  },
+  {
+    id: 'correlated-normal',
+    label: 'Correlated Normal (ρ = 0.9)',
+    logPi: (q) =>
+      -0.5 / (1 - 0.81) * (q[0] ** 2 - 1.8 * q[0] * q[1] + q[1] ** 2),
+    gradU: (q) => {
+      const f = 1 / (1 - 0.81);
+      return [f * (q[0] - 0.9 * q[1]), f * (q[1] - 0.9 * q[0])];
+    },
+    dimension: 2,
+    defaultStart: [2, -2],
+    recommendedEpsilon: 0.1,
+    recommendedSteps: 20,
+    description:
+      'Near-degenerate ridge; HMC with mass matrix M = Σ⁻¹ rescales to well-conditioned dynamics (§26.4 Rem 13).',
+  },
+];
+
+// ── ConvergenceDiagnosticDashboard presets ──────────────────────────────────
+
+export interface ConvergenceDashboardPreset {
+  readonly id: string;
+  readonly label: string;
+  /** Matches an `id` in `mhTunerPresets` — dashboard pulls the target from there. */
+  readonly targetId: string;
+  readonly defaultChains: number;
+  readonly defaultDispersion: number;
+  readonly expectedRhat: number;
+  readonly description: string;
+}
+
+export const convergenceDashboardPresets: readonly ConvergenceDashboardPreset[] = [
+  {
+    id: 'well-mixed-normal',
+    label: 'Well-mixed chains on 𝒩(0, 1)',
+    targetId: 'standard-normal',
+    defaultChains: 4,
+    defaultDispersion: 3,
+    expectedRhat: 1.01,
+    description:
+      'Dispersed starts collapse onto the mode within ~200 iter. R̂ drops from ≈ 1.3 → < 1.01 — the happy path.',
+  },
+  {
+    id: 'stuck-bimodal',
+    label: 'Stuck chains on bimodal target',
+    targetId: 'bimodal-mixture',
+    defaultChains: 4,
+    defaultDispersion: 4,
+    expectedRhat: 1.5,
+    description:
+      'All chains stuck in the mode they started in — R̂ stays high, visually demonstrates §26.8 Ex 10.',
+  },
+  {
+    id: 'slow-mixing-banana',
+    label: 'Slow-mixing RWM on banana',
+    targetId: 'banana',
+    defaultChains: 4,
+    defaultDispersion: 2,
+    expectedRhat: 1.1,
+    description:
+      'Curvature traps RWM at short lags — R̂ improves slowly, motivating gradient-aware methods.',
+  },
+];

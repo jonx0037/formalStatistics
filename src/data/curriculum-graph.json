@@ -31,7 +31,7 @@
     { "id": "model-selection", "label": "Model Selection & Information Criteria", "domain": "regression-linear-models", "status": "published", "url": "/topics/model-selection-and-information-criteria" },
 
     { "id": "bayesian-foundations", "label": "Bayesian Foundations & Prior Selection", "domain": "bayesian-statistics", "status": "published", "url": "/topics/bayesian-foundations-and-prior-selection" },
-    { "id": "bayesian-computation", "label": "Bayesian Computation", "domain": "bayesian-statistics", "status": "planned", "url": "/topics/bayesian-computation-and-mcmc" },
+    { "id": "bayesian-computation", "label": "Bayesian Computation & MCMC", "domain": "bayesian-statistics", "status": "published", "url": "/topics/bayesian-computation-and-mcmc" },
     { "id": "bayesian-model-comparison", "label": "Bayesian Model Comparison", "domain": "bayesian-statistics", "status": "planned", "url": "/topics/bayesian-model-comparison-and-bma" },
     { "id": "hierarchical-bayes", "label": "Hierarchical & Empirical Bayes", "domain": "bayesian-statistics", "status": "planned", "url": "/topics/hierarchical-bayes-and-partial-pooling" },
 
@@ -126,6 +126,11 @@
     { "source": "model-selection", "target": "bayesian-foundations" },
     { "source": "bayesian-foundations", "target": "bayesian-computation" },
     { "source": "multivariate-distributions", "target": "bayesian-computation" },
+    { "source": "conditional-probability", "target": "bayesian-computation" },
+    { "source": "law-of-large-numbers", "target": "bayesian-computation" },
+    { "source": "central-limit-theorem", "target": "bayesian-computation" },
+    { "source": "maximum-likelihood", "target": "bayesian-computation" },
+    { "source": "model-selection", "target": "bayesian-computation" },
     { "source": "bayesian-foundations", "target": "bayesian-model-comparison" },
     { "source": "bayesian-computation", "target": "bayesian-model-comparison" },
     { "source": "hypothesis-testing", "target": "bayesian-model-comparison" },

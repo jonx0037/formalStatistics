@@ -43,7 +43,7 @@ formalmlConnections:
     relationship: "PAC learning bounds are WLLN statements: P(|R̂(h) − R(h)| > ε) ≤ δ. Uniform convergence over hypothesis classes (Vapnik–Chervonenkis theory) extends the Glivenko–Cantelli theorem from indicators to function classes."
   - topic: "monte-carlo-methods"
     site: "formalml"
-    relationship: "The SLLN is the theoretical foundation of all Monte Carlo methods. MCMC convergence (ergodic theorem) is a generalization of the SLLN to dependent sequences. Importance sampling convergence is the SLLN applied under a change of measure."
+    relationship: "The SLLN is the theoretical foundation of all Monte Carlo methods. [Topic 26 §26.7 Theorem 5](/topics/bayesian-computation-and-mcmc#section-26-7) proves the Markov-chain ergodic theorem — the generalization of Theorem 10.5 (Kolmogorov/Etemadi SLLN) to dependent sequences; the additional ingredients beyond iid are irreducibility, aperiodicity, and positive recurrence. Importance sampling convergence is the SLLN applied under a change of measure."
   - topic: "empirical-risk-minimization"
     site: "formalml"
     relationship: "ERM consistency — the minimizer of the empirical risk converges to the minimizer of the population risk — requires uniform convergence of R̂ₙ(θ) → R(θ) over θ, which is a generalization of the Glivenko–Cantelli theorem."
@@ -791,7 +791,7 @@ This means that even before proving the SLLN, we know the answer must be all-or-
 
 Other tail events include $\{\sum X_n \text{ converges}\}$, $\{\limsup \bar{X}_n = +\infty\}$, and $\{\bar{X}_n \text{ oscillates between } a \text{ and } b\}$. All of these have probability 0 or 1. The 0-1 law is one of the most elegant results in probability: it says that for independent sequences, every question about the "eventual behavior" has a deterministic answer — even though the individual random variables are random, the tail behavior is not.
 
-The 0-1 law requires independence (or at least that the tail $\sigma$-algebra is trivial). For dependent sequences (such as Markov chains), the tail behavior can genuinely have intermediate probabilities. This is why the SLLN for Markov chains (the ergodic theorem) requires additional conditions beyond what the iid SLLN needs.
+The 0-1 law requires independence (or at least that the tail $\sigma$-algebra is trivial). For dependent sequences (such as Markov chains), the tail behavior can genuinely have intermediate probabilities. This is why the SLLN for Markov chains (the [ergodic theorem](/topics/bayesian-computation-and-mcmc#section-26-7)) requires additional conditions beyond what the iid SLLN needs — specifically, irreducibility, aperiodicity, and positive recurrence (Topic 26 §26.7 Thm 5).
 </RemarkBlock>
 
 <img src="/images/topics/law-of-large-numbers/slln.png" alt="SLLN: sample paths converging almost surely to μ for Normal, Exponential; failing for Cauchy" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
@@ -1066,7 +1066,7 @@ The Monte Carlo method extends to high-dimensional integrals where deterministic
 
 Notice the role of the SLLN versus the WLLN here. The WLLN would tell you that for each fixed $n$, the probability of your estimate being far from $E[X^2]$ is small. But you are looking at a *single* run — a single sequence of estimates $\hat{\theta}_1, \hat{\theta}_2, \hat{\theta}_3, \ldots$ — and you want this sequence to converge. That is exactly what the SLLN guarantees: with probability 1, your sequence converges to the truth.
 
-The SLLN also extends to MCMC: if the Markov chain is ergodic (irreducible, aperiodic, positive recurrent), then time averages converge to space averages almost surely. This is the ergodic theorem, a generalization of the SLLN to dependent sequences — the dependence between successive states of the Markov chain is handled by the ergodic property rather than independence. See <ExternalLink href="https://formalml.com/topics/monte-carlo-methods" site="formalml" topic="Monte Carlo Methods" /> for the full development.
+The SLLN also extends to MCMC: if the Markov chain is ergodic (irreducible, aperiodic, positive recurrent), then time averages converge to space averages almost surely. This is the [ergodic theorem](/topics/bayesian-computation-and-mcmc#section-26-7), a generalization of Theorem 10.5 (Kolmogorov/Etemadi SLLN) to dependent sequences — the dependence between successive states of the Markov chain is handled by the ergodic property rather than independence. [Topic 26 §26.7 Theorem 5](/topics/bayesian-computation-and-mcmc#section-26-7) develops this in the MCMC context. See also <ExternalLink href="https://formalml.com/topics/monte-carlo-methods" site="formalml" topic="Monte Carlo Methods" /> for applied extensions.
 </ExampleBlock>
 
 <ExampleBlock number={7} title="Stochastic Gradient Descent and Polyak Averaging">
