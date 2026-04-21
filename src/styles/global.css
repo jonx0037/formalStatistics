@@ -77,6 +77,15 @@
   --color-true-parameter: #10B981;  /* emerald-500 */
   --color-mle:            #F97316;  /* orange-500 */
 
+  /* Chain-accent palette (Topic 26, Track 7) — four Tableau-10 hues for
+     Gelman–Rubin multi-chain diagnostics and HMC/Gibbs trace overlays.
+     Inherited by Topics 27–28. Always paired with linestyle redundancy
+     (chainLineStyles in colorScales.ts) for colorblind accessibility. */
+  --chain-1: #4E79A7;  /* blue   */
+  --chain-2: #F28E2B;  /* orange */
+  --chain-3: #59A14F;  /* green  */
+  --chain-4: #E15759;  /* red    */
+
   /* Typography */
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
   --font-serif: 'Merriweather', 'Georgia', serif;

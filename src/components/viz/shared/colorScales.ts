@@ -183,6 +183,12 @@ export const bayesianColors = {
   posterior:  'var(--color-posterior)',
   true:       'var(--color-true-parameter)',
   mle:        'var(--color-mle)',
+  chains: [
+    'var(--chain-1)',
+    'var(--chain-2)',
+    'var(--chain-3)',
+    'var(--chain-4)',
+  ],
 } as const;
 
 export type BayesianColorKey = keyof typeof bayesianColors;
@@ -201,3 +207,35 @@ export const bayesianLineStyles = {
   true:       '2 2',
   mle:        'none',
 } as const;
+
+/**
+ * Topic 26 — four-chain linestyle companion to `bayesianColors.chains`.
+ *
+ * Gelman–Rubin multi-chain diagnostics require four visually distinct chain
+ * lines. Color alone is insufficient for colorblind readers, so every chain
+ * pairs a `--chain-N` color with a distinct SVG `stroke-dasharray`. The
+ * matplotlib mnemonic is `['-', '--', '-.', ':']` — this array gives the
+ * SVG-native equivalents for D3 `.attr('stroke-dasharray', …)`.
+ *
+ * Index-aligned with `bayesianColors.chains`: chain i uses
+ * `bayesianColors.chains[i]` + `chainLineStyles[i]`.
+ *
+ *   [0] solid    — chain 1 (baseline)
+ *   [1] dashed   — chain 2
+ *   [2] dashdot  — chain 3
+ *   [3] dotted   — chain 4
+ */
+export const chainLineStyles = [
+  'none',        // solid — chain 1
+  '6 3',         // dashed — chain 2
+  '4 2 1 2',     // dashdot — chain 3
+  '2 2',         // dotted — chain 4
+] as const;
+
+/**
+ * Matplotlib-style chain linestyle mnemonics. Mirrors the notebook's
+ * `CHAIN_LINESTYLES = ['-', '--', '-.', ':']` constant (brief §4.1 Cell 4).
+ * Kept for parity with the Python figure-generation code and documentation;
+ * for SVG/D3 rendering use `chainLineStyles` above.
+ */
+export const CHAIN_LINESTYLES = ['-', '--', '-.', ':'] as const;
