@@ -1,0 +1,748 @@
+---
+title: "Bayesian Computation & MCMC"
+subtitle: "Topic 25 handed us the Bayesian framework but stopped at the conjugate families. Every non-exponential-family likelihood, every hierarchical prior, every mixture model has a posterior known only up to the intractable normalizing constant m(y). Topic 26 develops the Monte Carlo machinery that makes Bayesian inference operational in those regimes: Metropolis–Hastings proved correct via detailed balance (featured), Gibbs sampling as a special case, Hamiltonian Monte Carlo with leapfrog, NUTS (Hoffman–Gelman 2014), the R̂ and ESS convergence diagnostics, and the Markov-chain ergodic theorem that generalizes Topic 10's iid SLLN (Thm 10.5) to dependent sequences."
+status: "published"
+difficulty: "intermediate"
+prerequisites:
+  - "conditional-probability"
+  - "multivariate-distributions"
+  - "law-of-large-numbers"
+  - "central-limit-theorem"
+  - "maximum-likelihood"
+  - "model-selection-and-information-criteria"
+  - "bayesian-foundations-and-prior-selection"
+tags:
+  - "statistics"
+  - "bayesian-inference"
+  - "mcmc"
+  - "metropolis-hastings"
+  - "gibbs-sampling"
+  - "hamiltonian-monte-carlo"
+  - "hmc"
+  - "nuts"
+  - "r-hat"
+  - "effective-sample-size"
+  - "ergodic-theorem"
+  - "detailed-balance"
+  - "leapfrog-integrator"
+  - "gelman-rubin"
+domain: "bayesian-statistics"
+videoId: null
+notebookPath: "notebooks/bayesian-computation/26_bayesian_computation.ipynb"
+githubUrl: "https://github.com/jonx0037/formalStatistics/blob/main/src/content/topics/bayesian-computation-and-mcmc.mdx"
+datePublished: 2026-04-21
+estimatedReadTime: 60
+formalcalculusPrereqs:
+  - topic: "multivariable-calculus"
+    site: "formalcalculus"
+    relationship: "§26.4's leapfrog integrator uses ∇U(θ) = −∇ log π(θ | y) at every half-step. Volume preservation (Proof 3) uses the Jacobian determinant."
+  - topic: "integration"
+    site: "formalcalculus"
+    relationship: "Ergodic averages (§26.7) are integrals against the invariant measure π, estimated by Cesàro time-averaging. The Kac formula (renewal interpretation in Proof 4 Step 3) is a standard integration-by-parts-on-stopping-times argument."
+  - topic: "ordinary-differential-equations"
+    site: "formalcalculus"
+    relationship: "Hamilton's equations (ẋ = ∂H/∂p, ṗ = −∂H/∂q) form an ODE system; §26.4 Def 4 and Rem 11 draw on ODE theory to contrast exact flow with the symplectic leapfrog approximation."
+formalmlConnections:
+  - topic: "variational-inference"
+    site: "formalml"
+    relationship: "VI is the non-MCMC alternative for approximate posterior inference: pick a tractable q(θ), minimize KL(q ∥ p(· | y)). Trades exactness for speed. §26.10 Rem 26 names the contrast; formalml develops ELBO, mean-field, and normalizing flows."
+  - topic: "stochastic-gradient-mcmc"
+    site: "formalml"
+    relationship: "SGLD (Welling–Teh 2011) and SGHMC (Chen–Fox–Guestrin 2014) replace the full-batch gradient in HMC / Langevin with a mini-batch gradient plus injected noise. Scales MCMC to large-n datasets at the cost of introducing asymptotic bias. §26.10 Rem 30."
+  - topic: "sequential-monte-carlo"
+    site: "formalml"
+    relationship: "SMC / particle filters are the alternative when the target is a sequence π_t indexed by time or annealing parameter. Parallel to MCMC's single-target framework. §26.10 Rem 31."
+  - topic: "probabilistic-programming"
+    site: "formalml"
+    relationship: "Stan, PyMC, NumPyro — domain-specific languages that compile user-specified models into NUTS samplers. Topic 26 motivates; formalml explores the compiler stack. §26.10 Rem 33."
+connections:
+  - topic: "law-of-large-numbers"
+    relationship: "Topic 10 Thm 10.5 (Kolmogorov/Etemadi SLLN) for iid sequences generalizes to §26.7 Thm 5 for Markov chains under irreducibility + aperiodicity + positive recurrence. The Etemadi block-sum proof structure reappears inside Proof 4 Step 3."
+  - topic: "central-limit-theorem"
+    relationship: "Topic 11's iid CLT generalizes to the MCMC-CLT (§26.7 Thm 6, Kipnis–Varadhan 1986). The asymptotic variance picks up autocovariance — the reason ESS is less than the chain length."
+  - topic: "multivariate-distributions"
+    relationship: "Topic 8 Thm 3 (conditional MVN) powers §26.3 Ex 3 (Gibbs on bivariate Normal). §8.10 Dirichlet-Multinomial is the collapsed-Gibbs example in §26.3 Rem 10."
+  - topic: "bayesian-foundations-and-prior-selection"
+    relationship: "Topic 25's conjugate posteriors become Gibbs building blocks. BvM (§25.8) is the regularity condition making HMC's Gaussian default geometrically appropriate. Laplace-at-MAP is the HMC warm-start."
+  - topic: "bayesian-model-comparison-and-bma"
+    relationship: "Topic 27 uses MCMC draws to estimate marginal likelihoods for BMA: bridge sampling, path sampling, nested sampling. §26.10 Rem 24 names the connection."
+  - topic: "hierarchical-bayes-and-partial-pooling"
+    relationship: "Topic 28 uses Gibbs with conjugate full-conditionals (when available) or NUTS (in Stan / PyMC) for hierarchical models. The 8-schools example (§26.9 Ex 11) is the canonical hierarchical model."
+references:
+  - type: "article"
+    author: "Nicholas Metropolis, Arianna W. Rosenbluth, Marshall N. Rosenbluth, Augusta H. Teller & Edward Teller"
+    year: 1953
+    title: "Equation of State Calculations by Fast Computing Machines"
+    publisher: "Journal of Chemical Physics 21(6): 1087–1092"
+    note: "MET1953. Historical origin of the Metropolis algorithm — the symmetric-proposal special case of §26.2 Thm 1. https://doi.org/10.1063/1.1699114"
+  - type: "article"
+    author: "W. K. Hastings"
+    year: 1970
+    title: "Monte Carlo sampling methods using Markov chains and their applications"
+    publisher: "Biometrika 57(1): 97–109"
+    note: "HAS1970. Generalization of MET1953 to asymmetric proposals — the version §26.2 Thm 1 proves. https://doi.org/10.1093/biomet/57.1.97"
+  - type: "article"
+    author: "Stuart Geman & Donald Geman"
+    year: 1984
+    title: "Stochastic Relaxation, Gibbs Distributions, and the Bayesian Restoration of Images"
+    publisher: "IEEE Transactions on Pattern Analysis and Machine Intelligence 6(6): 721–741"
+    note: "GEM1984. Origin of Gibbs sampling. https://doi.org/10.1109/TPAMI.1984.4767596"
+  - type: "book"
+    author: "Radford M. Neal"
+    year: 2011
+    title: "MCMC using Hamiltonian dynamics"
+    publisher: "CRC Press"
+    note: "NEA2011. Ch. 5 of the Handbook of MCMC (BRO2011). Canonical HMC reference; §5.2 volume preservation, §5.3 time reversibility, §5.4 symplectic integrators. https://www.mcmchandbook.net/HandbookChapter5.pdf"
+  - type: "article"
+    author: "Matthew D. Hoffman & Andrew Gelman"
+    year: 2014
+    title: "The No-U-Turn Sampler: Adaptively Setting Path Lengths in Hamiltonian Monte Carlo"
+    publisher: "Journal of Machine Learning Research 15(47): 1593–1623"
+    note: "HOF2014. NUTS definition and correctness proof. https://jmlr.org/papers/v15/hoffman14a.html"
+  - type: "article"
+    author: "Andrew Gelman & Donald B. Rubin"
+    year: 1992
+    title: "Inference from Iterative Simulation Using Multiple Sequences"
+    publisher: "Statistical Science 7(4): 457–472"
+    note: "GEL1992. Origin of the R̂ diagnostic. https://doi.org/10.1214/ss/1177011136"
+  - type: "book"
+    author: "Sean P. Meyn & Richard L. Tweedie"
+    year: 2009
+    edition: "2nd"
+    title: "Markov Chains and Stochastic Stability"
+    publisher: "Cambridge University Press"
+    note: "MEY2009. Definitive Markov-chain-theory reference. §26.7 cites §5.1 (Athreya–Ney splitting) and §17.1 (renewal theorem) for Proof 4; Thm 17.0.1 is the full ergodic theorem. https://doi.org/10.1017/CBO9780511626630"
+  - type: "book"
+    author: "Christian P. Robert & George Casella"
+    year: 2004
+    edition: "2nd"
+    title: "Monte Carlo Statistical Methods"
+    publisher: "Springer"
+    note: "ROB2004. Applied MCMC reference. §26.2 Ex 2 cites Ch. 7; §26.6 ESS formulation cites Ch. 12. https://link.springer.com/book/10.1007/978-1-4757-4145-2"
+  - type: "book"
+    author: "Steve Brooks, Andrew Gelman, Galin L. Jones & Xiao-Li Meng (Editors)"
+    year: 2011
+    title: "Handbook of Markov Chain Monte Carlo"
+    publisher: "CRC Press"
+    note: "BRO2011. Umbrella reference; contains NEA2011 as Ch. 5. §26.10 remarks cite Ch. 3 (RJMCMC Green 1995), Ch. 4 (adaptive MCMC), Ch. 11 (parallel tempering). https://www.mcmchandbook.net/"
+  - type: "book"
+    author: "Andrew Gelman, John B. Carlin, Hal S. Stern, David B. Dunson, Aki Vehtari & Donald B. Rubin"
+    year: 2013
+    edition: "3rd"
+    title: "Bayesian Data Analysis"
+    publisher: "CRC Press"
+    note: "GEL2013. §10 (basics of Markov chain simulation), §11 (diagnostics and HMC), §12 (convergence). §26.9 Ex 11 (8-schools) uses GEL2013 §5.5. http://www.stat.columbia.edu/~gelman/book/"
+  - type: "book"
+    author: "A. W. van der Vaart"
+    year: 1998
+    title: "Asymptotic Statistics"
+    publisher: "Cambridge University Press"
+    note: "VDV1998. §2 contains the general CLT machinery §26.7 Thm 6 specializes to the Markov-chain setting. https://www.cambridge.org/core/books/asymptotic-statistics/A3C7DAD3F7E66A1FA60E9C8FE132EE1D"
+---
+
+import DefinitionBlock from '../../components/ui/DefinitionBlock.astro';
+import TheoremBlock from '../../components/ui/TheoremBlock.astro';
+import ProofBlock from '../../components/ui/ProofBlock.astro';
+import ExampleBlock from '../../components/ui/ExampleBlock.astro';
+import RemarkBlock from '../../components/ui/RemarkBlock.astro';
+import ExternalLink from '../../components/ui/ExternalLink.astro';
+
+import MetropolisHastingsTuner from '../../components/viz/MetropolisHastingsTuner.tsx';
+import GibbsStepper from '../../components/viz/GibbsStepper.tsx';
+import HamiltonianTrajectoryAnimator from '../../components/viz/HamiltonianTrajectoryAnimator.tsx';
+import ConvergenceDiagnosticDashboard from '../../components/viz/ConvergenceDiagnosticDashboard.tsx';
+
+## 26.1 When conjugacy fails
+
+[Topic 25](/topics/bayesian-foundations-and-prior-selection) built the Bayesian framework on a load-bearing simplification: the prior and likelihood live in matching conjugate families, so the posterior has a closed form. Five canonical pairs cover much of applied statistics — Beta-Binomial, Normal-Normal, Normal-Normal-Inverse-Gamma, Gamma-Poisson, Dirichlet-Multinomial — and every conjugate analysis looks the same: observe data, update hyperparameters, read off credible intervals from the named family.
+
+But the conjugate framework fails whenever the likelihood is not exponential-family (logistic regression with a Gaussian prior, robust regression with a Student-t likelihood), whenever the prior is hierarchical (school effects inside a group-level Normal, shrinkage priors like the horseshoe), or whenever the model has many parameters (mixture models, hidden Markov models, anything with latent variables). The posterior $p(\theta \mid \mathbf{y})$ is still well-defined — Bayes' theorem is one line — but the normalizing constant
+
+$$m(\mathbf{y}) \;=\; \int L(\theta) \pi(\theta) \, d\theta$$
+
+is a high-dimensional integral without a closed form. We know $p(\theta \mid \mathbf{y})$ only up to this unknown constant.
+
+<img src="/images/topics/bayesian-computation-and-mcmc/26-1-banana-posterior-mh-samples.png"
+     alt="Two-panel figure. Left: Rosenbrock-style banana posterior, a curved ridge in 2-D with analytic contour lines. Right: 2000 Metropolis–Hastings samples overlaid on the same banana, colored by iteration order to show mixing along the curved ridge."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<RemarkBlock number={1} title="The MCMC insight: the normalizer cancels">
+The trick underneath every MCMC algorithm: we never need $m(\mathbf{y})$. To sample from $p(\theta \mid \mathbf{y})$ we only need *ratios* $\pi(\theta')/\pi(\theta)$ (in the MCMC-theory notation introduced in §26.3, where $\pi$ denotes the posterior-as-target), and the unknown $m(\mathbf{y})$ cancels from numerator and denominator. This is the structural reason every MH / HMC / NUTS algorithm moves by proposing a candidate $\theta'$ and comparing its unnormalized density to the current state's.
+</RemarkBlock>
+
+<RemarkBlock number={2} title="What Topic 26 covers, and what it defers">
+Topic 26 develops four algorithms end-to-end: Metropolis–Hastings (§26.2, the featured recipe), Gibbs sampling (§26.3, the conjugate-full-conditional specialization), Hamiltonian Monte Carlo (§26.4, the gradient-aware extension), and the No-U-Turn Sampler (§26.5, the self-tuning HMC default that Stan and PyMC ship). Convergence diagnostics follow in §26.6. The theoretical spine is §26.7's Markov-chain ergodic theorem, which generalizes [Topic 10's Theorem 10.5](/topics/law-of-large-numbers#section-10-5) (Kolmogorov/Etemadi SLLN) from iid sequences to dependent Markov chains. Ten specializations and alternatives — adaptive MCMC, reversible-jump, Riemann-manifold HMC, stochastic-gradient MCMC, sequential Monte Carlo, variational inference, parallel tempering, nested sampling, Bayesian nonparametric MCMC, slice sampling — each get a forward-pointing paragraph in §26.10, not a dedicated section. Topic 26's bar is pedagogical: does this method change how the reader thinks about proposals, acceptance, or convergence?
+</RemarkBlock>
+
+<RemarkBlock number={3} title="MCMC's asymptotic contract">
+MCMC is asymptotically exact: under irreducibility, aperiodicity, and positive recurrence, long-run chain averages converge almost surely to posterior expectations (§26.7 Thm 5). The price is computational — chains take time to mix, and diagnosing convergence is an empirical art. Variational inference trades exactness for speed (§26.10 Rem 26); Topic 26 commits to the exactness side of the trade.
+</RemarkBlock>
+
+<a id="section-26-2"></a>
+
+## 26.2 Metropolis–Hastings
+
+The Metropolis–Hastings (MH) algorithm is the pedagogical kernel of the entire topic. Every subsequent algorithm is a specific choice of proposal kernel inside the MH frame — Gibbs is MH with acceptance $\alpha \equiv 1$, HMC is MH on an extended position–momentum state, NUTS is MH with an adaptive trajectory length. Getting the MH correctness proof right once buys the rest.
+
+<DefinitionBlock number={1} title="Proposal kernel, acceptance probability, transition kernel">
+Let $\pi$ be a target density on $\mathcal{X} \subseteq \mathbb{R}^d$, known up to a normalizing constant. A **proposal kernel** is a conditional density $q(x' \mid x)$ that generates a candidate $x'$ given the current state $x$. Given a proposal, the **MH acceptance probability** is
+
+$$\alpha(x, x') \;=\; \min\!\left\{1,\; \frac{\pi(x') \, q(x \mid x')}{\pi(x) \, q(x' \mid x)}\right\}.$$
+
+The **MH transition kernel** is
+
+$$K(x, dx') \;=\; \alpha(x, x') \, q(x' \mid x) \, dx' \;+\; r(x) \, \delta_x(dx'), \qquad r(x) \;=\; 1 - \!\int \alpha(x, y) \, q(y \mid x) \, dy,$$
+
+where the first term covers accepted moves and the second (the rejection mass $r(x)$) parks the chain at $x$ when the proposal is rejected.
+</DefinitionBlock>
+
+<DefinitionBlock number={2} title="Invariant distribution, detailed balance">
+A distribution $\pi$ is **invariant** for a transition kernel $K$ if $\int \pi(x) K(x, A) \, dx = \pi(A)$ for every measurable $A \subseteq \mathcal{X}$. A sufficient condition for invariance is **detailed balance**: $\pi(x) k(x, x') = \pi(x') k(x', x)$ for all $x, x'$, where $k$ is the off-diagonal density of $K$.
+</DefinitionBlock>
+
+<TheoremBlock number={1} title="Metropolis–Hastings correctness (FEATURED)">
+The MH transition kernel $K$ of Def 1 satisfies detailed balance with respect to $\pi$. Consequently $\pi$ is invariant for $K$.
+</TheoremBlock>
+
+<ProofBlock number={1} title="Proof of Thm 1 (MH correctness, FEATURED)">
+**Step 1 — setup.** Target density $\pi$ on $\mathcal{X} \subseteq \mathbb{R}^d$, known up to a normalizing constant. Proposal density $q(x' \mid x)$ with the accessibility condition: $q(x' \mid x) > 0$ whenever $\pi(x') > 0$ and $x \to x'$ is reachable. Acceptance probability
+
+$$\alpha(x, x') \;=\; \min\!\left\{1,\, \frac{\pi(x') \, q(x \mid x')}{\pi(x) \, q(x' \mid x)}\right\}.$$
+
+Transition kernel
+
+$$K(x, dx') \;=\; \alpha(x, x') \, q(x' \mid x) \, dx' \;+\; r(x) \, \delta_x(dx'), \qquad r(x) \;=\; 1 - \int \alpha(x, y) \, q(y \mid x) \, dy.$$
+
+**Claim:** $\pi$ is invariant for $K$: for every measurable $A \subseteq \mathcal{X}$, $\int \pi(x) K(x, A) \, dx = \pi(A)$.
+
+**Step 2 — strategy.** Prove detailed balance $\pi(x) k(x, x') = \pi(x') k(x', x)$ for the off-diagonal density $k(x, x') = \alpha(x, x') \, q(x' \mid x)$. Detailed balance implies invariance (MEY2009 Thm 1.6).
+
+**Step 3 — reduce to two cases.** Let $r = \pi(x') q(x \mid x') / \bigl[\pi(x) q(x' \mid x)\bigr]$. By symmetry (swap $x \leftrightarrow x'$) one case suffices. Suppose $r \le 1$. Then $\alpha(x, x') = r$ and $\alpha(x', x) = \min\!\bigl\{1,\, 1/r\bigr\} = 1$.
+
+**Step 4 — LHS of detailed balance.**
+
+$$\pi(x) \, \alpha(x, x') \, q(x' \mid x) \;=\; \pi(x) \cdot \frac{\pi(x') \, q(x \mid x')}{\pi(x) \, q(x' \mid x)} \cdot q(x' \mid x) \;=\; \pi(x') \, q(x \mid x').$$
+
+**Step 5 — RHS of detailed balance.**
+
+$$\pi(x') \, \alpha(x', x) \, q(x \mid x') \;=\; \pi(x') \cdot 1 \cdot q(x \mid x') \;=\; \pi(x') \, q(x \mid x').$$
+
+LHS equals RHS. The $r > 1$ case is the same calculation with labels swapped.
+
+**Step 6 — invariance from detailed balance.** For any measurable $A$,
+
+$$\int \pi(x) K(x, A) \, dx \;=\; \int_A \!\!\int \pi(x) \, k(x, x') \, dx \, dx' \;+\; \int_A r(x) \, \pi(x) \, dx.$$
+
+Apply detailed balance to the inner integral: $\int \pi(x) k(x, x') \, dx = \pi(x') \int \alpha(x', x) q(x \mid x') \, dx = \pi(x') \, \bigl(1 - r(x')\bigr)$. Substitute:
+
+$$\int \pi(x) K(x, A) \, dx \;=\; \int_A \pi(x') \bigl(1 - r(x')\bigr) \, dx' \;+\; \int_A r(x) \pi(x) \, dx \;=\; \int_A \pi(x') \, dx' \;=\; \pi(A).$$
+
+∎ — using the MH acceptance ratio definition (HAS1970 §2) and the detailed-balance-⇒-invariance lemma (MEY2009 Thm 1.6).
+</ProofBlock>
+
+<img src="/images/topics/bayesian-computation-and-mcmc/26-2-mh-chain-and-acceptance.png"
+     alt="Two-panel figure. Left: three 1-D chains on standard-Normal target with proposal scales σ = 0.1 (sticky, small steps), σ = 2.4 (optimal), σ = 10 (large steps, most rejected). Right: acceptance rate vs proposal scale on a log-x axis, with the Roberts-Gelman-Gilks 1997 optimum of 0.234 marked for reference."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<ExampleBlock number={1} title="Random-walk Metropolis on a banana">
+The canonical 2-D tuning problem. Target $\pi(q) \propto \exp\!\bigl(-\tfrac{1}{2}\bigl[(1-q_1)^2 + 10(q_2 - q_1^2)^2\bigr]\bigr)$ (Rosenbrock banana). Use a symmetric Gaussian proposal $q(x' \mid x) = \mathcal{N}(x, \sigma^2 I)$, so the proposal density ratio in $\alpha$ drops out: $\alpha(x, x') = \min\!\bigl\{1, \pi(x') / \pi(x)\bigr\}$. Start from $(0, 0)$, tune $\sigma$ until the empirical acceptance rate approaches the optimum. The banana's curved ridge is the difficulty — too-small $\sigma$ leaves the chain sticky at the current point; too-large $\sigma$ overshoots the ridge and rejects almost every proposal.
+</ExampleBlock>
+
+<ExampleBlock number={2} title="Optimal scaling and the 0.234 / 0.44 rule">
+For a $d$-dimensional Gaussian target with a Gaussian random-walk proposal of scale $\sigma$, Roberts–Gelman–Gilks 1997 proved the asymptotically optimal proposal covariance is $\Sigma = (2.38^2 / d) \, \Sigma_\pi$, where $\Sigma_\pi$ is the target covariance. The induced optimal acceptance rate is **0.234** for $d \ge 5$ and **0.44** for $d = 1$. ROB2004 Ch. 7 gives the full derivation. For Bayesian applications, the natural choice is $\Sigma \propto \hat{\mathcal{I}}(\hat\theta_{\text{MLE}})^{-1} / n$, using [Topic 14 Theorem 4](/topics/maximum-likelihood) — MLE asymptotic normality tells us the posterior is approximately Gaussian at large $n$, and its covariance is the inverse Fisher information scaled by $1/n$.
+</ExampleBlock>
+
+<RemarkBlock number={4} title="Symmetric MH is the original Metropolis 1953">
+When $q(x' \mid x) = q(x \mid x')$ — a symmetric proposal, like a Gaussian random walk — the ratio $q(x \mid x') / q(x' \mid x) = 1$ and $\alpha(x, x') = \min\!\bigl\{1, \pi(x')/\pi(x)\bigr\}$. This is the 1953 Metropolis recipe; Hastings 1970 generalized to asymmetric proposals.
+</RemarkBlock>
+
+<RemarkBlock number={5} title="Independence samplers as alternative proposals">
+The independence sampler uses a proposal $q(x' \mid x) = q(x')$ that doesn't depend on the current state — typically a Laplace approximation to the posterior. Acceptance ratio becomes $\pi(x') q(x) / \bigl[\pi(x) q(x')\bigr]$, with the importance-ratio-like structure familiar from importance sampling. Works well when $q$ is a good global approximation; catastrophic when it misses modes.
+</RemarkBlock>
+
+<RemarkBlock number={6} title="Tuning guidance in practice">
+Target acceptance 20–40% for random-walk Metropolis on smooth unimodal posteriors; larger is over-proposing, smaller is over-rejecting. Tune the proposal covariance to $\Sigma \propto \hat{\mathcal{I}}^{-1}/n$ where available; otherwise use the empirical covariance of a pilot chain. The tuner component below lets you feel the acceptance-rate-vs-scale trade-off directly.
+</RemarkBlock>
+
+<RemarkBlock number={7} title="Geometric ergodicity and heavy tails">
+Geometric ergodicity — the rate of convergence to $\pi$ is exponential — requires compatible proposal and target tails (ROB2004 §7.3). Polynomial-tailed targets (Student-$t$ with few degrees of freedom, scale-mixture distributions) violate geometric ergodicity under Gaussian proposals; §26.8 Rem 21 names the standard mitigation (heavier-tailed proposals or reparameterization).
+</RemarkBlock>
+
+<MetropolisHastingsTuner client:visible />
+
+<a id="section-26-3"></a>
+
+## 26.3 Gibbs sampling
+
+Gibbs sampling is the special case of MH where the proposal is a draw from a full conditional distribution — the acceptance probability turns out to be identically 1, so every proposal is accepted. The algorithm is the practical pathway from [Topic 25 §25.5's](/topics/bayesian-foundations-and-prior-selection#section-25-5) five canonical conjugate pairs to posterior inference in hierarchical and mixture models: when a full joint posterior has a non-conjugate structure but every coordinate's full conditional is conjugate, Gibbs lets us sample coordinate-by-coordinate using the closed-form updates we already know.
+
+Track 7 notation was locked in [Topic 25 §25.3](/topics/bayesian-foundations-and-prior-selection#section-25-3); we inherit every symbol verbatim. Topic 26 adds seven symbols specific to Markov-chain Monte Carlo:
+
+| Object | Symbol | Interpretation |
+|---|---|---|
+| Proposal density | $q(x' \mid x)$ | MH proposal kernel: density of $x'$ given current state $x$. |
+| Acceptance probability | $\alpha(x, x')$ | MH acceptance of $x'$ given proposal from $x$. |
+| Transition kernel | $K(x, dx')$ | One-step chain kernel: accept-move density plus rejection mass on $\\{x\\}$. |
+| Invariant distribution | $\pi$ | Satisfies $\int \pi K = \pi$. In Bayesian use $\pi$ is the posterior; reconciles with Topic 25's $\pi(\theta)$ prior by context. |
+| Gelman–Rubin statistic | $\hat R$ | Multi-chain convergence diagnostic; $\hat R \to 1$ as chains mix. |
+| Effective sample size | $N_{\text{eff}}$ (ESS) | $N / \bigl(1 + 2\sum_t \rho_t\bigr)$ — iid-equivalent sample count for the chain. |
+| Autocorrelation at lag $t$ | $\rho_t$ | $\mathrm{Corr}_\pi\bigl(f(X_0), f(X_t)\bigr)$ for fixed test function $f$; decays under geometric ergodicity. |
+
+HMC uses $(q, p)$ for the position–momentum pair following Neal 2011 convention. The letter $q$ thus does double duty — proposal kernel in MH notation, position coordinate in HMC notation — but the distinction is unambiguous by context (function-of-two-arguments vs pair-of-vectors).
+
+<DefinitionBlock number={3} title="Full conditionals, systematic-scan Gibbs">
+Let $\boldsymbol\theta = (\theta_1, \ldots, \theta_d) \in \mathbb{R}^d$ with joint target $\pi(\boldsymbol\theta)$. The **full conditional** of coordinate $i$ is
+
+$$\pi(\theta_i \mid \boldsymbol\theta_{-i}) \;=\; \frac{\pi(\boldsymbol\theta)}{\int \pi(\boldsymbol\theta) \, d\theta_i},$$
+
+where $\boldsymbol\theta_{-i} = (\theta_1, \ldots, \theta_{i-1}, \theta_{i+1}, \ldots, \theta_d)$. The **systematic-scan Gibbs** sampler iterates: at iteration $t+1$, for $i = 1, \ldots, d$ in sequence, draw $\theta_i^{(t+1)} \sim \pi\bigl(\theta_i \mid \theta_1^{(t+1)}, \ldots, \theta_{i-1}^{(t+1)}, \theta_{i+1}^{(t)}, \ldots, \theta_d^{(t)}\bigr)$.
+</DefinitionBlock>
+
+<TheoremBlock number={2} title="Gibbs is MH with α ≡ 1">
+The systematic-scan Gibbs sampler preserves $\pi$. Equivalently: each coordinate-wise sub-step is an MH step with acceptance probability identically 1.
+</TheoremBlock>
+
+<ProofBlock number={2} title="Proof of Thm 2 (Gibbs-as-MH)">
+**Step 1 — setup.** State $\boldsymbol\theta = (\theta_1, \ldots, \theta_d)$. Target $\pi(\boldsymbol\theta)$ with full conditionals $\pi(\theta_i \mid \boldsymbol\theta_{-i})$.
+
+**Step 2 — the $i$-th component update as MH.** Propose $\boldsymbol\theta' = (\theta_1, \ldots, \theta_i', \ldots, \theta_d)$ with density
+
+$$q_i(\boldsymbol\theta' \mid \boldsymbol\theta) \;=\; \pi(\theta_i' \mid \boldsymbol\theta_{-i}) \prod_{j \ne i} \mathbf{1}\\{\theta_j' = \theta_j\\},$$
+
+a proposal that only moves coordinate $i$, drawing it from the target's full conditional given the other coordinates held fixed.
+
+**Step 3 — factor the target.** By the defining property of conditional densities,
+
+$$\pi(\boldsymbol\theta) \;=\; \pi(\theta_i \mid \boldsymbol\theta_{-i}) \, \pi(\boldsymbol\theta_{-i}).$$
+
+**Step 4 — acceptance ratio.** Since $\boldsymbol\theta'_{-i} = \boldsymbol\theta_{-i}$ on the non-$i$ coordinates,
+
+$$\frac{\pi(\boldsymbol\theta') \, q_i(\boldsymbol\theta \mid \boldsymbol\theta')}{\pi(\boldsymbol\theta) \, q_i(\boldsymbol\theta' \mid \boldsymbol\theta)} \;=\; \frac{\pi(\theta_i' \mid \boldsymbol\theta_{-i}) \, \pi(\boldsymbol\theta_{-i}) \cdot \pi(\theta_i \mid \boldsymbol\theta_{-i})}{\pi(\theta_i \mid \boldsymbol\theta_{-i}) \, \pi(\boldsymbol\theta_{-i}) \cdot \pi(\theta_i' \mid \boldsymbol\theta_{-i})} \;=\; 1.$$
+
+So $\alpha \equiv 1$: every Gibbs proposal is accepted.
+
+**Step 5 — conclude.** By [Thm 1](#section-26-2) (MH correctness), each full-conditional sub-kernel $K_i$ preserves $\pi$. The systematic-scan Gibbs iteration is the composition $K_{\text{Gibbs}} = K_1 \circ K_2 \circ \cdots \circ K_d$, and composition of $\pi$-preserving kernels is $\pi$-preserving.
+
+∎ — using Thm 1 (MH correctness) and the composition closure of $\pi$-preserving kernels (MEY2009 §1.4).
+</ProofBlock>
+
+<img src="/images/topics/bayesian-computation-and-mcmc/26-3-gibbs-bivariate-normal-contour.png"
+     alt="Two-panel figure. Left: bivariate Normal posterior with correlation ρ = 0.8, elliptic contours. Overlaid are 30 Gibbs iterations as alternating vertical and horizontal line segments (each segment = one full-conditional draw). Right: trace plots of the two marginal coordinates showing Gibbs mixing."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<ExampleBlock number={3} title="Gibbs on bivariate Normal (conditional-MVN engine)">
+Let $(X, Y) \sim \mathcal{N}\!\bigl(\mathbf{0}, \Sigma\bigr)$ with $\Sigma = \begin{psmallmatrix}1 & \rho \\ \rho & 1\end{psmallmatrix}$. [Topic 8 Theorem 3](/topics/multivariate-distributions) — the conditional-MVN formula — gives the full conditionals in closed form: $X \mid Y = y \sim \mathcal{N}(\rho y, 1 - \rho^2)$ and $Y \mid X = x \sim \mathcal{N}(\rho x, 1 - \rho^2)$. Gibbs alternates between these two draws. For $\rho$ near 1, consecutive draws are highly correlated — axis-aligned updates crawl along the diagonal — and mixing slows. This is the canonical Gibbs failure mode that motivates block updates, reparameterization, or HMC.
+</ExampleBlock>
+
+<ExampleBlock number={4} title="Gibbs on conjugate hierarchies (reusing Topic 25)">
+When a posterior splits into blocks whose full conditionals are each conjugate, Gibbs becomes the composition of closed-form Topic 25 updates. The five canonical pairs from [§25.5 Examples 2–5](/topics/bayesian-foundations-and-prior-selection#section-25-5) become Gibbs building blocks without re-derivation:
+
+- $\theta \mid \mathbf{y}, \sigma^2 \sim \pi(\theta \mid \mathbf{y}, \sigma^2)$ via [Normal-Normal conjugacy](/topics/bayesian-foundations-and-prior-selection#section-25-5) (Ex 2);
+- $\sigma^2 \mid \mathbf{y}, \theta \sim \mathrm{Inv\text{-}Gamma}(\cdot, \cdot)$ via [Normal-Normal-IG](/topics/bayesian-foundations-and-prior-selection#section-25-5) (Ex 3);
+- Poisson rates $\lambda_j$ via [Gamma-Poisson](/topics/bayesian-foundations-and-prior-selection#section-25-5) (Ex 4);
+- Multinomial probabilities via [Dirichlet-Multinomial](/topics/bayesian-foundations-and-prior-selection#section-25-5) (Ex 5).
+
+Each sub-step is a single conjugate update; Gibbs glues them together. The composition preserves the joint posterior by Thm 2.
+</ExampleBlock>
+
+<RemarkBlock number={8} title="Random-scan versus systematic-scan Gibbs">
+Systematic-scan Gibbs updates coordinates in a fixed order $1, 2, \ldots, d$ each sweep. Random-scan Gibbs picks a coordinate uniformly at random each step. Both preserve $\pi$; systematic-scan is the standard practical choice because it guarantees every coordinate is updated each sweep. Random-scan is easier to analyze theoretically (the transition kernel becomes symmetric in a way systematic-scan is not).
+</RemarkBlock>
+
+<RemarkBlock number={9} title="Block Gibbs for correlated coordinates">
+When coordinates are strongly correlated, one-at-a-time Gibbs mixes slowly (§26.3 Ex 3 with $\rho \to 1$). Block Gibbs groups correlated coordinates and updates them jointly from the joint full conditional — which must itself be tractable. For bivariate Normal with unknown covariance, drawing $(\theta_1, \theta_2)$ as a block from their joint conditional is a simple MVN draw and mixes far better than alternating $\theta_1 \mid \theta_2$ and $\theta_2 \mid \theta_1$.
+</RemarkBlock>
+
+<RemarkBlock number={10} title="Collapsed Gibbs: the LDA pattern">
+**Collapsed Gibbs** integrates out nuisance parameters analytically before sampling. The canonical example is Latent Dirichlet Allocation: [Topic 8 §8.10 Theorem 6](/topics/multivariate-distributions) gives the Dirichlet-Multinomial conjugacy that lets us integrate out topic proportions $\boldsymbol\theta_d$ and word distributions $\boldsymbol\phi_k$ in closed form, leaving only the discrete topic assignments to sample via Gibbs. The state space shrinks dramatically and mixing improves — when the integrated-out parameters exist in closed form.
+</RemarkBlock>
+
+<GibbsStepper client:visible />
+
+<a id="section-26-4"></a>
+
+## 26.4 Hamiltonian Monte Carlo
+
+Random-walk Metropolis proposes diffusively — each step is a small Gaussian perturbation, and the chain random-walks its way across the target. On high-dimensional correlated targets, diffusion is slow: to traverse a ridge of length $R$ with proposal scale $\sigma$, the chain needs $O(R^2 / \sigma^2)$ steps. Hamiltonian Monte Carlo replaces diffusion with **Hamiltonian dynamics**: introduce an auxiliary momentum variable, let the chain flow deterministically along constant-energy contours for $L$ steps, then accept or reject based on a (numerically-introduced) energy discrepancy. The result is a proposal that can traverse $R$ in $O(R)$ steps — a quadratic speedup that scales to thousands of parameters.
+
+<DefinitionBlock number={4} title="Hamiltonian, leapfrog integrator">
+Let $\pi(q)$ be the target density on $\mathbb{R}^d$ ($q$ = position, following NEA2011). Augment with momentum $p \in \mathbb{R}^d$ and joint density
+
+$$\tilde\pi(q, p) \;=\; \pi(q) \, \mathcal{N}(p; \mathbf{0}, M),$$
+
+where $M \succ 0$ is the **mass matrix**. The **Hamiltonian** is $H(q, p) = U(q) + K(p)$ with $U(q) = -\log \pi(q)$ and $K(p) = \tfrac{1}{2} p^\top M^{-1} p$; so $\tilde\pi(q, p) \propto \exp(-H(q, p))$. The **leapfrog integrator** approximates the Hamiltonian flow over time $L\epsilon$ via $L$ steps of size $\epsilon$:
+
+$$p^{(k+1/2)} \;=\; p^{(k)} - \tfrac{\epsilon}{2} \nabla U(q^{(k)}),$$
+
+$$q^{(k+1)} \;=\; q^{(k)} + \epsilon M^{-1} p^{(k+1/2)},$$
+
+$$p^{(k+1)} \;=\; p^{(k+1/2)} - \tfrac{\epsilon}{2} \nabla U(q^{(k+1)}).$$
+</DefinitionBlock>
+
+<TheoremBlock number={3} title="HMC detailed balance via volume preservation + time reversibility">
+The HMC iteration — resample $p \sim \mathcal{N}(\mathbf{0}, M)$, run $L$ leapfrog steps, flip momentum, MH-accept — preserves $\tilde\pi$ on the extended state space $(q, p)$. Consequently $\pi$ is preserved on the marginal $q$-space.
+</TheoremBlock>
+
+<ProofBlock number={3} title="Proof of Thm 3 (HMC, sketch)">
+**Step 1 — setup.** Target $\pi(q)$ on $\mathbb{R}^d$; joint $\tilde\pi(q, p) = \pi(q) \, \mathcal{N}(p; \mathbf{0}, M) \propto \exp(-H(q, p))$ with $H = U + K$, $U = -\log\pi$, $K = \tfrac{1}{2} p^\top M^{-1} p$.
+
+**Step 2 — HMC iteration.** (i) Draw $p \sim \mathcal{N}(\mathbf{0}, M)$ — a Gibbs step on $p$, which preserves $\tilde\pi$ since the momentum marginal is exactly $\mathcal{N}(\mathbf{0}, M)$. (ii) Run $L$ leapfrog steps to obtain $(q^*, p^*)$. (iii) Flip momentum: proposal $(\tilde q, \tilde p) = (q^*, -p^*)$. (iv) Accept with probability $\alpha = \min\!\bigl\{1,\, \exp\!\bigl(H(q, p) - H(\tilde q, \tilde p)\bigr)\bigr\}$.
+
+**Step 3 — property (a): volume preservation.** Each leapfrog half-step is a shear: the momentum half-update depends only on $q$, and the position update depends only on $p^{(k+1/2)}$. Shears have Jacobian determinant 1, and a composition of shears preserves the determinant. The full leapfrog map $\Phi_\epsilon^L$ therefore satisfies $\bigl|\det \partial \Phi_\epsilon^L / \partial (q, p)\bigr| = 1$. [NEA2011 §5.2.]
+
+**Step 4 — property (b): time reversibility.** The map $\mathrm{Flip} \circ \Phi_\epsilon^L$ is an involution: $(\mathrm{Flip} \circ \Phi_\epsilon^L)^2 = \mathrm{id}$. This combines the leapfrog's symmetric step-symmetric structure (each step reversible under momentum flip) with the terminal momentum flip in step (iii). [NEA2011 §5.3.]
+
+**Step 5 — extended-state MH.** Properties (a) + (b) make the proposal distribution on $(q, p)$ **symmetric**: $\tilde q_{\text{prop}}\bigl((\tilde q, \tilde p) \mid (q, p)\bigr) = \tilde q_{\text{prop}}\bigl((q, p) \mid (\tilde q, \tilde p)\bigr)$. Apply Thm 1 to $\tilde\pi$ with a symmetric proposal; the acceptance ratio simplifies to
+
+$$\alpha \;=\; \min\!\left\{1,\, \frac{\tilde\pi(\tilde q, \tilde p)}{\tilde\pi(q, p)}\right\} \;=\; \min\!\bigl\{1,\, \exp(H(q, p) - H(\tilde q, \tilde p))\bigr\},$$
+
+matching step (iv).
+
+**Step 6 — why exact Hamiltonian flow would give α ≡ 1.** Exact Hamiltonian dynamics conserves $H$ along trajectories, so $\alpha = \exp(H - H) = 1$. Leapfrog introduces $O(\epsilon^2)$ discretization error in $H$; the MH accept step corrects for this bias. Symplectic integrators (NEA2011 §5.4) bound the error uniformly in $L$ — unlike non-symplectic methods, which suffer energy drift and unbounded rejection.
+
+∎ — sketch, using Thm 1 (MH correctness), leapfrog volume preservation (NEA2011 §5.2), and time reversibility (NEA2011 §5.3). Symplectic-integrator construction and $O(\epsilon^2)$ energy bound: NEA2011 §5.4.
+</ProofBlock>
+
+<img src="/images/topics/bayesian-computation-and-mcmc/26-4-hmc-leapfrog-trajectory.png"
+     alt="Two-panel featured figure. Left: the banana posterior with a single HMC trajectory of L = 20 leapfrog steps. Arrows show momentum at several waypoints; points mark positions. The terminal momentum-flip is annotated. Right: Hamiltonian H(q, p) over the trajectory, near-constant with small O(ε²) oscillation (|ΔH|_max ≈ 0.7) — not perfect conservation, by design, so readers can see why the MH accept step is needed."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<ExampleBlock number={5} title="HMC on the banana">
+Target $\pi(q) \propto \exp\!\bigl(-\tfrac12\bigl[(1-q_1)^2 + 10(q_2 - q_1^2)^2\bigr]\bigr)$. Gradient $\nabla U$ is smooth and cheap to evaluate. Run HMC with $\epsilon = 0.05$, $L = 25$, mass matrix $M = I$. Starting from $(0, 0)$, HMC flows along the banana ridge — a single trajectory can traverse from one end to the other, whereas random-walk Metropolis with any reasonable scale needs thousands of steps for the same distance. The acceptance rate comfortably exceeds 0.6 under these settings; the 0.234 / 0.44 random-walk rule does not apply.
+</ExampleBlock>
+
+<RemarkBlock number={11} title="Leapfrog as a symplectic integrator">
+Symplectic integrators conserve a modified Hamiltonian $\tilde H = H + O(\epsilon^2)$ exactly, so while $H$ oscillates by $O(\epsilon^2)$ per step, the oscillation stays bounded as $L$ grows. Non-symplectic methods (e.g., Runge–Kutta applied to Hamilton's equations) suffer energy drift that grows linearly with $L$ — the chain would reject almost every proposal at long horizons. NEA2011 §5.4 derives the leapfrog modified Hamiltonian in full.
+</RemarkBlock>
+
+<RemarkBlock number={12} title="Energy-conservation tolerance and target acceptance">
+Standard HMC practice targets acceptance 0.65–0.85 — higher than random-walk's 0.234 / 0.44 because HMC proposals are near-deterministic and should land close in energy. Too-low acceptance signals $\epsilon$ is too large (energy drift swamps the target density); too-high acceptance signals $\epsilon$ is too small (we're under-exploring). Divergences — iterations where $|H_{\text{end}} - H_{\text{start}}|$ exceeds a threshold — indicate leapfrog has "fallen off" the energy manifold; in Stan / PyMC these are reported and usually signal a reparameterization opportunity.
+</RemarkBlock>
+
+<RemarkBlock number={13} title="Mass matrix as Fisher-information geometry">
+The mass matrix $M$ defines the momentum distribution and hence the geometry HMC sees. The theoretically motivated choice is $M = \mathcal{I}(\theta_0)$ — Fisher information at the posterior mode — because then the transformed target is locally standard Normal and HMC's Gaussian-momentum default is well-conditioned. This connects to [Topic 14 Theorem 4](/topics/maximum-likelihood) (MLE asymptotic normality; the posterior is approximately Gaussian with covariance $\mathcal{I}^{-1}/n$ at large $n$) and to [Topic 25 §25.8's Remark 16](/topics/bayesian-foundations-and-prior-selection#section-25-8) Laplace-at-MAP approximation, which provides the standard HMC **warm-start** in practice: initialize at $\hat\theta_{\text{MAP}}$ and set $M = \hat{\mathcal{I}}(\hat\theta_{\text{MAP}})$ from the Laplace Hessian.
+</RemarkBlock>
+
+<HamiltonianTrajectoryAnimator client:visible />
+
+<a id="section-26-5"></a>
+
+## 26.5 The No-U-Turn Sampler
+
+HMC's two tuning parameters — leapfrog step size $\epsilon$ and trajectory length $L$ — are hard to pick by hand. Too-small $L$ under-explores; too-large $L$ wastes computation on trajectories that fold back on themselves. The No-U-Turn Sampler (NUTS, Hoffman–Gelman 2014) solves the length problem adaptively: extend the trajectory by binary doubling until the endpoints would turn back toward each other, then terminate. Combined with dual-averaging step-size adaptation during warmup, NUTS has no user-tunable hyperparameters — the pedagogical reason Stan and PyMC ship it as the default.
+
+<DefinitionBlock number={5} title="U-turn criterion">
+Given forward and backward trajectory endpoints $q_+, p_+$ and $q_-, p_-$ (with $q_+ = q_-$ initially), a **U-turn** is detected when either of
+
+$$\langle q_+ - q_-,\; p_+\rangle \;<\; 0 \quad \text{or} \quad \langle q_+ - q_-,\; p_-\rangle \;<\; 0$$
+
+holds. Intuitively: the trajectory has turned far enough that its endpoint momenta no longer point outward along the displacement vector. NUTS terminates doubling when a U-turn is detected on any subtree.
+</DefinitionBlock>
+
+<TheoremBlock number={4} title="NUTS correctness (Hoffman–Gelman 2014 Thm 1, stated only)">
+The NUTS sampler with dual-averaging step-size adaptation and slice-sampling-based subtree validity preserves $\pi$ on the extended state space $(q, p)$.
+</TheoremBlock>
+
+Proof is not reproduced here; see **HOF2014 Theorem 1** for the slice-sampling + multinomial-sampling argument. The key ingredients are (i) the slice variable ensures subtree nodes are valid samples from the typical set, (ii) uniform sampling from the valid subtree preserves $\tilde\pi$ by a deferred MH correction, and (iii) the U-turn stopping rule is reversible — terminating at a U-turn gives the same distribution whether we build forward or backward. HOF2014 Algorithms 2–3 state the recursive tree-doubling; Algorithm 6 gives the production-quality weighted-multinomial sampling scheme.
+
+<img src="/images/topics/bayesian-computation-and-mcmc/26-5-nuts-tree-doubling.png"
+     alt="Binary doubling tree of leapfrog subtrajectories for NUTS on a 1-D Gaussian target. Nodes are (q, p) states; edges are leapfrog steps. The tree doubles forward and backward alternately; the U-turn termination is highlighted at the boundary where the dot-product criterion flips sign. The uniformly-sampled terminal node is marked."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<ExampleBlock number={6} title="NUTS on the 8-schools hierarchical model (preview)">
+The canonical NUTS stress test is Rubin's 1981 8-schools hierarchical model (GEL2013 §5.5). Eight observed treatment effects $y_j \sim \mathcal{N}(\theta_j, \sigma_j^2)$ with school-level effects $\theta_j \sim \mathcal{N}(\mu, \tau^2)$ and hyperpriors on $(\mu, \tau)$. At small $\tau$, the posterior develops **Neal's funnel** — a narrow neck where $\tau$ concentrates near zero. NUTS with Stan's default settings handles this acceptably; non-centered reparameterization (§26.8 Rem 23, Topic 28) improves mixing further. Full applied workflow in [§26.9 Example 11](#section-26-9).
+</ExampleBlock>
+
+<RemarkBlock number={14} title="Dual-averaging step-size adaptation">
+During a warmup phase (~1000 iterations), NUTS runs a dual-averaging scheme that targets acceptance around 0.8 by adjusting $\epsilon$ on the fly (HOF2014 §3.2). After warmup, $\epsilon$ is frozen and sampling begins. The adaptation is optimization-free — just Robbins–Monro stochastic approximation on the acceptance deviation — and converges reliably under Hoffman–Gelman's conditions.
+</RemarkBlock>
+
+<RemarkBlock number={15} title="NUTS is the default in Stan, PyMC, and NumPyro">
+Stan (since 2014), PyMC (since 2016), and NumPyro all ship NUTS as their default sampler. The practical implication for practitioners: specify the model in the DSL, let NUTS sample, check $\hat R$ and ESS. The §26.9 workflow assumes this; implementation internals are deferred to <ExternalLink href="https://formalml.com/topics/probabilistic-programming" site="formalml" topic="Probabilistic Programming" /> (§26.10 Rem 33).
+</RemarkBlock>
+
+<a id="section-26-6"></a>
+
+## 26.6 Convergence diagnostics
+
+Every MCMC algorithm preserves its target asymptotically. The practical question is whether a finite-length chain has run long enough to represent the target — and since MCMC samples are dependent, standard iid intuitions about sample size don't apply. Two diagnostics dominate applied work: **Gelman–Rubin $\hat R$** (has this chain mixed across its starting region?) and **effective sample size** (how many iid-equivalent samples does this correlated chain represent?).
+
+<DefinitionBlock number={6} title="Gelman–Rubin R̂">
+Suppose we run $M$ chains of length $N$ from dispersed starting points, on a scalar summary of the chain state. Let $\bar x_m$ and $s_m^2$ be the $m$-th chain's sample mean and (unbiased) sample variance, and $\bar{\bar x}$ the grand mean across chains. Define
+
+$$B \;=\; \frac{N}{M - 1} \sum_{m=1}^M \bigl(\bar x_m - \bar{\bar x}\bigr)^2,\qquad W \;=\; \frac{1}{M} \sum_{m=1}^M s_m^2.$$
+
+The **Gelman–Rubin statistic** is
+
+$$\hat R \;=\; \sqrt{\frac{N-1}{N} \,+\, \frac{B}{N\,W}}.$$
+</DefinitionBlock>
+
+When chains have converged to $\pi$, the between-chain variance $B$ falls to the within-chain variance $W$ and $\hat R \to 1$. Stan's default threshold is $\hat R < 1.01$ before declaring convergence. $\hat R$ **detects non-convergence** — high $\hat R$ means chains disagree — but $\hat R \approx 1$ does **not prove** convergence; see §26.8 Rem 22 and the stuck-chain failure mode.
+
+<DefinitionBlock number={7} title="Effective sample size (Geyer IPS)">
+For a single chain of length $N$ with lag-$t$ autocorrelation $\rho_t$, the **effective sample size** is
+
+$$N_{\text{eff}} \;=\; \frac{N}{1 \,+\, 2\sum_{t=1}^\infty \rho_t}.$$
+
+In practice the infinite sum is truncated by **Geyer's initial-positive-sequence** estimator: group consecutive lags into pairs $\Gamma_m = \rho_{2m} + \rho_{2m+1}$, accumulate until the first non-positive pair, and stop. For AR(1) with parameter $\varphi$, the theoretical $\tau = (1 + \varphi) / (1 - \varphi)$, so $\varphi = 0.9$ gives $\tau = 19$ and $N_{\text{eff}} \approx N / 19$.
+</DefinitionBlock>
+
+<ExampleBlock number={7} title="R̂ collapse as chains mix">
+Initialize four chains at positions $\\{-3, -1, 1, 3\\}$ targeting $\mathcal{N}(0, 1)$ with a random-walk Metropolis proposal at the RGG-1997 optimum. At iteration 100, chains are still concentrated near their starts — $\hat R \approx 1.34$ signals mixing has not occurred. By iteration 2000, chains have interpenetrated; $\hat R$ has dropped below 1.01. The dashboard component below lets you scrub through this collapse interactively.
+</ExampleBlock>
+
+<ExampleBlock number={8} title="ESS collapse under autocorrelation">
+Generate an AR(1) chain $X_{t+1} = \varphi X_t + \sqrt{1 - \varphi^2} \, Z_t$ with $Z_t \sim \mathcal{N}(0, 1)$ iid. This has stationary variance 1, but lag-1 autocorrelation $\varphi$. For $N = 5000$ samples at $\varphi = 0.9$, the Geyer-IPS estimator gives $N_{\text{eff}} \approx 263$ — the 5000 correlated samples carry the information of roughly 263 iid samples. At $\varphi = 0.99$, $N_{\text{eff}} / N$ falls below 1%.
+</ExampleBlock>
+
+<img src="/images/topics/bayesian-computation-and-mcmc/26-6-rhat-ess-diagnostics.png"
+     alt="Three-panel diagnostic figure. Left: 4-chain trace plot on a bimodal target — chains start dispersed and cross. Middle: R̂ trajectory vs. iteration, falling from 1.5 toward 1.01 as chains mix. Right: N_eff/N versus AR(1) coefficient φ, dropping from near 1 at φ = 0 toward 0 at φ → 1."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<RemarkBlock number={16} title="Diagnostics detect non-convergence, not convergence">
+A low $\hat R$ and a high ESS are necessary but not sufficient for convergence — chains that have collectively missed a mode show $\hat R \approx 1$ despite the posterior being fundamentally wrong (§26.8 Ex 10). ROB2004 Ch. 12 is forceful on this point: diagnostics tell us when the sampler has *failed*, not when it has *succeeded*. Substantive prior knowledge — does the posterior make sense? are credible intervals plausible? — remains the primary convergence check.
+</RemarkBlock>
+
+<RemarkBlock number={17} title="Modern refinements: rank-normalized split-R̂">
+Vehtari et al. 2021 ("Rank-normalized split-$\hat R$ and improved ESS") updates $\hat R$ to address two GEL1992 weaknesses: (i) sensitivity to marginal non-normality (addressed via rank-normalization), and (ii) insensitivity to intra-chain drift (addressed by splitting each chain in half and treating the halves as separate chains). Stan 2.21+ and PyMC 5+ use this variant. The GEL1992 formulation in Def 6 is still the pedagogical anchor.
+</RemarkBlock>
+
+<RemarkBlock number={18} title="Practical thresholds">
+Stan's defaults: $\hat R < 1.01$ per parameter and $N_{\text{eff}} > 400$ per parameter before the chain is considered safe to report. The $N_{\text{eff}} > 400$ guidance comes from Monte Carlo standard error: at $N_{\text{eff}} = 400$, the 95% MC-CI half-width is $1.96 \, \sigma_{\text{MC}} / \sqrt{400} \approx 0.098 \, \sigma_{\text{MC}}$ — less than 10% of the posterior standard deviation, which is typically the target precision for downstream inference.
+</RemarkBlock>
+
+<ConvergenceDiagnosticDashboard client:visible />
+
+<a id="section-26-7"></a>
+
+## 26.7 The ergodic theorem and MCMC-CLT
+
+MCMC is justified by a dependent-sequence analog of the Strong Law of Large Numbers. Where [Topic 10 Theorem 10.5](/topics/law-of-large-numbers#section-10-5) (Kolmogorov/Etemadi) guarantees that iid sample means converge almost surely to the expectation, the Markov-chain ergodic theorem extends the same conclusion to time averages along a chain — provided the chain is irreducible, aperiodic, and positive recurrent.
+
+<TheoremBlock number={5} title="Markov-chain ergodic theorem">
+Let $(X_n)_{n \ge 0}$ be a Markov chain on state space $\mathcal{X}$ with transition kernel $K$ and invariant distribution $\pi$. Assume:
+
+- **π-irreducibility.** For every $A$ with $\pi(A) > 0$ and every $x$, there exists $n \ge 1$ with $K^n(x, A) > 0$.
+- **Aperiodicity.** $\gcd\\{n \ge 1 : K^n(x, \\{x\\}) > 0\\} = 1$ for some (hence all) $x$ in the support.
+- **Positive recurrence.** $\mathbb{E}_x[\tau_A] < \infty$ for every $A$ with $\pi(A) > 0$, where $\tau_A$ is the first return time to $A$.
+
+Then for every $f \in L^1(\pi)$,
+
+$$\bar f_n \;:=\; \frac{1}{n} \sum_{t=1}^n f(X_t) \;\xrightarrow{n \to \infty}\; \mathbb{E}_\pi[f] \quad \text{almost surely.}$$
+
+Equivalently: time averages converge to $\mathbb{E}_\pi[f]$ almost surely. This generalizes [Topic 10 Thm 10.5](/topics/law-of-large-numbers#section-10-5) (iid SLLN) to dependent sequences; the new ingredients are **irreducibility, aperiodicity, and positive recurrence** replacing iid independence.
+</TheoremBlock>
+
+<ProofBlock number={4} title="Proof of Thm 5 (ergodic theorem, sketch)">
+**Step 1 — reduction to regeneration.** Under π-irreducibility + aperiodicity + positive recurrence the chain is positive Harris recurrent. These conditions give a **small set** $C$ and a minorization: there exist $\varepsilon > 0$, integer $m \ge 1$, and a probability measure $\nu$ with
+
+$$K^m(x, \cdot) \;\ge\; \varepsilon \, \nu(\cdot) \quad \text{for all } x \in C.$$
+
+**Athreya–Ney splitting** constructs an auxiliary binary variable: whenever the chain enters $C$, trigger a "regeneration" with probability $\varepsilon$, drawing the next state from $\nu$ and forgetting history. Regeneration times $\tau_1 < \tau_2 < \cdots$ partition the chain into iid blocks.
+
+**Step 2 — block sums are iid.** Define
+
+$$S_k \;=\; \sum_{t = \tau_{k-1}+1}^{\tau_k} f(X_t),\qquad T_k \;=\; \tau_k - \tau_{k-1}.$$
+
+By regeneration, $\\{(S_k, T_k) : k \ge 1\\}$ is iid. The Kac formula gives
+
+$$\mathbb{E}[S_k] \;=\; \mathbb{E}[T_k] \cdot \mathbb{E}_\pi[f].$$
+
+Positive recurrence ⇒ $\mathbb{E}[T_k] < \infty$.
+
+**Step 3 — apply Topic 10 Thm 10.5 to the block sums.** The $\\{S_k\\}$ are iid with $\mathbb{E}|S_k| \le \mathbb{E}[T_k] \cdot \mathbb{E}_\pi[|f|] < \infty$. By the Kolmogorov/Etemadi SLLN ([Topic 10 Thm 10.5](/topics/law-of-large-numbers#section-10-5)),
+
+$$\frac{1}{m} \sum_{k=1}^m S_k \;\xrightarrow{\text{a.s.}}\; \mathbb{E}[T_k] \cdot \mathbb{E}_\pi[f],\qquad \frac{1}{m} \sum_{k=1}^m T_k \;\xrightarrow{\text{a.s.}}\; \mathbb{E}[T_k].$$
+
+This is the canonical bridge: **time averages converge to $\mathbb{E}_\pi[f]$ almost surely. This generalizes [Topic 10 Thm 10.5](/topics/law-of-large-numbers#section-10-5) (iid SLLN) to dependent sequences; the new ingredients are irreducibility, aperiodicity, and positive recurrence replacing iid independence.**
+
+**Step 4 — renewal interpolation.** Let $N(n) = \max\\{k : \tau_k \le n\\}$ count regenerations by time $n$. Elementary renewal theory: $N(n)/n \to 1/\mathbb{E}[T_k]$ almost surely. Then
+
+$$\bar f_n \;=\; \frac{N(n)}{n} \cdot \frac{1}{N(n)} \sum_{k=1}^{N(n)} S_k + o(1) \;\xrightarrow{\text{a.s.}}\; \frac{1}{\mathbb{E}[T_k]} \cdot \mathbb{E}[T_k] \cdot \mathbb{E}_\pi[f] \;=\; \mathbb{E}_\pi[f],$$
+
+with $o(1)$ absorbing the partial last block.
+
+**Step 5 — bridge made explicit.** The iid SLLN operates on the *block sums* $S_k$, not directly on $f(X_t)$. Regeneration structure — induced by (i) irreducibility (ensures $C$ is reached), (ii) aperiodicity (permits Athreya–Ney minorization), (iii) positive recurrence (makes $\mathbb{E}[T_k] < \infty$) — converts the correlated chain into an iid-of-blocks sequence. The three conditions are the **additional ingredients** the Markov extension requires beyond iid independence.
+
+∎ — sketch, using Topic 10 Thm 10.5 (Kolmogorov/Etemadi SLLN) for the block-sum SLLN, Athreya–Ney splitting (MEY2009 §5.1), and the renewal theorem (MEY2009 §17.1). Full proof: MEY2009 Thm 17.0.1.
+</ProofBlock>
+
+<TheoremBlock number={6} title="MCMC-CLT (Kipnis–Varadhan 1986, stated)">
+Under geometric ergodicity (a strengthening of positive recurrence requiring exponential return times), for $f \in L^2(\pi)$ with suitable regularity,
+
+$$\sqrt{n}\,\bigl(\bar f_n - \mathbb{E}_\pi[f]\bigr) \;\xrightarrow{d}\; \mathcal{N}\bigl(0,\, \sigma^2_{\text{MC}}\bigr),$$
+
+with asymptotic variance
+
+$$\sigma^2_{\text{MC}} \;=\; \mathrm{Var}_\pi(f) \;+\; 2\sum_{t=1}^\infty \mathrm{Cov}_\pi\bigl(f(X_0),\, f(X_t)\bigr).$$
+</TheoremBlock>
+
+Proof is not reproduced; see **VDV1998 §2** for the general martingale-CLT machinery and **Kipnis–Varadhan 1986** for the Markov-chain specialization under geometric ergodicity conditions. The key structural difference from the iid CLT: the asymptotic variance picks up autocovariance terms — the reason ESS (§26.6 Def 7) is less than the chain length. The Monte Carlo standard error is $\sigma_{\text{MC}} / \sqrt{n}$, consistent with the ESS interpretation as an effective count of iid-equivalent samples.
+
+<ExampleBlock number={9} title="Batch-means estimator of σ²_MC">
+Estimating $\sigma^2_{\text{MC}}$ from a single chain is the practical MCMC analog of estimating population variance. The **batch-means** estimator (Jones et al. 2006) splits the chain into $b \approx \sqrt{n}$ batches of size $n/b$, computes per-batch means $\bar x_1, \ldots, \bar x_b$, and sets
+
+$$\hat\sigma^2_{\text{MC}} \;=\; \frac{n}{b} \cdot \frac{1}{b - 1} \sum_{k=1}^b \bigl(\bar x_k - \bar{\bar x}\bigr)^2.$$
+
+For iid samples from $\mathcal{N}(0, 1)$, this estimator converges to the variance 1. For AR(1) with $\varphi = 0.9$, it inflates to approximately $\tau \cdot 1 = 19$, matching the theoretical $(1+\varphi)/(1-\varphi)$.
+</ExampleBlock>
+
+<img src="/images/topics/bayesian-computation-and-mcmc/26-7-ergodic-running-mean.png"
+     alt="Two-panel ergodic-theorem figure. Left: running mean of four chains on the standard Normal target, all converging to E_π[f] = 0 as iteration grows — the almost-sure convergence guaranteed by Thm 5. Right: the √n-scaled error √n(bar f_n - 0) collected across 500 independent runs, plotted as a histogram overlaid with the N(0, σ²_MC) MCMC-CLT reference curve (σ²_MC estimated via batch means)."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<RemarkBlock number={19} title="The Topic-10 bridge, explicit">
+The ergodic theorem is the bridge from [Topic 10](/topics/law-of-large-numbers) to modern computational statistics. Time averages converge to $\mathbb{E}_\pi[f]$ almost surely. This generalizes [Topic 10 Thm 10.5](/topics/law-of-large-numbers#section-10-5) (iid SLLN) to dependent sequences; the new ingredients are **irreducibility, aperiodicity, and positive recurrence** replacing iid independence. Roughly: iid independence is a very strong form of "the past stops mattering"; under the ergodic conditions, the past stops mattering after a random — but finite-on-average — recurrence time.
+</RemarkBlock>
+
+<RemarkBlock number={20} title="Monte Carlo standard error ties it together">
+MCMC-CLT gives the applied MC standard error $\sigma_{\text{MC}} / \sqrt{N_{\text{eff}}}$, where $N_{\text{eff}}$ is the effective sample size (§26.6 Def 7). The practical workflow: run a chain, estimate $\sigma^2_{\text{MC}}$ via batch means, report $\hat{\mathbb{E}}_\pi[f] \pm 1.96 \hat\sigma_{\text{MC}} / \sqrt{N_{\text{eff}}}$ — the exact same construction as frequentist CIs, with $N_{\text{eff}}$ in place of $N$.
+</RemarkBlock>
+
+<a id="section-26-8"></a>
+
+## 26.8 Failure modes
+
+The ergodic-theorem conditions are not automatic — bimodal posteriors can trap chains in a single mode indefinitely, polynomial tails can destroy geometric ergodicity, and bad starting points can leave chains stuck for the entire computational budget. The diagnostics of §26.6 detect *some* of these; the rest require substantive knowledge of the posterior.
+
+<ExampleBlock number={10} title="Stuck chains on a bimodal target">
+Consider the mixture $\pi(x) = \tfrac12 \mathcal{N}(x; -3, 0.25) + \tfrac12 \mathcal{N}(x; 3, 0.25)$. Both modes have probability 1/2; the valley between them has density ~$e^{-18}$, effectively zero at double precision. Run four random-walk Metropolis chains starting at $\\{-3, -2.8, 2.8, 3\\}$ with a local proposal scale of 0.5. The chains centered at $+3$ stay there; the chains centered at $-3$ stay there. Neither group ever visits the other mode within the 5000-iteration budget.
+
+The between-chain variance $B$ is large (chains have different means — one pair near $-3$, one near $+3$), but **so is** the within-chain variance $W$ — because "variance around the local chain mean" is dominated by the motion within each mode. When we compute $\hat R = \sqrt{(N-1)/N + B/(N W)}$, the ratio $B/W$ is not catastrophically large, and $\hat R$ comes out near 1.0 despite the pooled posterior missing the valley entirely. The diagnostic is **fooled**.
+
+This is the canonical caution in §26.6 Rem 16: low $\hat R$ is not a proof of convergence. Multi-modal problems require domain knowledge (is the posterior expected to be multi-modal? if so, tempering or dispersed restarts are mandatory).
+</ExampleBlock>
+
+<img src="/images/topics/bayesian-computation-and-mcmc/26-8-stuck-chain-multimodal.png"
+     alt="Two-panel failure-mode figure. Left: trace plots of four MH chains, two stuck in the left mode around x = -3 and two stuck in the right mode around x = +3. Right: pooled posterior histogram compared with the true bimodal density; the valley between the modes is completely missing from the pooled sample. The displayed R̂ is approximately 1.02 — low enough to pass a naive convergence check."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<RemarkBlock number={21} title="Geometric ergodicity and heavy tails">
+Geometric ergodicity fails when the target has polynomial tails and the proposal is light-tailed: returns to typical-set sets take polynomial (not exponential) time, the Kipnis–Varadhan CLT conditions fail, and batch-means variance estimates become unreliable. ROB2004 §7.3 gives conditions for geometric ergodicity of random-walk Metropolis; the standard fix for heavy-tailed targets is a Student-$t$ proposal (polynomial tails match polynomial tails) or a reparameterization that mod-transforms the tail behavior. Roberts–Rosenthal 2004 Thm 13 is the general geometric-ergodicity statement.
+</RemarkBlock>
+
+<RemarkBlock number={22} title="Starting-point dependence: multi-chain + dispersion">
+Single-chain MCMC is diagnostically weak: any pathology that affects the chain uniformly (stuck in a mode, never reaching the typical set, divergent leapfrog trajectory) can look fine from inside. Multi-chain MCMC with dispersed starting points — standard practice since GEL1992 — lets $\hat R$ detect disagreement between chains that started in different regions. The canonical heuristic: initialize chains by sampling from an over-dispersed approximation to the posterior, typically 4 chains with starting points at the MAP $\pm$ 3 MAP-std in each coordinate.
+</RemarkBlock>
+
+<RemarkBlock number={23} title="Non-identifiability and funnels">
+Hierarchical models produce **Neal's funnel**: the hyperparameter $\tau$ (group-level scale) is inversely correlated with the conditional standard deviation of the individual-level effects $\theta_j$, producing a long thin neck where $\tau$ concentrates near zero. HMC trajectories in this region either diverge (energy explodes) or crawl along the narrow direction. The standard mitigation is **non-centered reparameterization**: sample $\tilde\theta_j \sim \mathcal{N}(0, 1)$ and set $\theta_j = \mu + \tau \tilde\theta_j$, decoupling the funnel's correlation structure. NEA2011 §4 and [Topic 28](/topics/hierarchical-bayes-and-partial-pooling) develop this in the hierarchical-model context.
+</RemarkBlock>
+
+<a id="section-26-9"></a>
+
+## 26.9 Applied workflow: the 8-schools hierarchical model
+
+Putting it all together: Rubin 1981 / GEL2013 §5.5 **eight-schools** model is the canonical hierarchical-Bayes demonstration. Eight observed treatment effects from an educational intervention, each with a standard error. The question: is the "true" effect shared across schools, completely independent, or partially pooled?
+
+Data:
+
+$$y = (28,\, 8,\, -3,\, 7,\, -1,\, 1,\, 18,\, 12),\qquad \sigma = (15,\, 10,\, 16,\, 11,\, 9,\, 11,\, 10,\, 18).$$
+
+Model:
+
+$$y_j \;\sim\; \mathcal{N}(\theta_j,\, \sigma_j^2),\qquad \theta_j \;\sim\; \mathcal{N}(\mu,\, \tau^2),\qquad \mu \;\sim\; \mathcal{N}(0,\, 100),\qquad \tau \;\sim\; \mathrm{Half\text{-}Cauchy}(0,\, 5).$$
+
+The workflow: specify the model in Stan or PyMC, let NUTS sample 4 chains × 2000 iterations with 1000 warmup each, inspect $\hat R$ and ESS for every parameter, plot the posterior for $\tau$ (this is where Neal's funnel lives) and for each $\theta_j$ (partial pooling visible: school 1's raw $y_1 = 28$ shrinks substantially toward the group mean $\mu \approx 7$).
+
+<img src="/images/topics/bayesian-computation-and-mcmc/26-9-eight-schools-workflow.png"
+     alt="Three-panel 8-schools NUTS output. Panel 1: per-school posterior for theta_j as violin plots; the extreme schools (school 1 with y=28, school 3 with y=-3) show strong shrinkage toward the group mean. Panel 2: posterior for tau on the log scale, showing the funnel-shaped concentration near tau = 0. Panel 3: R̂ and ESS bar charts for all 10 parameters, all R̂ values below 1.01 and ESS values above 400 — the Stan defaults."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<ExampleBlock number={11} title="8-schools via NUTS">
+Running the 8-schools model in Stan with default settings — 4 chains, 2000 post-warmup iterations each — produces $\hat R < 1.01$ for every parameter and $N_{\text{eff}} > 400$ for every parameter. Neal's funnel is visible in $\log \tau$: the posterior concentrates in a narrow neck near $\tau \approx 0$ that fans out as $\tau$ grows. The school-level effects $\theta_j$ all shrink toward the group mean $\mu \approx 7.7$; the shrinkage is stronger for schools with larger observational $\sigma_j$ (less individual information). The partial-pooling posterior has noticeably smaller uncertainty than either fully-pooled ($\theta_j = \mu$ for all $j$, 1 parameter) or no-pooling ($\theta_j = y_j$ with known $\sigma_j$, 8 independent problems) analyses. This is the classical Bayesian hierarchical advantage, made computational by NUTS.
+
+The non-centered reparameterization — sample $\tilde\theta_j \sim \mathcal{N}(0, 1)$ and set $\theta_j = \mu + \tau \tilde\theta_j$ — eliminates the funnel at the cost of slightly more verbose model code. Full treatment in [Topic 28](/topics/hierarchical-bayes-and-partial-pooling).
+
+Note on implementation: the notebook backing this topic uses conjugate Gibbs with an Inverse-Gamma prior on $\tau^2$ for self-containment and speed; production workflows use NUTS with a Half-Cauchy prior on $\tau$ per Gelman 2006 ("Prior distributions for variance parameters in hierarchical models"). The two yield comparable $\theta_j$ posteriors but differ on the $\tau$ marginal — the Half-Cauchy is the applied-recommendation default.
+</ExampleBlock>
+
+<a id="section-26-10"></a>
+
+## 26.10 Forward map
+
+Topic 26 covers the core four algorithms and their diagnostics. Ten specialized methods — each a coherent research area in its own right — defer to downstream topics or to <ExternalLink href="https://formalml.com/" site="formalml" topic="formalml.com" />. Two in-Track-7 topics extend the Bayesian framework further. One cross-track connection to variational inference frames the speed-exactness trade-off.
+
+<RemarkBlock number={24} title="Topic 27 — marginal-likelihood estimation and BMA">
+[Topic 27](/topics/bayesian-model-comparison-and-bma) develops Bayes-factor-based model comparison and Bayesian model averaging (BMA). The computational core is estimating marginal likelihoods $m(\mathbf{y}) = \int L(\theta) \pi(\theta) \, d\theta$ from MCMC draws — hard because MCMC only gives the posterior's *shape*, not its normalization. Standard methods: bridge sampling (Meng–Wong 1996), path sampling via thermodynamic integration, nested sampling (Skilling 2006). The Topic 24 BIC-Laplace approximation is the low-effort first pass; Topic 27 gives the high-effort production versions.
+</RemarkBlock>
+
+<RemarkBlock number={25} title="Topic 28 — hierarchical Bayes and partial pooling">
+[Topic 28](/topics/hierarchical-bayes-and-partial-pooling) generalizes the 8-schools example to arbitrary hierarchical models. The computational pattern is Gibbs (when conjugate) or NUTS (when not); the scientific content is partial pooling, shrinkage, and empirical Bayes as degenerate limits of full hierarchical inference. Continuous shrinkage priors (horseshoe, Cauchy+) complete the modern applied toolkit.
+</RemarkBlock>
+
+<RemarkBlock number={26} title="Variational inference: the speed–exactness trade">
+When conjugacy fails and MCMC is too slow (hierarchical models with millions of parameters, deep Bayesian neural networks), **variational inference** approximates the posterior with a tractable family $q(\theta)$ by minimizing $\mathrm{KL}(q \parallel p(\cdot \mid \mathbf{y}))$. VI is orders of magnitude faster than MCMC for large $d$; MCMC is asymptotically exact, VI is not. Both are supported in Stan, PyMC, and NumPyro; the practical rule is "start with VI for fast exploration, switch to MCMC for final inference." Full treatment at <ExternalLink href="https://formalml.com/topics/variational-inference" site="formalml" topic="Variational Inference" />.
+</RemarkBlock>
+
+<RemarkBlock number={27} title="Adaptive MCMC">
+**Adaptive MCMC** — Haario–Saksman–Tamminen 2001, Roberts–Rosenthal 2009 — updates the proposal covariance during the run using the empirical covariance of accumulated samples. Requires diminishing-adaptation conditions (the adaptation must eventually stop) to preserve ergodicity; practical implementations freeze the adaptation after a warmup phase. BRO2011 Ch. 4 is the standard reference.
+</RemarkBlock>
+
+<RemarkBlock number={28} title="Reversible-jump MCMC">
+**Reversible-jump MCMC** (Green 1995) generalizes MH to trans-dimensional state spaces — models whose dimension is itself a parameter (variable selection, mixture models with unknown component count). The dimension-changing moves require Jacobian corrections to the acceptance ratio. BRO2011 Ch. 3 gives a clean exposition; <ExternalLink href="https://formalml.com/topics/reversible-jump-mcmc" site="formalml" topic="Reversible-Jump MCMC" /> develops the formalml treatment.
+</RemarkBlock>
+
+<RemarkBlock number={29} title="Riemann-manifold HMC">
+**Riemann-manifold HMC** (Girolami–Calderhead 2011) replaces HMC's constant mass matrix with a position-dependent metric $M(q) = \mathcal{I}(q)$ — Fisher information evaluated at the current position. Pays local geometry respect; requires second-derivative computation of $\log \pi$. <ExternalLink href="https://formalml.com/topics/riemann-manifold-hmc" site="formalml" topic="Riemann-Manifold HMC" /> develops the differential-geometry machinery.
+</RemarkBlock>
+
+<RemarkBlock number={30} title="Stochastic-gradient MCMC">
+**Stochastic-gradient Langevin dynamics** (Welling–Teh 2011) and **SGHMC** (Chen–Fox–Guestrin 2014) replace the full-batch gradient in HMC / Langevin with a mini-batch gradient plus injected noise, scaling MCMC to large-$n$ datasets at the cost of introducing asymptotic bias. Standard in Bayesian deep learning. <ExternalLink href="https://formalml.com/topics/stochastic-gradient-mcmc" site="formalml" topic="Stochastic-Gradient MCMC" /> develops the theory.
+</RemarkBlock>
+
+<RemarkBlock number={31} title="Sequential Monte Carlo">
+**Sequential Monte Carlo / particle filters** target a sequence $\pi_t$ indexed by time or annealing parameter, importance-sampling from $\pi_{t-1}$ and resampling. The natural framework for state-space models (Kalman filter generalizations) and rare-event estimation. Parallel to MCMC's single-target framework. <ExternalLink href="https://formalml.com/topics/sequential-monte-carlo" site="formalml" topic="Sequential Monte Carlo" />.
+</RemarkBlock>
+
+<RemarkBlock number={32} title="Parallel tempering">
+**Parallel tempering / simulated tempering** runs multiple chains at different temperatures $T_1 < T_2 < \cdots < T_k$ (target $\pi^{1/T_i}$); chains occasionally swap states via an MH-style accept step. Hot chains explore freely; cool chains sample $\pi$ precisely; swaps transfer the hot-chain exploration to cool-chain precision. Standard multi-modal mitigation. BRO2011 Ch. 11.
+</RemarkBlock>
+
+<RemarkBlock number={33} title="Stan / PyMC / NumPyro as probabilistic-programming compilers">
+Modern Bayesian practice runs through **probabilistic programming languages** (PPLs): Stan, PyMC, NumPyro, Turing.jl. Users specify a model in a DSL; the compiler generates the log-density and its gradient (automatic differentiation), then hands the result to NUTS. Compiler engineering — transformation to unconstrained space, reverse-mode autodiff, target densification — is outside Topic 26's scope. <ExternalLink href="https://formalml.com/topics/probabilistic-programming" site="formalml" topic="Probabilistic Programming" />.
+</RemarkBlock>
+
+<RemarkBlock number={34} title="Nested sampling">
+**Nested sampling** (Skilling 2006) transforms the marginal-likelihood integral into a 1-D integral over the prior's likelihood levels, sampled via a sequence of constrained-prior draws. Natural for problems where the marginal likelihood itself is the target (Bayes factors, cosmological model comparison). [Topic 27](/topics/bayesian-model-comparison-and-bma) develops the modern machinery.
+</RemarkBlock>
+
+<RemarkBlock number={35} title="Bayesian nonparametric MCMC">
+**Bayesian nonparametrics** — Chinese restaurant process / Dirichlet process mixtures, Indian buffet process — extends Bayesian inference to infinite-dimensional parameter spaces. MCMC for these models involves custom samplers (slice sampling, truncation, finite-dimensional approximations) tied to the specific construction. <ExternalLink href="https://formalml.com/topics/bayesian-nonparametrics" site="formalml" topic="Bayesian Nonparametrics" />.
+</RemarkBlock>
+
+<RemarkBlock number={36} title="Slice sampling">
+**Slice sampling** (Neal 2003) is an auxiliary-variable MH variant that avoids proposal-scale tuning: introduce a uniform-height auxiliary variable $u$ below the density, then draw uniformly over the level set $\\{\theta : \pi(\theta) > u\\}$. Adaptive without dual-averaging; robust on 1-D problems. Often described as "MH-without-tuning." Less used than HMC / NUTS at scale because the level-set sampling is expensive in high dimensions.
+</RemarkBlock>
+
+<img src="/images/topics/bayesian-computation-and-mcmc/26-10-forward-map.png"
+     alt="Forward-map diagram for Topic 26. Central amber hub 'Bayesian Computation (Topic 26)' with arrows outward to Topic 27 (BMA, marginal likelihood, bridge/path/nested sampling), Topic 28 (hierarchical Bayes, partial pooling, non-centered parameterization), and formalml (variational inference, SG-MCMC, SMC, Riemann-manifold HMC, RJMCMC, Bayesian nonparametric MCMC). Back-arrows from Topics 4, 8, 10, 11, 14, 24, 25 showing the prerequisite chain. Track-color coded."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+Topic 26 closes Track 7's computational pass. The remaining two Track 7 topics — [Topic 27](/topics/bayesian-model-comparison-and-bma) on Bayesian model comparison and BMA, [Topic 28](/topics/hierarchical-bayes-and-partial-pooling) on hierarchical Bayes — build on Topic 26's MCMC machinery to handle model uncertainty and group-structured priors, respectively. The ergodic-theorem bridge to [Topic 10](/topics/law-of-large-numbers) is the theoretical anchor: MCMC's asymptotic contract is a dependent-sequence SLLN, and every diagnostic and variance estimator we compute traces back to the Kipnis–Varadhan CLT.
+
+---
+
+### References
+
+1. Nicholas Metropolis, Arianna W. Rosenbluth, Marshall N. Rosenbluth, Augusta H. Teller & Edward Teller. (1953). [*Equation of State Calculations by Fast Computing Machines*](https://doi.org/10.1063/1.1699114). *Journal of Chemical Physics*, 21(6), 1087–1092.
+2. W. K. Hastings. (1970). [*Monte Carlo sampling methods using Markov chains and their applications*](https://doi.org/10.1093/biomet/57.1.97). *Biometrika*, 57(1), 97–109.
+3. Stuart Geman & Donald Geman. (1984). [*Stochastic Relaxation, Gibbs Distributions, and the Bayesian Restoration of Images*](https://doi.org/10.1109/TPAMI.1984.4767596). *IEEE Transactions on Pattern Analysis and Machine Intelligence*, 6(6), 721–741.
+4. Radford M. Neal. (2011). [*MCMC using Hamiltonian dynamics*](https://www.mcmchandbook.net/HandbookChapter5.pdf). In *Handbook of Markov Chain Monte Carlo*, Chapter 5. CRC Press.
+5. Matthew D. Hoffman & Andrew Gelman. (2014). [*The No-U-Turn Sampler: Adaptively Setting Path Lengths in Hamiltonian Monte Carlo*](https://jmlr.org/papers/v15/hoffman14a.html). *Journal of Machine Learning Research*, 15(47), 1593–1623.
+6. Andrew Gelman & Donald B. Rubin. (1992). [*Inference from Iterative Simulation Using Multiple Sequences*](https://doi.org/10.1214/ss/1177011136). *Statistical Science*, 7(4), 457–472.
+7. Sean P. Meyn & Richard L. Tweedie. (2009). [*Markov Chains and Stochastic Stability*](https://doi.org/10.1017/CBO9780511626630) (2nd ed.). Cambridge University Press.
+8. Christian P. Robert & George Casella. (2004). [*Monte Carlo Statistical Methods*](https://link.springer.com/book/10.1007/978-1-4757-4145-2) (2nd ed.). Springer.
+9. Steve Brooks, Andrew Gelman, Galin L. Jones & Xiao-Li Meng (Editors). (2011). [*Handbook of Markov Chain Monte Carlo*](https://www.mcmchandbook.net/). CRC Press.
+10. Andrew Gelman, John B. Carlin, Hal S. Stern, David B. Dunson, Aki Vehtari & Donald B. Rubin. (2013). [*Bayesian Data Analysis*](http://www.stat.columbia.edu/~gelman/book/) (3rd ed.). CRC Press.
+11. A. W. van der Vaart. (1998). [*Asymptotic Statistics*](https://www.cambridge.org/core/books/asymptotic-statistics/A3C7DAD3F7E66A1FA60E9C8FE132EE1D). Cambridge University Press.
