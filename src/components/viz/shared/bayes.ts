@@ -302,21 +302,43 @@ export function posterior(
 // PriorPosterior animators hit them every slider tick.
 // ═══════════════════════════════════════════════════════════════════════════
 
-/** Memoization cache for (α, β, level) → [lo, hi]. Cleared by the GC; no eviction. */
+/**
+ * Memoization for Beta credible / HPD intervals. Keys are quantized to 1e-6
+ * so IEEE-float rounding (e.g. `0.30000000000000004`) doesn't create
+ * near-duplicate entries, and the cache is bounded with FIFO eviction to
+ * prevent unbounded growth over long-lived slider sessions. Map iteration
+ * order is insertion order, so `.keys().next()` yields the oldest entry.
+ */
+const _CACHE_MAX = 1024;
 const _credibleBetaCache = new Map<string, [number, number]>();
 const _hpdBetaCache = new Map<string, [number, number]>();
 
+function _cacheKey(alpha: number, beta: number, level: number): string {
+  // 1e-6 quantization is ≥3 orders of magnitude finer than any slider step
+  // used in the components (step ≥ 1e-3 in practice) and absorbs float noise.
+  const q = (x: number) => Math.round(x * 1e6) / 1e6;
+  return `${q(alpha)},${q(beta)},${q(level)}`;
+}
+
+function _memoSet<K, V>(cache: Map<K, V>, key: K, value: V): void {
+  if (cache.size >= _CACHE_MAX) {
+    const oldest = cache.keys().next().value;
+    if (oldest !== undefined) cache.delete(oldest);
+  }
+  cache.set(key, value);
+}
+
 /**
  * Equal-tailed (1−α) credible interval for Beta(α, β). Memoized on
- * the (alpha, beta, level) triple because the BvM animator requests
- * intervals on every slider frame.
+ * a quantized (alpha, beta, level) triple because the BvM animator
+ * requests intervals on every slider frame.
  */
 export function credibleIntervalBeta(
   alpha: number,
   beta: number,
   level: number,
 ): [number, number] {
-  const key = `${alpha},${beta},${level}`;
+  const key = _cacheKey(alpha, beta, level);
   const cached = _credibleBetaCache.get(key);
   if (cached) return cached;
   const tail = (1 - level) / 2;
@@ -324,7 +346,7 @@ export function credibleIntervalBeta(
     quantileBeta(tail, alpha, beta),
     quantileBeta(1 - tail, alpha, beta),
   ];
-  _credibleBetaCache.set(key, interval);
+  _memoSet(_credibleBetaCache, key, interval);
   return interval;
 }
 
@@ -346,12 +368,20 @@ export function credibleIntervalGamma(
 }
 
 function _gammaQuantileBisect(p: number, alpha: number, beta: number): number {
+  // Degenerate quantiles.
+  if (p <= 0) return 0;
+  if (p >= 1) return Infinity;
   // Initial upper bound: mean + 10·sd.
   const mean = alpha / beta;
   const sd = Math.sqrt(alpha) / beta;
   let lo = 0;
   let hi = Math.max(mean + 10 * sd, 1);
-  while (cdfGamma(hi, alpha, beta) < p) hi *= 2;
+  // Expand upper bound until cdfGamma(hi) ≥ p, capped to prevent infinite loops
+  // for extreme p near 1 or numerical-precision failures. 40 doublings gives
+  // hi > 1e12 × initial bound — well past any practically reachable quantile.
+  for (let expand = 0; expand < 40 && cdfGamma(hi, alpha, beta) < p; expand++) {
+    hi *= 2;
+  }
   for (let i = 0; i < 60; i++) {
     const mid = 0.5 * (lo + hi);
     if (cdfGamma(mid, alpha, beta) < p) lo = mid;
@@ -445,7 +475,7 @@ export function hpdIntervalBeta(
   beta: number,
   level: number,
 ): [number, number] {
-  const key = `${alpha},${beta},${level}`;
+  const key = _cacheKey(alpha, beta, level);
   const cached = _hpdBetaCache.get(key);
   if (cached) return cached;
   const eps = 1e-4;
@@ -455,7 +485,7 @@ export function hpdIntervalBeta(
     level,
     500,
   );
-  _hpdBetaCache.set(key, interval);
+  _memoSet(_hpdBetaCache, key, interval);
   return interval;
 }
 
@@ -589,17 +619,23 @@ export function posteriorVariance(
  * Jeffreys prior density π_J(θ) = √I(θ) for a one-parameter family.
  *
  * Shapes:
- *   bernoulli    → π(θ) ∝ θ^{−1/2}(1−θ)^{−1/2}   (Beta(½, ½) up to a const)
- *   poisson      → π(λ) ∝ λ^{−1/2}
- *   normal-mean  → π(μ) ∝ 1 / σ                   (flat; requires knownVariance)
- *   normal-scale → π(σ) ∝ 1 / σ                   (log-flat; the classical
- *                                                   "reference" scale prior)
- *   exponential  → π(λ) ∝ 1 / λ
+ *   bernoulli    → π(θ) ∝ θ^{−1/2}(1−θ)^{−1/2}   (proportional to Beta(½, ½);
+ *                                                   proper after normalization)
+ *   poisson      → π(λ) ∝ λ^{−1/2}                (improper; integral diverges
+ *                                                   as λ → ∞)
+ *   normal-mean  → π(μ) ∝ 1 / σ                   (flat in μ; requires
+ *                                                   knownVariance; improper on ℝ)
+ *   normal-scale → π(σ) ∝ 1 / σ                   (log-flat; improper; the
+ *                                                   classical "reference" scale)
+ *   exponential  → π(λ) ∝ 1 / λ                   (improper at both 0 and ∞)
  *
- * All five are improper; the `∝` constant is dropped because downstream
- * Bayes-rule calculations only need the proportional kernel. See brief
- * §25.7 Thm 4 derivation for Bernoulli and Normal-scale; the other three
- * are named only (JEF1961 Ch. III).
+ * The Bernoulli Jeffreys prior is proper (Beta(½, ½) integrates to 1 on
+ * (0, 1) after normalization); the other four are improper but yield proper
+ * posteriors when combined with a likelihood that supplies integrability
+ * (Def 7). The `∝` constant is dropped because downstream Bayes-rule
+ * calculations only need the proportional kernel. See brief §25.7 Thm 4
+ * for the Bernoulli and Normal-scale derivations; the other three are
+ * named only (JEF1961 Ch. III).
  */
 export function jeffreysPrior(
   family: 'bernoulli' | 'poisson' | 'normal-mean' | 'normal-scale' | 'exponential',
@@ -746,10 +782,12 @@ export function posteriorSample(
  *   normal-normal → Normal(μ_n, σ_n² + σ²) density.
  *   gamma-poisson → NegativeBinomial PMF (see pmfNegativeBinomialPosterior).
  *
- * Dirichlet-Multinomial predictive is a Dirichlet-Multinomial compound, itself
- * multivariate; Normal-Normal-IG predictive is a non-standardized Student-t.
- * Both are deferred — call `pdfStudentTMarginal` directly for the latter and
- * sum `pmfBetaBinomial` over nNew trials for the former.
+ * Dirichlet-Multinomial predictive is multivariate and requires the proper
+ * Dirichlet-Multinomial PMF (equivalently, multivariate Beta / log-Γ ratios
+ * over the future count vector); a dedicated helper is deferred to Topic 27
+ * or 28 where multivariate predictive checks become the operational tool.
+ * Normal-Normal-IG predictive is a non-standardized Student-t; call
+ * `pdfStudentTMarginal` directly for that case.
  */
 export function posteriorPredictive(
   family: ConjugateFamily,

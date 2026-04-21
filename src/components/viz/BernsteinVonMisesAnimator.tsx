@@ -20,6 +20,7 @@ import {
   posteriorMean,
   posteriorVariance,
   credibleIntervalBeta,
+  credibleIntervalGamma,
   credibleIntervalNormal,
   type PriorHyperparams,
   type SuffStats,
@@ -131,8 +132,26 @@ export default function BernsteinVonMisesAnimator() {
     return posterior(preset.family, priorHP, suffStats);
   }, [preset, suffStats]);
 
-  // ── Density grids on the same [support.min, support.max] interval ────────
+  // ── Density grids and TV distance ────────────────────────────────────────
+  // The chart is drawn on [support.min, support.max] (the posterior's support),
+  // but TV is integrated on a wider interval so the Normal-at-MLE's mass
+  // outside a constrained support (e.g., λ < 0 for Gamma-Poisson or θ < 0 /
+  // θ > 1 for Beta-Binomial) contributes to |p − q|. Without this widening,
+  // the negative-tail of the Normal vanishes from the sum and TV is
+  // systematically underestimated — especially at small n where the Normal
+  // approximation is exactly where it matters least.
   const { xs, posteriorDensity, normalDensity, tvDistance } = useMemo(() => {
+    const approxVariance = 1 / (n * fisherInfo);
+    const approxStd = Math.sqrt(approxVariance);
+
+    // Helper: posterior density respecting the posterior's native support.
+    const posteriorDensityAt = (x: number) => {
+      if (family === 'beta-binomial' && (x <= 0 || x >= 1)) return 0;
+      if (family === 'gamma-poisson' && x <= 0) return 0;
+      return posteriorPdfAt(family, post, x);
+    };
+
+    // Chart grid — plotted support only.
     const xs_ = new Array<number>(gridPoints);
     const p_ = new Array<number>(gridPoints);
     const q_ = new Array<number>(gridPoints);
@@ -140,15 +159,23 @@ export default function BernsteinVonMisesAnimator() {
     for (let i = 0; i < gridPoints; i++) {
       const x = support.min + i * dx;
       xs_[i] = x;
-      p_[i] = posteriorPdfAt(family, post, x);
-      // Normal-at-MLE approximation: N(MLE, I⁻¹/n). Fisher info is per-observation,
-      // so posterior variance is 1/(n·I). When I(θ) varies with θ, we use observed
-      // Fisher at the MLE — the standard BvM plug-in.
-      q_[i] = pdfNormal(x, mle, 1 / (n * fisherInfo));
+      p_[i] = posteriorDensityAt(x);
+      q_[i] = pdfNormal(x, mle, approxVariance);
     }
-    // TV distance ½·∫|p−q|dx (BvM's native convergence metric).
+
+    // TV grid — widened to include ±8σ of the Normal so the tail mass
+    // outside the posterior's support is captured in |p − q|.
+    const tvMin = Math.min(support.min, mle - 8 * approxStd);
+    const tvMax = Math.max(support.max, mle + 8 * approxStd);
+    const tvDx = (tvMax - tvMin) / (gridPoints - 1);
     let tv = 0;
-    for (let i = 0; i < gridPoints; i++) tv += 0.5 * Math.abs(p_[i] - q_[i]) * dx;
+    for (let i = 0; i < gridPoints; i++) {
+      const x = tvMin + i * tvDx;
+      const pVal = posteriorDensityAt(x);
+      const qVal = pdfNormal(x, mle, approxVariance);
+      tv += 0.5 * Math.abs(pVal - qVal) * tvDx;
+    }
+
     return { xs: xs_, posteriorDensity: p_, normalDensity: q_, tvDistance: tv };
   }, [family, post, mle, fisherInfo, n, support, gridPoints]);
 
@@ -417,12 +444,12 @@ function credibleInterval(family: Family, post: PosteriorHyperparams): [number, 
   if (family === 'normal-normal' && post.family === 'normal-normal') {
     return credibleIntervalNormal(post.mu0, post.sigma0_sq, 0.95);
   }
-  // Gamma: approximate via Normal on log scale (posterior mean ± 1.96·SD). Not exact
-  // but adequate for visual overlay at n ≥ 10 where Gamma is near-Normal.
+  // Gamma: use the exact cdfGamma-bisection solver from bayes.ts. Earlier
+  // drafts used a Normal(mean ± 1.96·SD) plug-in here, but that's the very
+  // approximation this BvM component is supposed to falsify at small n —
+  // we want the readout to show the *actual* posterior quantiles.
   if (family === 'gamma-poisson' && post.family === 'gamma-poisson') {
-    const mean = post.alpha0 / post.beta0;
-    const sd = Math.sqrt(post.alpha0) / post.beta0;
-    return [Math.max(0, mean - 1.96 * sd), mean + 1.96 * sd];
+    return credibleIntervalGamma(post.alpha0, post.beta0, 0.95);
   }
   return [0, 0];
 }
