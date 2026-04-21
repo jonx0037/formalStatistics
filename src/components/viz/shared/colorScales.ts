@@ -160,3 +160,44 @@ export const informationCriteriaLineStyles = {
   cp:   '2 2',
   loo:  '8 4 2 4',
 } as const;
+
+/**
+ * Topic 25 — Bayesian palette (Track 7). Three-color prior/likelihood/
+ * posterior trio matches the standard Bayesian-textbook visual grammar.
+ * Two utility colors support the BvM animator's dual-reference plot
+ * (`true` for the data-generating θ₀, `mle` for θ̂_MLE).
+ *
+ * Inherited by Topics 26–28. Mirrors the CSS variables `--color-prior` …
+ * `--color-mle` defined in `src/styles/global.css`, matching Topic 22's
+ * `glmFamilyColors` ↔ `--color-bernoulli` themed pattern.
+ *
+ *   prior      blue    — information before data
+ *   likelihood amber   — information from data
+ *   posterior  violet  — updated belief after Bayes
+ *   true       emerald — data-generating parameter θ₀ (BvM reference)
+ *   mle        orange  — frequentist θ̂_MLE (BvM reference)
+ */
+export const bayesianColors = {
+  prior:      'var(--color-prior)',
+  likelihood: 'var(--color-likelihood)',
+  posterior:  'var(--color-posterior)',
+  true:       'var(--color-true-parameter)',
+  mle:        'var(--color-mle)',
+} as const;
+
+export type BayesianColorKey = keyof typeof bayesianColors;
+
+/**
+ * SVG `stroke-dasharray` companion to `bayesianColors`. Provides redundant
+ * color+linestyle encoding so color-blind viewers can still distinguish
+ * prior / likelihood / posterior curves. Prior is solid (the baseline);
+ * likelihood is dashed (the update engine); posterior is solid but thicker
+ * in practice (set via stroke-width at the component level).
+ */
+export const bayesianLineStyles = {
+  prior:      'none',
+  likelihood: '6 3',
+  posterior:  'none',
+  true:       '2 2',
+  mle:        'none',
+} as const;

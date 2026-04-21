@@ -1,0 +1,781 @@
+---
+title: "Bayesian Foundations & Prior Selection"
+subtitle: "Track 7 opens with the parallel Bayesian formalism: treat θ as a random variable with a prior π(θ), update to a posterior p(θ | y) via Bayes' theorem, and produce every downstream quantity — point estimates, credible intervals, predictions — by integrating against the posterior. The featured result, Bernstein–von Mises, proves that under regularity the posterior concentrates on 𝒩(θ̂_MLE, 𝓘⁻¹/n) in total variation: Bayesian and frequentist inference agree asymptotically."
+status: "published"
+difficulty: "intermediate"
+prerequisites:
+  - "conditional-probability"
+  - "expectation-moments"
+  - "exponential-families"
+  - "multivariate-distributions"
+  - "maximum-likelihood"
+  - "regularization-and-penalized-estimation"
+  - "point-estimation"
+  - "confidence-intervals-and-duality"
+  - "model-selection-and-information-criteria"
+tags:
+  - "statistics"
+  - "bayesian-inference"
+  - "prior"
+  - "posterior"
+  - "conjugate-prior"
+  - "beta-binomial"
+  - "normal-normal"
+  - "gamma-poisson"
+  - "dirichlet-multinomial"
+  - "jeffreys-prior"
+  - "credible-interval"
+  - "hpd-interval"
+  - "map-estimate"
+  - "posterior-predictive"
+  - "bernstein-von-mises"
+  - "laplace-approximation"
+  - "marginal-likelihood"
+  - "prior-sensitivity"
+domain: "bayesian-statistics"
+videoId: null
+notebookPath: "notebooks/bayesian-foundations/25_bayesian_foundations.ipynb"
+githubUrl: "https://github.com/jonx0037/formalStatistics/blob/main/src/content/topics/bayesian-foundations-and-prior-selection.mdx"
+datePublished: 2026-04-20
+estimatedReadTime: 60
+abstract: "Topics 13–24 built the frequentist framework: point estimators evaluated by bias and MSE, tests defined by size and power, confidence intervals defined by coverage. Topic 25 opens Track 7 with the parallel Bayesian formalism — θ treated as a random variable with prior π(θ), updated to a posterior p(θ | y) ∝ L(θ) π(θ) via Bayes' theorem, with point estimates, credible intervals, and predictive distributions produced by integration against the posterior. §25.4 proves the general exponential-family conjugacy theorem — every regular exponential family admits a conjugate prior whose hyperparameters update by adding the sufficient statistic. §25.5 works the five canonical pairs: Beta-Binomial (full proof), Normal-Normal (known σ²), Normal-Normal-Inverse-Gamma (unknown σ²), Gamma-Poisson, Dirichlet-Multinomial. §25.6 defines credible intervals (equal-tailed and highest-posterior-density) and the posterior predictive, with a full proof of the Beta-Binomial compound. §25.7 treats prior selection as a substantive modeling decision: informative / weakly-informative / non-informative, with Jeffreys priors derived for Bernoulli (→ Beta(½, ½)) and Normal-scale (→ π(σ) ∝ 1/σ), and the Stone–Dawid–Zidek paradox as the cautionary note on improper priors. §25.8 is the featured section: Bernstein–von Mises (sketch, following van der Vaart §10) — under regularity, the posterior converges in total variation to 𝒩(θ̂_MLE, 𝓘⁻¹/n), so Bayesian credible and frequentist Wald intervals coincide asymptotically. The same section develops Laplace approximation to the posterior and to the marginal likelihood m(y) — the §24.4 BIC machinery lifted to the full posterior — and closes the MAP-as-penalized-MLE bridge from Topic 14 §14.11 Rem 9 through Topic 23 §23.7 Thm 5. §25.10 forward-maps Track 7: MCMC (Topic 26), BMA and Bayes factors (Topic 27), hierarchical and empirical Bayes (Topic 28), plus formalml forward-pointers to variational inference, GPs, and BNNs."
+formalcalculusPrereqs:
+  - topic: "multivariable-integration"
+    site: "formalcalculus"
+    relationship: "The marginal likelihood $m(\\mathbf{y}) = \\int L(\\theta)\\pi(\\theta)\\,d\\theta$ and posterior predictive $p(\\tilde y \\mid \\mathbf{y}) = \\int p(\\tilde y \\mid \\theta)p(\\theta \\mid \\mathbf{y})\\,d\\theta$ are integrals against the prior / posterior density. §25.4 Proof 1 does the conjugate-family closure calculation by identifying the integrand's kernel with a known density family."
+  - topic: "multivariable-calculus"
+    site: "formalcalculus"
+    relationship: "§25.8 Proof 3 (BvM sketch) Taylor-expands the log-posterior in a neighborhood of $\\hat\\theta_{\\text{MLE}}$; the leading Gaussian term is extracted via standard Taylor-with-remainder. The Laplace approximation remark is multivariate Taylor with a Hessian determinant."
+  - topic: "change-of-variables"
+    site: "formalcalculus"
+    relationship: "§25.7 Rem on reparameterization invariance of Jeffreys prior uses the Jacobian change-of-variables formula to show $\\pi_J(\\phi) = \\pi_J(\\theta)|d\\theta/d\\phi|$ for any monotone reparameterization $\\phi = g(\\theta)$."
+formalmlConnections:
+  - topic: "bayesian-neural-networks"
+    site: "formalml"
+    relationship: "BNN posteriors are MVN near the MAP estimate by BvM (§25.8 Thm 5); the Laplace approximation (§25.8 Rem 16) is the canonical construction. formalml's BNN topic develops non-conjugate posterior approximation via variational inference, extending Topic 25's Laplace machinery to deep-network-scale models."
+    url: "https://formalml.com/topics/bayesian-neural-networks"
+  - topic: "variational-inference"
+    site: "formalml"
+    relationship: "When conjugate priors break down (non-exponential-family likelihoods, hierarchical models beyond Topic 28) and MCMC is too slow, variational inference approximates the posterior with a tractable family $q(\\theta)$ minimizing $\\mathrm{KL}(q \\| p(\\cdot \\mid \\mathbf{y}))$. Topic 25 §25.10 pointers; formalml develops ELBO, mean-field VI, normalizing flows."
+    url: "https://formalml.com/topics/variational-inference"
+  - topic: "gaussian-processes"
+    site: "formalml"
+    relationship: "GPs are the infinite-dimensional generalization of Topic 25's finite-dimensional Bayesian framework: the prior is over functions rather than parameters, and the posterior is a conditional MVN (Topic 8 Thm 3 applied infinite-dimensionally)."
+    url: "https://formalml.com/topics/gaussian-processes"
+  - topic: "probabilistic-programming"
+    site: "formalml"
+    relationship: "Probabilistic programming languages (Stan, PyMC, NumPyro) automate the posterior computation Topic 25 does by hand — users specify prior × likelihood, the language handles sampling via HMC/NUTS. Topic 25's conjugate calculations show what the PPL would output for the easy cases."
+    url: "https://formalml.com/topics/probabilistic-programming"
+connections:
+  - topic: "conditional-probability"
+    relationship: "Topic 4's Bayes' theorem for events is lifted to parameters. The prior × likelihood ∝ posterior shorthand is the same multiplication as Topic 4's $P(A \\cap B) / P(B)$."
+  - topic: "exponential-families"
+    relationship: "Topic 7's conjugate-prior construction is the algebraic kernel of §25.4 Thm 2. Topic 25 adds credible intervals, posterior predictive, and prior-selection theory on top."
+  - topic: "maximum-likelihood"
+    relationship: "The MLE and the MAP are two halves of the same argmax — MAP maximizes $\\ell(\\theta) + \\log\\pi(\\theta)$. Under BvM (§25.8) they coincide asymptotically."
+  - topic: "model-selection-and-information-criteria"
+    relationship: "BIC is the first-order Laplace approximation to $-2\\log m(\\mathcal{M})$ (Topic 24 §24.4). §25.8 Rem 16 generalizes the Laplace machinery to the full posterior; Topic 27 returns to $m(\\mathbf{y})$ computation for BMA."
+  - topic: "bayesian-computation-and-mcmc"
+    relationship: "When the conjugate framework breaks down, MCMC is the standard tool. Topic 26 develops Metropolis–Hastings, Gibbs sampling (which uses Topic 25 conjugate full-conditionals as building blocks), HMC, and NUTS."
+  - topic: "bayesian-model-comparison-and-bma"
+    relationship: "Bayes factors $\\mathrm{BF}_{10} = m(\\mathbf{y} \\mid H_1) / m(\\mathbf{y} \\mid H_0)$ and BMA use the marginal likelihood §25.8 Rem 16 introduces. Full treatment Topic 27."
+  - topic: "hierarchical-bayes-and-partial-pooling"
+    relationship: "Hierarchical priors $\\theta_i \\mid \\mu \\sim \\pi(\\cdot \\mid \\mu)$, $\\mu \\sim \\pi(\\mu)$ generalize Topic 25's fixed-prior framework. Empirical Bayes uses the data to estimate $\\mu$. Topic 28 develops."
+references:
+  - type: "book"
+    author: "Andrew Gelman, John B. Carlin, Hal S. Stern, David B. Dunson, Aki Vehtari & Donald B. Rubin"
+    year: 2013
+    title: "Bayesian Data Analysis"
+    edition: "3rd"
+    publisher: "CRC Press"
+    url: "http://www.stat.columbia.edu/~gelman/book/"
+    note: "GEL2013. The standard modern reference. Ch. 2 (single-parameter models), Ch. 3 (multivariate, including Normal-Normal-Inverse-Gamma), Ch. 5 (hierarchical — Topic 28)."
+  - type: "book"
+    author: "José M. Bernardo & Adrian F. M. Smith"
+    year: 1994
+    title: "Bayesian Theory"
+    publisher: "Wiley"
+    url: "https://onlinelibrary.wiley.com/doi/book/10.1002/9780470316870"
+    note: "BER1994. Foundational-theory text. Ch. 4 (posterior inference), Ch. 5 (reference analysis, Jeffreys priors)."
+  - type: "book"
+    author: "Christian P. Robert"
+    year: 2007
+    title: "The Bayesian Choice"
+    edition: "2nd"
+    publisher: "Springer"
+    url: "https://link.springer.com/book/10.1007/0-387-71599-1"
+    note: "ROB2007. Decision-theoretic emphasis; §25.6 Rem 9 on posterior mean as Bayes estimator under squared-error loss."
+  - type: "book"
+    author: "Harold Jeffreys"
+    year: 1961
+    title: "Theory of Probability"
+    edition: "3rd"
+    publisher: "Oxford University Press"
+    url: "https://global.oup.com/academic/product/theory-of-probability-9780198503682"
+    note: "JEF1961. Historical source for the Jeffreys prior construction (§25.7 Thm 4). Ch. III covers the invariance property."
+  - type: "book"
+    author: "Dennis V. Lindley"
+    year: 2014
+    title: "Understanding Uncertainty"
+    edition: "Revised"
+    publisher: "Wiley"
+    url: "https://onlinelibrary.wiley.com/doi/book/10.1002/9781118650158"
+    note: "LIN2014. Subjective-Bayes anchor; §25.1 Rem 2 philosophy pointer."
+  - type: "book"
+    author: "A. W. van der Vaart"
+    year: 1998
+    title: "Asymptotic Statistics"
+    publisher: "Cambridge University Press"
+    url: "https://www.cambridge.org/core/books/asymptotic-statistics/A3C7DAD3F7E66A1FA60E9C8FE132EE1D"
+    note: "VDV1998. §10 contains the full Bernstein–von Mises proof Topic 25 §25.8 sketches."
+  - type: "article"
+    author: "Persi Diaconis & David Freedman"
+    year: 1986
+    title: "On the consistency of Bayes estimates"
+    publisher: "The Annals of Statistics 14(1): 1–26"
+    url: "https://doi.org/10.1214/aos/1176349830"
+    note: "DIA1986. BvM failure modes in infinite-dimensional parameter spaces (§25.8 Rem 18)."
+  - type: "book"
+    author: "George Casella & Roger L. Berger"
+    year: 2002
+    title: "Statistical Inference"
+    edition: "2nd"
+    publisher: "Duxbury"
+    url: "https://www.routledge.com/Statistical-Inference/Casella-Berger/p/book/9780534243128"
+    note: "CAS2002. §7.2 (Bayes estimators), §10.4 (Bayes vs frequentist contrast)."
+  - type: "book"
+    author: "E. L. Lehmann & George Casella"
+    year: 1998
+    title: "Theory of Point Estimation"
+    edition: "2nd"
+    publisher: "Springer"
+    url: "https://link.springer.com/book/10.1007/b98854"
+    note: "LEH1998. §4 (Bayes estimation)."
+  - type: "book"
+    author: "Trevor Hastie, Robert Tibshirani & Jerome Friedman"
+    year: 2009
+    title: "The Elements of Statistical Learning"
+    edition: "2nd"
+    publisher: "Springer"
+    url: "https://hastie.su.domains/ElemStatLearn/"
+    note: "HAS2009. §8.3 on MAP and shrinkage-as-prior."
+---
+
+import DefinitionBlock from '../../components/ui/DefinitionBlock.astro';
+import TheoremBlock from '../../components/ui/TheoremBlock.astro';
+import ProofBlock from '../../components/ui/ProofBlock.astro';
+import ExampleBlock from '../../components/ui/ExampleBlock.astro';
+import RemarkBlock from '../../components/ui/RemarkBlock.astro';
+import ExternalLink from '../../components/ui/ExternalLink.astro';
+
+import PriorPosteriorExplorer from '../../components/viz/PriorPosteriorExplorer.tsx';
+import ConjugatePairBrowser from '../../components/viz/ConjugatePairBrowser.tsx';
+import BernsteinVonMisesAnimator from '../../components/viz/BernsteinVonMisesAnimator.tsx';
+import PriorSensitivityComparator from '../../components/viz/PriorSensitivityComparator.tsx';
+
+## 25.1 Why Bayesian?
+
+Topics 13–24 treated the unknown parameter $\theta$ as a **fixed constant**: the MLE is a point; confidence intervals are random sets that cover $\theta$ with a specified long-run frequency; hypothesis tests reject or retain fixed null hypotheses. That framework has been extraordinarily productive — every result from point estimation through model selection fits within it — but it answers questions about procedures, not about $\theta$. A frequentist 95% confidence interval is a guarantee about the interval-constructing procedure, not a probability statement about the parameter.
+
+The Bayesian framework flips the setup. Treat $\theta$ itself as a **random variable**, specify a prior distribution $\pi(\theta)$ encoding what we know before observing data, then apply Bayes' theorem to obtain a posterior distribution $p(\theta \mid \mathbf{y})$ that is a probability statement about $\theta$ given the data. Every downstream quantity — point estimates, interval estimates, predictions, model comparisons — follows by integration against the posterior. The price is that we must specify a prior; the return is that every question about $\theta$ admits a direct probability answer.
+
+<img src="/images/topics/bayesian-foundations-and-prior-selection/25-1-prior-to-posterior-animation.png"
+     alt="Four-panel figure showing a Beta(2, 2) prior (blue) and posterior densities (purple) after observing 1, 5, 20, and 100 Bernoulli trials with true θ = 0.3. The prior is broad; the posterior sharpens and shifts toward θ = 0.3 as n grows, with the prior's influence visibly diminishing."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<RemarkBlock number={1} title="Distribution over θ vs point estimator">
+A frequentist answer to "what is $\theta$?" is a single number (the MLE) plus an interval around it justified by long-run coverage. A Bayesian answer is a density: the full posterior $p(\theta \mid \mathbf{y})$, which assigns probabilities to every neighborhood of parameter space. Point estimates (posterior mean, posterior median, MAP) and interval estimates (credible intervals, HPD intervals) are summaries of the posterior, not substitutes for it.
+</RemarkBlock>
+
+<RemarkBlock number={2} title="Subjective vs objective Bayes — scope note">
+The philosophical debate between subjective Bayes (LIN2014 — priors as genuine personal beliefs) and objective Bayes (JEF1961 — priors as reference or non-informative distributions that minimize subjective input) is out of scope for Topic 25. We treat priors as substantive modeling choices whose sensitivity we examine empirically (§25.7), and we note where the two schools diverge as we go.
+</RemarkBlock>
+
+<RemarkBlock number={3} title="What's in vs what's out">
+Topic 25 covers: Bayes' theorem for $\theta$ (§25.2), Track 7 notation (§25.3), exponential-family conjugacy with full proof (§25.4), five canonical conjugate pairs with Beta-Binomial in full (§25.5), credible intervals and posterior predictive (§25.6), prior selection including Jeffreys (§25.7), Bernstein–von Mises with a sketch proof (§25.8), multivariate Normal-Inverse-Wishart as a pointer (§25.9), and the forward-map to Track 7 (§25.10). It does **not** cover: MCMC algorithms (Topic 26), Bayes factors or BMA beyond naming (Topic 27), hierarchical and empirical Bayes (Topic 28), variational inference or Bayesian nonparametrics (formalml). Each deferral gets a §25.10 pointer.
+</RemarkBlock>
+
+<a id="section-25-2"></a>
+
+## 25.2 Bayes' theorem for a parameter
+
+The computational engine is Topic 4 Thm 4 (Bayes' theorem for events), lifted from a two-event statement $P(A \mid B) = P(B \mid A) P(A) / P(B)$ to a statement about densities on a continuous parameter space.
+
+<DefinitionBlock number={1} title="Prior, likelihood, posterior, marginal likelihood, posterior predictive">
+Let $\theta \in \Theta$ be an unknown parameter and $\mathbf{y} = (y_1, \ldots, y_n)$ an observed sample. The Bayesian framework attaches five densities to the inference problem:
+
+- **Prior** $\pi(\theta)$: distribution on $\Theta$ encoding information about $\theta$ before observing data.
+- **Likelihood** $L(\theta; \mathbf{y}) = p(\mathbf{y} \mid \theta)$: the sampling density, viewed as a function of $\theta$ with $\mathbf{y}$ fixed.
+- **Posterior** $p(\theta \mid \mathbf{y})$: distribution on $\Theta$ conditional on the observed data.
+- **Marginal likelihood** $m(\mathbf{y}) = \int_\Theta L(\theta; \mathbf{y}) \pi(\theta) \, d\theta$: the prior-predictive density of $\mathbf{y}$, also called the **evidence**.
+- **Posterior predictive** $p(\tilde y \mid \mathbf{y}) = \int_\Theta p(\tilde y \mid \theta) p(\theta \mid \mathbf{y}) \, d\theta$: distribution of a future observation $\tilde y$ integrating out posterior uncertainty.
+</DefinitionBlock>
+
+<TheoremBlock number={1} title="Bayes' theorem for a parameter (stated)">
+Under the measure-theoretic conditions of Topic 4 Thm 4 (absolute continuity of the joint distribution with respect to a product measure on $\Theta \times \mathcal{Y}^n$),
+
+$$p(\theta \mid \mathbf{y}) \;=\; \frac{L(\theta; \mathbf{y}) \, \pi(\theta)}{m(\mathbf{y})},$$
+
+where $m(\mathbf{y}) = \int_\Theta L(\theta; \mathbf{y}) \pi(\theta) \, d\theta$ is the marginal likelihood. Equivalently, in unnormalized form,
+
+$$p(\theta \mid \mathbf{y}) \;\propto\; L(\theta; \mathbf{y}) \, \pi(\theta).$$
+
+Proof is a direct application of [Topic 4 Thm 4](/topics/conditional-probability#section-4-5) to the joint density $p(\theta, \mathbf{y}) = \pi(\theta) L(\theta; \mathbf{y})$; the computation is exactly the event version with $P$ replaced by density integrals.
+</TheoremBlock>
+
+<ExampleBlock number={1} title="Coin toss — Beta(1, 1) prior plus 3 heads in 4 tosses">
+Let $Y \sim \mathrm{Binomial}(n=4, \theta)$ and place a uniform prior $\theta \sim \mathrm{Beta}(1, 1)$ (flat on $(0, 1)$). Observe $y = 3$. Then:
+
+$$L(\theta; y = 3) \;=\; \binom{4}{3} \theta^3 (1-\theta)^1 \;\propto\; \theta^3 (1-\theta),$$
+
+and the unnormalized posterior is
+
+$$p(\theta \mid y = 3) \;\propto\; \theta^3 (1 - \theta) \cdot 1 \;=\; \theta^3 (1-\theta),$$
+
+which is the kernel of $\mathrm{Beta}(4, 2)$. Normalizing, $p(\theta \mid y = 3) = \mathrm{Beta}(\theta; 4, 2)$, with posterior mean $4/6 = 2/3$. The data shifted the posterior mean from $1/2$ (prior) to $2/3$ — and shrunk the posterior SD from $\sqrt{1/12} \approx 0.29$ to $\sqrt{4 \cdot 2 / (6^2 \cdot 7)} \approx 0.178$.
+</ExampleBlock>
+
+<img src="/images/topics/bayesian-foundations-and-prior-selection/25-2-bayes-update-geometry.png"
+     alt="Three-panel figure showing the Bayes update for Ex 1. Left panel: Beta(1, 1) prior, flat on (0, 1). Middle panel: Binomial likelihood θ³(1−θ) peaked at θ = 0.75. Right panel: Beta(4, 2) posterior peaked at θ ≈ 0.75 with narrower spread. Annotation 'prior × likelihood ∝ posterior' between the panels."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<RemarkBlock number={4} title="Proportionality shorthand">
+In practice one rarely computes the marginal likelihood $m(\mathbf{y})$ directly — the proportionality $p(\theta \mid \mathbf{y}) \propto L(\theta) \pi(\theta)$ together with the constraint $\int p(\theta \mid \mathbf{y}) \, d\theta = 1$ determines the posterior uniquely. For conjugate pairs (§25.5) the identification of the posterior kernel with a known density family sidesteps the integral entirely. For non-conjugate cases, MCMC (Topic 26) sidesteps it via ratio-based acceptance.
+</RemarkBlock>
+
+<PriorPosteriorExplorer client:visible />
+
+<a id="section-25-3"></a>
+
+## 25.3 Track 7 notation conventions
+
+The notation locked in this section propagates to Topics 26, 27, and 28. Every symbol is introduced explicitly; the rationale for the Bernardo–Smith / Robert house style over the Gelman overloading is given below the table.
+
+| Object | Symbol | Interpretation |
+|---|---|---|
+| Prior density | $\pi(\theta)$ | Distribution over $\theta$ before observing data. Positive, integrable (or improper — §25.7 Def 7). |
+| Posterior density | $p(\theta \mid \mathbf{y})$ | Distribution over $\theta$ after observing $\mathbf{y} = (y_1, \ldots, y_n)$. |
+| Sampling density | $p(\mathbf{y} \mid \theta)$ or $L(\theta; \mathbf{y})$ | Likelihood — joint density of $\mathbf{y}$ given $\theta$, viewed as a function of $\theta$. |
+| Marginal likelihood | $m(\mathbf{y}) = \int p(\mathbf{y} \mid \theta)\pi(\theta)\,d\theta$ | Normalizing constant; also called *evidence* or *prior predictive*. |
+| Posterior predictive | $p(\tilde y \mid \mathbf{y}) = \int p(\tilde y \mid \theta) p(\theta \mid \mathbf{y})\,d\theta$ | Distribution of a future observation $\tilde y$ integrating out posterior uncertainty. |
+| KL divergence | $D_{\text{KL}}(\pi \Vert \pi')$ | Relative entropy of $\pi$ w.r.t. $\pi'$. |
+| Bayes factor | $\text{BF}_{10} = m(\mathbf{y} \mid H_1)/m(\mathbf{y} \mid H_0)$ | Posterior-odds update factor. Topic 25 mentions only; Topic 27 develops. |
+| MAP estimate | $\hat\theta_{\text{MAP}} = \arg\max p(\theta \mid \mathbf{y})$ | Mode of the posterior. |
+| Posterior mean | $\hat\theta_{\text{PM}} = \mathbb{E}[\theta \mid \mathbf{y}]$ | Bayes estimator under squared-error loss (§25.6 Rem 9). |
+| Posterior median | $\hat\theta_{\text{med}}$ | Bayes estimator under absolute-error loss. |
+| $(1-\alpha)$ credible set | $C$ with $\int_C p(\theta \mid \mathbf{y})\,d\theta = 1 - \alpha$ | Analog of the frequentist CI in the Bayesian framework. |
+| HPD interval | $C^{\text{HPD}}$ — the set of $\theta$ with $p(\theta \mid \mathbf{y}) \ge c_\alpha$ | Highest-posterior-density interval — the shortest $(1-\alpha)$ credible set. |
+
+We use **$\pi$ for prior** (Bernardo–Smith / Robert house style) because it is visually distinct from the sampling $p$ and the posterior $p(\cdot \mid \mathbf{y})$ — the alternative Gelman-style overloading $p(\theta)$ forces context-based disambiguation in every formula. We write **$p(\tilde y \mid \mathbf{y})$ for posterior predictive** using tilde-for-new-observation rather than $y_{\text{new}}$ subscripts because tilde renders cleanly in KaTeX. We write **$m(\mathbf{y})$ for marginal likelihood** because the natural alternative $p(\mathbf{y})$ collides with the sampling density viewed as a function of $\mathbf{y}$. Bayesian and frequentist estimators are distinguished by subscripts throughout: $\hat\theta_{\text{MLE}}$ (Topic 14), $\hat\theta_{\text{MAP}}$, $\hat\theta_{\text{PM}}$, $\hat\theta_{\text{med}}$.
+
+<a id="section-25-4"></a>
+
+## 25.4 Exponential-family conjugacy
+
+The five conjugate pairs of §25.5 (Beta-Binomial, Normal-Normal, Normal-Normal-IG, Gamma-Poisson, Dirichlet-Multinomial) all emerge from a single construction on exponential families. The theorem below generalizes [Topic 7 Thm 3](/topics/exponential-families#section-7-7): what was algebra there — close the exponential family under multiplication by a particular kernel — becomes Bayesian inference here, with the updated kernel as the posterior.
+
+<DefinitionBlock number={2} title="Conjugate family">
+A family of distributions $\{\pi(\theta \mid \chi, \nu) : \chi \in \mathbb{R}, \nu > 0\}$ is **conjugate** to a likelihood $\{f(y; \theta) : \theta \in \Theta\}$ if, for every prior $\pi(\theta \mid \chi_0, \nu_0)$ in the family and every sample $\mathbf{y}$, the posterior $p(\theta \mid \mathbf{y})$ is also in the family — only the hyperparameters update.
+</DefinitionBlock>
+
+<TheoremBlock number={2} title="Exponential-family conjugacy">
+Let $\{f(y; \theta) : \theta \in H\}$ be a one-parameter exponential family in canonical form,
+
+$$f(y; \eta) \;=\; h(y) \exp\!\big(\eta T(y) - A(\eta)\big),$$
+
+with natural parameter $\eta \in H \subseteq \mathbb{R}$, sufficient statistic $T(y)$, base measure $h(y)$, and log-partition $A(\eta)$. Define the conjugate-prior family indexed by $(\chi_0, \nu_0) \in \mathbb{R} \times (0, \infty)$ by
+
+$$\pi(\eta \mid \chi_0, \nu_0) \;=\; K(\chi_0, \nu_0) \exp\!\big(\chi_0 \eta - \nu_0 A(\eta)\big),$$
+
+where $K(\chi_0, \nu_0)$ is the normalizing constant (finite whenever the integral on $H$ converges). For $n$ iid observations $\mathbf{y} = (y_1, \ldots, y_n)$ with sufficient-statistic total $S = \sum_{i=1}^n T(y_i)$, the posterior is
+
+$$p(\eta \mid \mathbf{y}) \;=\; \pi(\eta \mid \chi_0 + S, \; \nu_0 + n).$$
+
+The hyperparameter $\nu_0$ is the **pseudo-sample-size**: the prior is worth $\nu_0$ equivalent observations before any data arrive. $\chi_0$ is the pseudo-sufficient-statistic total.
+</TheoremBlock>
+
+<ProofBlock number={1} title="Proof of Thm 2 (exponential-family conjugacy)">
+**Step 1 — setup.** Let $f(y; \eta) = h(y) \exp(\eta T(y) - A(\eta))$ as stated, with natural parameter $\eta \in H$ and sufficient statistic $T(y)$.
+
+**Step 2 — proposed conjugate prior.** Define
+
+$$\pi(\eta \mid \chi_0, \nu_0) \;=\; K(\chi_0, \nu_0) \exp(\chi_0 \eta - \nu_0 A(\eta)),$$
+
+with hyperparameters $\chi_0 \in \mathbb{R}$, $\nu_0 > 0$, and normalizing constant $K(\chi_0, \nu_0)$ chosen so $\int_H \pi(\eta) \, d\eta = 1$. Whenever this integral is finite, $\pi$ is a proper prior; [§25.7 Def 7](#section-25-7) handles the improper case.
+
+**Step 3 — apply Bayes' theorem.** Given $n$ iid observations $y_1, \ldots, y_n$ with joint likelihood
+
+$$L(\eta) \;=\; \prod_{i=1}^n f(y_i; \eta) \;=\; \left[\prod_i h(y_i)\right] \exp\!\left(\eta \sum_i T(y_i) - n A(\eta)\right).$$
+
+Write $S = \sum_{i=1}^n T(y_i)$ for the sufficient-statistic sum. Then, dropping the constant $\prod_i h(y_i)$ that does not depend on $\eta$,
+
+$$p(\eta \mid \mathbf{y}) \;\propto\; L(\eta) \pi(\eta) \;\propto\; \exp(\eta S - n A(\eta)) \exp(\chi_0 \eta - \nu_0 A(\eta)).$$
+
+**Step 4 — collect exponents.** Combining the two exponentials,
+
+$$p(\eta \mid \mathbf{y}) \;\propto\; \exp\!\big((\chi_0 + S)\eta - (\nu_0 + n) A(\eta)\big).$$
+
+**Step 5 — identify the posterior kernel.** This is the kernel of the same conjugate family with updated hyperparameters $\chi_0' = \chi_0 + S$, $\nu_0' = \nu_0 + n$. Since the normalizing constant of the prior family depends only on the kernel shape, we conclude
+
+$$p(\eta \mid \mathbf{y}) \;=\; \pi(\eta \mid \chi_0 + S, \; \nu_0 + n).$$
+
+**Step 6 — interpretation of the update rule.** The hyperparameter $\nu_0$ acts as a pseudo-sample-size: the prior is worth $\nu_0$ equivalent observations before any data arrive. $\chi_0$ is the pseudo-sufficient-statistic total. After observing $n$ real data points with sufficient-statistic sum $S$, the effective sample size grows to $\nu_0 + n$ and the effective sufficient-statistic total to $\chi_0 + S$.
+
+∎ — using Topic 4 Thm 4 (Bayes' theorem) and [Topic 7 §7.7 Thm 3](/topics/exponential-families#section-7-7) (exp-family form).
+</ProofBlock>
+
+<img src="/images/topics/bayesian-foundations-and-prior-selection/25-4-exp-fam-conjugacy-kernel.png"
+     alt="Three-panel figure showing the same conjugate-family update rule χ₀' = χ₀ + S, ν₀' = ν₀ + n applied to Beta-Binomial, Gamma-Poisson, and Normal-Normal. Each panel shows the prior (blue) and posterior (purple) densities with the updated hyperparameters annotated. The shared kernel-shift structure is visually apparent."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<RemarkBlock number={5} title="Topic 7 Thm 3 as the special case">
+Topic 7 §7.7 Thm 3 constructed the conjugate-prior family for an exponential likelihood — the algebra of Proof 1 Step 4 but stripped of inferential framing. Thm 2 adds the inferential layer: the updated hyperparameters are now the posterior, and every downstream Bayesian quantity (credible interval, posterior mean, posterior predictive) follows from this one identification. Where Topic 7 asked "what family of priors is closed under multiplication by this likelihood?" Topic 25 answers "what is the posterior given this prior and these data?" — but they are literally the same calculation.
+</RemarkBlock>
+
+<RemarkBlock number={6} title="Pseudo-observations interpretation">
+The hyperparameter pair $(\chi_0, \nu_0)$ is interpretable as a **pseudo-dataset** of $\nu_0$ observations whose sufficient-statistic total is $\chi_0$. Under this reading, the prior encodes prior information by committing to the equivalent of $\nu_0$ imaginary observations, and Bayes' theorem literally concatenates them with the real data. Informative priors have large $\nu_0$; weakly informative priors have $\nu_0 \sim 1$; non-informative improper priors correspond to the formal limit $\nu_0 \to 0$ (§25.7). This pseudo-observation framing is the clearest way to calibrate how much prior information to commit.
+</RemarkBlock>
+
+<a id="section-25-5"></a>
+
+## 25.5 The canonical conjugate pairs
+
+Thm 2 is abstract. Making it concrete means specializing to the five canonical conjugate pairs used throughout applied Bayesian statistics. Beta-Binomial is the first and simplest, with a full end-to-end proof. The other four pairs are worked as examples with citation back to the algebra Topic 7 already established.
+
+<TheoremBlock number={3} title="Beta-Binomial posterior">
+Let $Y \sim \mathrm{Binomial}(n, \theta)$ and place a $\mathrm{Beta}(\alpha_0, \beta_0)$ prior on $\theta \in (0, 1)$. After observing $k$ successes in $n$ trials,
+
+$$\theta \mid Y = k \;\sim\; \mathrm{Beta}(\alpha_0 + k, \; \beta_0 + n - k).$$
+
+The posterior mean is
+
+$$\mathbb{E}[\theta \mid k] \;=\; \frac{\alpha_0 + k}{\alpha_0 + \beta_0 + n} \;=\; w \cdot \frac{\alpha_0}{\alpha_0 + \beta_0} \;+\; (1-w) \cdot \frac{k}{n},$$
+
+a convex combination of the prior mean and the sample proportion, with weight $w = (\alpha_0 + \beta_0) / (\alpha_0 + \beta_0 + n)$ proportional to the pseudo-sample-size.
+</TheoremBlock>
+
+<ProofBlock number={2} title="Proof of Thm 3 (Beta-Binomial posterior)">
+**Step 1 — setup.** Observe $k$ successes in $n$ independent Bernoulli($\theta$) trials; equivalently, observe $S_n = k$ from $S_n \sim \mathrm{Binomial}(n, \theta)$. Place a $\mathrm{Beta}(\alpha_0, \beta_0)$ prior on $\theta \in (0, 1)$.
+
+**Step 2 — likelihood and prior.** The Binomial likelihood, viewed as a function of $\theta$,
+
+$$L(\theta) \;=\; \binom{n}{k} \theta^k (1-\theta)^{n-k} \;\propto\; \theta^k (1-\theta)^{n-k}.$$
+
+The Beta prior density,
+
+$$\pi(\theta) \;=\; \frac{1}{B(\alpha_0, \beta_0)} \theta^{\alpha_0 - 1} (1-\theta)^{\beta_0 - 1} \;\propto\; \theta^{\alpha_0 - 1} (1 - \theta)^{\beta_0 - 1}.$$
+
+**Step 3 — apply Bayes.** The posterior is proportional to likelihood × prior:
+
+$$p(\theta \mid k) \;\propto\; \theta^k (1 - \theta)^{n-k} \cdot \theta^{\alpha_0 - 1} (1-\theta)^{\beta_0 - 1} \;=\; \theta^{(\alpha_0 + k) - 1} (1-\theta)^{(\beta_0 + n - k) - 1}.$$
+
+**Step 4 — identify.** This is the kernel of $\mathrm{Beta}(\alpha_0 + k, \beta_0 + n - k)$. Since the posterior must integrate to 1, the normalizing constant is $1 / B(\alpha_0 + k, \beta_0 + n - k)$, and
+
+$$p(\theta \mid k) \;=\; \mathrm{Beta}(\alpha_0 + k, \; \beta_0 + n - k).$$
+
+**Step 5 — posterior moments.** The posterior mean is
+
+$$\mathbb{E}[\theta \mid k] \;=\; \frac{\alpha_0 + k}{\alpha_0 + \beta_0 + n} \;=\; w \cdot \frac{\alpha_0}{\alpha_0 + \beta_0} \;+\; (1 - w) \cdot \frac{k}{n},$$
+
+with $w = (\alpha_0 + \beta_0) / (\alpha_0 + \beta_0 + n)$ — a convex combination of the prior mean $\alpha_0 / (\alpha_0 + \beta_0)$ and the sample proportion $k/n$, with weights proportional to the pseudo-sample-size $\alpha_0 + \beta_0$ and the real sample size $n$.
+
+∎ — using Topic 4 Thm 4 (Bayes' theorem) and [Topic 6 §6.6 Thm 12](/topics/continuous-distributions) (Beta moments).
+</ProofBlock>
+
+<ExampleBlock number={2} title="Normal-Normal (known σ²)">
+Let $Y_i \mid \mu \overset{\text{iid}}{\sim} \mathcal{N}(\mu, \sigma^2)$ with $\sigma^2$ known, and prior $\mu \sim \mathcal{N}(\mu_0, \sigma_0^2)$. The posterior on $\mu$ given the sample mean $\bar y$ and sample size $n$ is $\mathcal{N}(\mu_n, \sigma_n^2)$ with
+
+$$\frac{1}{\sigma_n^2} \;=\; \frac{1}{\sigma_0^2} + \frac{n}{\sigma^2}, \qquad \mu_n \;=\; \sigma_n^2 \left(\frac{\mu_0}{\sigma_0^2} + \frac{n \bar y}{\sigma^2}\right).$$
+
+The posterior precision is the sum of prior precision and data precision — the canonical **precision-weighted averaging** formula. The posterior mean is the precision-weighted average of the prior mean and the sample mean. Derivation mirrors Proof 2 but with Gaussian kernels; see [Topic 7 §7.7](/topics/exponential-families#section-7-7) for the exp-family algebra in the location-family case.
+</ExampleBlock>
+
+<ExampleBlock number={3} title="Normal-Normal-Inverse-Gamma (σ² unknown)">
+When $\sigma^2$ is unknown, place a joint Normal-Inverse-Gamma prior
+
+$$\mu \mid \sigma^2 \sim \mathcal{N}(\mu_0, \sigma^2/\kappa_0), \qquad \sigma^2 \sim \mathrm{InvGamma}(\alpha_0, \beta_0).$$
+
+After observing $n$ iid data with sample mean $\bar y$ and sample variance $s^2$, the posterior is Normal-Inverse-Gamma with updated hyperparameters (GEL2013 §3.3 Eqs 3.3–3.5):
+
+$$\kappa_n = \kappa_0 + n, \quad \mu_n = \frac{\kappa_0 \mu_0 + n \bar y}{\kappa_n}, \quad \alpha_n = \alpha_0 + \tfrac{n}{2},$$
+
+$$\beta_n = \beta_0 + \tfrac{n s^2}{2} + \tfrac{\kappa_0 n (\bar y - \mu_0)^2}{2 \kappa_n}.$$
+
+The marginal posterior on $\mu$ is a **non-standardized Student-t** with $2\alpha_n$ degrees of freedom, location $\mu_n$, and scale $\sqrt{\beta_n / (\alpha_n \kappa_n)}$ — heavier tails than Normal because $\sigma^2$'s uncertainty widens the marginal on $\mu$.
+</ExampleBlock>
+
+<ExampleBlock number={4} title="Gamma-Poisson">
+Let $Y_i \mid \lambda \overset{\text{iid}}{\sim} \mathrm{Poisson}(\lambda)$ and prior $\lambda \sim \mathrm{Gamma}(\alpha_0, \beta_0)$ (shape-rate). Observing $S = \sum_{i=1}^n y_i$, the posterior is
+
+$$\lambda \mid \mathbf{y} \;\sim\; \mathrm{Gamma}(\alpha_0 + S, \; \beta_0 + n),$$
+
+with posterior mean $(\alpha_0 + S)/(\beta_0 + n)$. The algebra reduces to the exp-family update rule of Thm 2 with $T(y) = y$, $A(\eta) = e^\eta$ (Poisson canonical form). See [Topic 7 §7.7 Ex 3](/topics/exponential-families#section-7-7) for the matching derivation.
+</ExampleBlock>
+
+<ExampleBlock number={5} title="Dirichlet-Multinomial">
+Let $(Y_1, \ldots, Y_K) \sim \mathrm{Multinomial}(n, \mathbf{p})$ with $\sum_k p_k = 1$, and prior $\mathbf{p} \sim \mathrm{Dirichlet}(\boldsymbol\alpha_0)$ for $\boldsymbol\alpha_0 = (\alpha_{0,1}, \ldots, \alpha_{0,K})$. Observing counts $\mathbf{x} = (x_1, \ldots, x_K)$ with $\sum_k x_k = n$, the posterior is
+
+$$\mathbf{p} \mid \mathbf{x} \;\sim\; \mathrm{Dirichlet}(\boldsymbol\alpha_0 + \mathbf{x}),$$
+
+the natural generalization of Beta-Binomial to $K > 2$ categories. [Topic 8 §8 Thm 6](/topics/multivariate-distributions) works this as pure algebra; Topic 25 adds the inferential layer (credible sets on the simplex, marginal posteriors on individual $p_k$).
+</ExampleBlock>
+
+<img src="/images/topics/bayesian-foundations-and-prior-selection/25-5-five-conjugate-pairs-panel.png"
+     alt="Five-panel figure showing prior-and-posterior density pairs for each of the five canonical conjugate pairs: Beta-Bernoulli, Normal-Normal known σ², Normal-Normal-Inverse-Gamma joint posterior, Gamma-Poisson, and Dirichlet(1,1,1) → Dirichlet(13,11,9) on the 2-simplex. Each panel is annotated with the prior and posterior hyperparameters."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<ConjugatePairBrowser client:visible />
+
+<RemarkBlock number={7} title="All five pairs as instances of Thm 2">
+Every pair in §25.5 is a specialization of the exponential-family conjugacy theorem. Beta-Binomial: $T(y) = y$, $A(\eta) = \log(1 + e^\eta)$ (logit-parameterized Bernoulli). Normal-Normal known $\sigma^2$: $T(y) = y$, $A(\eta) = \eta^2 / 2$ (location-only Gaussian). Gamma-Poisson: $T(y) = y$, $A(\eta) = e^\eta$. Dirichlet-Multinomial: the multi-parameter extension where $T(\mathbf{y}) = \mathbf{y}$ is a count vector. Normal-Normal-IG is the two-parameter case with $(\mu, \sigma^2)$ jointly — the algebra is more involved but the conjugacy logic is identical.
+</RemarkBlock>
+
+<RemarkBlock number={8} title="When conjugacy breaks">
+Conjugate priors exist only for exponential-family likelihoods. Non-exponential-family models — mixtures, hierarchical models beyond Topic 28, neural networks — have no closed-form conjugate priors. In these cases, the posterior is known only up to the intractable normalizing constant $m(\mathbf{y})$, and one must resort to approximation: [MCMC](/topics/bayesian-computation-and-mcmc) (Topic 26) for exact asymptotic sampling, variational inference (formalml) for fast approximate posteriors, or Laplace approximation (§25.8 Rem 16) for local Gaussian approximations at the MAP.
+</RemarkBlock>
+
+<PriorPosteriorExplorer client:visible />
+
+<a id="section-25-6"></a>
+
+## 25.6 Credible intervals and posterior predictive
+
+The posterior $p(\theta \mid \mathbf{y})$ is the full Bayesian answer, but practical work demands summaries. Credible intervals are the Bayesian analog of confidence intervals — interval-valued summaries with posterior-probability content. Point estimators (posterior mean, median, MAP) are scalar summaries, each minimizing a different Bayes risk. The posterior predictive closes the loop: given the posterior on $\theta$, what is the distribution of a future $\tilde y$?
+
+<DefinitionBlock number={5} title="Credible interval — equal-tailed and HPD">
+For a posterior $p(\theta \mid \mathbf{y})$ and level $1 - \alpha$, a set $C \subseteq \Theta$ is a $(1 - \alpha)$ **credible set** if $\int_C p(\theta \mid \mathbf{y}) \, d\theta = 1 - \alpha$. Two canonical choices:
+
+- **Equal-tailed** credible interval: $C = [q_{\alpha/2}, q_{1 - \alpha/2}]$ where $q_p$ is the posterior $p$-quantile.
+- **Highest-posterior-density** (HPD) interval: $C^{\text{HPD}} = \{\theta : p(\theta \mid \mathbf{y}) \ge c_\alpha\}$ for the largest $c_\alpha$ such that $C^{\text{HPD}}$ has posterior mass $1 - \alpha$. The HPD is the **shortest** $(1-\alpha)$ credible set.
+
+For symmetric unimodal posteriors the two coincide. For skewed posteriors the HPD is narrower and shifted toward the mode.
+</DefinitionBlock>
+
+<DefinitionBlock number={6} title="Posterior point estimators">
+The three standard Bayesian point estimators of $\theta$ are:
+
+- **Posterior mean**: $\hat\theta_{\text{PM}} = \mathbb{E}[\theta \mid \mathbf{y}] = \int \theta \, p(\theta \mid \mathbf{y}) \, d\theta$.
+- **Posterior median**: $\hat\theta_{\text{med}}$, the $0.5$-quantile of $p(\theta \mid \mathbf{y})$.
+- **MAP estimate**: $\hat\theta_{\text{MAP}} = \arg\max_\theta p(\theta \mid \mathbf{y})$.
+
+Each is Bayes-optimal under a different loss: posterior mean under squared-error loss, posterior median under absolute-error loss, MAP under 0-1 (indicator) loss — as $\epsilon \to 0$ in $L(\hat\theta, \theta) = \mathbf{1}\\{|\hat\theta - \theta| > \epsilon\\}$.
+</DefinitionBlock>
+
+<TheoremBlock number={4} title="Beta-Binomial posterior predictive (Thm 3b)">
+Under the Beta-Binomial setup of Thm 3 with posterior $\theta \mid \mathbf{y} \sim \mathrm{Beta}(\alpha^\star, \beta^\star)$ where $\alpha^\star = \alpha_0 + k$, $\beta^\star = \beta_0 + n - k$, the posterior-predictive distribution of a future count $\tilde y \in \{0, 1, \ldots, m\}$ from $m$ new independent Bernoulli($\theta$) trials is the **Beta-Binomial compound**:
+
+$$p(\tilde y \mid \mathbf{y}) \;=\; \binom{m}{\tilde y} \frac{B(\tilde y + \alpha^\star, \; m - \tilde y + \beta^\star)}{B(\alpha^\star, \beta^\star)}.$$
+
+The variance of $\tilde y$ under the posterior predictive strictly exceeds the variance under the plug-in Binomial$(m, \hat\theta)$ — the Bayesian predictive distribution inflates uncertainty to reflect posterior uncertainty in $\theta$.
+</TheoremBlock>
+
+<ProofBlock number={3} title="Proof of Thm 4 (Beta-Binomial posterior predictive)">
+**Step 1 — setup.** Having observed $k$ successes in $n$ trials with posterior $\theta \mid \mathbf{y} \sim \mathrm{Beta}(\alpha_0 + k, \beta_0 + n - k)$, the posterior predictive is the distribution of a future count $\tilde y \in \{0, 1, \ldots, m\}$ from $m$ new independent Bernoulli($\theta$) trials.
+
+**Step 2 — definition.** The posterior-predictive PMF is the marginal of $\tilde y$ under the joint distribution $(\theta, \tilde y) \sim p(\theta \mid \mathbf{y}) \cdot p(\tilde y \mid \theta)$, obtained by integrating out $\theta$:
+
+$$p(\tilde y \mid \mathbf{y}) \;=\; \int_0^1 p(\tilde y \mid \theta) \, p(\theta \mid \mathbf{y}) \, d\theta.$$
+
+**Step 3 — substitute the likelihood and posterior.** With $p(\tilde y \mid \theta) = \binom{m}{\tilde y} \theta^{\tilde y} (1 - \theta)^{m - \tilde y}$ and $p(\theta \mid \mathbf{y}) = \theta^{\alpha^\star - 1} (1 - \theta)^{\beta^\star - 1} / B(\alpha^\star, \beta^\star)$ where $\alpha^\star = \alpha_0 + k$, $\beta^\star = \beta_0 + n - k$,
+
+$$p(\tilde y \mid \mathbf{y}) \;=\; \binom{m}{\tilde y} \frac{1}{B(\alpha^\star, \beta^\star)} \int_0^1 \theta^{\tilde y + \alpha^\star - 1} (1 - \theta)^{m - \tilde y + \beta^\star - 1} \, d\theta.$$
+
+**Step 4 — identify the integral as a Beta function.** The integrand is the kernel of $\mathrm{Beta}(\tilde y + \alpha^\star, m - \tilde y + \beta^\star)$. Its integral over $(0, 1)$ is $B(\tilde y + \alpha^\star, m - \tilde y + \beta^\star)$, yielding
+
+$$p(\tilde y \mid \mathbf{y}) \;=\; \binom{m}{\tilde y} \frac{B(\tilde y + \alpha^\star, \; m - \tilde y + \beta^\star)}{B(\alpha^\star, \beta^\star)}.$$
+
+**Step 5 — wider than plug-in.** This is the Beta-Binomial compound with parameters $(m, \alpha^\star, \beta^\star)$. The posterior predictive is **wider** than the Binomial$(m, \hat\theta)$ plug-in approximation, reflecting the posterior uncertainty in $\theta$ — a structural feature of Bayesian prediction that plug-in point-estimate predictions miss. Specifically, by the law of total variance,
+
+$$\mathrm{Var}[\tilde y \mid \mathbf{y}] \;=\; \mathbb{E}[\mathrm{Var}(\tilde y \mid \theta) \mid \mathbf{y}] + \mathrm{Var}[\mathbb{E}(\tilde y \mid \theta) \mid \mathbf{y}],$$
+
+where the first term is the average plug-in variance and the second is strictly positive whenever the posterior on $\theta$ has nonzero spread.
+
+∎ — using [Topic 4 §4.3](/topics/conditional-probability) law of total probability and [Topic 6 §6.6 Def 3](/topics/continuous-distributions) (Beta function).
+</ProofBlock>
+
+<ExampleBlock number={6} title="95% credible intervals for all five conjugate pairs">
+Under the standard data scenario used in §25.5 (the posterior hyperparameters from each conjugate-pair example), equal-tailed 95% credible intervals are:
+
+- Beta-Binomial with $\alpha^\star = 12, \beta^\star = 42$: $[0.123, 0.341]$ (via the Beta-quantile function).
+- Normal-Normal with $\mu_n = 0.988, \sigma_n^2 = 0.049$: $\mu_n \pm 1.96\sigma_n = [0.554, 1.422]$.
+- Gamma-Poisson with $\alpha^\star = 17, \beta^\star = 6$: approximately $[1.65, 4.47]$.
+- Normal-Normal-IG with $2\alpha_n$ df Student-t marginal on $\mu$: non-symmetric if the df is small.
+- Dirichlet-Multinomial on individual $p_k$: marginal is Beta with hyperparameters $(\alpha_k, \sum_{j \ne k} \alpha_j)$.
+
+The HPD interval is slightly narrower and shifted toward the posterior mode in every skewed case (Beta-Binomial for $\alpha^\star \ne \beta^\star$, Gamma-Poisson, asymmetric Dirichlet marginals).
+</ExampleBlock>
+
+<img src="/images/topics/bayesian-foundations-and-prior-selection/25-6-credible-vs-wald.png"
+     alt="Two-panel figure. Left: Beta(5, 20) posterior density with a shaded 95% equal-tailed credible interval and a hatched HPD overlay — the HPD is narrower and shifted toward the mode. Right: flat-prior Normal-Normal posterior on μ overlaid with a z-confidence interval; the two 95% shaded regions coincide exactly, discharging Topic 19 §19.1 Rem 3."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<img src="/images/topics/bayesian-foundations-and-prior-selection/25-6-posterior-predictive-beta-binomial.png"
+     alt="Two-panel figure. Left: Beta-Binomial posterior-predictive PMF for m=20 new trials with α*=5, β*=20 shown as purple bars; Binomial(m=20, p̂=5/25) plug-in PMF shown as grey bars. The Beta-Binomial bars have visibly heavier tails. Right: variance comparison bar chart showing Beta-Binomial variance > Binomial plug-in variance."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<RemarkBlock number={9} title="Posterior mean as Bayes estimator">
+Under squared-error loss $L(\hat\theta, \theta) = (\hat\theta - \theta)^2$, the Bayes estimator — the one minimizing posterior expected loss $\mathbb{E}[L \mid \mathbf{y}]$ — is exactly the posterior mean. This is the Bayesian reading of the bias-variance decomposition: the posterior-mean point estimator is optimal in the $L^2$ sense against the posterior, the same way the sample mean is $L^2$-optimal against the empirical distribution. See ROB2007 §2 for the decision-theoretic development.
+</RemarkBlock>
+
+<RemarkBlock number={10} title="HPD vs equal-tailed for skewed posteriors">
+For a symmetric unimodal posterior the HPD and equal-tailed intervals coincide. For skewed posteriors (e.g., Beta(2, 20) with pronounced right skew), the equal-tailed interval allocates equal tail mass $\alpha/2$ to each side, including a long right tail of low-density values; the HPD instead follows the density and is strictly narrower. The tradeoff: equal-tailed is invariant under monotone reparameterization; HPD is not.
+</RemarkBlock>
+
+<RemarkBlock number={11} title="Posterior predictive for Normal-Normal is Student-t">
+For Normal-Normal known $\sigma^2$ the posterior predictive for a future $\tilde y$ is $\mathcal{N}(\mu_n, \sigma_n^2 + \sigma^2)$ — the posterior variance plus the likelihood variance, again wider than the plug-in $\mathcal{N}(\hat\mu, \sigma^2)$. For Normal-Normal-Inverse-Gamma (unknown $\sigma^2$), the predictive is a **non-standardized Student-t** with $2\alpha_n$ df — heavier tails still, because $\sigma^2$'s uncertainty further inflates predictive variance. See [Topic 6 §6.7](/topics/continuous-distributions) for the Student-t distribution.
+</RemarkBlock>
+
+<a id="section-25-7"></a>
+
+## 25.7 Prior selection
+
+The prior is a modeling choice, not a fact. Every Bayesian analysis commits to some $\pi(\theta)$, and different priors yield different posteriors. This section treats prior selection systematically: three classes (informative, weakly informative, non-informative), Jeffreys priors as a reparameterization-invariant reference construction, improper priors and the integrable-posterior condition, and prior sensitivity as an empirical diagnostic.
+
+<RemarkBlock number={12} title="Three classes of priors">
+Priors divide roughly into three informational tiers:
+
+- **Informative**: encode substantive prior knowledge. Example: a pharmacologist's prior on a drug's dose-response parameter based on ten years of related trials. Hyperparameters reflect that knowledge (small posterior variance when knowledge is strong).
+- **Weakly informative**: encode loose, regularization-style constraints. The canonical example is $\mathrm{Cauchy}(0, 2.5)$ on logistic-regression coefficients (Gelman et al. 2008) — excludes implausible values like $|\beta| > 100$ without committing to any specific scale.
+- **Non-informative**: minimize prior influence. Jeffreys (§25.7 Thm 5), reference priors (Bernardo 1979 — deferred), flat priors (often improper).
+
+The pragmatic recommendation (GEL2013 Ch. 2): use weakly informative priors by default; use informative priors when genuine prior knowledge exists; use non-informative priors for benchmarking.
+</RemarkBlock>
+
+<TheoremBlock number={5} title="Jeffreys prior and reparameterization invariance">
+For a one-parameter regular family with Fisher information $\mathcal{I}(\theta)$, the **Jeffreys prior** is
+
+$$\pi_J(\theta) \;\propto\; \sqrt{\mathcal{I}(\theta)}.$$
+
+The Jeffreys prior is **reparameterization-invariant**: under a smooth monotone reparameterization $\phi = g(\theta)$ with Jacobian $|d\theta/d\phi|$, $\pi_J(\phi) = \pi_J(\theta) |d\theta/d\phi|$ — the transformed Jeffreys prior equals the Jeffreys prior computed directly in the $\phi$-parameterization. This invariance is the principled argument for the Jeffreys construction as a reference prior: any other "non-informative" choice (e.g., $\pi(\theta) = $ const) depends on the parameterization.
+
+**Derivation (Bernoulli).** For $Y \sim \mathrm{Bernoulli}(\theta)$, $\mathcal{I}(\theta) = 1/(\theta(1-\theta))$, so $\pi_J(\theta) \propto \theta^{-1/2} (1-\theta)^{-1/2}$, which is the $\mathrm{Beta}(1/2, 1/2)$ density up to normalization.
+
+**Derivation (Normal-scale).** For $Y \sim \mathcal{N}(\mu_0, \sigma^2)$ with $\mu_0$ known and $\sigma > 0$ unknown, $\mathcal{I}(\sigma) = 2/\sigma^2$, so $\pi_J(\sigma) \propto 1/\sigma$ — the classical log-flat scale prior. (Improper; see Def 7.)
+
+Invariance property proof uses the Jacobian identity for Fisher information: $\mathcal{I}(\phi) = \mathcal{I}(\theta) (d\theta/d\phi)^2$, so $\sqrt{\mathcal{I}(\phi)} = \sqrt{\mathcal{I}(\theta)} |d\theta/d\phi|$. See JEF1961 Ch. III for the full invariance argument.
+</TheoremBlock>
+
+<img src="/images/topics/bayesian-foundations-and-prior-selection/25-7-jeffreys-prior-bernoulli.png"
+     alt="Two-panel figure. Left: Beta(½, ½) density on (0, 1), the Bernoulli Jeffreys prior π(θ) ∝ 1/√(θ(1−θ)) — U-shaped with integrable singularities at 0 and 1. Right: reparameterization check in logit coordinates φ = logit(θ), showing that π_J(φ) computed directly equals π_J(θ)|dθ/dφ| computed from the original Jeffreys prior — the two curves coincide exactly."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<ExampleBlock number={7} title="Prior sensitivity: three priors, one dataset">
+Observe 10 successes in 50 Bernoulli trials. Compare three posteriors:
+
+- Informative $\mathrm{Beta}(2, 8)$ peaked at $0.2$: posterior $\mathrm{Beta}(12, 48)$, mean $0.2$.
+- Weakly informative $\mathrm{Beta}(2, 2)$ centered at $0.5$: posterior $\mathrm{Beta}(12, 42)$, mean $\approx 0.222$.
+- Non-informative Jeffreys $\mathrm{Beta}(1/2, 1/2)$: posterior $\mathrm{Beta}(10.5, 40.5)$, mean $\approx 0.206$.
+
+At $n = 50$ all three posterior means lie in $[0.20, 0.23]$ — the data dominates the informative prior's pull toward $0.2$. At $n = 10$, the three posterior means are far apart ($\sim 0.21$, $\sim 0.23$, $\sim 0.25$); at $n = 1000$ they are numerically identical. The interpolation is exactly what Bernstein–von Mises (§25.8) predicts.
+</ExampleBlock>
+
+<img src="/images/topics/bayesian-foundations-and-prior-selection/25-7-prior-sensitivity-three-priors.png"
+     alt="Three-panel figure showing three posterior densities for the same data (10 heads in 50 tosses): informative Beta(2, 8) prior yields Beta(12, 48) posterior (amber), weakly informative Beta(2, 2) prior yields Beta(12, 42) posterior (violet), Jeffreys Beta(½, ½) prior yields Beta(10.5, 40.5) posterior (blue). All three posteriors are concentrated in roughly the same region around 0.2 with small pairwise differences; a vertical reference line marks the MLE at θ̂ = 0.2."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<PriorSensitivityComparator client:visible />
+
+<DefinitionBlock number={7} title="Improper prior and integrable-posterior condition">
+A prior $\pi(\theta)$ is **improper** if $\int_\Theta \pi(\theta) \, d\theta = \infty$ — i.e., it is not a valid probability density. Examples: $\pi(\mu) = \text{const}$ on $\mathbb{R}$; $\pi(\sigma) \propto 1/\sigma$ on $(0, \infty)$ (the Normal-scale Jeffreys prior).
+
+Bayesian inference with an improper prior is valid **if and only if** the posterior is proper:
+
+$$\int_\Theta L(\theta) \pi(\theta) \, d\theta \;<\; \infty.$$
+
+When this **integrable-posterior condition** holds, the posterior $p(\theta \mid \mathbf{y}) \propto L(\theta) \pi(\theta)$ is a well-defined probability density and all downstream quantities (credible intervals, posterior moments, posterior predictive) are well-defined. When it fails, no Bayesian inference is possible.
+</DefinitionBlock>
+
+<RemarkBlock number={13} title="Stone–Dawid–Zidek paradox">
+Improper priors can produce paradoxes when naively combined. Stone (1970) and later Dawid, Stone, and Zidek (1973) showed that two proper-posterior improper priors on nested parameter spaces can yield **conditionally inconsistent posteriors** — the marginal posterior derived one way disagrees with the marginal posterior derived another way on the same parameter. The resolution requires careful measure-theoretic handling of the improper prior limit. Topic 25 names the paradox once; full treatment deferred to [Topic 27](/topics/bayesian-model-comparison-and-bma) or formalml.
+</RemarkBlock>
+
+<RemarkBlock number={14} title="Reference priors (Bernardo)">
+Bernardo (1979) proposed **reference priors** as a generalization of Jeffreys that maximizes asymptotic expected Kullback–Leibler divergence between prior and posterior — i.e., the prior is chosen to be as "non-informative" as possible in an information-theoretic sense. For one-parameter regular families, reference priors coincide with Jeffreys priors; for multi-parameter problems they differ. Full development is deferred to Topic 27 or formalml.
+</RemarkBlock>
+
+<RemarkBlock number={15} title="Prior elicitation as substantive modeling">
+In applied work, priors are rarely chosen from theoretical principles alone. **Prior elicitation** — the systematic conversion of expert knowledge into prior hyperparameters — is a substantive modeling activity (ROB2007 §3; GEL2013 §2.9). Practical approaches: ask experts for quantile estimates and fit a prior that matches; use historical data from related problems; elicit pseudo-sample-size directly. The sensitivity analysis of Ex 7 is the diagnostic: if the inference is sensitive to the prior, the prior deserves more attention; if not, the data has spoken.
+</RemarkBlock>
+
+<a id="section-25-8"></a>
+
+## 25.8 Bernstein–von Mises: the bridge to frequentism
+
+This is the featured section. Under regularity conditions identical to those required for MLE asymptotic normality ([Topic 14 Thm 4](/topics/maximum-likelihood#section-14-5)), the posterior itself is asymptotically Normal — centered at the MLE, with covariance equal to the inverse Fisher information scaled by $1/n$. Concretely: Bayesian and frequentist inference converge. A 95% credible interval and a 95% Wald confidence interval become numerically identical in the large-sample limit. The prior's role diminishes at rate $1/\sqrt{n}$; priors stop mattering once there is enough data.
+
+<TheoremBlock number={6} title="Bernstein–von Mises">
+Let $Y_1, \ldots, Y_n \overset{\text{iid}}{\sim} f(\cdot; \theta_0)$ with $\theta_0$ in the interior of $\Theta \subseteq \mathbb{R}$, a regular parametric family with Fisher information $\mathcal{I}(\theta_0) \in (0, \infty)$. Let $\hat\theta_n$ be the MLE. For any proper prior $\pi$ continuous and positive at $\theta_0$,
+
+$$\sup_{B \in \mathcal{B}(\mathbb{R})} \left| \Pr_{\theta \sim p(\cdot \mid \mathbf{y})}\!\left(\sqrt{n}(\theta - \hat\theta_n) \in B\right) - \Pr_{Z \sim \mathcal{N}(0, \mathcal{I}(\theta_0)^{-1})}(Z \in B) \right| \;\xrightarrow{P}\; 0.$$
+
+That is, the rescaled posterior converges in total variation to $\mathcal{N}(0, \mathcal{I}(\theta_0)^{-1})$ in probability under the true distribution $\Pr_{\theta_0}$.
+</TheoremBlock>
+
+<img src="/images/topics/bayesian-foundations-and-prior-selection/25-8-bernstein-von-mises-convergence.png"
+     alt="Four-panel figure for n = 5, 25, 100, 500. Beta(2, 2) prior, true θ₀ = 0.3. Each panel shows the posterior density (purple) overlaid with the Normal-at-MLE approximation 𝒩(θ̂_MLE, 𝓘⁻¹/n) (black dashed), with vertical reference lines at θ₀ (green dotted) and θ̂_MLE (orange solid). At n=5 the two curves disagree noticeably (posterior narrower near boundaries). By n=500 they are visually indistinguishable — BvM's total-variation convergence."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<ProofBlock number={4} title="Proof of Thm 6 (Bernstein–von Mises, sketch)">
+**Step 1 — statement.** As above. We show pointwise convergence of densities then upgrade to total variation via VDV1998 §10.2 Thm 10.1.
+
+**Step 2 — Taylor-expand the log-posterior at $\hat\theta_n$.** Write $\ell_n(\theta) = \sum_i \log f(Y_i; \theta)$. The log-posterior is
+
+$$\log p(\theta \mid \mathbf{y}) \;=\; \ell_n(\theta) + \log\pi(\theta) + \text{const}.$$
+
+By Taylor's theorem, for $\theta$ near $\hat\theta_n$,
+
+$$\ell_n(\theta) \;=\; \ell_n(\hat\theta_n) + \ell_n'(\hat\theta_n)(\theta - \hat\theta_n) + \tfrac{1}{2}\ell_n''(\tilde\theta)(\theta - \hat\theta_n)^2$$
+
+for some intermediate $\tilde\theta$. The first-derivative term vanishes because $\hat\theta_n$ is the MLE ($\ell_n'(\hat\theta_n) = 0$). The second derivative satisfies $-\ell_n''(\tilde\theta)/n \to \mathcal{I}(\theta_0)$ in probability by [Topic 14 Thm 4](/topics/maximum-likelihood#section-14-5)'s argument.
+
+**Step 3 — reparameterize.** Let $u = \sqrt{n}(\theta - \hat\theta_n)$. Then $\theta = \hat\theta_n + u/\sqrt{n}$, and
+
+$$\ell_n(\theta) - \ell_n(\hat\theta_n) \;=\; -\tfrac{1}{2}\mathcal{I}(\theta_0) u^2 + o_P(1)$$
+
+uniformly on compact $u$-sets. This is the Local Asymptotic Normality (LAN) condition; full proof is VDV1998 §7.2 Lemma 7.6.
+
+**Step 4 — prior smoothness.** Since $\pi$ is continuous and positive at $\theta_0$, $\log\pi(\theta)$ is bounded on a neighborhood of $\theta_0$, and
+
+$$\log\pi(\hat\theta_n + u/\sqrt n) \;=\; \log\pi(\theta_0) + o_P(1)$$
+
+uniformly on compact $u$-sets (by consistency of $\hat\theta_n$, which holds by [Topic 14 Thm 3](/topics/maximum-likelihood#section-14-5)).
+
+**Step 5 — assemble the posterior density.** In the $u$-parameterization,
+
+$$p(u \mid \mathbf{y}) \;\propto\; \exp\!\left(\ell_n(\hat\theta_n + u/\sqrt n) - \ell_n(\hat\theta_n)\right) \pi(\hat\theta_n + u/\sqrt n)$$
+
+$$\;\propto\; \exp\!\left(-\tfrac{1}{2}\mathcal{I}(\theta_0) u^2\right) (1 + o_P(1)).$$
+
+This is the kernel of $\mathcal{N}(0, \mathcal{I}(\theta_0)^{-1})$.
+
+**Step 6 — extend to total-variation convergence.** Step 5 establishes pointwise (at each $u$) convergence of densities up to normalization. The total-variation upgrade requires showing (a) the posterior puts asymptotically negligible mass outside a shrinking neighborhood of $\hat\theta_n$ (posterior concentration), and (b) uniform integrability of the posterior density. Both follow from the prior's positivity at $\theta_0$ plus the regular-family tail bounds. Full argument: VDV1998 §10.2 Thm 10.1.
+
+**Step 7 — interpretation.** The posterior forgets the prior at rate $1/\sqrt{n}$: the prior's contribution to the posterior density becomes vanishingly small relative to the likelihood's contribution. Bayesian and frequentist inference converge — credible intervals $\to$ Wald intervals in TV distance.
+
+∎ (sketch) — using [Topic 14 §14.5 Thm 4](/topics/maximum-likelihood#section-14-5) (MLE asymptotic normality), [Topic 11 §11.3 Thm 1](/topics/central-limit-theorem) (CLT), and van der Vaart 1998 §10.2 Thm 10.1 (full TV upgrade).
+</ProofBlock>
+
+<BernsteinVonMisesAnimator client:visible />
+
+<ExampleBlock number={8} title="MAP = penalized MLE — discharging Topic 14 Rem 9 and Topic 23 Thm 5">
+The MAP estimate maximizes the log-posterior:
+
+$$\hat\theta_{\text{MAP}} \;=\; \arg\max_\theta \big[\ell(\theta) + \log\pi(\theta)\big].$$
+
+When $\pi(\theta) = \mathcal{N}(0, \tau^2)$ is Gaussian, $\log\pi(\theta) = -\theta^2/(2\tau^2) + \text{const}$, so $\hat\theta_{\text{MAP}}$ maximizes $\ell(\theta) - \theta^2/(2\tau^2)$ — exactly **ridge regression** with $\lambda = \sigma^2/\tau^2$. When $\pi(\theta) = \mathrm{Laplace}(0, b)$, $\log\pi(\theta) = -|\theta|/b + \text{const}$, so $\hat\theta_{\text{MAP}}$ maximizes $\ell(\theta) - |\theta|/b$ — exactly **lasso** with $\lambda = \sigma^2/b$. This discharges [Topic 14 §14.11 Rem 9](/topics/maximum-likelihood) (the MAP/regularized-MLE correspondence preview) and [Topic 23 §23.7 Thm 5](/topics/regularization-and-penalized-estimation#section-23-7) (the MAP-penalization formal correspondence). The arc closes here.
+
+Under BvM, $\hat\theta_{\text{MAP}}$ and $\hat\theta_{\text{MLE}}$ converge at rate $1/\sqrt n$ in TV — the regularization vanishes asymptotically, confirming that ridge and lasso are **prior-informed** procedures whose regularization is a commitment that data eventually overrides.
+</ExampleBlock>
+
+<img src="/images/topics/bayesian-foundations-and-prior-selection/25-8-map-as-penalized-mle.png"
+     alt="Two-panel figure. Left: Gaussian prior 𝒩(0, 0.25) (thin blue) + Normal likelihood centered at x̄=1 (amber) for n=4, σ²=1 → posterior (purple) with MAP vertical line coinciding exactly with the ridge-estimate vertical line. Right: Laplace(0, 0.5) prior + same likelihood → MAP vertical line coincides with lasso estimate (at a sparser solution)."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<RemarkBlock number={16} title="Laplace approximation to the posterior and to m(y)">
+The same machinery that produces BvM yields a Gaussian approximation to the posterior **at any finite $n$** — the **Laplace approximation**. Taylor-expanding $\log p(\theta, \mathbf{y})$ to second order at $\hat\theta_{\text{MAP}}$ and exponentiating gives $p(\theta \mid \mathbf{y}) \approx \mathcal{N}(\hat\theta_{\text{MAP}}, H^{-1})$ where $H = -\nabla^2 \log p(\theta, \mathbf{y})|_{\theta = \hat\theta_{\text{MAP}}}$. The same expansion approximates the marginal likelihood:
+
+$$\log m(\mathbf{y}) \;\approx\; \log p(\mathbf{y} \mid \hat\theta_{\text{MAP}}) + \log\pi(\hat\theta_{\text{MAP}}) + \tfrac{k}{2}\log(2\pi) - \tfrac{1}{2}\log|H|.$$
+
+This is the generalization of [Topic 24 §24.4](/topics/model-selection-and-information-criteria#section-24-4) Proof 2: BIC drops the prior term and approximates $\log |H| \approx k \log n$, yielding BIC = $-2\log p(\mathbf{y} \mid \hat\theta_{\text{MAP}}) + k \log n + O(1)$. The Laplace approximation is the full version — [Topic 27](/topics/bayesian-model-comparison-and-bma) returns to it for Bayes-factor computation.
+</RemarkBlock>
+
+<RemarkBlock number={17} title="Flat-prior coincidence — discharging Topic 19 §19.1 Rem 3">
+For the Normal-mean problem with known $\sigma^2$ and improper flat prior $\pi(\mu) \propto 1$, the posterior is exactly $\mathcal{N}(\bar y, \sigma^2/n)$ — and the 95% credible interval $\bar y \pm 1.96 \sigma/\sqrt n$ is identical **at every finite $n$** to the frequentist z-CI. This is not a BvM asymptotic result but a finite-sample coincidence: the flat prior makes the posterior coincide with the sampling distribution of the MLE. This discharges [Topic 19 §19.1 Rem 3](/topics/confidence-intervals-and-duality) and [§19.10 Rem 21](/topics/confidence-intervals-and-duality): for Normal mean under flat prior, Bayesian and frequentist intervals coincide, but the interpretations differ — the Bayesian reads it as "posterior probability $0.95$ that $\mu$ lies in the interval" while the frequentist reads it as "95% of such constructed intervals would cover the true $\mu$."
+</RemarkBlock>
+
+<RemarkBlock number={18} title="When BvM fails">
+BvM's regularity conditions are those of MLE asymptotic normality plus positivity and continuity of the prior at $\theta_0$. When these fail, BvM can fail:
+
+- **Heavy-tailed priors** (e.g., Cauchy) violate the $\sqrt n$-concentration rate near the prior's tails.
+- **Non-identifiable models** (mixture label-switching, over-parameterized networks) have multimodal posteriors that never collapse to a single Gaussian.
+- **High-dimensional regimes** $d \sim n$ break the fixed-dimension Taylor expansion of Step 2.
+- **Nonparametric models** (function-valued $\theta$) require infinite-dimensional generalizations that sometimes hold (Castillo–Rousseau 2015) and sometimes don't (DIA1986).
+
+See VDV1998 §10.3 for failure modes in regular models and DIA1986 for the nonparametric counterexamples.
+</RemarkBlock>
+
+<a id="section-25-9"></a>
+
+## 25.9 The multivariate case: Normal-Inverse-Wishart
+
+Topic 25's scalar framework extends to multivariate parameters. The most-cited multivariate conjugate pair is **Normal-Inverse-Wishart** — the generalization of Normal-Inverse-Gamma (Ex 3) to joint inference on a mean vector $\boldsymbol\mu \in \mathbb{R}^d$ and covariance matrix $\boldsymbol\Sigma \in \mathbb{R}^{d \times d}$.
+
+<RemarkBlock number={19} title="Joint posterior on (μ, Σ)">
+Place a prior $(\boldsymbol\mu, \boldsymbol\Sigma) \sim \mathrm{NIW}(\boldsymbol\mu_0, \kappa_0, \boldsymbol\Lambda_0, \nu_0)$ — a Normal-Inverse-Wishart distribution. After observing $n$ iid Gaussian samples with sample mean $\bar{\mathbf{y}}$ and sample scatter matrix $\mathbf{S}$, the posterior is NIW with updated hyperparameters. Detailed parameter-update rule: GEL2013 §3.6 Eqs 3.18–3.21. The scalar mechanics of Topic 25 §25.5 Ex 3 (Normal-Normal-IG) are the one-dimensional case.
+</RemarkBlock>
+
+<RemarkBlock number={20} title="Regression extension — scalar case covered, regression deferred">
+The NIW framework extends to Bayesian linear regression: place a conjugate Normal-Inverse-Wishart prior on $(\boldsymbol\beta, \sigma^2)$ in $\mathbf{y} = \mathbf{X}\boldsymbol\beta + \boldsymbol\epsilon$, and the posterior is NIW with updated parameters that include a ridge-regression posterior mean. [Topic 25 §25.5 Ex 3](#section-25-5) covered the scalar analog; the full regression generalization, plus non-conjugate priors (horseshoe, spike-and-slab) handled via MCMC, is [Topic 27 or Topic 28](/topics/bayesian-model-comparison-and-bma) territory. This note discharges [Topic 21 §21.10 Rem 25](/topics/linear-regression).
+</RemarkBlock>
+
+<a id="section-25-10"></a>
+
+## 25.10 Forward map
+
+Topic 25 is the Track 7 opener. The remainder of Track 7 — plus one cross-track pointer to formalml — develops the machinery Topic 25 names but defers.
+
+<RemarkBlock number={21} title="Topic 26 — Bayesian Computation and MCMC">
+When the conjugate-prior framework fails — non-exponential-family likelihoods, hierarchical models beyond Topic 28, models with many parameters — the posterior is known only up to the intractable normalizing constant $m(\mathbf{y})$. **Markov chain Monte Carlo (MCMC)** provides exact asymptotic sampling: Metropolis–Hastings (1970), Gibbs sampling (Geman–Geman 1984), Hamiltonian Monte Carlo (Duane et al. 1987; Neal 2011), and the No-U-Turn Sampler (Hoffman–Gelman 2014) are the four principal algorithms. Gibbs samplers use Topic 25 conjugate full-conditionals as building blocks — the connection is direct. [Topic 26](/topics/bayesian-computation-and-mcmc) develops.
+</RemarkBlock>
+
+<RemarkBlock number={22} title="Topic 27 — Bayesian Model Comparison and BMA">
+Bayes factors $\mathrm{BF}_{10} = m(\mathbf{y} \mid H_1) / m(\mathbf{y} \mid H_0)$ compare two models via their marginal likelihoods. **Bayesian model averaging (BMA)** combines posterior predictions across candidate models, weighted by posterior model probabilities. Efficient marginal-likelihood computation uses nested sampling (Skilling 2006), bridge sampling (Meng–Wong 1996), thermodynamic integration, DIC / WAIC / PSIS-LOO (Watanabe 2010; Vehtari–Gelman–Gabry 2017). Topic 25 §25.8 Rem 16 introduced $m(\mathbf{y})$ via the Laplace approximation; the full computational machinery is [Topic 27](/topics/bayesian-model-comparison-and-bma). This also houses local-FDR and Bayesian multiplicity (Efron 2010), discharging [Topic 20 §20.10](/topics/multiple-testing-and-false-discovery).
+</RemarkBlock>
+
+<RemarkBlock number={23} title="Topic 28 — Hierarchical Bayes and Partial Pooling">
+Topic 25 treats the prior $\pi(\theta)$ as fixed. **Hierarchical priors** $\theta_i \mid \mu \sim \pi(\cdot \mid \mu), \mu \sim \pi(\mu)$ treat the prior itself as having hyperparameters with their own prior. This is the Bayesian reading of **partial pooling** (Lindley–Smith 1972): individual-level estimates borrow strength from group-level structure. **Empirical Bayes** uses the data to estimate $\mu$ directly, collapsing the hierarchy. **Continuous shrinkage priors** (Carvalho–Polson–Scott 2010 horseshoe) provide adaptive sparsity — the "lasso of priors." [Topic 28](/topics/hierarchical-bayes-and-partial-pooling) develops.
+</RemarkBlock>
+
+<RemarkBlock number={24} title="Variational inference (formalml)">
+When conjugate priors break down and MCMC is too slow (hierarchical models with millions of parameters, deep neural networks), **variational inference** approximates the posterior with a tractable family $q(\theta)$ minimizing $\mathrm{KL}(q \,\|\, p(\cdot \mid \mathbf{y}))$. The ELBO (evidence lower bound) machinery, mean-field VI, normalizing flows, and stochastic VI are developed at <ExternalLink href="https://formalml.com/topics/variational-inference" site="formalml" topic="Variational Inference" />.
+</RemarkBlock>
+
+<RemarkBlock number={25} title="Bayesian decision theory">
+Every Bayesian point estimator is a Bayes-optimal decision under some loss (§25.6 Rem 9). **Bayesian decision theory** formalizes this: given a loss $L(\hat\theta, \theta)$, the Bayes decision minimizes posterior expected loss $\mathbb{E}[L \mid \mathbf{y}]$. ROB2007 Ch. 2 is the standard reference; full treatment deferred to a later philosophical essay or formalml.
+</RemarkBlock>
+
+<RemarkBlock number={26} title="Reference priors and Berger–Pericchi machinery">
+Bernardo's 1979 reference-priors framework extends Jeffreys to multi-parameter problems by maximizing asymptotic expected KL divergence between prior and posterior. **Intrinsic priors** (Berger–Pericchi 1996) generalize improper Jeffreys priors for Bayes-factor computation. These are specialized tools not covered in Topic 25's introductory opener.
+</RemarkBlock>
+
+<RemarkBlock number={27} title="Predictive checks and model criticism">
+**Posterior predictive checks** (PPCs) simulate replicated datasets from the posterior predictive $p(\mathbf{y}^{\text{rep}} \mid \mathbf{y})$ and compare them to observed data — a direct Bayesian alternative to frequentist goodness-of-fit tests. GEL2013 Ch. 6 is the standard reference; full development [Topic 27](/topics/bayesian-model-comparison-and-bma).
+</RemarkBlock>
+
+<RemarkBlock number={28} title="Bayesian nonparametrics (formalml)">
+When the parameter space is infinite-dimensional — distributions over distributions, functions over functions — **Bayesian nonparametrics** provides the toolkit. Dirichlet processes (Ferguson 1973), Pólya trees, and Gaussian processes as priors are the three principal constructions. GPs were already flagged in [Topic 8](/topics/multivariate-distributions); full treatment at <ExternalLink href="https://formalml.com/topics/gaussian-processes" site="formalml" topic="Gaussian Processes" />.
+</RemarkBlock>
+
+<RemarkBlock number={29} title="Closing: Track 7 as a parallel formalism">
+Track 7 is a parallel formalism to Tracks 4–6, not a replacement. Every frequentist method of Topics 13–24 has a Bayesian counterpart: MLE ↔ posterior mean or MAP; Wald CI ↔ credible interval (coincident asymptotically by BvM); LRT ↔ Bayes factor; AIC/BIC ↔ marginal likelihood $m(\mathbf{y})$; regularization ↔ informative prior. The practical choice between frameworks depends on whether you can defensibly specify priors and whether you want answers that are probability statements about parameters (Bayesian) or long-run frequency guarantees about procedures (frequentist). In many modern applications (hierarchical models, small-sample inference, integration of prior information) the Bayesian framework is better suited; in others (large-n prediction, procedural guarantees with minimal assumptions) the frequentist framework is cleaner. Track 7's remaining three topics — [MCMC](/topics/bayesian-computation-and-mcmc), [BMA and Bayes factors](/topics/bayesian-model-comparison-and-bma), [hierarchical and empirical Bayes](/topics/hierarchical-bayes-and-partial-pooling) — develop the computational and structural machinery needed to use the Bayesian framework at modern applied scale.
+</RemarkBlock>
+
+<img src="/images/topics/bayesian-foundations-and-prior-selection/25-10-forward-map.png"
+     alt="Forward-map diagram for Topic 25. Central purple hub 'Bayesian Foundations (Topic 25)' with arrows outward to Topic 26 (MCMC: Metropolis–Hastings, Gibbs, HMC, NUTS), Topic 27 (BMA, Bayes factors, DIC/WAIC/PSIS-LOO, marginal likelihood), Topic 28 (hierarchical, partial pooling, empirical Bayes, horseshoe), and formalml (VI, BNN, GP, PP, Bayesian nonparametrics). Back-arrows to Topic 4 (Bayes thm), Topic 7 (conjugacy), Topic 14 (MLE/BvM), Topic 23 (MAP=penalty), Topic 24 (BIC=Laplace)."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+---
+
+### References
+
+1. Andrew Gelman, John B. Carlin, Hal S. Stern, David B. Dunson, Aki Vehtari & Donald B. Rubin. (2013). [*Bayesian Data Analysis*](http://www.stat.columbia.edu/~gelman/book/) (3rd ed.). CRC Press.
+2. José M. Bernardo & Adrian F. M. Smith. (1994). [*Bayesian Theory*](https://onlinelibrary.wiley.com/doi/book/10.1002/9780470316870). Wiley.
+3. Christian P. Robert. (2007). [*The Bayesian Choice: From Decision-Theoretic Foundations to Computational Implementation*](https://link.springer.com/book/10.1007/0-387-71599-1) (2nd ed.). Springer.
+4. Harold Jeffreys. (1961). [*Theory of Probability*](https://global.oup.com/academic/product/theory-of-probability-9780198503682) (3rd ed.). Oxford University Press.
+5. Dennis V. Lindley. (2014). [*Understanding Uncertainty*](https://onlinelibrary.wiley.com/doi/book/10.1002/9781118650158) (Rev. ed.). Wiley.
+6. A. W. van der Vaart. (1998). [*Asymptotic Statistics*](https://www.cambridge.org/core/books/asymptotic-statistics/A3C7DAD3F7E66A1FA60E9C8FE132EE1D). Cambridge University Press.
+7. Persi Diaconis & David Freedman. (1986). [*On the consistency of Bayes estimates*](https://doi.org/10.1214/aos/1176349830). *The Annals of Statistics*, 14(1), 1–26.
+8. George Casella & Roger L. Berger. (2002). [*Statistical Inference*](https://www.routledge.com/Statistical-Inference/Casella-Berger/p/book/9780534243128) (2nd ed.). Duxbury.
+9. E. L. Lehmann & George Casella. (1998). [*Theory of Point Estimation*](https://link.springer.com/book/10.1007/b98854) (2nd ed.). Springer.
+10. Trevor Hastie, Robert Tibshirani & Jerome Friedman. (2009). [*The Elements of Statistical Learning*](https://hastie.su.domains/ElemStatLearn/) (2nd ed.). Springer.

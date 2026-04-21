@@ -704,6 +704,20 @@ export function pdfF(x: number, d1: number, d2: number): number {
   return Math.exp(logPdf);
 }
 
+/**
+ * Inverse-Gamma(α, β) PDF (shape-scale parameterization).
+ * f(x) = β^α / Γ(α) · x^{−α−1} · exp(−β/x), x > 0.
+ * If X ∼ Gamma(α, β) then 1/X ∼ InverseGamma(α, β).
+ * Computed in log space to avoid underflow for small x.
+ * Used by Topic 25 §25.5 Ex 3 (Normal-Normal-Inverse-Gamma conjugate prior).
+ */
+export function pdfInverseGamma(x: number, alpha: number, beta: number): number {
+  if (x <= 0 || alpha <= 0 || beta <= 0) return 0;
+  const logPdf = alpha * Math.log(beta) - lnGamma(alpha)
+    - (alpha + 1) * Math.log(x) - beta / x;
+  return Math.exp(logPdf);
+}
+
 // ── Continuous CDFs (Topic 6) ──────────────────────────────────────────────
 
 /**
