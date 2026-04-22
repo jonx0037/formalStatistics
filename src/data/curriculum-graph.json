@@ -33,7 +33,7 @@
     { "id": "bayesian-foundations", "label": "Bayesian Foundations & Prior Selection", "domain": "bayesian-statistics", "status": "published", "url": "/topics/bayesian-foundations-and-prior-selection" },
     { "id": "bayesian-computation", "label": "Bayesian Computation & MCMC", "domain": "bayesian-statistics", "status": "published", "url": "/topics/bayesian-computation-and-mcmc" },
     { "id": "bayesian-model-comparison", "label": "Bayesian Model Comparison & BMA", "domain": "bayesian-statistics", "status": "published", "url": "/topics/bayesian-model-comparison-and-bma" },
-    { "id": "hierarchical-bayes", "label": "Hierarchical & Empirical Bayes", "domain": "bayesian-statistics", "status": "planned", "url": "/topics/hierarchical-bayes-and-partial-pooling" },
+    { "id": "hierarchical-bayes", "label": "Hierarchical & Empirical Bayes", "domain": "bayesian-statistics", "status": "published", "url": "/topics/hierarchical-bayes-and-partial-pooling" },
 
     { "id": "order-statistics", "label": "Order Statistics & Quantiles", "domain": "high-dimensional-nonparametric", "status": "planned", "url": "/topics/order-statistics" },
     { "id": "kernel-density-estimation", "label": "Kernel Density Estimation", "domain": "high-dimensional-nonparametric", "status": "planned", "url": "/topics/kernel-density-estimation" },
@@ -141,6 +141,7 @@
     { "source": "bayesian-foundations", "target": "hierarchical-bayes" },
     { "source": "bayesian-computation", "target": "hierarchical-bayes" },
     { "source": "point-estimation", "target": "hierarchical-bayes" },
+    { "source": "regularization", "target": "hierarchical-bayes" },
 
     { "source": "random-variables", "target": "order-statistics" },
     { "source": "continuous-distributions", "target": "order-statistics" },
