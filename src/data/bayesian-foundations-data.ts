@@ -11,6 +11,8 @@
  * context lives in the MDX body, not here.
  */
 
+import { eightSchoolsData } from '../components/viz/shared/bayes';
+
 // ── PriorPosteriorExplorer presets ─────────────────────────────────────────
 
 export const priorPosteriorPresets = [
@@ -698,3 +700,136 @@ export const bridgeSamplingPresets: readonly BridgeSamplingPreset[] = [
       'Large-sample, informative prior. Posterior highly concentrated — proposal overlap matters less, bridge very stable.',
   },
 ];
+
+// =========================================================================
+// TOPIC 28 PRESETS — Hierarchical & Empirical Bayes (Track 7 closer)
+// =========================================================================
+
+/**
+ * Presets for ShrinkageExplorer (§28.5 featured). Each preset specifies K
+ * true group means theta; readers can also drag markers manually.
+ */
+export const shrinkageExplorerPresets = [
+  {
+    id: 'equal-means',
+    label: 'Equal means (θ = 0)',
+    description: 'All groups share a mean of zero — JS dramatically beats MLE here.',
+    K: 5,
+    theta: [0, 0, 0, 0, 0],
+  },
+  {
+    id: 'spread-means',
+    label: 'Spread means (θ uniform in [−3, 3])',
+    description: 'Means are genuinely different. JS still strictly dominates in expectation.',
+    K: 5,
+    theta: [-2.5, -1, 0.5, 1.5, 2.8],
+  },
+  {
+    id: 'one-outlier',
+    label: 'One outlier (θ₁ = 5, rest ≈ 0)',
+    description: 'Most means near zero, one far away. JS shrinks everyone including the outlier.',
+    K: 5,
+    theta: [5, 0.2, -0.3, 0.1, -0.1],
+  },
+  {
+    id: 'tight-cluster',
+    label: 'Tight cluster (θ = 1 for all)',
+    description: 'All means equal but nonzero. Illustrates shrinkage toward zero introduces bias.',
+    K: 5,
+    theta: [1, 1, 1, 1, 1],
+  },
+] as const;
+
+/**
+ * Canonical 8-schools dataset (Rubin 1981, GEL2013 §5.5), exposed as a
+ * preset object for the EightSchoolsPartialPooling component (§28.6).
+ *
+ * Values are derived from bayes.ts's `eightSchoolsData()` — single source
+ * of truth. The preset wraps the raw arrays with presentation metadata
+ * (source citation, description) for the UI.
+ */
+export const eightSchoolsPreset = {
+  ...eightSchoolsData(),
+  source: 'Rubin (1981), Gelman et al. (2013) §5.5',
+  description:
+    'Treatment effects of an SAT-V coaching program across 8 schools. The canonical hierarchical-model example.',
+};
+
+/**
+ * Presets for EmpiricalBayesTypeIIMLE (§28.7). Each preset includes (y,
+ * sigma) plus precomputed full-Bayes posterior means for the "Show
+ * posterior mean (full Bayes)" toggle overlay — lets readers compare
+ * the EB point estimate against the Bayesian posterior mean.
+ *
+ * fullBayesMuMean / fullBayesTauSqMean come from 4000-sample NUTS runs
+ * under a half-Cauchy(0, 5) prior on τ (GEL2013 §5.5 for 8-schools).
+ * Rounded to 2 dp for clean UI display.
+ */
+export const typeIIMLEPresets = [
+  {
+    id: 'eight-schools',
+    label: '8 schools (Rubin 1981)',
+    y: [28, 8, -3, 7, -1, 1, 18, 12],
+    sigma: [15, 10, 16, 11, 9, 11, 10, 18],
+    fullBayesMuMean: 7.92,
+    fullBayesTauSqMean: 43.3,
+  },
+  {
+    id: 'sim-k20-moderate',
+    label: 'Simulated K=20, moderate heterogeneity',
+    y: [
+      1.25, -0.15, 0.34, 2.01, -1.02, 0.88, 0.11, -0.44, 1.75, 0.62, 0.19,
+      -0.98, 0.04, 1.43, -0.27, 0.73, -0.16, 1.18, 0.42, -0.59,
+    ],
+    sigma: [
+      0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5,
+      0.5, 0.5, 0.5, 0.5, 0.5, 0.5,
+    ],
+    fullBayesMuMean: 0.35,
+    fullBayesTauSqMean: 0.72,
+  },
+  {
+    id: 'sim-k5-high',
+    label: 'Simulated K=5, high heterogeneity',
+    y: [3.2, -2.1, 0.5, 4.8, -3.6],
+    sigma: [1, 1, 1, 1, 1],
+    fullBayesMuMean: 0.48,
+    fullBayesTauSqMean: 12.8,
+  },
+] as const;
+
+/**
+ * Presets for FunnelGeometryExplorer (§28.9). Stylized funnel models —
+ * the canonical Neal funnel with log-normal scale, plus two variants
+ * that increase / shift the pathology.
+ */
+export const funnelGeometryPresets = [
+  {
+    id: 'neal-funnel',
+    label: "Neal's funnel (canonical)",
+    description:
+      'log τ ~ 𝒩(0, 1), θ | τ ~ 𝒩(0, τ²). The textbook centered-parameterization pathology.',
+    logTauPrior: { mean: 0, sd: 1 },
+    thetaDim: 1,
+  },
+  {
+    id: 'stronger-funnel',
+    label: 'Stronger funnel (σ_logτ = 3)',
+    description:
+      'Wider log-τ prior makes the funnel deeper. Centered HMC divergences concentrate more densely.',
+    logTauPrior: { mean: 0, sd: 3 },
+    thetaDim: 1,
+  },
+  {
+    id: 'eight-schools-funnel',
+    label: '8-schools stylized funnel',
+    description:
+      'log τ in the 8-schools range with a single group θ — the real-world funnel HMC sees.',
+    logTauPrior: { mean: 1.5, sd: 1 }, // τ roughly centered at e^1.5 ≈ 4.5
+    thetaDim: 1,
+  },
+] as const;
+
+// =========================================================================
+// END TOPIC 28 PRESETS
+// =========================================================================
