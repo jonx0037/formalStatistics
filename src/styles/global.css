@@ -70,12 +70,15 @@
   /* Bayesian palette (Topic 25, Track 7) — prior/likelihood/posterior trio
      matches the standard Bayesian-textbook visual grammar and is inherited
      by Topics 26–28. Two utility vars support the BvM animator's dual-
-     reference plot (θ₀ vs θ̂_MLE). */
+     reference plot (θ₀ vs θ̂_MLE). Topic 28 adds shrink + divergence for
+     James–Stein / partial-pool arrows and HMC funnel diagnostics. */
   --color-prior:          #3B82F6;  /* blue-500 */
   --color-likelihood:     #F59E0B;  /* amber-500 */
   --color-posterior:      #8B5CF6;  /* violet-500 */
   --color-true-parameter: #10B981;  /* emerald-500 */
   --color-mle:            #F97316;  /* orange-500 */
+  --color-shrink:         #7C3AED;  /* violet-600 — Topic 28 JS + partial-pool */
+  --color-divergence:     #DC2626;  /* red-600 — Topic 28 HMC divergences      */
 
   /* Chain-accent palette (Topic 26, Track 7) — four Tableau-10 hues for
      Gelman–Rubin multi-chain diagnostics and HMC/Gibbs trace overlays.

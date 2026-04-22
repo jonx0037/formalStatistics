@@ -171,11 +171,13 @@ export const informationCriteriaLineStyles = {
  * `--color-mle` defined in `src/styles/global.css`, matching Topic 22's
  * `glmFamilyColors` ↔ `--color-bernoulli` themed pattern.
  *
- *   prior      blue    — information before data
- *   likelihood amber   — information from data
- *   posterior  violet  — updated belief after Bayes
- *   true       emerald — data-generating parameter θ₀ (BvM reference)
- *   mle        orange  — frequentist θ̂_MLE (BvM reference)
+ *   prior      blue      — information before data
+ *   likelihood amber     — information from data
+ *   posterior  violet    — updated belief after Bayes
+ *   true       emerald   — data-generating parameter θ₀ (BvM reference)
+ *   mle        orange    — frequentist θ̂_MLE (BvM reference)
+ *   shrink     violet-600 — James–Stein + partial-pool shrinkage (Topic 28)
+ *   divergence red-600   — HMC divergences in funnel diagnostics (Topic 28)
  */
 export const bayesianColors = {
   prior:      'var(--color-prior)',
@@ -183,6 +185,8 @@ export const bayesianColors = {
   posterior:  'var(--color-posterior)',
   true:       'var(--color-true-parameter)',
   mle:        'var(--color-mle)',
+  shrink:     'var(--color-shrink)',
+  divergence: 'var(--color-divergence)',
   chains: [
     'var(--chain-1)',
     'var(--chain-2)',
