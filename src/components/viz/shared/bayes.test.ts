@@ -60,6 +60,20 @@ import {
   bmaPredictive,
   localFdr,
   posteriorPredictiveCheck,
+  // Topic 28 additions
+  jamesSteinEstimator,
+  jamesSteinPositivePart,
+  steinRiskDifference,
+  partialPoolingShrinkageFactor,
+  partialPoolingPosteriorMean,
+  partialPoolingPosteriorVariance,
+  normalNormalGrandMean,
+  typeIIMarginalLogLikelihood,
+  typeIIMLE,
+  eightSchoolsData,
+  nonCenteredTransform,
+  centeredToNonCentered,
+  funnelLogDensity,
   type PriorHyperparams,
   type SuffStats,
   type PosteriorHyperparams,
@@ -1164,6 +1178,276 @@ console.log('========================================\n');
     logMarginal.toFixed(8),
     '-2.07679374',
     'tol 5e-2 for NS run variance; Skilling prior-mass shrinkage',
+  );
+}
+
+console.log('\n========================================');
+console.log(' Topic 28 · bayes.ts verification (Hierarchical & Empirical Bayes)');
+console.log('========================================\n');
+
+// ── T28.1. Stein risk diff at θ=0 (d=3) = −(d−2) = −1 ─────────────────────
+// E[1/χ²_3(0)] = 1/(d−2) = 1; R(JS)−R(MLE) = −(d−2)² · 1 = −1.
+{
+  const delta = steinRiskDifference([0, 0, 0]);
+  check(
+    'T28.1 steinRiskDifference([0,0,0]) ≈ −1',
+    approx(delta, -1.0, 1e-4),
+    delta.toFixed(6),
+    '-1',
+    'Stein paradox: d=3 at the most-favorable point θ=0',
+  );
+}
+
+// ── T28.2. Stein risk diff at θ=0 (d=5) = −3 ──────────────────────────────
+{
+  const delta = steinRiskDifference([0, 0, 0, 0, 0]);
+  check(
+    'T28.2 steinRiskDifference([0]*5) ≈ −3',
+    approx(delta, -3.0, 1e-4),
+    delta.toFixed(6),
+    '-3',
+    'd=5 at θ=0: E[1/χ²_5(0)] = 1/3; risk diff = −9 · 1/3 = −3',
+  );
+}
+
+// ── T28.3. Stein risk diff at θ=ones(d=10), λ=10 ≈ −3.7909 ────────────────
+// Poisson(λ/2=5)-weighted sum over 1/(d+2j−2) converges to E[1/χ²_10(10)]
+// ≈ 0.05923; risk diff = −64 · 0.05923 ≈ −3.791.
+{
+  const theta = new Array(10).fill(1);
+  const delta = steinRiskDifference(theta);
+  check(
+    'T28.3 steinRiskDifference(ones(10), λ=10) ≈ −3.791',
+    approx(delta, -3.7909, 2e-2),
+    delta.toFixed(4),
+    '-3.7909',
+    'Poisson-mixture series verification against scipy ncx2.expect',
+  );
+}
+
+// ── T28.4. partialPoolingShrinkageFactor(σ²=1, τ²=1) = 0.5 ────────────────
+{
+  const B = partialPoolingShrinkageFactor(1, 1);
+  check(
+    'T28.4 partialPoolingShrinkageFactor(1, 1) = 0.5',
+    approx(B, 0.5, 1e-10),
+    B,
+    0.5,
+    'equal signal-vs-prior → 50% weight on grand mean',
+  );
+}
+
+// ── T28.5. partialPoolingShrinkageFactor(σ²=100, τ²=25) = 0.8 ─────────────
+{
+  const B = partialPoolingShrinkageFactor(100, 25);
+  check(
+    'T28.5 partialPoolingShrinkageFactor(100, 25) = 0.8',
+    approx(B, 0.8, 1e-10),
+    B,
+    0.8,
+    'noisy obs (σ²=100) vs tight prior (τ²=25) → heavy shrinkage',
+  );
+}
+
+// ── T28.6. School-A posterior mean at τ²=100 ≈ 14.2414 ────────────────────
+// σ²_A = 15² = 225, y_A = 28, μ̂(τ²=100) ≈ 8.1265 (from Cell 14).
+// B_A = 225/(225+100) = 0.6923; mean = 0.3077·28 + 0.6923·8.1265 ≈ 14.24.
+{
+  const pm = partialPoolingPosteriorMean(28, 8.1265, 225, 100);
+  check(
+    'T28.6 partialPoolingPosteriorMean(school-A, τ²=100) ≈ 14.2414',
+    approx(pm, 14.2414, 1e-3),
+    pm.toFixed(4),
+    '14.2414',
+    '8-schools: moderate shrinkage at τ²=100',
+  );
+}
+
+// ── T28.7. School-A posterior mean at τ²=25 ≈ 9.8659 ──────────────────────
+// B_A = 225/250 = 0.9; μ̂(τ²=25) ≈ 7.851 (Cell 14).
+// mean = 0.1·28 + 0.9·7.851 ≈ 9.866.
+{
+  const pm = partialPoolingPosteriorMean(28, 7.851, 225, 25);
+  check(
+    'T28.7 partialPoolingPosteriorMean(school-A, τ²=25) ≈ 9.8659',
+    approx(pm, 9.8659, 1e-3),
+    pm.toFixed(4),
+    '9.8659',
+    '8-schools: stronger shrinkage at τ²=25',
+  );
+}
+
+// ── T28.8. 8-schools precision-weighted grand mean ≈ 7.6856 ──────────────
+{
+  const { y, sigma } = eightSchoolsData();
+  const sigmaSq = sigma.map((s) => s * s);
+  const mu = normalNormalGrandMean(y, sigmaSq);
+  check(
+    'T28.8 normalNormalGrandMean(8-schools) ≈ 7.6856',
+    approx(mu, 7.6856, 1e-3),
+    mu.toFixed(4),
+    '7.6856',
+    'complete-pool MLE of μ; Cell 14-verified against scipy',
+  );
+}
+
+// ── T28.9. Type-II log-marginal on 8-schools at (μ=7.7, τ²=0) ≈ −29.6742 ─
+{
+  const { y, sigma } = eightSchoolsData();
+  const sigmaSq = sigma.map((s) => s * s);
+  const ll = typeIIMarginalLogLikelihood(y, sigmaSq, 7.7, 0);
+  check(
+    'T28.9 typeIIMarginalLogLikelihood(μ=7.7, τ²=0) ≈ −29.6742',
+    approx(ll, -29.6742, 1e-3),
+    ll.toFixed(4),
+    '-29.6742',
+    'complete-pool limit of the empirical-Bayes objective',
+  );
+}
+
+// ── T28.10. Type-II log-marginal at (μ=7.7, τ²=25) ≈ −29.9941 ────────────
+{
+  const { y, sigma } = eightSchoolsData();
+  const sigmaSq = sigma.map((s) => s * s);
+  const ll = typeIIMarginalLogLikelihood(y, sigmaSq, 7.7, 25);
+  check(
+    'T28.10 typeIIMarginalLogLikelihood(μ=7.7, τ²=25) ≈ −29.9941',
+    approx(ll, -29.9941, 1e-3),
+    ll.toFixed(4),
+    '-29.9941',
+    'log-marginal drops slightly as τ² moves off the boundary',
+  );
+}
+
+// ── T28.11. Type-II MLE on 8-schools: τ̂² ≈ 0 (boundary-case EB) ─────────
+// The canonical boundary-MLE result: on 8-schools the empirical-Bayes MLE
+// of τ² collapses to complete-pool. GEL2006's half-Cauchy-prior argument
+// is motivated by precisely this. Featured in §28.7.
+{
+  const { y, sigma } = eightSchoolsData();
+  const sigmaSq = sigma.map((s) => s * s);
+  const result = typeIIMLE(y, sigmaSq);
+  check(
+    'T28.11 typeIIMLE(8-schools).converged === true',
+    result.converged === true,
+    result.converged,
+    true,
+    `converged at iter ${result.iterations}`,
+  );
+  check(
+    'T28.11 typeIIMLE(8-schools).tauSq ≈ 0 (boundary MLE)',
+    result.tauSq < 0.5,
+    result.tauSq.toFixed(4),
+    '< 0.5',
+    'full-Bayes posterior mean ≈ 43 by contrast (GEL2013 §5.5)',
+  );
+  check(
+    'T28.11 typeIIMLE(8-schools).mu ≈ 7.6856',
+    approx(result.mu, 7.6856, 1e-2),
+    result.mu.toFixed(4),
+    '7.6856',
+    'EB μ̂ coincides with complete-pool grand mean when τ̂²→0',
+  );
+}
+
+// ── T28.12. Non-centered ↔ centered round-trip invertibility ─────────────
+{
+  const thetaTilde = [0.5, -1.2, 0.3, 2.1];
+  const theta = nonCenteredTransform(thetaTilde, 7.7, 5);
+  const back = centeredToNonCentered(theta, 7.7, 5);
+  const maxErr = Math.max(...thetaTilde.map((t, i) => Math.abs(back[i] - t)));
+  check(
+    'T28.12 nonCentered round-trip preserves values (max err < 1e-10)',
+    maxErr < 1e-10,
+    maxErr.toExponential(2),
+    '< 1e-10',
+    'change-of-variables invertibility for τ≠0',
+  );
+}
+
+// ── T28.13. centeredToNonCentered at τ=0 throws ──────────────────────────
+{
+  let threw = false;
+  try {
+    centeredToNonCentered([1, 2, 3], 0, 0);
+  } catch {
+    threw = true;
+  }
+  check(
+    'T28.13 centeredToNonCentered(_, _, 0) throws (funnel apex)',
+    threw,
+    threw,
+    true,
+    'change-of-variables undefined at τ=0',
+  );
+}
+
+// ── T28.14. funnelLogDensity(0, 0) = −log(2π) ────────────────────────────
+// At (θ=0, log τ=0): both log-Normal(0;0,1)=−½log(2π) terms add.
+{
+  const ld = funnelLogDensity(0, 0);
+  const expected = -Math.log(2 * Math.PI);
+  check(
+    'T28.14 funnelLogDensity(0, 0) = −log(2π)',
+    approx(ld, expected, 1e-8),
+    ld.toFixed(10),
+    expected.toFixed(10),
+    'joint mode of Neal-funnel parametrization',
+  );
+}
+
+// ── T28.15. funnelLogDensity(0, −3) = small-τ concentration ──────────────
+// log p(θ=0 | log τ=−3) = −½ log(2π·e^{−6}) = −log(2π)/2·(no, see below)
+// Full calc: log N(0;0,e^{−6}) = −½ log(2π) − (−6)/2 = −½ log(2π) + 3
+//           log N(−3;0,1)     = −½ log(2π) − 9/2
+// Sum: −log(2π) + 3 − 4.5 = −log(2π) − 1.5
+{
+  const ld = funnelLogDensity(0, -3);
+  const expected = -Math.log(2 * Math.PI) + 3 - 4.5;
+  check(
+    'T28.15 funnelLogDensity(0, −3) = −log(2π) − 1.5',
+    approx(ld, expected, 1e-6),
+    ld.toFixed(6),
+    expected.toFixed(6),
+    'log τ=−3 → tiny τ concentrates θ mass at 0',
+  );
+}
+
+// ── S28.A jamesSteinEstimator shrinks X=[2,0,0] by shrink = 0.75 ─────────
+// d=3, σ²=1, ‖X‖²=4 → shrink = 1 − (d−2)/‖X‖² = 1 − 1/4 = 0.75; JS = [1.5, 0, 0].
+{
+  const est = jamesSteinEstimator([2, 0, 0]);
+  check(
+    'S28.A jamesSteinEstimator([2,0,0]) = [1.5, 0, 0]',
+    approx(est[0], 1.5, 1e-10) && est[1] === 0 && est[2] === 0,
+    est.map((v) => v.toFixed(4)).join(','),
+    '1.5000, 0, 0',
+    'd=3, ‖X‖²=4 → shrink = 0.75; JS pulls [2,0,0] to [1.5,0,0]',
+  );
+}
+
+// ── S28.B jamesSteinPositivePart clamps when the JS shrink factor < 0 ────
+// X=[0.5,0,0], d=3 → 1 − 1/0.25 = −3 (plain JS flips sign); JS+ clamps to 0.
+{
+  const est = jamesSteinPositivePart([0.5, 0, 0]);
+  check(
+    'S28.B jamesSteinPositivePart clamps when shrink<0',
+    est[0] === 0 && est[1] === 0 && est[2] === 0,
+    est.join(','),
+    '0, 0, 0',
+    'Efron-Morris 1973: dominant over plain JS in finite samples',
+  );
+}
+
+// ── S28.C partialPoolingPosteriorVariance (σ²=100, τ²=100) = 50 ──────────
+{
+  const v = partialPoolingPosteriorVariance(100, 100);
+  check(
+    'S28.C partialPoolingPosteriorVariance(100, 100) = 50',
+    approx(v, 50, 1e-10),
+    v,
+    50,
+    'σ²·τ² / (σ² + τ²) = 10000/200 = 50',
   );
 }
 
