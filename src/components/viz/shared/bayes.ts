@@ -1766,9 +1766,25 @@ export function posteriorModelProbabilities(
 ): number[] {
   const K = logMarginals.length;
   if (K === 0) return [];
-  const logPriors = priorModelProbs
-    ? priorModelProbs.map(p => Math.log(p))
-    : new Array(K).fill(-Math.log(K));
+  let logPriors: number[];
+  if (priorModelProbs === undefined) {
+    logPriors = new Array(K).fill(-Math.log(K));
+  } else {
+    if (priorModelProbs.length !== K) {
+      throw new Error(
+        `posteriorModelProbabilities: priorModelProbs.length (${priorModelProbs.length}) `
+        + `must match logMarginals.length (${K}).`,
+      );
+    }
+    for (const p of priorModelProbs) {
+      if (!(Number.isFinite(p) && p > 0)) {
+        throw new Error(
+          'posteriorModelProbabilities: priorModelProbs must be strictly positive and finite.',
+        );
+      }
+    }
+    logPriors = priorModelProbs.map(p => Math.log(p));
+  }
   const logUnnorm = logMarginals.map((lm, k) => lm + logPriors[k]);
   const logZ = logsumexp(logUnnorm);
   return logUnnorm.map(lu => Math.exp(lu - logZ));
@@ -1876,20 +1892,21 @@ export function bridgeSamplingEstimate(opts: {
   const logP2 = proposalDraws.map(t => logUnnormPost(t));
   const logG2 = proposalDraws.map(t => logProposal(t));
 
-  // Initialize with naive-IS estimate on the proposal side.
-  const isInit: number[] = new Array(N2);
-  for (let j = 0; j < N2; j++) isInit[j] = logP2[j] - logG2[j];
-  let logM = logsumexp(isInit) - Math.log(N2);
+  // Initialize with naive-IS estimate on the proposal side. Reuse the
+  // proposal-side buffer as numerTerms across iterations; denomTerms is a
+  // separate buffer reused across iterations for the posterior-side sum.
+  const numerTerms: number[] = new Array(N2);
+  for (let j = 0; j < N2; j++) numerTerms[j] = logP2[j] - logG2[j];
+  let logM = logsumexp(numerTerms) - Math.log(N2);
+  const denomTerms: number[] = new Array(N1);
 
   let iterations = 0;
   for (iterations = 0; iterations < maxIter; iterations++) {
-    const numerTerms: number[] = new Array(N2);
     for (let j = 0; j < N2; j++) {
       numerTerms[j] = logP2[j] - logsumexpPair(logP2[j] - logM, logG2[j]);
     }
     const numer = logsumexp(numerTerms) - Math.log(N2);
 
-    const denomTerms: number[] = new Array(N1);
     for (let i = 0; i < N1; i++) {
       denomTerms[i] = logG1[i] - logsumexpPair(logP1[i] - logM, logG1[i]);
     }
@@ -1955,15 +1972,19 @@ export function pathSamplingEstimate(opts: {
   const varLogL: number[] = new Array(K);
   for (let k = 0; k < K; k++) {
     const draws = powerPosteriorDraws[k];
-    const logLs = draws.map(t => logLikelihood(t));
-    const n = logLs.length;
-    let sum = 0;
-    for (const l of logLs) sum += l;
-    const mean = sum / n;
-    let vSum = 0;
-    for (const l of logLs) vSum += (l - mean) ** 2;
+    const n = draws.length;
+    // Welford single-pass: compute mean and sum-of-squared-deviations online,
+    // avoiding the intermediate logLs[] allocation.
+    let mean = 0;
+    let m2 = 0;
+    for (let s = 0; s < n; s++) {
+      const x = logLikelihood(draws[s]);
+      const delta = x - mean;
+      mean += delta / (s + 1);
+      m2 += delta * (x - mean);
+    }
     expLogL[k] = mean;
-    varLogL[k] = n > 1 ? vSum / ((n - 1) * n) : 0;
+    varLogL[k] = n > 1 ? m2 / ((n - 1) * n) : 0;
   }
   let logMarginal = 0;
   let seSquared = 0;
@@ -2001,23 +2022,31 @@ export function nestedSamplingEstimate(opts: {
   }
   const logShrink = Math.log1p(-Math.exp(-1 / nLivePoints));
   const logTerms: number[] = [];
+  const logLs: number[] = [];              // per-term logL, for Skilling H
   for (let i = 0; i < K; i++) {
     // Iteration index 1-based: i+1. log w_{i+1} = −i/N + log(1 − e^{−1/N}).
     const logW = -i / nLivePoints + logShrink;
+    logLs.push(logLikDeadPoints[i]);
     logTerms.push(logLikDeadPoints[i] + logW);
   }
   const logXK = -K / nLivePoints;
   const logLiveW = logXK - Math.log(nLivePoints);
-  for (const logL of finalLiveLogLiks) logTerms.push(logL + logLiveW);
+  for (const logL of finalLiveLogLiks) {
+    logLs.push(logL);
+    logTerms.push(logL + logLiveW);
+  }
 
   const logZ = logsumexp(logTerms);
-  // Skilling information H ≈ ∫ p log(p/w); SE ≈ √(H/N).
+  // Skilling information H = ∫ (L/Z) log(L/Z) dπ ≈ Σ_i p_i (log L_i − log Z),
+  // where p_i = L_i w_i / Z (evidence contribution) and log L_i is the
+  // per-term log-likelihood (excluding the prior-mass weight). H ≥ 0 is the
+  // KL divergence from prior to posterior; SE(log Z) ≈ √(H / N_live).
   let H = 0;
-  for (const lt of logTerms) {
-    const logp = lt - logZ;
-    if (Number.isFinite(logp)) H += Math.exp(logp) * logp;
+  for (let i = 0; i < logTerms.length; i++) {
+    const logp = logTerms[i] - logZ;
+    if (Number.isFinite(logp)) H += Math.exp(logp) * (logLs[i] - logZ);
   }
-  const mcSe = Math.sqrt(Math.max(0, -H / nLivePoints));
+  const mcSe = Math.sqrt(Math.max(0, H / nLivePoints));
   return { logMarginal: logZ, mcSe };
 }
 
@@ -2075,18 +2104,24 @@ export function waic(
   }
   const n = logLikDraws[0].length;
   const pointwise: number[] = new Array(n);
+  // Reuse a single column buffer across the observation loop to avoid
+  // allocating [n] arrays of size S.
+  const col: number[] = new Array(S);
   let elpd = 0;
   let pwaicSum = 0;
   for (let i = 0; i < n; i++) {
-    const col: number[] = new Array(S);
     for (let s = 0; s < S; s++) col[s] = logLikDraws[s][i];
     const lppdI = logsumexp(col) - Math.log(S);
+    // Welford single-pass mean + variance.
     let mean = 0;
-    for (let s = 0; s < S; s++) mean += col[s];
-    mean /= S;
-    let varSum = 0;
-    for (let s = 0; s < S; s++) varSum += (col[s] - mean) ** 2;
-    const pwaicI = S > 1 ? varSum / (S - 1) : 0;
+    let m2 = 0;
+    for (let s = 0; s < S; s++) {
+      const x = col[s];
+      const delta = x - mean;
+      mean += delta / (s + 1);
+      m2 += delta * (x - mean);
+    }
+    const pwaicI = S > 1 ? m2 / (S - 1) : 0;
     pointwise[i] = lppdI - pwaicI;
     elpd += pointwise[i];
     pwaicSum += pwaicI;
@@ -2136,10 +2171,11 @@ export function psisLoo(
   const n = logLikDraws[0].length;
   const pointwise: number[] = new Array(n);
   const paretoK: number[] = new Array(n);
+  // Reuse neg / pos buffers across observations.
+  const neg: number[] = new Array(S);
+  const pos: number[] = new Array(S);
   let lppdSum = 0;
   for (let i = 0; i < n; i++) {
-    const neg: number[] = new Array(S);
-    const pos: number[] = new Array(S);
     for (let s = 0; s < S; s++) {
       neg[s] = -logLikDraws[s][i];
       pos[s] = logLikDraws[s][i];
@@ -2148,8 +2184,9 @@ export function psisLoo(
     pointwise[i] = Math.log(S) - logsumexp(neg);
     // lppd_i for p_LOO = Σ lppd_i − elpd_LOO.
     lppdSum += logsumexp(pos) - Math.log(S);
-    // Pareto-k estimate: fit GPD to the top 20% of exp(neg) weights. Use a
-    // simple moment-matching (Vehtari 2017 §3.2 abbreviated variant).
+    // Pareto-k moment estimator on the top 20% of exp(neg) weights.
+    // For a GPD(k, σ), R := E[X]² / E[X²] = (1 − 2k) / (2(1 − k)), giving
+    // k = (1 − 2R) / (2(1 − R)). At k = 0 (Exponential), R = 1/2 ⇒ k = 0.
     const topCount = Math.max(2, Math.floor(0.2 * S));
     const sorted = neg.slice().sort((a, b) => b - a); // descending
     const tail = sorted.slice(0, topCount).map(v => Math.exp(v - sorted[0]));
@@ -2159,7 +2196,9 @@ export function psisLoo(
     let v = 0;
     for (const t of tail) v += (t - mean) ** 2;
     v /= Math.max(1, tail.length - 1);
-    const kHat = mean * mean > 0 ? 0.5 * (1 - (mean * mean) / (v + mean * mean)) : 0;
+    const m2 = v + mean * mean;                              // E[X²] (Bessel-corrected)
+    const R = m2 > 0 ? (mean * mean) / m2 : 0.5;             // ratio; degenerate tail → 0.5 ⇒ k = 0
+    const kHat = R < 1 ? (1 - 2 * R) / (2 * (1 - R)) : 0;
     paretoK[i] = kHat;
   }
   let elpd = 0;
@@ -2203,33 +2242,36 @@ export function bmaPredictive(opts: {
   const { perModelDraws, weights } = opts;
   const K = perModelDraws.length;
   if (K === 0) return [];
-  const total = weights.reduce((a, b) => a + b, 0);
-  if (!(total > 0)) return [];
-  const normW = weights.map(w => w / total);
-  const minS = perModelDraws.reduce(
-    (m, arr) => Math.min(m, arr.length),
-    Number.POSITIVE_INFINITY,
-  );
+  // Drop models with empty draws up front; if their weight was non-zero we
+  // renormalize over the remaining models (rather than silently sampling
+  // draws[NaN] below). If every model is empty we can't produce draws.
+  const eligible: { w: number; draws: number[] }[] = [];
+  let minS = Number.POSITIVE_INFINITY;
+  for (let k = 0; k < K; k++) {
+    const draws = perModelDraws[k];
+    if (draws.length > 0) {
+      eligible.push({ w: weights[k] ?? 0, draws });
+      if (draws.length < minS) minS = draws.length;
+    }
+  }
+  const total = eligible.reduce((a, e) => a + e.w, 0);
+  if (eligible.length === 0 || !(total > 0)) return [];
+  const normW = eligible.map(e => e.w / total);
   const nOut = opts.nOut ?? (Number.isFinite(minS) ? minS : 0);
   const out: number[] = new Array(nOut);
   let idx = 0;
-  for (let k = 0; k < K; k++) {
+  for (let k = 0; k < eligible.length; k++) {
     const take = Math.round(normW[k] * nOut);
-    const draws = perModelDraws[k];
+    const draws = eligible[k].draws;
     for (let j = 0; j < take && idx < nOut; j++) {
       out[idx++] = draws[j % draws.length];
     }
   }
-  // Fill rounding residuals from the last non-empty model.
-  let fallback = K - 1;
-  while (fallback >= 0 && perModelDraws[fallback].length === 0) fallback--;
-  if (fallback >= 0) {
-    while (idx < nOut) {
-      out[idx] = perModelDraws[fallback][idx % perModelDraws[fallback].length];
-      idx++;
-    }
-  } else {
-    out.length = idx;
+  // Rounding residuals: fill from the last eligible model (guaranteed non-empty).
+  const fallback = eligible[eligible.length - 1].draws;
+  while (idx < nOut) {
+    out[idx] = fallback[idx % fallback.length];
+    idx++;
   }
   return out;
 }
@@ -2243,16 +2285,20 @@ function gaussianKDE(z: number, samples: number[], bandwidth: number): number {
   return sum / (samples.length * bandwidth * Math.sqrt(2 * Math.PI));
 }
 
-/** Silverman's rule-of-thumb bandwidth, used by default in gaussianKDE. */
+/** Silverman's rule-of-thumb bandwidth, used by default in gaussianKDE.
+ *  Single-pass Welford mean + variance (no intermediate allocation). */
 function silvermanBandwidth(samples: number[]): number {
   const n = samples.length;
   if (n < 2) return 1;
   let mean = 0;
-  for (const s of samples) mean += s;
-  mean /= n;
-  let varSum = 0;
-  for (const s of samples) varSum += (s - mean) ** 2;
-  const sd = Math.sqrt(varSum / (n - 1));
+  let m2 = 0;
+  for (let i = 0; i < n; i++) {
+    const x = samples[i];
+    const delta = x - mean;
+    mean += delta / (i + 1);
+    m2 += delta * (x - mean);
+  }
+  const sd = Math.sqrt(m2 / (n - 1));
   return 1.06 * sd * Math.pow(n, -0.2);
 }
 
@@ -2364,16 +2410,22 @@ export function posteriorPredictiveCheck(opts: {
   if (S === 0) return { bayesianPValue: NaN, TObs: T(yObs), TRep: [] };
   const TRep: number[] = new Array(S);
   let count = 0;
+  let tObsSum = 0;
   for (let s = 0; s < S; s++) {
     const theta = thetaDraws?.[s];
     const tRep = T(yRepDraws[s], theta);
     const tObs = T(yObs, theta);
     TRep[s] = tRep;
+    tObsSum += tObs;
     if (tRep >= tObs) count++;
   }
+  // For θ-independent T, each tObs is identical so sum/S = T(yObs) exactly.
+  // For θ-dependent T (e.g. Gelman discrepancies), we return the posterior
+  // mean of T(yObs, θ_s) — consistent with the values actually compared in
+  // the Bayesian p-value sum.
   return {
     bayesianPValue: count / S,
-    TObs: T(yObs),
+    TObs: tObsSum / S,
     TRep,
   };
 }

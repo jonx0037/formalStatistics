@@ -236,17 +236,30 @@ export default function LocalFDRExplorer() {
 
       <svg width={chartW} height={chartH} className="block">
         <g transform={`translate(${MARGIN.left}, ${MARGIN.top})`}>
-          {/* Rejection region shading: BH (light mle) */}
-          {Number.isFinite(bhCutoff) && (
-            <rect
-              x={bhCutoffX}
-              y={0}
-              width={plotW - bhCutoffX}
-              height={plotH}
-              fill={bayesianColors.mle}
-              opacity={0.15}
-            />
-          )}
+          {/* BH rejection region: two-sided |z| > cutoff (shades both tails). */}
+          {Number.isFinite(bhCutoff) && (() => {
+            const bhNegX = xOf(-bhCutoff);
+            return (
+              <g>
+                <rect
+                  x={0}
+                  y={0}
+                  width={Math.max(0, bhNegX)}
+                  height={plotH}
+                  fill={bayesianColors.mle}
+                  opacity={0.15}
+                />
+                <rect
+                  x={bhCutoffX}
+                  y={0}
+                  width={Math.max(0, plotW - bhCutoffX)}
+                  height={plotH}
+                  fill={bayesianColors.mle}
+                  opacity={0.15}
+                />
+              </g>
+            );
+          })()}
           {Number.isFinite(fdrCutoff) && (
             <rect
               x={fdrCutoffX}
@@ -265,16 +278,26 @@ export default function LocalFDRExplorer() {
           <path d={altPath} fill="none" stroke={bayesianColors.likelihood} strokeWidth={1.5} strokeDasharray="4 3" />
           {/* Mixture */}
           <path d={mixPath} fill="none" stroke={bayesianColors.posterior} strokeWidth={2} />
-          {/* BH cutoff line */}
+          {/* BH cutoff lines at ±cutoff (two-sided) */}
           {Number.isFinite(bhCutoff) && (
-            <line
-              x1={bhCutoffX}
-              y1={0}
-              x2={bhCutoffX}
-              y2={plotH}
-              stroke={bayesianColors.mle}
-              strokeWidth={2}
-            />
+            <g>
+              <line
+                x1={xOf(-bhCutoff)}
+                y1={0}
+                x2={xOf(-bhCutoff)}
+                y2={plotH}
+                stroke={bayesianColors.mle}
+                strokeWidth={2}
+              />
+              <line
+                x1={bhCutoffX}
+                y1={0}
+                x2={bhCutoffX}
+                y2={plotH}
+                stroke={bayesianColors.mle}
+                strokeWidth={2}
+              />
+            </g>
           )}
           {Number.isFinite(fdrCutoff) && (
             <line
