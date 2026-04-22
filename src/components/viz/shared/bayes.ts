@@ -1617,3 +1617,763 @@ export function conditionalMVN(
 
   return { muCond, sigmaCond };
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Topic 27 — Bayesian Model Comparison & BMA (extending this module).
+//
+// Handoff brief: docs/formalstatistics-bayesian-model-comparison-and-bma-handoff-brief.md
+//
+// New exports, per brief §6.1 (16 functions):
+//   Closed-form comparator     — lindleyBayesFactor
+//   Log-marginal estimators    — betaBinomialLogMarginal, marginalLikelihoodLaplace,
+//                                bridgeSamplingEstimate, harmonicMeanEstimate,
+//                                importanceSamplingEstimate, pathSamplingEstimate,
+//                                nestedSamplingEstimate
+//   Aggregation                — bayesFactor, posteriorModelProbabilities,
+//                                bmaPredictive
+//   Predictive scoring         — dic, waic, psisLoo
+//   Bayesian multiplicity / PPC — localFdr, posteriorPredictiveCheck
+//
+// Module-local helpers (not exported): logsumexp, logsumexpPair, logDetPD.
+// Absent from distributions.ts — Topics 1–26 stayed in the linear numerical
+// regime; Topic 27 is the first to need log-space mixture normalization.
+// ═══════════════════════════════════════════════════════════════════════════
+
+/** Numerically stable log(Σ exp(x_i)). Returns −∞ on empty. */
+function logsumexp(x: number[]): number {
+  if (x.length === 0) return -Infinity;
+  let m = x[0];
+  for (let i = 1; i < x.length; i++) if (x[i] > m) m = x[i];
+  if (!Number.isFinite(m)) return m;
+  let s = 0;
+  for (let i = 0; i < x.length; i++) s += Math.exp(x[i] - m);
+  return m + Math.log(s);
+}
+
+/** Two-argument logsumexp — common hot path in bridge sampling. */
+function logsumexpPair(a: number, b: number): number {
+  if (a === -Infinity) return b;
+  if (b === -Infinity) return a;
+  const m = a > b ? a : b;
+  return m + Math.log(Math.exp(a - m) + Math.exp(b - m));
+}
+
+/** Log determinant of a symmetric positive-definite matrix via Cholesky.
+ *  Returns −∞ if the matrix is not PD (caught by a non-positive diagonal
+ *  during factorization). */
+function logDetPD(M: number[][]): number {
+  const n = M.length;
+  const L: number[][] = Array.from({ length: n }, () => new Array(n).fill(0));
+  let logDet = 0;
+  for (let i = 0; i < n; i++) {
+    let diag = M[i][i];
+    for (let k = 0; k < i; k++) diag -= L[i][k] * L[i][k];
+    if (!(diag > 0)) return -Infinity;
+    const Lii = Math.sqrt(diag);
+    L[i][i] = Lii;
+    logDet += Math.log(Lii);
+    for (let j = i + 1; j < n; j++) {
+      let s = M[j][i];
+      for (let k = 0; k < i; k++) s -= L[j][k] * L[i][k];
+      L[j][i] = s / Lii;
+    }
+  }
+  return 2 * logDet;
+}
+
+/**
+ * Lindley paradox closed-form BF₁₀ for H₀: θ = 0 vs H₁: θ ~ N(0, τ²), with
+ * observed data summarized as the standardized statistic z = ȳ · √n / σ and
+ * known sampling variance σ²/n. Brief §3.2 Proof 1 derives
+ *
+ *   BF₁₀ = (1 + r)^(−1/2) · exp(z² r / (2(1 + r))),   r = τ² n / σ².
+ *
+ * The paradox: at fixed z, τ → ∞ drives BF₁₀ → 0 — the frequentist rejects
+ * H₀ at p ≈ 0.003 while the Bayesian overwhelmingly favors H₀.
+ */
+export function lindleyBayesFactor(
+  z: number,
+  n: number,
+  tau: number,
+  sigma = 1,
+): number {
+  const r = (tau * tau * n) / (sigma * sigma);
+  return Math.exp(-0.5 * Math.log(1 + r) + (0.5 * z * z * r) / (1 + r));
+}
+
+/**
+ * Exact log marginal likelihood for the Beta(α, β) + Binomial(n, k) model:
+ *
+ *   log m(y) = log C(n, k) + log B(α + k, β + n − k) − log B(α, β),
+ *
+ * with B(a, b) = Γ(a) Γ(b) / Γ(a + b). Closed-form reference for the bridge,
+ * path, and Laplace estimators' convergence checks (brief §6.2 T27.4 / T27.5).
+ */
+export function betaBinomialLogMarginal(
+  k: number,
+  n: number,
+  alpha: number,
+  beta: number,
+): number {
+  const logComb = lnGamma(n + 1) - lnGamma(k + 1) - lnGamma(n - k + 1);
+  const logB = (a: number, b: number) => lnGamma(a) + lnGamma(b) - lnGamma(a + b);
+  return logComb + logB(alpha + k, beta + n - k) - logB(alpha, beta);
+}
+
+/**
+ * Laplace approximation to log m(y) given the unnormalized log posterior
+ * value at its mode and the (negative) Hessian of log posterior there:
+ *
+ *   log m(y) ≈ (k/2) log(2π) − (1/2) log |H| + log ũ(θ̂).
+ *
+ * k is the parameter-space dimension. Brief §3.2 Proof 2 shows BIC is the
+ * O(1)-truncated asymptotic version of this expansion (Topic 24 §24.4).
+ *
+ * The Hessian must be symmetric positive-definite; non-PD input returns −∞
+ * as a clear sentinel rather than silently producing a bogus estimate.
+ */
+export function marginalLikelihoodLaplace(opts: {
+  logUnnormPostAtMode: number;
+  hessianAtMode: number[][];
+  k: number;
+}): number {
+  const { logUnnormPostAtMode, hessianAtMode, k } = opts;
+  const logDet = logDetPD(hessianAtMode);
+  if (!Number.isFinite(logDet)) return -Infinity;
+  return (k / 2) * Math.log(2 * Math.PI) - 0.5 * logDet + logUnnormPostAtMode;
+}
+
+/**
+ * Bayes factor BF₁₀ = m₁/m₀ from two log marginals. Trivial wrapper, kept
+ * for API clarity so callers don't need to remember the sign convention.
+ */
+export function bayesFactor(logM0: number, logM1: number): number {
+  return Math.exp(logM1 - logM0);
+}
+
+/**
+ * Posterior model probabilities from per-model log marginals and an optional
+ * prior over models (defaults to uniform):
+ *
+ *   P(M_k | y) ∝ π(M_k) m_k(y),  computed as softmax(log π + log m).
+ *
+ * Uses logsumexp for numerical stability — necessary when log marginals
+ * differ by many orders of magnitude (common in nested-model comparisons).
+ */
+export function posteriorModelProbabilities(
+  logMarginals: number[],
+  priorModelProbs?: number[],
+): number[] {
+  const K = logMarginals.length;
+  if (K === 0) return [];
+  const logPriors = priorModelProbs
+    ? priorModelProbs.map(p => Math.log(p))
+    : new Array(K).fill(-Math.log(K));
+  const logUnnorm = logMarginals.map((lm, k) => lm + logPriors[k]);
+  const logZ = logsumexp(logUnnorm);
+  return logUnnorm.map(lu => Math.exp(lu - logZ));
+}
+
+/**
+ * Harmonic-mean estimator of log m(y):  m̂_HM = 1 / mean(1/L(θ_s)),
+ * i.e. log m̂ = log N − logsumexp(−log L_s).
+ *
+ * Included for pedagogy only — Newton & Raftery (1994) show the variance
+ * is almost always infinite (the integrand 1/L(θ) has a heavy right tail
+ * under the posterior). Brief §6.1 flags it as known-pathological; use
+ * bridge or importance sampling in production.
+ */
+export function harmonicMeanEstimate(
+  logLikDraws: number[],
+): { logMarginal: number; mcSe: number } {
+  const n = logLikDraws.length;
+  if (n === 0) return { logMarginal: -Infinity, mcSe: NaN };
+  const negLogL = logLikDraws.map(l => -l);
+  const logSum = logsumexp(negLogL);
+  const logMarginal = Math.log(n) - logSum;
+  // Delta-method SE on the log-mean; unstable when tail exists (expected).
+  const maxNeg = negLogL.reduce((m, x) => (x > m ? x : m), -Infinity);
+  let meanShift = 0;
+  for (const x of negLogL) meanShift += Math.exp(x - maxNeg);
+  meanShift /= n;
+  let varShift = 0;
+  for (const x of negLogL) varShift += (Math.exp(x - maxNeg) - meanShift) ** 2;
+  varShift /= Math.max(1, n - 1);
+  const mcSe = Math.sqrt(varShift / n) / meanShift;
+  return { logMarginal, mcSe };
+}
+
+/**
+ * Naive importance-sampling estimator: draw θ_s ~ g(θ), estimate
+ *
+ *   log m(y) ≈ logsumexp_s( log ũ(θ_s) − log g(θ_s) ) − log N.
+ *
+ * Unbiased but high-variance when g overlaps poorly with the unnormalized
+ * posterior ũ = L π. In practice the bridge estimator (Meng–Wong 1996)
+ * dominates this on the same sample budget; keep IS as the contrast in
+ * the `BridgeSamplingConvergence` component and as a sanity baseline.
+ */
+export function importanceSamplingEstimate(opts: {
+  proposalDraws: number[][];
+  logUnnormPost: (theta: number[]) => number;
+  logProposal: (theta: number[]) => number;
+}): { logMarginal: number; mcSe: number } {
+  const { proposalDraws, logUnnormPost, logProposal } = opts;
+  const n = proposalDraws.length;
+  if (n === 0) return { logMarginal: -Infinity, mcSe: NaN };
+  const logRatios = proposalDraws.map(t => logUnnormPost(t) - logProposal(t));
+  const logMarginal = logsumexp(logRatios) - Math.log(n);
+  // Delta-method SE of log(mean(exp r)) ≈ sd(exp r) / (mean(exp r) √N).
+  const maxR = logRatios.reduce((m, x) => (x > m ? x : m), -Infinity);
+  let mean = 0;
+  for (const r of logRatios) mean += Math.exp(r - maxR);
+  mean /= n;
+  let variance = 0;
+  for (const r of logRatios) variance += (Math.exp(r - maxR) - mean) ** 2;
+  variance /= Math.max(1, n - 1);
+  const mcSe = Math.sqrt(variance / n) / mean;
+  return { logMarginal, mcSe };
+}
+
+/**
+ * Meng–Wong (1996) iterative bridge sampling estimator of log m(y).
+ *
+ * Uses equal sample sizes s₁ = s₂ = 1/2 (the log(1/2) factors cancel between
+ * numerator and denominator, dropping out of the fixed-point iteration).
+ * The iteration is
+ *
+ *   log m_{t+1} = logsumexp_j( log ũ(θ_j^g) − logsumexp(log ũ − log m_t, log g) )
+ *               − logsumexp_i( log g(θ_i^p) − logsumexp(log ũ − log m_t, log g) )
+ *
+ * initialized with a naive IS estimate on the proposal side. Ports notebook
+ * Cell 7 literally, with `logsumexp` throughout for stability (the fragility
+ * flagged in the brief shows up when the proposal and target have near-zero
+ * overlap — the fixed-point iteration stays well-conditioned as long as the
+ * Meng–Wong identity's denominator is bounded away from 0).
+ *
+ * Brief §3.2 Proof 3 derives the identity m = E_g[α(θ) ũ(θ)] / E_p[α(θ) g(θ)].
+ */
+export function bridgeSamplingEstimate(opts: {
+  posteriorDraws: number[][];
+  proposalDraws: number[][];
+  logUnnormPost: (theta: number[]) => number;
+  logProposal: (theta: number[]) => number;
+  maxIter?: number;
+  tol?: number;
+}): { logMarginal: number; iterations: number; mcSe: number } {
+  const { posteriorDraws, proposalDraws, logUnnormPost, logProposal } = opts;
+  const maxIter = opts.maxIter ?? 50;
+  const tol = opts.tol ?? 1e-10;
+
+  const N1 = posteriorDraws.length;
+  const N2 = proposalDraws.length;
+  if (N1 === 0 || N2 === 0) {
+    return { logMarginal: NaN, iterations: 0, mcSe: NaN };
+  }
+
+  const logP1 = posteriorDraws.map(t => logUnnormPost(t));
+  const logG1 = posteriorDraws.map(t => logProposal(t));
+  const logP2 = proposalDraws.map(t => logUnnormPost(t));
+  const logG2 = proposalDraws.map(t => logProposal(t));
+
+  // Initialize with naive-IS estimate on the proposal side.
+  const isInit: number[] = new Array(N2);
+  for (let j = 0; j < N2; j++) isInit[j] = logP2[j] - logG2[j];
+  let logM = logsumexp(isInit) - Math.log(N2);
+
+  let iterations = 0;
+  for (iterations = 0; iterations < maxIter; iterations++) {
+    const numerTerms: number[] = new Array(N2);
+    for (let j = 0; j < N2; j++) {
+      numerTerms[j] = logP2[j] - logsumexpPair(logP2[j] - logM, logG2[j]);
+    }
+    const numer = logsumexp(numerTerms) - Math.log(N2);
+
+    const denomTerms: number[] = new Array(N1);
+    for (let i = 0; i < N1; i++) {
+      denomTerms[i] = logG1[i] - logsumexpPair(logP1[i] - logM, logG1[i]);
+    }
+    const denom = logsumexp(denomTerms) - Math.log(N1);
+
+    const logMNew = numer - denom;
+    if (Math.abs(logMNew - logM) < tol) {
+      logM = logMNew;
+      iterations++;
+      break;
+    }
+    logM = logMNew;
+  }
+
+  // Delta-method SE from the fixed-point numerator and denominator terms.
+  const wNum: number[] = new Array(N2);
+  for (let j = 0; j < N2; j++) {
+    wNum[j] = Math.exp(logP2[j] - logM - logsumexpPair(logP2[j] - logM, logG2[j]));
+  }
+  const wDen: number[] = new Array(N1);
+  for (let i = 0; i < N1; i++) {
+    wDen[i] = Math.exp(logG1[i] - logsumexpPair(logP1[i] - logM, logG1[i]));
+  }
+  const mean = (arr: number[]): number => {
+    let s = 0;
+    for (const x of arr) s += x;
+    return s / arr.length;
+  };
+  const variance = (arr: number[], mu: number): number => {
+    let s = 0;
+    for (const x of arr) s += (x - mu) ** 2;
+    return s / Math.max(1, arr.length - 1);
+  };
+  const mN = mean(wNum), mD = mean(wDen);
+  const vN = variance(wNum, mN), vD = variance(wDen, mD);
+  const mcSe = Math.sqrt(vN / (N2 * mN * mN) + vD / (N1 * mD * mD));
+
+  return { logMarginal: logM, iterations, mcSe };
+}
+
+/**
+ * Path-sampling / thermodynamic-integration estimator of log m(y).
+ *
+ * Given draws θ_s^{(β)} from each power posterior p_β(θ) ∝ L(θ)^β π(θ) at
+ * an ascending β-grid {β_0 = 0, …, β_K = 1}, the Gelman–Meng identity gives
+ *
+ *   log m(y) = ∫_0^1 E_{p_β}[ log L(θ) ] dβ,
+ *
+ * estimated by trapezoidal integration over the grid. Brief §6.1 keeps this
+ * in the estimator stable-of-four alongside bridge, IS, and harmonic-mean.
+ */
+export function pathSamplingEstimate(opts: {
+  powerPosteriorDraws: number[][][];
+  betas: number[];
+  logLikelihood: (theta: number[]) => number;
+}): { logMarginal: number; mcSe: number } {
+  const { powerPosteriorDraws, betas, logLikelihood } = opts;
+  const K = betas.length;
+  if (K < 2 || powerPosteriorDraws.length !== K) {
+    return { logMarginal: NaN, mcSe: NaN };
+  }
+  const expLogL: number[] = new Array(K);
+  const varLogL: number[] = new Array(K);
+  for (let k = 0; k < K; k++) {
+    const draws = powerPosteriorDraws[k];
+    const logLs = draws.map(t => logLikelihood(t));
+    const n = logLs.length;
+    let sum = 0;
+    for (const l of logLs) sum += l;
+    const mean = sum / n;
+    let vSum = 0;
+    for (const l of logLs) vSum += (l - mean) ** 2;
+    expLogL[k] = mean;
+    varLogL[k] = n > 1 ? vSum / ((n - 1) * n) : 0;
+  }
+  let logMarginal = 0;
+  let seSquared = 0;
+  for (let k = 0; k < K - 1; k++) {
+    const dB = betas[k + 1] - betas[k];
+    logMarginal += 0.5 * dB * (expLogL[k] + expLogL[k + 1]);
+    seSquared += 0.25 * dB * dB * (varLogL[k] + varLogL[k + 1]);
+  }
+  return { logMarginal, mcSe: Math.sqrt(seSquared) };
+}
+
+/**
+ * Nested-sampling evidence estimator (Skilling 2006 §6).
+ *
+ * Takes the ascending-sorted dead-point log-likelihoods from an NS run,
+ * the number of live points N, and the final live-point log-likelihoods,
+ * and returns the log evidence via prior-mass shrinkage:
+ *
+ *   X_i = exp(−i / N),   w_i = X_{i−1} − X_i,
+ *   log Z = logsumexp_i( log L_i + log w_i ) ⊕ live-remainder contribution.
+ *
+ * The live-remainder averages the final N live-point likelihoods over the
+ * remaining prior volume X_K / N each. Uncertainty is estimated by the
+ * Skilling information H = ∫ p log(p/w), with SE(log Z) ≈ √(H/N).
+ */
+export function nestedSamplingEstimate(opts: {
+  logLikDeadPoints: number[];
+  nLivePoints: number;
+  finalLiveLogLiks: number[];
+}): { logMarginal: number; mcSe: number } {
+  const { logLikDeadPoints, nLivePoints, finalLiveLogLiks } = opts;
+  const K = logLikDeadPoints.length;
+  if (K === 0 || nLivePoints <= 0) {
+    return { logMarginal: -Infinity, mcSe: NaN };
+  }
+  const logShrink = Math.log1p(-Math.exp(-1 / nLivePoints));
+  const logTerms: number[] = [];
+  for (let i = 0; i < K; i++) {
+    // Iteration index 1-based: i+1. log w_{i+1} = −i/N + log(1 − e^{−1/N}).
+    const logW = -i / nLivePoints + logShrink;
+    logTerms.push(logLikDeadPoints[i] + logW);
+  }
+  const logXK = -K / nLivePoints;
+  const logLiveW = logXK - Math.log(nLivePoints);
+  for (const logL of finalLiveLogLiks) logTerms.push(logL + logLiveW);
+
+  const logZ = logsumexp(logTerms);
+  // Skilling information H ≈ ∫ p log(p/w); SE ≈ √(H/N).
+  let H = 0;
+  for (const lt of logTerms) {
+    const logp = lt - logZ;
+    if (Number.isFinite(logp)) H += Math.exp(logp) * logp;
+  }
+  const mcSe = Math.sqrt(Math.max(0, -H / nLivePoints));
+  return { logMarginal: logZ, mcSe };
+}
+
+/**
+ * Spiegelhalter et al. (2002) Deviance Information Criterion.
+ *
+ *   D(θ) = −2 log L(y | θ),
+ *   p_DIC = Ē_s[D(θ_s)] − D(θ̂),   θ̂ = posterior mean,
+ *   DIC = D(θ̂) + 2 p_DIC = Ē_s[D] + p_DIC.
+ *
+ * Inputs: a pointwise log-likelihood matrix `logLikDraws[s][i]` and the
+ * per-observation log-likelihoods evaluated at the posterior-mean parameter.
+ * Returns {dic, pDic, eLogLik} where eLogLik = Ē_s[Σ_i log L_{s,i}] is the
+ * posterior-expected log-likelihood (displayed by many Stan/PyMC outputs).
+ */
+export function dic(opts: {
+  logLikDraws: number[][];
+  logLikAtPosteriorMean: number[];
+}): { dic: number; pDic: number; eLogLik: number } {
+  const { logLikDraws, logLikAtPosteriorMean } = opts;
+  const S = logLikDraws.length;
+  if (S === 0) return { dic: NaN, pDic: NaN, eLogLik: NaN };
+  let sumLogLik = 0;
+  for (let s = 0; s < S; s++) {
+    let row = 0;
+    for (let i = 0; i < logLikDraws[s].length; i++) row += logLikDraws[s][i];
+    sumLogLik += row;
+  }
+  const eLogLik = sumLogLik / S;
+  const logLikMean = logLikAtPosteriorMean.reduce((a, b) => a + b, 0);
+  const dBar = -2 * eLogLik;
+  const dHat = -2 * logLikMean;
+  const pDic = dBar - dHat;
+  return { dic: dBar + pDic, pDic, eLogLik };
+}
+
+/**
+ * Watanabe (2010) Widely Applicable Information Criterion (WAIC).
+ *
+ *   lppd_i  = log ( (1/S) Σ_s exp(log L_{s,i}) ),
+ *   pwaic_i = Var_s[ log L_{s,i} ]   (Bessel-corrected, ddof = 1),
+ *   elpd_WAIC = Σ_i (lppd_i − pwaic_i),
+ *   WAIC      = −2 · elpd_WAIC.
+ *
+ * Brief §27.8 cites this alongside DIC and PSIS-LOO; Vehtari, Gelman &
+ * Gabry (2017) show WAIC ≈ LOO asymptotically (cited-not-proven — brief
+ * Appendix B.2). The per-observation lppd_i uses logsumexp for stability.
+ */
+export function waic(
+  logLikDraws: number[][],
+): { waic: number; elpdWaic: number; pWaic: number; seWaic: number } {
+  const S = logLikDraws.length;
+  if (S === 0) {
+    return { waic: NaN, elpdWaic: NaN, pWaic: NaN, seWaic: NaN };
+  }
+  const n = logLikDraws[0].length;
+  const pointwise: number[] = new Array(n);
+  let elpd = 0;
+  let pwaicSum = 0;
+  for (let i = 0; i < n; i++) {
+    const col: number[] = new Array(S);
+    for (let s = 0; s < S; s++) col[s] = logLikDraws[s][i];
+    const lppdI = logsumexp(col) - Math.log(S);
+    let mean = 0;
+    for (let s = 0; s < S; s++) mean += col[s];
+    mean /= S;
+    let varSum = 0;
+    for (let s = 0; s < S; s++) varSum += (col[s] - mean) ** 2;
+    const pwaicI = S > 1 ? varSum / (S - 1) : 0;
+    pointwise[i] = lppdI - pwaicI;
+    elpd += pointwise[i];
+    pwaicSum += pwaicI;
+  }
+  // SE over observations (Vehtari 2017 §2.2): √(n · Var_i(pointwise_i)).
+  let mean = 0;
+  for (const p of pointwise) mean += p;
+  mean /= n;
+  let varSum = 0;
+  for (const p of pointwise) varSum += (p - mean) ** 2;
+  const seElpd = Math.sqrt(n * (n > 1 ? varSum / (n - 1) : 0));
+  return {
+    waic: -2 * elpd,
+    elpdWaic: elpd,
+    pWaic: pwaicSum,
+    seWaic: 2 * seElpd,
+  };
+}
+
+/**
+ * PSIS-LOO (Vehtari, Gelman & Gabry 2017). For the Topic 27 scope we use
+ * the naive-IS estimator (no Pareto-smoothing) as the pointwise LOO
+ * log-likelihood estimator,
+ *
+ *   log p(y_i | y_{−i}) ≈ −log ( (1/S) Σ_s exp(−log L_{s,i}) )
+ *                      = log S − logsumexp_s(−log L_{s,i}).
+ *
+ * A Pareto-k diagnostic per observation is computed: if > 0.7, that
+ * observation's LOO estimate is flagged as unreliable. The test T27.12 at
+ * the canonical-tiny conjugate-Normal problem has small k's throughout
+ * (posterior-to-LOO variance ratio is bounded for conjugate models).
+ */
+export function psisLoo(
+  logLikDraws: number[][],
+): {
+  loo: number;
+  elpdLoo: number;
+  pLoo: number;
+  seLoo: number;
+  paretoK: number[];
+  nProblematic: number;
+} {
+  const S = logLikDraws.length;
+  if (S === 0) {
+    return { loo: NaN, elpdLoo: NaN, pLoo: NaN, seLoo: NaN, paretoK: [], nProblematic: 0 };
+  }
+  const n = logLikDraws[0].length;
+  const pointwise: number[] = new Array(n);
+  const paretoK: number[] = new Array(n);
+  let lppdSum = 0;
+  for (let i = 0; i < n; i++) {
+    const neg: number[] = new Array(S);
+    const pos: number[] = new Array(S);
+    for (let s = 0; s < S; s++) {
+      neg[s] = -logLikDraws[s][i];
+      pos[s] = logLikDraws[s][i];
+    }
+    // Naive IS LOO: log p(y_i | y_{−i}) ≈ log S − logsumexp_s(−log L_{s,i}).
+    pointwise[i] = Math.log(S) - logsumexp(neg);
+    // lppd_i for p_LOO = Σ lppd_i − elpd_LOO.
+    lppdSum += logsumexp(pos) - Math.log(S);
+    // Pareto-k estimate: fit GPD to the top 20% of exp(neg) weights. Use a
+    // simple moment-matching (Vehtari 2017 §3.2 abbreviated variant).
+    const topCount = Math.max(2, Math.floor(0.2 * S));
+    const sorted = neg.slice().sort((a, b) => b - a); // descending
+    const tail = sorted.slice(0, topCount).map(v => Math.exp(v - sorted[0]));
+    let mean = 0;
+    for (const t of tail) mean += t;
+    mean /= tail.length;
+    let v = 0;
+    for (const t of tail) v += (t - mean) ** 2;
+    v /= Math.max(1, tail.length - 1);
+    const kHat = mean * mean > 0 ? 0.5 * (1 - (mean * mean) / (v + mean * mean)) : 0;
+    paretoK[i] = kHat;
+  }
+  let elpd = 0;
+  for (const p of pointwise) elpd += p;
+  const pLoo = lppdSum - elpd;
+  let mean = 0;
+  for (const p of pointwise) mean += p;
+  mean /= n;
+  let varSum = 0;
+  for (const p of pointwise) varSum += (p - mean) ** 2;
+  const seElpd = Math.sqrt(n * (n > 1 ? varSum / (n - 1) : 0));
+  let nProblematic = 0;
+  for (const k of paretoK) if (k > 0.7) nProblematic++;
+  return {
+    loo: -2 * elpd,
+    elpdLoo: elpd,
+    pLoo,
+    seLoo: 2 * seElpd,
+    paretoK,
+    nProblematic,
+  };
+}
+
+/**
+ * BMA predictive mixture: aggregate per-model posterior-predictive draws
+ * weighted by posterior model probabilities.
+ *
+ * Output size defaults to the minimum per-model draw count. Stratified
+ * allocation: model k contributes ⌊weights[k] · nOut⌉ draws (rounded),
+ * with residual slots filled from the final model to preserve length.
+ * Inputs need not be pre-normalized; weights are normalized internally.
+ *
+ * Brief §3.2 §27.7 Thm 8 gives the log-loss form of the BMA predictive;
+ * this is the sample-level realization used by `BMAPredictiveComparison`.
+ */
+export function bmaPredictive(opts: {
+  perModelDraws: number[][];
+  weights: number[];
+  nOut?: number;
+}): number[] {
+  const { perModelDraws, weights } = opts;
+  const K = perModelDraws.length;
+  if (K === 0) return [];
+  const total = weights.reduce((a, b) => a + b, 0);
+  if (!(total > 0)) return [];
+  const normW = weights.map(w => w / total);
+  const minS = perModelDraws.reduce(
+    (m, arr) => Math.min(m, arr.length),
+    Number.POSITIVE_INFINITY,
+  );
+  const nOut = opts.nOut ?? (Number.isFinite(minS) ? minS : 0);
+  const out: number[] = new Array(nOut);
+  let idx = 0;
+  for (let k = 0; k < K; k++) {
+    const take = Math.round(normW[k] * nOut);
+    const draws = perModelDraws[k];
+    for (let j = 0; j < take && idx < nOut; j++) {
+      out[idx++] = draws[j % draws.length];
+    }
+  }
+  // Fill rounding residuals from the last non-empty model.
+  let fallback = K - 1;
+  while (fallback >= 0 && perModelDraws[fallback].length === 0) fallback--;
+  if (fallback >= 0) {
+    while (idx < nOut) {
+      out[idx] = perModelDraws[fallback][idx % perModelDraws[fallback].length];
+      idx++;
+    }
+  } else {
+    out.length = idx;
+  }
+  return out;
+}
+
+/** Gaussian kernel density estimate — internal helper for localFdr's
+ *  Efron-2010 mixture-density estimation path. */
+function gaussianKDE(z: number, samples: number[], bandwidth: number): number {
+  if (samples.length === 0 || bandwidth <= 0) return 0;
+  let sum = 0;
+  for (const s of samples) sum += Math.exp(-0.5 * ((z - s) / bandwidth) ** 2);
+  return sum / (samples.length * bandwidth * Math.sqrt(2 * Math.PI));
+}
+
+/** Silverman's rule-of-thumb bandwidth, used by default in gaussianKDE. */
+function silvermanBandwidth(samples: number[]): number {
+  const n = samples.length;
+  if (n < 2) return 1;
+  let mean = 0;
+  for (const s of samples) mean += s;
+  mean /= n;
+  let varSum = 0;
+  for (const s of samples) varSum += (s - mean) ** 2;
+  const sd = Math.sqrt(varSum / (n - 1));
+  return 1.06 * sd * Math.pow(n, -0.2);
+}
+
+/**
+ * Efron (2010) two-groups local-FDR estimator.
+ *
+ *   fdr(z) = π₀ · f₀(z) / f̂(z),   f̂ = (1 − π₁) f₀ + π₁ f₁.
+ *
+ * Two paths per the `opts.alternative` presence:
+ *  • `alternative` provided (closed-form): compute fdr analytically from the
+ *    given two-groups mixture parameters. This is the path used by T27.13 /
+ *    T27.14's 1e-4-tolerance sanity checks — the density-estimation path
+ *    would require an impractically large z-sample to hit that precision.
+ *  • `alternative` absent (Efron-2010 estimated): estimate f̂ via Gaussian
+ *    KDE with Silverman bandwidth, estimate π₀ by the "lowest-point" rule
+ *    π₀ = min(1, f̂(μ₀) / f₀(μ₀)), and return the ratio. Suitable for the
+ *    `LocalFDRExplorer` component where a realistic z-sample is supplied.
+ *
+ * When `theoreticalNull === true` (default), f₀ = N(0, 1); otherwise the
+ * null (μ₀, σ₀) is fit by central-matching on the middle 50% of z-scores
+ * (SD-of-middle-50% conversion factor 1.483 for Gaussian null).
+ */
+export function localFdr(opts: {
+  zScores: number[];
+  zGrid: number[];
+  theoreticalNull?: boolean;
+  alternative?: { piOne: number; muAlt: number; sigmaAlt?: number };
+}): { fdrGrid: number[]; piZero: number; nullParams: [number, number] } {
+  const { zScores, zGrid, alternative } = opts;
+  const theoreticalNull = opts.theoreticalNull ?? true;
+
+  let mu0 = 0;
+  let sigma0 = 1;
+  if (!theoreticalNull && zScores.length >= 4) {
+    const sorted = zScores.slice().sort((a, b) => a - b);
+    const n = sorted.length;
+    const q1 = Math.floor(n * 0.25);
+    const q3 = Math.min(n, Math.floor(n * 0.75));
+    const middle = sorted.slice(q1, q3);
+    if (middle.length >= 2) {
+      let mean = 0;
+      for (const z of middle) mean += z;
+      mean /= middle.length;
+      let vSum = 0;
+      for (const z of middle) vSum += (z - mean) ** 2;
+      mu0 = mean;
+      // Conversion: SD of the middle-50% ≈ σ · 0.674, so σ ≈ sd_middle / 0.674 ≈ sd_middle · 1.483.
+      sigma0 = Math.sqrt(vSum / (middle.length - 1)) * 1.483;
+    }
+  }
+  const sigma02 = sigma0 * sigma0;
+
+  if (alternative) {
+    const piOne = alternative.piOne;
+    const piZero = 1 - piOne;
+    const muAlt = alternative.muAlt;
+    const sigmaAlt2 = alternative.sigmaAlt != null
+      ? alternative.sigmaAlt * alternative.sigmaAlt
+      : 1;
+    const fdrGrid = zGrid.map(z => {
+      const f0 = pdfNormal(z, mu0, sigma02);
+      const f1 = pdfNormal(z, muAlt, sigmaAlt2);
+      const mix = piZero * f0 + piOne * f1;
+      return mix > 0 ? (piZero * f0) / mix : 1;
+    });
+    return { fdrGrid, piZero, nullParams: [mu0, sigma0] };
+  }
+
+  // Efron-2010 estimated path (density estimation from observed z's).
+  if (zScores.length === 0) {
+    return {
+      fdrGrid: zGrid.map(() => NaN),
+      piZero: 1,
+      nullParams: [mu0, sigma0],
+    };
+  }
+  const bw = silvermanBandwidth(zScores);
+  const fMix = (z: number) => gaussianKDE(z, zScores, bw);
+  const piZeroEst = Math.min(1, fMix(mu0) / pdfNormal(mu0, mu0, sigma02));
+  const fdrGrid = zGrid.map(z => {
+    const num = piZeroEst * pdfNormal(z, mu0, sigma02);
+    const den = fMix(z);
+    return den > 0 ? Math.min(1, num / den) : 1;
+  });
+  return { fdrGrid, piZero: piZeroEst, nullParams: [mu0, sigma0] };
+}
+
+/**
+ * Gelman (1996) posterior-predictive check: Bayesian p-value for a test
+ * statistic T on observed vs replicated data.
+ *
+ *   p_B = (1/S) Σ_s 1{ T(y_rep_s, θ_s) ≥ T(y_obs, θ_s) }.
+ *
+ * For θ-independent discrepancies (standard case), `thetaDraws` may be
+ * omitted; T receives only `y`. For θ-dependent discrepancies (e.g. Gelman's
+ * discrepancy statistics in BDA §6.3), pass per-draw `thetaDraws[s]` so
+ * T(y_rep_s, θ_s) and T(y_obs, θ_s) share the same θ_s.
+ *
+ * Brief §27.9 uses this for the capstone PPC example (Ex 12).
+ */
+export function posteriorPredictiveCheck(opts: {
+  yRepDraws: number[][];
+  yObs: number[];
+  T: (y: number[], theta?: number[]) => number;
+  thetaDraws?: number[][];
+}): { bayesianPValue: number; TObs: number; TRep: number[] } {
+  const { yRepDraws, yObs, T, thetaDraws } = opts;
+  const S = yRepDraws.length;
+  if (S === 0) return { bayesianPValue: NaN, TObs: T(yObs), TRep: [] };
+  const TRep: number[] = new Array(S);
+  let count = 0;
+  for (let s = 0; s < S; s++) {
+    const theta = thetaDraws?.[s];
+    const tRep = T(yRepDraws[s], theta);
+    const tObs = T(yObs, theta);
+    TRep[s] = tRep;
+    if (tRep >= tObs) count++;
+  }
+  return {
+    bayesianPValue: count / S,
+    TObs: T(yObs),
+    TRep,
+  };
+}

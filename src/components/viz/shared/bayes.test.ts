@@ -43,12 +43,30 @@ import {
   effectiveSampleSize,
   autocorrelation,
   batchMeansVariance,
+  // Topic 27 additions
+  lindleyBayesFactor,
+  betaBinomialLogMarginal,
+  marginalLikelihoodLaplace,
+  bayesFactor,
+  posteriorModelProbabilities,
+  harmonicMeanEstimate,
+  importanceSamplingEstimate,
+  bridgeSamplingEstimate,
+  pathSamplingEstimate,
+  nestedSamplingEstimate,
+  dic,
+  waic,
+  psisLoo,
+  bmaPredictive,
+  localFdr,
+  posteriorPredictiveCheck,
   type PriorHyperparams,
   type SuffStats,
   type PosteriorHyperparams,
   type ProposalKernel,
   type SeededRng,
 } from './bayes';
+import { sampleGammaShape, lnGamma, quantileStdNormal } from './distributions';
 
 let passed = 0;
 let failed = 0;
@@ -697,6 +715,455 @@ console.log('========================================\n');
     allEqual ? '10/10 identical' : 'diverged',
     '10/10 identical',
     'exact equality (tol 1e-3 not needed)',
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Topic 27 · bayes.ts verification — brief §6.2 T27.1–T27.15
+// ═══════════════════════════════════════════════════════════════════════════
+console.log('\n========================================');
+console.log(' Topic 27 · bayes.ts verification');
+console.log('========================================\n');
+
+// ── T27.1. Lindley BF at z=3, n=100, τ=1, σ=1 (moderate-τ, favors H₁). ──
+{
+  const bf = lindleyBayesFactor(3, 100, 1, 1);
+  check(
+    'T27.1 lindleyBayesFactor(z=3, n=100, τ=1, σ=1) ≈ 8.56672',
+    approx(bf, 8.56672, 1e-4),
+    bf.toFixed(6),
+    '8.566723',
+    'tol 1e-4; classic Lindley moderate-τ',
+  );
+}
+
+// ── T27.2. Lindley BF at large τ (τ=100) — paradox: BF → 0 favoring H₀. ──
+{
+  const bf = lindleyBayesFactor(3, 100, 100, 1);
+  check(
+    'T27.2 lindleyBayesFactor(z=3, n=100, τ=100, σ=1) ≈ 0.09002',
+    approx(bf, 0.09001668, 1e-5),
+    bf.toFixed(8),
+    '0.09001668',
+    'tol 1e-5; large τ — Lindley paradox',
+  );
+}
+
+// ── T27.3. At z=0, BF = (1+r)^(−1/2) = 1/√101 ≈ 0.09950. ──
+{
+  const bf = lindleyBayesFactor(0, 100, 1, 1);
+  check(
+    'T27.3 lindleyBayesFactor(z=0) = 1/√101 ≈ 0.09950',
+    approx(bf, 1 / Math.sqrt(101), 1e-4),
+    bf.toFixed(8),
+    (1 / Math.sqrt(101)).toFixed(8),
+    'tol 1e-4; no effect — prior dominates',
+  );
+}
+
+// ── T27.4. Beta-Binomial log marginal at (n=20, k=12, α=1, β=1) = log(1/21). ──
+{
+  const logM = betaBinomialLogMarginal(12, 20, 1, 1);
+  check(
+    'T27.4 betaBinomialLogMarginal(12, 20, 1, 1) ≈ −3.04452244',
+    approx(logM, -3.0445224377, 1e-6),
+    logM.toFixed(10),
+    '-3.0445224377',
+    'tol 1e-6; closed-form reference for bridge',
+  );
+}
+
+// ── T27.5. Beta-Binomial log marginal at (n=50, k=30, α=2, β=2). ──
+{
+  const logM = betaBinomialLogMarginal(30, 50, 2, 2);
+  check(
+    'T27.5 betaBinomialLogMarginal(30, 50, 2, 2) ≈ −3.58309215',
+    approx(logM, -3.5830921534, 1e-6),
+    logM.toFixed(10),
+    '-3.5830921534',
+    'tol 1e-6; closed-form reference for path',
+  );
+}
+
+// ── T27.8. bayesFactor(−3.5, −2.5) = exp(1) = e. ──
+{
+  const bf = bayesFactor(-3.5, -2.5);
+  check(
+    'T27.8 bayesFactor(logM0=−3.5, logM1=−2.5) = e',
+    approx(bf, Math.E, 1e-12),
+    bf.toFixed(12),
+    Math.E.toFixed(12),
+    'tol 1e-12; trivial exp(ΔlogM)',
+  );
+}
+
+// ── T27.9. posteriorModelProbabilities([−1, −2, −3], uniform) ≈ softmax. ──
+{
+  const probs = posteriorModelProbabilities([-1, -2, -3]);
+  const expected = [0.66524096, 0.24472847, 0.09003057];
+  const allOk = probs.every((p, i) => approx(p, expected[i], 1e-5));
+  check(
+    'T27.9 posteriorModelProbabilities([−1,−2,−3], uniform) ≈ softmax',
+    allOk && Math.abs(probs.reduce((a, b) => a + b, 0) - 1) < 1e-12,
+    probs.map(p => p.toFixed(6)).join(', '),
+    expected.map(p => p.toFixed(6)).join(', '),
+    'tol 1e-5; sums to 1',
+  );
+}
+
+// Marginal-likelihood Laplace sanity — Laplace on a standard N(0, 1) posterior
+// with a known unnormalized log posterior and Hessian recovers log m = 0 (the
+// prior and likelihood cancel out to the marginal). This is a reachable
+// sanity check for marginalLikelihoodLaplace without a specific T27.x pin.
+{
+  // Fake setup: unnormalized log posterior = log φ(0) at mode, H = [[1]]
+  // so log m ≈ (1/2) log(2π) − (1/2) log(1) + log φ(0) = (1/2) log(2π) − (1/2) log(2π) = 0.
+  const logU = -0.5 * Math.log(2 * Math.PI); // log φ(0)
+  const logM = marginalLikelihoodLaplace({
+    logUnnormPostAtMode: logU,
+    hessianAtMode: [[1]],
+    k: 1,
+  });
+  check(
+    'S27.L marginalLikelihoodLaplace on standard normal identity → log m = 0',
+    approx(logM, 0, 1e-12),
+    logM.toFixed(12),
+    '0.000000000000',
+    'Laplace self-consistency; tol 1e-12',
+  );
+}
+
+// ── T27.6. Bridge sampling on Beta-Binomial (20, 12, 1, 1), n=8000. ──────
+// Per brief G7, the test locks the absolute bracket [−3.05, −3.04] rather
+// than a tight SD — the proposal Beta(12.7, 9.1) is deliberately offset
+// from the target Beta(13, 9) to make the bridge estimator's advantage
+// over naive IS visible.  With N=8000 draws and correct algorithm, a
+// single-run estimate should land in the bracket with high probability.
+{
+  const rng = createSeededRng(42);
+  const nDraws = 8000;
+  const aPost = 13, bPost = 9;            // posterior Beta(α+k, β+n−k)
+  const aProp = aPost * 0.9 + 1;          // = 12.7 — notebook Cell 7
+  const bProp = bPost * 0.9 + 1;          // = 9.1
+  const sampleBeta = (a: number, b: number): number => {
+    const x = sampleGammaShape(a, () => rng.random());
+    const y = sampleGammaShape(b, () => rng.random());
+    return x / (x + y);
+  };
+  const posteriorDraws: number[][] = [];
+  const proposalDraws: number[][] = [];
+  for (let i = 0; i < nDraws; i++) posteriorDraws.push([sampleBeta(aPost, bPost)]);
+  for (let i = 0; i < nDraws; i++) proposalDraws.push([sampleBeta(aProp, bProp)]);
+
+  // log ũ(θ) for Beta-Binomial: log C(n,k) + log Binom(k|n,θ) + log Beta(θ|1,1)
+  //                           = log C(20,12) + 12 log θ + 8 log(1−θ)  (flat prior drops)
+  const logBinom = lnGamma(21) - lnGamma(13) - lnGamma(9);
+  const logUnnormPost = (theta: number[]): number => {
+    const t = theta[0];
+    return logBinom + 12 * Math.log(t) + 8 * Math.log1p(-t);
+  };
+  const logProposal = (theta: number[]): number => {
+    const t = theta[0];
+    return Math.log(pdfBeta(t, aProp, bProp));
+  };
+
+  const result = bridgeSamplingEstimate({
+    posteriorDraws,
+    proposalDraws,
+    logUnnormPost,
+    logProposal,
+  });
+  check(
+    'T27.6 bridgeSamplingEstimate Beta-Binomial (20, 12, 1, 1), n=8000',
+    result.logMarginal >= -3.05 && result.logMarginal <= -3.04,
+    result.logMarginal.toFixed(8),
+    'in [-3.05, -3.04]',
+    `abs. bracket; closed form −3.04452; converged in ${result.iterations} iter`,
+  );
+}
+
+// ── T27.7. Importance sampling on the same setup; wider bracket. ──────────
+{
+  const rng = createSeededRng(123);
+  const nDraws = 8000;
+  const aProp = 13 * 0.9 + 1, bProp = 9 * 0.9 + 1;
+  const sampleBeta = (a: number, b: number): number => {
+    const x = sampleGammaShape(a, () => rng.random());
+    const y = sampleGammaShape(b, () => rng.random());
+    return x / (x + y);
+  };
+  const proposalDraws: number[][] = [];
+  for (let i = 0; i < nDraws; i++) proposalDraws.push([sampleBeta(aProp, bProp)]);
+  const logBinom = lnGamma(21) - lnGamma(13) - lnGamma(9);
+  const logUnnormPost = (theta: number[]): number => {
+    const t = theta[0];
+    return logBinom + 12 * Math.log(t) + 8 * Math.log1p(-t);
+  };
+  const logProposal = (theta: number[]): number =>
+    Math.log(pdfBeta(theta[0], aProp, bProp));
+
+  const { logMarginal } = importanceSamplingEstimate({
+    proposalDraws,
+    logUnnormPost,
+    logProposal,
+  });
+  check(
+    'T27.7 importanceSamplingEstimate Beta-Binomial (20, 12, 1, 1), n=8000',
+    logMarginal >= -3.1 && logMarginal <= -3.0,
+    logMarginal.toFixed(8),
+    'in [-3.10, -3.00]',
+    'abs. bracket; higher variance than bridge',
+  );
+}
+
+// ── T27.10–T27.12. Canonical tiny for DIC / WAIC / PSIS-LOO. ─────────────
+// y = [−0.5, 0.2, 0.1, −0.3, 0.7] (hardcoded in notebook Cell 13), σ = 1.
+// Posterior μ | y ~ N(ȳ, σ²/n) = N(0.04, 0.2). Quasi-MC μ-draws via inverse
+// Φ on an equal-probability midpoint grid — sub-1e-3 reproducibility across
+// runtimes (unlike np.random.default_rng, which this runtime can't match
+// bit-exactly). Targets are analytical moment-closed-form; the brief's
+// notebook-realization values (12.0716, 11.3863, 11.4027) deviate by ~1e-2
+// from analytical due to their specific MC realization.
+{
+  const y = [-0.5, 0.2, 0.1, -0.3, 0.7];
+  const n = y.length;
+  const nDraws = 10000;
+  const yBar = y.reduce((a, b) => a + b, 0) / n;             // 0.04
+  const postStd = Math.sqrt(1 / n);                          // √0.2
+  // Quasi-MC draws at equal-probability midpoints of N(ȳ, σ²/n). With 10k
+  // draws the midpoint-quantile variance deficit is ≲ 1.3e-4 relative,
+  // bounding DIC / WAIC / LOO quadrature error well below the 1e-3 tol.
+  const muDraws: number[] = new Array(nDraws);
+  for (let s = 0; s < nDraws; s++) {
+    const q = (s + 0.5) / nDraws;
+    muDraws[s] = yBar + postStd * quantileStdNormal(q);
+  }
+  const logLikDraws: number[][] = muDraws.map(mu =>
+    y.map(yi => -0.5 * Math.log(2 * Math.PI) - 0.5 * (yi - mu) ** 2),
+  );
+  const logLikAtPosteriorMean = y.map(
+    yi => -0.5 * Math.log(2 * Math.PI) - 0.5 * (yi - yBar) ** 2,
+  );
+
+  // ── T27.10. DIC. Analytical: n log(2π) + Σ(y−ȳ)² + 2σ² = 12.06139. ──
+  {
+    const { dic: dicValue, pDic } = dic({ logLikDraws, logLikAtPosteriorMean });
+    check(
+      'T27.10 dic(canonical tiny, 10k QMC draws) ≈ 12.06139 (analytical limit)',
+      approx(dicValue, 12.061385, 1e-3) && approx(pDic, 1.0, 1e-3),
+      `DIC=${dicValue.toFixed(6)}, p_DIC=${pDic.toFixed(6)}`,
+      'DIC=12.061385, p_DIC=1.000000',
+      'tol 1e-3; analytical target (notebook MC value 12.0716 differs by ~1e-2)',
+    );
+  }
+
+  // ── T27.11. WAIC. Analytical: 11.376446 via lppd + pwaic moment forms. ──
+  {
+    const { waic: waicValue, pWaic, elpdWaic } = waic(logLikDraws);
+    check(
+      'T27.11 waic(canonical tiny, 10k QMC draws) ≈ 11.37645 (analytical limit)',
+      approx(waicValue, 11.376446, 1e-3)
+        && approx(pWaic, 0.2744, 1e-3)
+        && approx(elpdWaic, -5.688223, 1e-3),
+      `WAIC=${waicValue.toFixed(6)}, p_WAIC=${pWaic.toFixed(6)}`,
+      'WAIC=11.376446, p_WAIC=0.274400',
+      'tol 1e-3; analytical target (notebook MC value 11.3863 differs by ~1e-2)',
+    );
+  }
+
+  // ── T27.12. PSIS-LOO. Analytical: Normal-Normal leave-one-out closed form. ──
+  // For conjugate Normal-Normal, the naive-IS LOO estimator equals the exact
+  // leave-one-out predictive log density (by the exponential-family identity
+  // E[1/p(y_i|μ)] under the full-data posterior = 1/p(y_i|y_{−i})).
+  {
+    const { loo: looValue, nProblematic } = psisLoo(logLikDraws);
+    check(
+      'T27.12 psisLoo(canonical tiny, 10k QMC draws) ≈ 11.395 (analytical limit)',
+      approx(looValue, 11.395, 5e-2) && nProblematic === 0,
+      `LOO=${looValue.toFixed(6)}, n_pareto_problematic=${nProblematic}`,
+      'LOO=11.39529, n_pareto_problematic=0',
+      'tol 5e-2; analytical target via Normal-Normal LOO identity',
+    );
+  }
+}
+
+// ── T27.13. localFdr closed-form (theoretical null, alternative N(2.5, 1)) at z=3.0. ──
+{
+  const { fdrGrid } = localFdr({
+    zScores: [],            // not used in closed-form path
+    zGrid: [3.0],
+    theoreticalNull: true,
+    alternative: { piOne: 0.1, muAlt: 2.5, sigmaAlt: 1.0 },
+  });
+  check(
+    'T27.13 localFdr closed-form two-groups at z=3.0',
+    approx(fdrGrid[0], 0.10176409, 1e-4),
+    fdrGrid[0].toFixed(8),
+    '0.10176409',
+    'tol 1e-4; π₀=0.9, μ_alt=2.5, σ_alt=1; strong-signal z favors H₁',
+  );
+}
+
+// ── T27.14. Same at z=2.0 — low-effect z, mostly null. ───────────────────
+{
+  const { fdrGrid } = localFdr({
+    zScores: [],
+    zGrid: [2.0],
+    theoreticalNull: true,
+    alternative: { piOne: 0.1, muAlt: 2.5, sigmaAlt: 1.0 },
+  });
+  check(
+    'T27.14 localFdr closed-form two-groups at z=2.0',
+    approx(fdrGrid[0], 0.57986630, 1e-4),
+    fdrGrid[0].toFixed(8),
+    '0.57986630',
+    'tol 1e-4; low-effect z — null accounts for > 50% of mixture mass',
+  );
+}
+
+// ── S27.B bmaPredictive sanity check: weighted mixture size/composition. ──
+{
+  const perModelDraws = [
+    new Array(100).fill(1.0),  // model 0: draws ≡ 1
+    new Array(100).fill(2.0),  // model 1: draws ≡ 2
+    new Array(100).fill(3.0),  // model 2: draws ≡ 3
+  ];
+  const weights = [0.5, 0.3, 0.2];
+  const mix = bmaPredictive({ perModelDraws, weights, nOut: 100 });
+  const n1 = mix.filter(v => v === 1.0).length;
+  const n2 = mix.filter(v => v === 2.0).length;
+  const n3 = mix.filter(v => v === 3.0).length;
+  check(
+    'S27.B bmaPredictive stratified allocation (50, 30, 20 of 100)',
+    mix.length === 100 && n1 === 50 && n2 === 30 && n3 === 20,
+    `length=${mix.length}, counts=(${n1}, ${n2}, ${n3})`,
+    'length=100, counts=(50, 30, 20)',
+    'rounded weighted allocation',
+  );
+}
+
+// ── S27.P posteriorPredictiveCheck sanity: y_obs at the median of y_rep. ─
+// With y_obs = 0 (all zeros, T = sample mean = 0) and y_rep_s ~ N(0, 1)
+// (mean 0 by symmetry), the Bayesian p-value P(T(y_rep) ≥ T(y_obs)) = 0.5
+// exactly ± MC noise O(1/√S). This isolates the implementation from the
+// (uncontrolled) realization of a random y_obs.
+{
+  const rng = createSeededRng(777);
+  const S = 2000;
+  const n = 20;
+  const yObs = new Array(n).fill(0);  // T(yObs) = 0 deterministically
+  const yRepDraws: number[][] = [];
+  for (let s = 0; s < S; s++) {
+    const rep: number[] = new Array(n);
+    for (let i = 0; i < n; i++) {
+      const u1 = rng.random();
+      const u2 = rng.random();
+      rep[i] = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+    }
+    yRepDraws.push(rep);
+  }
+  const { bayesianPValue } = posteriorPredictiveCheck({
+    yRepDraws,
+    yObs,
+    T: (y) => y.reduce((a, b) => a + b, 0) / y.length,
+  });
+  check(
+    'S27.P posteriorPredictiveCheck y_obs=0 under N(0,1) y_rep: p_B ≈ 0.5',
+    approx(bayesianPValue, 0.5, 0.05),
+    bayesianPValue.toFixed(4),
+    '≈ 0.5',
+    'tol ±0.05; exact in expectation by symmetry',
+  );
+}
+
+// ── S27.H harmonicMeanEstimate sanity: finite output on i.i.d. log-liks. ──
+// Harmonic-mean is known pathological (infinite variance in general), but
+// on bounded log-likelihoods with moderate spread it returns a finite
+// number in the expected range. This is a pedagogical-only function; we
+// assert finiteness + rough magnitude rather than a tight numerical target.
+{
+  const logLikDraws = Array.from({ length: 1000 }, (_, i) => -1 - (i / 1000) * 2);
+  const result = harmonicMeanEstimate(logLikDraws);
+  check(
+    'S27.H harmonicMeanEstimate returns finite value on bounded log-liks',
+    Number.isFinite(result.logMarginal) && result.logMarginal > -5 && result.logMarginal < 0,
+    result.logMarginal.toFixed(6),
+    'in (−5, 0)',
+    'pedagogical estimator; finiteness check only',
+  );
+}
+
+// ── S27.T pathSamplingEstimate sanity: Beta-Binomial 11-point β grid. ──
+// Path sampling trapezoidal quadrature on Beta-Binomial converges to the
+// closed form as the β grid densifies. Coarse 3-point grids have large
+// quadrature error on this strongly-curved integrand (integrand jumps
+// from ≈ −n log(θ) at β=0 to near zero at β=1); 11 points gets within 0.1.
+{
+  const n = 20, k = 12, alpha = 1, beta = 1;
+  const betas = Array.from({ length: 11 }, (_, i) => i / 10);
+  const rng = createSeededRng(99);
+  const nDrawsBeta = 2000;
+  // Power posterior at β: ∝ Binom(k|n,θ)^β · Beta(θ|α,β) ∝ θ^(βk+α-1) (1-θ)^(β(n-k)+β-1)
+  // so draws from Beta(βk + α, β(n-k) + β)
+  const powerPosteriorDraws: number[][][] = betas.map((b) => {
+    const aPow = b * k + alpha;
+    const bPow = b * (n - k) + beta;
+    const out: number[][] = [];
+    for (let i = 0; i < nDrawsBeta; i++) {
+      const x = sampleGammaShape(aPow, () => rng.random());
+      const y = sampleGammaShape(bPow, () => rng.random());
+      out.push([x / (x + y)]);
+    }
+    return out;
+  });
+  const logLikelihood = (theta: number[]): number => {
+    const t = theta[0];
+    return (
+      lnGamma(n + 1) - lnGamma(k + 1) - lnGamma(n - k + 1)
+      + k * Math.log(t) + (n - k) * Math.log1p(-t)
+    );
+  };
+  const { logMarginal } = pathSamplingEstimate({
+    powerPosteriorDraws,
+    betas,
+    logLikelihood,
+  });
+  check(
+    'S27.T pathSamplingEstimate Beta-Binomial (20, 12, 1, 1), 11-point β grid',
+    Math.abs(logMarginal - (-3.04452)) < 0.15,
+    logMarginal.toFixed(6),
+    '≈ −3.04452 ± 0.15',
+    '11-point trapezoidal quadrature; MC noise + residual quadrature error',
+  );
+}
+
+// ── T27.15. Nested sampling on N(0,1) × U(−10, 10). ──────────────────────
+// Closed form: Z = √(2π) / 20 = 0.12533,  log Z = −2.07679374.
+// Generate a deterministic dead-point trajectory using the expected
+// prior-mass shrinkage — exercises the assembly logic without MC noise.
+// Specifically, at iteration i of a run with N_live = 50 live points,
+// expected X_i = exp(−i/50), so log L_i = −50 · X_i² for L(θ) = exp(−θ²/2)
+// on U(−10, 10).  Live-point tail converged to peak: log L ≈ 0.
+{
+  const nLive = 50;
+  const K = 500;
+  const logLikDeadPoints: number[] = [];
+  for (let i = 1; i <= K; i++) {
+    const Xi = Math.exp(-i / nLive);
+    logLikDeadPoints.push(-50 * Xi * Xi);
+  }
+  const finalLiveLogLiks = new Array(nLive).fill(0);
+  const { logMarginal } = nestedSamplingEstimate({
+    logLikDeadPoints,
+    nLivePoints: nLive,
+    finalLiveLogLiks,
+  });
+  check(
+    'T27.15 nestedSamplingEstimate N(0,1) on U(−10, 10) ≈ −2.0768',
+    approx(logMarginal, -2.07679374, 5e-2),
+    logMarginal.toFixed(8),
+    '-2.07679374',
+    'tol 5e-2 for NS run variance; Skilling prior-mass shrinkage',
   );
 }
 
