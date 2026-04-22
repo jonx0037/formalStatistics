@@ -482,3 +482,219 @@ export const convergenceDashboardPresets: readonly ConvergenceDashboardPreset[] 
       'Curvature traps RWM at short lags — R̂ improves slowly, motivating gradient-aware methods.',
   },
 ];
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Topic 27 — Bayesian Model Comparison & BMA presets
+//
+// Brief §7 — per the Track 7 single-file rule we extend here rather than
+// create a sibling `bayesian-model-comparison-data.ts`. Five new exports:
+//   • lindleyPresets            → LindleyParadoxExplorer (3 presets)
+//   • bmaPolynomialData         → BMAPredictiveComparison fixed dataset
+//   • bmaWeightPresets          → BMAPredictiveComparison weight sets (4)
+//   • localFdrPresets           → LocalFDRExplorer scenarios (3)
+//   • bridgeSamplingPresets     → BridgeSamplingConvergence problems (3)
+// ═══════════════════════════════════════════════════════════════════════════
+
+export interface LindleyPreset {
+  readonly id: string;
+  readonly label: string;
+  readonly z: number;
+  readonly n: number;
+  readonly tau: number;
+  readonly sigma: number;
+  readonly description: string;
+}
+
+/** Preset (z, n, τ, σ) triples for `LindleyParadoxExplorer`. Each spans a
+ *  regime the paradox is pedagogically designed to illuminate. */
+export const lindleyPresets: readonly LindleyPreset[] = [
+  {
+    id: 'classic-lindley',
+    label: 'Classic Lindley',
+    z: 3.0,
+    n: 100,
+    tau: 100,
+    sigma: 1,
+    description:
+      'Frequentist rejects H₀ at p ≈ 0.003, but BF₁₀ ≈ 0.09 favors H₀ by ~11:1 — the canonical paradox.',
+  },
+  {
+    id: 'frequentist-bayesian-agree',
+    label: 'Frequentist–Bayesian agree',
+    z: 3.0,
+    n: 100,
+    tau: 1,
+    sigma: 1,
+    description:
+      'Tight prior τ=1 concentrates the alternative near 0; both p-value and BF support H₁ (BF₁₀ ≈ 8.57).',
+  },
+  {
+    id: 'extreme-effect',
+    label: 'Extreme effect',
+    z: 5.0,
+    n: 100,
+    tau: 100,
+    sigma: 1,
+    description:
+      'Large z dominates the prior-diffusion penalty — BF₁₀ ≫ 1 even with diffuse prior.',
+  },
+];
+
+/** Fixed synthetic regression dataset for `BMAPredictiveComparison` — drawn
+ *  once from y = sin(2π x / 10) + 0.3 x + ε, ε ~ N(0, 0.25²), x ~ U(0, 10)
+ *  with NumPy default_rng seed 42 (notebook Cell 10). Copy verbatim — the
+ *  BIC weights below depend on these exact values. */
+export const bmaPolynomialData = {
+  /** 20 observed x-values (seed 42, sorted ascending). */
+  x: [
+    0.6382, 0.9418, 1.2811, 2.2724, 3.708, 4.3888, 4.4341, 4.5039, 5.5458,
+    6.3166, 6.4387, 6.9737, 7.6114, 7.7396, 7.8606, 8.2276, 8.2763, 8.586,
+    9.2676, 9.7562,
+  ] as const,
+  /** 20 observed y-values (seed 42, aligned with x). */
+  y: [
+    0.5356, 0.6701, 1.4108, 1.6329, 1.7308, 1.6033, 1.8114, 1.7492, 1.4307,
+    1.2666, 1.6812, 1.0447, 1.1578, 1.1297, 1.5378, 1.8532, 1.571, 1.5897,
+    2.1301, 2.9369,
+  ] as const,
+  /** 100-point predictive grid matching np.linspace(0, 10, 100). */
+  testX: Array.from({ length: 100 }, (_, i) => (i * 10) / 99) as readonly number[],
+  /** True data-generating function (for overlay). */
+  trueF: (x: number): number => Math.sin((2 * Math.PI * x) / 10) + 0.3 * x,
+  /** True observation noise SD. */
+  trueSigma: 0.25,
+} as const;
+
+export interface BmaWeightPreset {
+  readonly id: string;
+  readonly label: string;
+  readonly weights: readonly number[];
+  readonly description: string;
+}
+
+/** Weight sets for `BMAPredictiveComparison` over polynomial degrees 1/2/3.
+ *  "BIC-weighted" values copied from notebook Cell 10: on this particular
+ *  sample BIC overwhelmingly prefers degree 3, collapsing weights to (0,0,1) —
+ *  a featureful degeneracy that illustrates the BIC-selection regime. For
+ *  contrast, the other three presets exercise flat and single-model cases. */
+export const bmaWeightPresets: readonly BmaWeightPreset[] = [
+  {
+    id: 'bic-weighted',
+    label: 'BIC-weighted',
+    weights: [0, 0, 1],
+    description:
+      'Posterior model probabilities ∝ exp(−BIC/2). On this sample BIC strongly prefers degree 3 (weights collapse to (0, 0, 1)).',
+  },
+  {
+    id: 'uniform',
+    label: 'Uniform',
+    weights: [1 / 3, 1 / 3, 1 / 3],
+    description:
+      'Flat prior + equal posterior: each model contributes equally to the BMA predictive.',
+  },
+  {
+    id: 'degree-1',
+    label: 'Degree-1 only',
+    weights: [1, 0, 0],
+    description:
+      'Hard-select the linear model — lowest-complexity baseline; residuals show the sin component clearly.',
+  },
+  {
+    id: 'degree-3',
+    label: 'Degree-3 only',
+    weights: [0, 0, 1],
+    description:
+      'Hard-select the cubic — matches the BIC-preferred model and closely tracks the data.',
+  },
+];
+
+export interface LocalFdrPreset {
+  readonly id: string;
+  readonly label: string;
+  readonly piOne: number;
+  readonly muAlt: number;
+  readonly sigmaAlt: number;
+  readonly m: number;
+  readonly description: string;
+}
+
+/** Scenarios for `LocalFDRExplorer` illustrating BH vs local-FDR divergence
+ *  across sparsity and effect-size regimes (Efron 2010 two-groups model). */
+export const localFdrPresets: readonly LocalFdrPreset[] = [
+  {
+    id: 'sparse-genomics',
+    label: 'Sparse (genomics-like)',
+    piOne: 0.05,
+    muAlt: 3.0,
+    sigmaAlt: 1.0,
+    m: 1000,
+    description:
+      '5% signal, μ_alt = 3 — large m, sparse alternatives. BH rejects a tail; local FDR returns per-hypothesis posteriors.',
+  },
+  {
+    id: 'moderate-signal',
+    label: 'Moderate signal',
+    piOne: 0.10,
+    muAlt: 2.5,
+    sigmaAlt: 1.0,
+    m: 1000,
+    description:
+      '10% signal, μ_alt = 2.5 — the notebook Cell 12 default; BH and local-FDR disagree around z ≈ 2.',
+  },
+  {
+    id: 'dense-signal',
+    label: 'Dense signal',
+    piOne: 0.30,
+    muAlt: 2.0,
+    sigmaAlt: 1.0,
+    m: 1000,
+    description:
+      '30% signal, μ_alt = 2 — dense regime where π₀ estimation matters and local FDR corrects sharply.',
+  },
+];
+
+export interface BridgeSamplingPreset {
+  readonly id: string;
+  readonly label: string;
+  readonly n: number;
+  readonly k: number;
+  readonly alpha: number;
+  readonly beta: number;
+  readonly description: string;
+}
+
+/** Beta-Binomial preset problems for `BridgeSamplingConvergence`. All have
+ *  closed-form m(y) via `betaBinomialLogMarginal`, making them perfect
+ *  regression targets for the bridge iterative fixed point. */
+export const bridgeSamplingPresets: readonly BridgeSamplingPreset[] = [
+  {
+    id: 'bb-20-12-1-1',
+    label: 'Beta-Binomial (20, 12, 1, 1)',
+    n: 20,
+    k: 12,
+    alpha: 1,
+    beta: 1,
+    description:
+      'The T27.6 calibration case. Closed-form log m = log(1/21) ≈ −3.04452; bridge converges in ≤ 5 iter.',
+  },
+  {
+    id: 'bb-50-30-2-2',
+    label: 'Beta-Binomial (50, 30, 2, 2)',
+    n: 50,
+    k: 30,
+    alpha: 2,
+    beta: 2,
+    description:
+      'Moderate sample with informative Beta(2, 2) prior. Closed-form log m ≈ −3.58309; showcases mild-informativeness regime.',
+  },
+  {
+    id: 'bb-100-60-5-5',
+    label: 'Beta-Binomial (100, 60, 5, 5)',
+    n: 100,
+    k: 60,
+    alpha: 5,
+    beta: 5,
+    description:
+      'Large-sample, informative prior. Posterior highly concentrated — proposal overlap matters less, bridge very stable.',
+  },
+];

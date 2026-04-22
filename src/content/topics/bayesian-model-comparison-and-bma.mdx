@@ -1,0 +1,751 @@
+---
+title: "Bayesian Model Comparison & BMA"
+subtitle: "Topic 25 introduced the marginal likelihood m(y) as the normalizer of the posterior; Topic 26 gave us MCMC machinery that samples the posterior without ever needing m(y). Topic 27 asks the opposite question: when we do need m(y) — for Bayes factors, posterior model probabilities, Bayesian model averaging — how do we estimate it from MCMC draws that only know the posterior's shape? Four estimators (Laplace, bridge sampling, path sampling, nested sampling), three predictive scores (DIC, WAIC, PSIS-LOO), the Lindley paradox (featured), the Occam-factor ⇔ BIC equivalence that closes Topic 24 §24.4, local FDR as the Bayesian counterpart to Topic 20's BH procedure, and posterior-predictive checks — all built on Topic 26's draws."
+status: "published"
+difficulty: "intermediate"
+prerequisites:
+  - "bayesian-foundations-and-prior-selection"
+  - "bayesian-computation-and-mcmc"
+  - "model-selection-and-information-criteria"
+  - "hypothesis-testing"
+  - "likelihood-ratio-tests-and-np"
+  - "multiple-testing-and-false-discovery"
+tags:
+  - "statistics"
+  - "bayesian-inference"
+  - "bayes-factor"
+  - "lindley-paradox"
+  - "marginal-likelihood"
+  - "bridge-sampling"
+  - "path-sampling"
+  - "nested-sampling"
+  - "bayesian-model-averaging"
+  - "bma"
+  - "dic"
+  - "waic"
+  - "psis-loo"
+  - "local-fdr"
+  - "posterior-predictive-check"
+  - "occam-factor"
+  - "bic"
+domain: "bayesian-statistics"
+videoId: null
+notebookPath: "notebooks/bayesian-model-comparison-and-bma/27_bayesian_model_comparison.ipynb"
+githubUrl: "https://github.com/jonx0037/formalStatistics/blob/main/src/content/topics/bayesian-model-comparison-and-bma.mdx"
+datePublished: 2026-04-21
+estimatedReadTime: 60
+formalcalculusPrereqs:
+  - topic: "multivariable-integration"
+    site: "formalcalculus"
+    relationship: "The Laplace expansion of $m(\\mathbf{y}) = \\int L(\\theta)\\pi(\\theta)\\,d\\theta$ uses multivariate Gaussian integration over a neighborhood of the posterior mode. §27.6 Proof 2 cites this mechanism directly."
+  - topic: "taylor-series"
+    site: "formalcalculus"
+    relationship: "Second-order Taylor expansion of $\\log L(\\theta)\\pi(\\theta)$ around $\\hat\\theta$ is the analytical backbone of the Occam–BIC equivalence (§27.6 Proof 2). The error term is $O_p(1/\\sqrt{n})$ under Topic 14's regularity conditions."
+formalmlConnections:
+  - topic: "stacking-and-predictive-ensembles"
+    site: "formalml"
+    relationship: "Stacking is the M-open alternative to BMA: optimize predictive weights directly rather than derive them from marginal likelihoods. Critical when no candidate model is true. §27.10 Rem 26 sets up the contrast."
+  - topic: "variational-bayes-for-model-selection"
+    site: "formalml"
+    relationship: "The evidence lower bound (ELBO) is a variational approximation to $\\log m(\\mathbf{y})$ derived from the Kullback–Leibler projection of the posterior onto a tractable family. Replaces MCMC+bridge for very large models at the cost of approximation bias."
+  - topic: "reversible-jump-mcmc"
+    site: "formalml"
+    relationship: "RJMCMC (Green 1995) samples directly from the joint posterior over $(\\mathcal{M}_k, \\theta_k)$, providing BMA weights as a byproduct. An alternative to separate marginal-likelihood estimates when the model space is discrete and structured."
+connections:
+  - topic: "bayesian-foundations-and-prior-selection"
+    relationship: "Topic 25 §25.8 Rem 16 introduced Laplace marginal likelihood; §25.10 Rem 22 forward-promised every Topic 27 deliverable. Topic 27 is the payoff — each method named there is developed here."
+  - topic: "bayesian-computation-and-mcmc"
+    relationship: "Bridge / path / nested sampling all consume Topic 26's MCMC draws. The ergodic-theorem contract (§26.7) is what makes these estimators consistent."
+  - topic: "model-selection-and-information-criteria"
+    relationship: "Topic 24 developed AIC/BIC as frequentist information criteria. §27.6 Thm 4 closes the loop: BIC is the asymptotic Occam factor, the first-order approximation to $-2\\log m(\\mathbf{y})$."
+  - topic: "hypothesis-testing"
+    relationship: "Bayes factors are the posterior-odds analog of the Neyman–Pearson test. §17.10 Rem 15 flagged the framework; §27.4 builds it out. Lindley paradox (§27.5) is the sharpest contrast to §17.5's decision-theoretic framing."
+  - topic: "likelihood-ratio-tests-and-np"
+    relationship: "The Bayes factor decomposes into the LRT statistic plus a prior-volume correction. Topic 18's Rem 25 points here; §27.4 develops the exact relationship."
+  - topic: "multiple-testing-and-false-discovery"
+    relationship: "§27.9 develops local FDR (Efron 2010) as the Bayesian counterpart to Topic 20's BH procedure. The two answer different questions: tail-FDR vs per-hypothesis posterior."
+  - topic: "hierarchical-bayes-and-partial-pooling"
+    relationship: "Topic 28 applies BMA to hierarchical structures — model-averaged hierarchical predictions and priors over candidate model classes. §27.10 sets up the handoff."
+references:
+  - type: "article"
+    author: "Robert E. Kass & Adrian E. Raftery"
+    year: 1995
+    title: "Bayes Factors"
+    publisher: "Journal of the American Statistical Association 90(430): 773–795"
+    note: "KAS1995. Definitive applied-Bayes-factors reference; §3.4 develops the Lindley paradox; §4.1 gives the Laplace-BIC equivalence at the level Topic 27 cites. https://www.jstor.org/stable/2291091"
+  - type: "article"
+    author: "Xiao-Li Meng & Wing Hung Wong"
+    year: 1996
+    title: "Simulating Ratios of Normalizing Constants via a Simple Identity: A Theoretical Exploration"
+    publisher: "Statistica Sinica 6(4): 831–860"
+    note: "MEN1996. Origin of the bridge sampling identity (§27.6 Thm 5 Proof 3) and the MSE-optimal bridge function (Corollary 5.1). https://www3.stat.sinica.edu.tw/statistica/oldpdf/A6n43.pdf"
+  - type: "article"
+    author: "Andrew Gelman & Xiao-Li Meng"
+    year: 1998
+    title: "Simulating Normalizing Constants: From Importance Sampling to Bridge Sampling to Path Sampling"
+    publisher: "Statistical Science 13(2): 163–185"
+    note: "GEL1998. Thermodynamic integration / path sampling identity (§27.6 Thm 6). Unifies IS, bridge, and path in one framework. https://projecteuclid.org/journals/statistical-science/volume-13/issue-2/Simulating-normalizing-constants--from-importance-sampling-to-bridge-sampling/10.1214/ss/1028905934.full"
+  - type: "article"
+    author: "John Skilling"
+    year: 2006
+    title: "Nested Sampling for General Bayesian Computation"
+    publisher: "Bayesian Analysis 1(4): 833–859"
+    note: "SKI2006. Origin of nested sampling (§27.6 Thm 7). §6 gives the prior-mass shrinkage $X_i = \\exp(-i/N_{\\text{live}})$ used by `nestedSamplingEstimate`. https://projecteuclid.org/journals/bayesian-analysis/volume-1/issue-4/Nested-sampling-for-general-Bayesian-computation/10.1214/06-BA127.full"
+  - type: "article"
+    author: "Sumio Watanabe"
+    year: 2010
+    title: "Asymptotic Equivalence of Bayes Cross Validation and Widely Applicable Information Criterion in Singular Learning Theory"
+    publisher: "Journal of Machine Learning Research 11: 3571–3594"
+    note: "WAT2010. WAIC definition (§27.8) plus the WAIC ≈ LOO asymptotic equivalence — stated-and-cited in Topic 27 rather than proven (requires singular-learning machinery outside the curriculum). https://www.jmlr.org/papers/v11/watanabe10a.html"
+  - type: "article"
+    author: "Aki Vehtari, Andrew Gelman & Jonah Gabry"
+    year: 2017
+    title: "Practical Bayesian Model Evaluation Using Leave-One-Out Cross-Validation and WAIC"
+    publisher: "Statistics and Computing 27(5): 1413–1432"
+    note: "VEH2017. PSIS-LOO implementation (§27.8): Pareto-smoothed importance sampling + the $\\hat k$ diagnostic. The standard Bayesian-workflow reference for LOO. https://link.springer.com/article/10.1007/s11222-016-9696-4"
+  - type: "book"
+    author: "Bradley Efron"
+    year: 2010
+    title: "Large-Scale Inference: Empirical Bayes Methods for Estimation, Testing, and Prediction"
+    publisher: "Cambridge University Press"
+    note: "EFR2010. Two-groups model and local FDR (§27.9 Ex 11). Ch. 5 on empirical-null central-matching; Ch. 6 on the fdr vs Fdr distinction. https://www.cambridge.org/core/books/largescale-inference/A0B183B0080A92966497F12CE5D12589"
+  - type: "article"
+    author: "David J. Spiegelhalter, Nicola G. Best, Bradley P. Carlin & Angelika van der Linde"
+    year: 2002
+    title: "Bayesian Measures of Model Complexity and Fit"
+    publisher: "Journal of the Royal Statistical Society: Series B 64(4): 583–639"
+    note: "SPI2002. DIC definition and the effective-parameter-count $p_{\\text{DIC}}$ (§27.8 Ex 8). The reading-group paper that made DIC a default output of BUGS/JAGS. https://rss.onlinelibrary.wiley.com/doi/10.1111/1467-9868.00353"
+  - type: "article"
+    author: "Dennis V. Lindley"
+    year: 1957
+    title: "A Statistical Paradox"
+    publisher: "Biometrika 44(1–2): 187–192"
+    note: "LIN1957. Original statement of the paradox §27.5 proves. Five-page note; worth reading for the historical framing. https://www.jstor.org/stable/2333251"
+  - type: "book"
+    author: "Harold Jeffreys"
+    year: 1961
+    edition: "3rd"
+    title: "Theory of Probability"
+    publisher: "Oxford University Press"
+    note: "JEF1961. Source of the Jeffreys scale tabulated in §27.4 (Table 1). Reused from Topic 25 (Jeffreys priors). https://global.oup.com/academic/product/the-theory-of-probability-9780198503682"
+  - type: "article"
+    author: "Jennifer A. Hoeting, David Madigan, Adrian E. Raftery & Chris T. Volinsky"
+    year: 1999
+    title: "Bayesian Model Averaging: A Tutorial"
+    publisher: "Statistical Science 14(4): 382–401"
+    note: "HOE1999. Canonical BMA tutorial (§27.7). Discusses model-set construction, Occam's-window pruning, and applied case studies. https://projecteuclid.org/journals/statistical-science/volume-14/issue-4/Bayesian-model-averaging--a-tutorial-with-comments-by-M/10.1214/ss/1009212519.full"
+  - type: "article"
+    author: "Andrew Gelman, Xiao-Li Meng & Hal Stern"
+    year: 1996
+    title: "Posterior Predictive Assessment of Model Fitness via Realized Discrepancies"
+    publisher: "Statistica Sinica 6(4): 733–760"
+    note: "GEL1996. Origin of the Bayesian posterior-predictive p-value $p_B$ (§27.9 Ex 12). Three discrepancy types: data-space, prior-distance, residual-space. https://www3.stat.sinica.edu.tw/statistica/oldpdf/A6n41.pdf"
+  - type: "book"
+    author: "Andrew Gelman, John B. Carlin, Hal S. Stern, David B. Dunson, Aki Vehtari & Donald B. Rubin"
+    year: 2013
+    edition: "3rd"
+    title: "Bayesian Data Analysis"
+    publisher: "CRC Press"
+    note: "GEL2013. §6 on posterior predictive checks; §7 on model comparison; §11–12 on LOO/WAIC. Reused from Topics 25 and 26. http://www.stat.columbia.edu/~gelman/book/"
+---
+
+import TheoremBlock from '../../components/ui/TheoremBlock.astro';
+import ProofBlock from '../../components/ui/ProofBlock.astro';
+import ExampleBlock from '../../components/ui/ExampleBlock.astro';
+import RemarkBlock from '../../components/ui/RemarkBlock.astro';
+import ExternalLink from '../../components/ui/ExternalLink.astro';
+
+import LindleyParadoxExplorer from '../../components/viz/LindleyParadoxExplorer.tsx';
+import BridgeSamplingConvergence from '../../components/viz/BridgeSamplingConvergence.tsx';
+import BMAPredictiveComparison from '../../components/viz/BMAPredictiveComparison.tsx';
+import LocalFDRExplorer from '../../components/viz/LocalFDRExplorer.tsx';
+
+## 27.1 The hidden object: marginal likelihood as Bayesian normalizer
+
+Every Bayesian computation in Topics 25 and 26 ran through the same unnormalized identity:
+
+$$p(\theta \mid \mathbf{y}) \;\propto\; L(\theta)\, \pi(\theta).$$
+
+The proportionality constant — the integral
+
+$$m(\mathbf{y}) \;=\; \int_\Theta L(\theta)\, \pi(\theta)\, d\theta$$
+
+— didn't matter for posterior inference. Metropolis–Hastings cancels $m(\mathbf{y})$ in the acceptance ratio. Gibbs samplers sample from full conditionals that depend only on the unnormalized joint density. HMC follows gradients of $\log L + \log \pi$ and never touches the normalizer. Topic 26's machinery delivers posterior expectations, credible intervals, and predictive draws — all without ever computing $m(\mathbf{y})$.
+
+Topic 27 is about what happens when you need $m(\mathbf{y})$ anyway. Three tasks force the issue:
+
+1. **Bayes factors.** Comparing two models $\mathcal{M}_0$ and $\mathcal{M}_1$ via the posterior odds ratio requires the ratio $m_0(\mathbf{y}) / m_1(\mathbf{y})$. The individual normalizers don't cancel — they're the whole game.
+2. **Bayesian model averaging.** Predictions weighted by posterior model probability require $p(\mathcal{M}_k \mid \mathbf{y}) \propto p(\mathcal{M}_k) m_k(\mathbf{y})$. Again, the marginal likelihoods themselves are the computational object.
+3. **Evidence-level hypothesis testing.** "How much does this dataset support $\mathcal{M}_1$ over $\mathcal{M}_0$?" — a question Neyman–Pearson answers with a decision rule, and Bayesian analysis answers with a number derived from $m(\mathbf{y})$.
+
+<img src="/images/topics/bayesian-model-comparison-and-bma/27-marginal-likelihood-as-partition.png"
+     alt="Figure 1. The marginal likelihood as a partition: left panel shows the unnormalized posterior L(θ)π(θ) as a curve over Θ, with the shaded area equal to m(y). Right panel shows the normalized posterior p(θ | y). The marginal likelihood is the constant that converts unnormalized to normalized — the Bayesian analog of the partition function Z in statistical physics."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+The figure above captures the central idea: $m(\mathbf{y})$ is the **partition function** — the integral over parameter space that turns the unnormalized joint $L(\theta)\pi(\theta)$ into a probability density. Physicists face the same object in the Gibbs distribution $p(x) \propto e^{-\beta H(x)}$; Bayesians face it in the posterior. The computational challenge is identical — integrate an exponential-family-ish object over a high-dimensional space — and the techniques developed in physics (bridge sampling originates in free-energy estimation) transfer directly.
+
+<RemarkBlock number={1} title="Marginal likelihood vs posterior predictive — don't confuse them">
+Topic 25 §25.5 introduced two distinct quantities that both begin with the word "marginal":
+
+- **Marginal likelihood** $m(\mathbf{y}) = \int L(\theta)\pi(\theta)\,d\theta$: integrates the *data* likelihood against the prior. A single scalar summarizing the fit of the *model*.
+- **Posterior predictive** $p(\tilde y \mid \mathbf{y}) = \int p(\tilde y \mid \theta) p(\theta \mid \mathbf{y})\,d\theta$: integrates a *new-data* likelihood against the posterior. A full density over new observations.
+
+The marginal likelihood is the **evidence** supporting the model; the posterior predictive is the model's **prediction** under that evidence. §27.2 formalizes the first, §27.7 develops the second.
+</RemarkBlock>
+
+<RemarkBlock number={2} title="Why this is harder than posterior sampling">
+MCMC works because it cancels $m(\mathbf{y})$. That cancellation is exactly what makes $m(\mathbf{y})$ hard to estimate from MCMC draws — the draws carry information about the posterior's *shape* but not its *scale*. Every technique in §27.6 is a way to recover the lost scale: Laplace uses the analytic Gaussian-integral formula, bridge and path sampling tie posterior draws to a calibrated proposal, nested sampling transforms the integral into a 1-D quadrature over prior-mass levels. Each has failure modes; the one-size-fits-all estimator does not exist.
+</RemarkBlock>
+
+<a id="section-27-2"></a>
+
+## 27.2 Models and marginal likelihood
+
+Formalize the setting. Let $\mathcal{M} = \{\mathcal{M}_1, \ldots, \mathcal{M}_M\}$ be a candidate set of models — each $\mathcal{M}_k$ specifies a parameter space $\Theta_k$, a likelihood $L_k(\theta_k) = p(\mathbf{y} \mid \theta_k, \mathcal{M}_k)$, and a prior $\pi_k(\theta_k \mid \mathcal{M}_k)$. Each model produces its own marginal likelihood:
+
+$$m_k(\mathbf{y}) \;=\; \int_{\Theta_k} L_k(\theta_k)\, \pi_k(\theta_k \mid \mathcal{M}_k)\, d\theta_k.$$
+
+A prior over models $p(\mathcal{M}_k)$ (typically uniform, $1/M$) turns the collection into a full joint model. Bayes' theorem then applies at the model level.
+
+<TheoremBlock number={1} title="Posterior model probabilities">
+Given a candidate set $\mathcal{M}$, prior model probabilities $\\{p(\mathcal{M}_k)\\}_{k=1}^M$, and marginal likelihoods $\\{m_k(\mathbf{y})\\}_{k=1}^M$, the posterior probability of model $k$ is
+
+$$p(\mathcal{M}_k \mid \mathbf{y}) \;=\; \frac{p(\mathcal{M}_k)\, m_k(\mathbf{y})}{\sum_{j=1}^M p(\mathcal{M}_j)\, m_j(\mathbf{y})}.$$
+
+The denominator is the total evidence $p(\mathbf{y}) = \sum_j p(\mathcal{M}_j) m_j(\mathbf{y})$ — a number independent of $k$, acting purely as a normalizer.
+</TheoremBlock>
+
+This is the standard Bayes-theorem application at the model level: the likelihood of model $k$ having generated the data is $m_k(\mathbf{y})$ (by definition of the marginal likelihood); the prior is $p(\mathcal{M}_k)$; the posterior is their normalized product. The function `posteriorModelProbabilities` in `bayes.ts` implements this softmax-like normalization in log space for numerical stability — a precaution that matters when $\log m_k$ values differ by tens or hundreds of units across a candidate set.
+
+<ExampleBlock number={1} title="Beta-Binomial m(y) in closed form">
+Consider $y \mid \theta \sim \text{Binomial}(n, \theta)$ with $\theta \sim \text{Beta}(\alpha, \beta)$. The marginal likelihood is
+
+$$m(y) \;=\; \int_0^1 \binom{n}{y}\, \theta^y (1-\theta)^{n-y} \cdot \frac{\theta^{\alpha-1}(1-\theta)^{\beta-1}}{B(\alpha, \beta)}\, d\theta.$$
+
+The integrand is proportional to $\text{Beta}(\alpha + y, \beta + n - y)$, so the integral evaluates to
+
+$$m(y) \;=\; \binom{n}{y} \cdot \frac{B(\alpha + y, \beta + n - y)}{B(\alpha, \beta)}.$$
+
+Taking logs: $\log m(y) = \log \binom{n}{y} + \log B(\alpha + y, \beta + n - y) - \log B(\alpha, \beta)$. For $(n, y, \alpha, \beta) = (20, 12, 1, 1)$ the answer is $\log(1/21) \approx -3.04452$ — the closed-form reference we use in §27.6 to verify the bridge / path / Laplace estimators (brief §6.2 T27.4). The function `betaBinomialLogMarginal` in `bayes.ts` computes this with stable `lnGamma` arithmetic.
+</ExampleBlock>
+
+<RemarkBlock number={3} title="M-closed, M-open, M-complete">
+Bernardo–Smith (1994) classify model-comparison settings by the status of truth. **M-closed:** the true data-generating process is in $\mathcal{M}$. **M-open:** the truth is outside $\mathcal{M}$; we're choosing the best *approximating* model. **M-complete:** truth lies in a (possibly unenumerated) extension of $\mathcal{M}$, but we treat $\mathcal{M}$ as a working set. BMA is principled in M-closed and M-complete (it averages over the posterior within $\mathcal{M}$); for M-open problems, stacking (formalml) or predictive-weight optimization is often preferred because BMA weights concentrate on a single "best" model that may still be far from truth. Most applied settings are M-open; the distinction matters when interpreting BMA weights.
+</RemarkBlock>
+
+<RemarkBlock number={4} title="Marginal likelihood is not the likelihood">
+A common pitfall: calling $m(\mathbf{y})$ the "likelihood of the model." It is not. The likelihood of the model at $\theta$ is $L(\theta) = p(\mathbf{y} \mid \theta)$ — a function of $\theta$. The marginal likelihood $m(\mathbf{y})$ is a *scalar* — the likelihood $L$ averaged against the prior. Two models with identical MLE fits (same peak of $L$) can have very different $m$ if one has a concentrated prior that matches the data and the other has a diffuse prior that allocates probability mass to regions where $L$ is low.
+</RemarkBlock>
+
+<RemarkBlock number={5} title="Model-set sensitivity">
+$p(\mathcal{M}_k \mid \mathbf{y})$ depends on the *entire set* $\mathcal{M}$ through the denominator. Adding or removing candidate models — even ones with negligible weight — can shift the reported posterior probabilities. This is not a bug; it's a statement about what Bayesian model comparison actually asks. The question "which model explains the data best?" is inherently relative: best *compared to what?* A model with $p(\mathcal{M}_1 \mid \mathbf{y}) = 0.95$ in a pair and $p(\mathcal{M}_1 \mid \mathbf{y}) = 0.03$ in an eight-model set is not contradictory — it answers different questions.
+</RemarkBlock>
+
+<a id="section-27-3"></a>
+
+## 27.3 Notation
+
+Topic 27 inherits [Topic 25 §25.3](/topics/bayesian-foundations-and-prior-selection#section-25-3) and [Topic 26 §26.3](/topics/bayesian-computation-and-mcmc#section-26-3) notation verbatim. The new symbols introduced here:
+
+| Object | Symbol | Interpretation |
+|---|---|---|
+| Candidate model | $\mathcal{M}_k$ | Indexed by $k = 1, \ldots, M$ over a candidate set $\mathcal{M}$. |
+| Marginal likelihood | $m_k(\mathbf{y}) = m(\mathbf{y} \mid \mathcal{M}_k)$ | Integral of $L_k \pi_k$ over $\Theta_k$. |
+| Prior / posterior model probability | $p(\mathcal{M}_k)$ / $p(\mathcal{M}_k \mid \mathbf{y})$ | Prior weight / BMA weight $w_k^{\mathrm{BMA}}$. |
+| Bayes factor | $\mathrm{BF}_{ij} = m_i / m_j$ | Data-driven update of $\mathcal{M}_i$ vs $\mathcal{M}_j$ prior odds. |
+| Bridge function | $h(\theta)$ | User-chosen function in the Meng–Wong identity (§27.6 Thm 5). |
+| Normalizing constant | $Z_i$ | Generic — the integral $\int q_i\,d\theta$ for an unnormalized $q_i$. |
+| Inverse temperature | $\beta$ | Path-sampling parameter, $0 \le \beta \le 1$. |
+| Power posterior | $p_\beta(\theta) \propto L(\theta)^\beta \pi(\theta)$ | Interpolates prior ($\beta=0$) and posterior ($\beta=1$). |
+| Occam factor | $\mathrm{Occam}(\mathcal{M})$ | Ratio of posterior volume to prior volume; asymptotic $n^{-k/2}$. |
+| Effective parameter count | $p_{\mathrm{DIC}}$ / $p_{\mathrm{WAIC}}$ | "Effective" parameters accounting for posterior concentration. |
+| Expected log-predictive density | $\mathrm{elpd}$ | $\sum_i \mathbb{E}_{p(\theta \mid \mathbf{y})}[\log p(y_i \mid \theta)]$; the target of LOO / WAIC. |
+| PSIS-LOO estimate | $\widehat{\mathrm{elpd}}_{\mathrm{loo}}$ | Pareto-smoothed importance-sampling LOO. |
+| Pareto diagnostic | $\hat k$ | Per-observation PSIS-reliability flag; $\hat k > 0.7$ is problematic. |
+| Local false discovery rate | $\mathrm{fdr}(z)$ | Two-groups posterior $p(H_0 \mid z)$ (Efron 2010). |
+| Posterior-predictive test statistic | $T(\mathbf{y}, \theta)$ | Discrepancy evaluated at observed or replicated data. |
+| Bayesian p-value | $p_B$ | $P(T(\mathbf{y}^{\text{rep}}, \theta) \geq T(\mathbf{y}, \theta) \mid \mathbf{y})$. |
+
+<RemarkBlock number={6} title="Independence conventions">
+Independence and conditional independence continue to be written with the [Topic 16 §16.9](/topics/conditional-probability#section-16-9) convention $\perp\!\!\!\perp$. The M-open / M-closed / M-complete trichotomy is used narratively (§27.2 Rem 3) without a dedicated symbol. When $\mathcal{M}_k$ and $\mathcal{M}_{k'}$ share parameters (nested models), we'll say so explicitly — the shared parameter is integrated against the joint prior, not multiplied.
+</RemarkBlock>
+
+<a id="section-27-4"></a>
+
+## 27.4 Bayes factors and Jeffreys' scale
+
+The Bayes factor is the ratio of marginal likelihoods:
+
+$$\mathrm{BF}_{10}(\mathbf{y}) \;=\; \frac{m_1(\mathbf{y})}{m_0(\mathbf{y})} \;=\; \frac{p(\mathbf{y} \mid \mathcal{M}_1)}{p(\mathbf{y} \mid \mathcal{M}_0)}.$$
+
+This is the data's multiplicative update to the prior odds of $\mathcal{M}_1$ over $\mathcal{M}_0$:
+
+<TheoremBlock number={2} title="Bayes factor as posterior odds update">
+For any two models $\mathcal{M}_0$ and $\mathcal{M}_1$ with positive prior probabilities,
+
+$$\underbrace{\frac{p(\mathcal{M}_1 \mid \mathbf{y})}{p(\mathcal{M}_0 \mid \mathbf{y})}}_{\text{posterior odds}} \;=\; \underbrace{\frac{p(\mathcal{M}_1)}{p(\mathcal{M}_0)}}_{\text{prior odds}} \;\times\; \underbrace{\mathrm{BF}_{10}(\mathbf{y})}_{\text{data's update}}.$$
+
+The Bayes factor is thus *prior-free* in one sense — it's the part of the comparison due to the data, independent of prior model probabilities — and *prior-dependent* in another: each $m_k$ depends on the *within-model* prior $\pi_k$. Rem 7 below elaborates the second sense; Rem 12–14 follow the consequences.
+</TheoremBlock>
+
+The identity is immediate from $p(\mathcal{M}_k \mid \mathbf{y}) \propto p(\mathcal{M}_k) m_k(\mathbf{y})$ (§27.2 Thm 1): take the ratio and the $p(\mathbf{y})$ normalizer cancels.
+
+Jeffreys (1961, Appendix B) tabulated a heuristic scale for interpreting Bayes factors:
+
+| $\mathrm{BF}_{10}$ range | Strength of evidence for $\mathcal{M}_1$ |
+|---|---|
+| $< 1$ | Supports $\mathcal{M}_0$ |
+| $1$ to $3.2$ | Barely worth mentioning |
+| $3.2$ to $10$ | Substantial |
+| $10$ to $100$ | Strong |
+| $> 100$ | Decisive |
+
+<img src="/images/topics/bayesian-model-comparison-and-bma/27-jeffreys-scale.png"
+     alt="Figure 2. Jeffreys' scale for Bayes factor interpretation. Horizontal axis: BF_10 on log scale from 0.01 to 1000. Color bands mark 'supports H_0' (BF < 1), 'barely worth mentioning' (1 to 3.2), 'substantial' (3.2 to 10), 'strong' (10 to 100), 'decisive' (> 100). Numerical BF values from several hypothesis-testing scenarios are overlaid to show where typical applied analyses fall."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<ExampleBlock number={2} title="One-sample Normal Bayes factor">
+Let $y_1, \ldots, y_n \mid \theta \sim \mathcal{N}(\theta, 1)$ with $H_0: \theta = 0$ and $H_1: \theta \sim \mathcal{N}(0, \tau^2)$. Then $\bar y \mid H_0 \sim \mathcal{N}(0, 1/n)$ and $\bar y \mid H_1 \sim \mathcal{N}(0, 1/n + \tau^2)$ (by the convolution of likelihood and prior). The Bayes factor is
+
+$$\mathrm{BF}_{10} \;=\; \frac{\phi(\bar y;\, 0,\, 1/n + \tau^2)}{\phi(\bar y;\, 0,\, 1/n)} \;=\; \frac{1}{\sqrt{1 + n\tau^2}}\, \exp\!\left(\frac{\bar y^2}{2}\left[\frac{1}{1/n} - \frac{1}{1/n + \tau^2}\right]\right).$$
+
+This is the Lindley setup — the featured case of §27.5. For $\bar y = 0.3, n = 100, \tau = 1$: $z = \bar y \sqrt n = 3$, $r = n\tau^2 = 100$, and $\mathrm{BF}_{10} \approx 8.57$ (moderate evidence for $\mathcal{M}_1$; `lindleyBayesFactor(3, 100, 1)` in `bayes.ts`). Same $z$ with $\tau = 100$: $\mathrm{BF}_{10} \approx 0.09$ (strong evidence for $\mathcal{M}_0$). The paradox lives between these two lines.
+</ExampleBlock>
+
+<RemarkBlock number={7} title="Bayes factors depend on within-model priors">
+The Bayes factor is prior-free over *model probabilities* but prior-dependent over *parameter* distributions. The $\pi_k$ in $m_k(\mathbf{y}) = \int L_k(\theta) \pi_k(\theta)\,d\theta$ is a hard input: a diffuse $\pi_k$ under $\mathcal{M}_1$ diluting probability mass over a large parameter volume yields a smaller $m_1$ than a concentrated $\pi_k$ matching the data. This is not a nuisance — it's the Occam factor (§27.6 Thm 4) acting as a model-complexity penalty. But it does mean you *must* think about your within-model priors when you use Bayes factors; vague "non-informative" priors are actively informative here.
+</RemarkBlock>
+
+<RemarkBlock number={8} title="Jeffreys' scale is a guide, not a law">
+The scale above is Jeffreys' original proposal and remains common in applied work, but nothing in Bayesian probability requires you to use it — $\mathrm{BF}_{10} = 5$ has a specific probabilistic meaning (multiplies the prior odds by 5) regardless of whether a convention calls it "substantial." Treat the labels as rough communication tools; report the numerical $\mathrm{BF}$ and let the reader apply their own threshold. [Kass & Raftery 1995](https://www.jstor.org/stable/2291091) §3.2 proposes a slightly coarser alternative scale (thresholds at 3, 20, 150); the distinction rarely matters in practice.
+</RemarkBlock>
+
+<RemarkBlock number={9} title="BF as the Bayesian counterpart to the LRT">
+Under $H_0: \theta = \theta_0$ and $H_1: \theta \neq \theta_0$ with prior $\pi_1$ on the alternative,
+
+$$\mathrm{BF}_{10} \;=\; \int \frac{L(\theta)}{L(\theta_0)}\, \pi_1(\theta)\, d\theta \;=\; \mathbb{E}_{\pi_1}\!\left[\Lambda(\mathbf{y}; \theta, \theta_0)\right],$$
+
+where $\Lambda$ is the [Topic 18](/topics/likelihood-ratio-tests-and-np) likelihood ratio. The BF is thus the *prior-averaged* LRT — Neyman–Pearson picks a specific alternative, Bayes averages over the prior. This is why §17.10 Rem 15 and §18 Rem 25 point here: Bayes factors are the evidence-level analog of the LRT decision rule.
+</RemarkBlock>
+
+<a id="section-27-5"></a>
+
+## 27.5 The Lindley paradox
+
+Section §27.4's Ex 2 already showed the paradox numerically: at $z = 3$, changing the prior scale $\tau$ from 1 to 100 flips the Bayes factor from $\approx 8.57$ (favoring $\mathcal{M}_1$) to $\approx 0.09$ (favoring $\mathcal{M}_0$) — even though the frequentist z-test flags $z = 3$ as a rejection at $p \approx 0.003$ regardless of $\tau$. Lindley (1957) proved this is general.
+
+<TheoremBlock number={3} title="Lindley paradox (Lindley 1957)">
+Let $Y_1, \ldots, Y_n \overset{\mathrm{iid}}{\sim} \mathcal{N}(\theta, \sigma^2)$ with $\sigma^2$ known. Consider $H_0: \theta = 0$ against $H_1: \theta \neq 0$ with prior $\theta \mid H_1 \sim \mathcal{N}(0, \tau^2)$. Let $z = \bar Y \sqrt{n}/\sigma$ be the observed z-statistic. Then
+
+$$\mathrm{BF}_{10}(z) \;=\; \frac{1}{\sqrt{1 + r}}\, \exp\!\left(\frac{z^2}{2} \cdot \frac{r}{1+r}\right), \qquad r := \frac{n\tau^2}{\sigma^2}.$$
+
+In particular, for any fixed $z$ and $n$, $\mathrm{BF}_{10}(z) \to 0$ as $\tau \to \infty$ — the frequentist rejects $H_0$ (a function of $z$ alone) while the Bayesian overwhelmingly favors $H_0$.
+</TheoremBlock>
+
+<ProofBlock number={1} title="Proof of Thm 3 (Lindley paradox)">
+**Step 1 — marginal under $H_0$.** Under $H_0: \theta = 0$, $\bar Y \sim \mathcal{N}(0, \sigma^2/n)$, so
+
+$$m_0(\bar y) \;=\; \phi\!\left(\bar y;\, 0,\, \sigma^2/n\right),$$
+
+where $\phi(\cdot;\mu, v)$ denotes the $\mathcal{N}(\mu, v)$ density.
+
+**Step 2 — marginal under $H_1$.** Under $H_1$, $\bar Y \mid \theta \sim \mathcal{N}(\theta, \sigma^2/n)$ and $\theta \sim \mathcal{N}(0, \tau^2)$. The marginal is the convolution
+
+$$m_1(\bar y) \;=\; \int \phi(\bar y;\, \theta,\, \sigma^2/n)\, \phi(\theta;\, 0,\, \tau^2)\, d\theta \;=\; \phi\!\left(\bar y;\, 0,\, \sigma^2/n + \tau^2\right),$$
+
+using the standard Gaussian convolution identity: the sum of a sampling-noise term with variance $\sigma^2/n$ and an independent prior draw with variance $\tau^2$ is Gaussian with variance $\sigma^2/n + \tau^2$.
+
+**Step 3 — ratio.** The Bayes factor is
+
+$$\mathrm{BF}_{10} \;=\; \frac{m_1(\bar y)}{m_0(\bar y)} \;=\; \sqrt{\frac{\sigma^2/n}{\sigma^2/n + \tau^2}} \,\cdot\, \exp\!\left(\frac{\bar y^2}{2} \left[\frac{1}{\sigma^2/n} - \frac{1}{\sigma^2/n + \tau^2}\right]\right).$$
+
+**Step 4 — substitute standardized quantities.** Let $r = n\tau^2/\sigma^2$ and $z^2 = n\bar y^2/\sigma^2$. Then $\sigma^2/n + \tau^2 = (\sigma^2/n)(1+r)$, so
+
+$$\sqrt{\frac{\sigma^2/n}{\sigma^2/n + \tau^2}} \;=\; \frac{1}{\sqrt{1+r}}, \qquad \bar y^2 \left[\frac{1}{\sigma^2/n} - \frac{1}{\sigma^2/n + \tau^2}\right] \;=\; z^2 \cdot \frac{r}{1+r}.$$
+
+Substituting into Step 3 gives the stated formula.
+
+**Step 5 — limit.** Fix $z, n, \sigma$ and let $\tau \to \infty$. Then $r \to \infty$, $r/(1+r) \to 1$, so the exponential factor converges to $e^{z^2/2}$ — a finite constant bounded by the observed data. The prefactor $1/\sqrt{1+r} \to 0$. Hence the product $\mathrm{BF}_{10} \to 0$.
+
+∎ — using LIN1957; KAS1995 §3.4.
+</ProofBlock>
+
+The paradox's resolution — developed in Rem 10–12 — is that a prior "vague enough to be non-committal" on the estimation question is a prior that makes *substantial* commitments on the model-comparison question. **The prior is part of the model.**
+
+<ExampleBlock number={3} title="Numerical Lindley at n = 100, z = 3">
+Three values of $\tau$, same $z = 3$ (p-value $\approx 0.0027$, strong frequentist rejection):
+
+- $\tau = 1$: $r = 100$. $\mathrm{BF}_{10} = (1/\sqrt{101}) \exp(4.5 \cdot 100/101) \approx 0.0995 \cdot 86.1 \approx 8.57$.
+- $\tau = 10$: $r = 10{,}000$. $\mathrm{BF}_{10} = (1/\sqrt{10001}) \exp(4.5 \cdot 10000/10001) \approx 0.01 \cdot 90.0 \approx 0.90$.
+- $\tau = 100$: $r = 10^6$. $\mathrm{BF}_{10} \approx 0.001 \cdot 90.0 \approx 0.0900$.
+
+Same data, same likelihood, same model — the prior-scale parameter alone flips the conclusion from "moderate evidence for $\mathcal{M}_1$" to "strong evidence for $\mathcal{M}_0$." This is not a numerical accident; it is the diffuse-prior penalty in action. The `LindleyParadoxExplorer` component below traces the full $\mathrm{BF}_{10}$ curve across $\tau$ at adjustable $(z, n)$.
+</ExampleBlock>
+
+<img src="/images/topics/bayesian-model-comparison-and-bma/27-lindley-curve.png"
+     alt="Figure 3. Lindley paradox curve (featured): BF_10 plotted against the prior scale τ on log axes, for a fixed z-statistic z = 3 and sample size n = 100. The curve rises to a maximum around τ ≈ 1 (favoring H_1 with BF ≈ 8.57), then falls monotonically as τ increases, crossing BF = 1 near τ ≈ 10 and approaching 0 as τ → ∞. Horizontal dashed lines at Jeffreys' scale thresholds (BF = 3.2, 10, 100) show the regimes. Annotations mark the three numerical examples from Ex 3."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<LindleyParadoxExplorer client:visible />
+
+<RemarkBlock number={10} title="The paradox depends on point-null H₀">
+Lindley's paradox is specific to the setting where $H_0$ assigns a *point mass* to a single parameter value (here $\theta = 0$). If instead $H_0: |\theta| < \epsilon$ (a small interval) — an "interval null" — the paradox dissolves: both $m_0$ and $m_1$ scale similarly as $\tau$ grows, so their ratio stabilizes. Applied Bayesian practice often recommends interval nulls for this reason (cf. Berger & Sellke 1987). Topic 27 keeps the point-null framing because that's what sharpens the contrast with frequentist hypothesis testing, but the pragmatic advice is: if your null is approximate, make the interval null explicit.
+</RemarkBlock>
+
+<RemarkBlock number={11} title="Bartlett's paradox — the n → ∞ version">
+A related phenomenon: fix $\bar y$ (not $z$) and let $n \to \infty$. Then $z = \bar y \sqrt n \to \infty$ too, and one might expect $\mathrm{BF}_{10} \to \infty$ always. Not so — for large $\tau$, the $1/\sqrt{1+r}$ prefactor can dominate the exponential. Bartlett (1957, "A comment on D. V. Lindley's statistical paradox") notes this: the paradox arises because the prior-scale $\tau$ and sample-scale $\sqrt n$ interact non-trivially. Keeping $\tau$ fixed as $n$ grows is itself a modeling choice — often the wrong one.
+</RemarkBlock>
+
+<RemarkBlock number={12} title="Resolution: pick a prior that means something">
+The paradox doesn't reveal a flaw in Bayesian inference; it reveals a demand for care in prior specification. A diffuse $\tau \gg 1$ under $H_1$ says: "before seeing data, I believed $\theta$ could plausibly be anywhere in $[-3\tau, 3\tau]$ — a range of hundreds of standard deviations." Under that prior, observing $z = 3$ is *modest* evidence for $\mathcal{M}_1$ relative to the prior commitment, and $\mathcal{M}_0$'s concentrated mass at 0 wins the comparison. The resolution: calibrate $\tau$ to what you actually believe about the effect size. For a standardized coefficient in a well-designed study, $\tau \sim 1$ is realistic. For a "diffuse" effect in an exploratory analysis, $\tau \sim 10$ might be appropriate — but don't go to $\tau = 100$ unless your substantive knowledge genuinely says so. This is the advice of applied Bayesian workflow: prior elicitation matters precisely because Bayes factors take priors seriously.
+</RemarkBlock>
+
+<a id="section-27-6"></a>
+
+## 27.6 Marginal-likelihood computation
+
+With Bayes factors motivated, we turn to the hard problem: computing $m(\mathbf{y})$ from MCMC draws. Four estimators, in rough order of effort:
+
+1. **Laplace approximation** — closed-form Gaussian integral around the posterior mode, $O(1)$ cost after finding the mode.
+2. **Bridge sampling** — iterative fixed-point estimator using posterior draws and a proposal density.
+3. **Path sampling** (thermodynamic integration) — integrate the expected log-likelihood over a power-posterior temperature schedule.
+4. **Nested sampling** — transform the volumetric integral into a 1-D quadrature over prior-mass levels.
+
+All four consume Topic 26's MCMC draws; each has a failure mode illuminated in the examples below.
+
+<TheoremBlock number={4} title="Occam factor ⇔ BIC equivalence (asymptotic)">
+Let $\mathcal{M}$ be a regular parametric model with $k$ parameters and prior $\pi$ continuous and positive at the posterior mode $\hat\theta$. Under the regularity conditions of [Topic 14 §14.7](/topics/maximum-likelihood#section-14-7) (existence of $\hat\theta_{\mathrm{MLE}}$; positive-definite observed information $\mathbf{J}_n = n \mathbf{I}(\hat\theta) + O_p(\sqrt n)$),
+
+$$-2 \log m(\mathbf{y}) \;=\; -2 \log L(\hat\theta_{\mathrm{MLE}}) \,+\, k \log n \,+\, O_p(1).$$
+
+The right-hand side is [BIC](/topics/model-selection-and-information-criteria#section-24-4); the $O_p(1)$ remainder absorbs the Occam factor (prior volume, Hessian determinant, Gaussian-integral constants) that doesn't scale with $n$.
+</TheoremBlock>
+
+<ProofBlock number={2} title="Proof of Thm 4 (Occam ⇔ BIC)">
+**Step 1 — start from the Laplace expansion.** [Topic 25 §25.8 Rem 16](/topics/bayesian-foundations-and-prior-selection#section-25-8) (citing [Topic 24 §24.4 Proof 2](/topics/model-selection-and-information-criteria#section-24-4)) gives
+
+$$\log m(\mathbf{y}) \;=\; \log L(\hat\theta) \,+\, \log \pi(\hat\theta) \,+\, \frac{k}{2}\log(2\pi) \,-\, \frac{1}{2}\log |\mathbf{H}(\hat\theta)| \,+\, O(1/n),$$
+
+where $\mathbf{H} = -\nabla^2[\log L + \log \pi]$ is the Hessian of the unnormalized log-posterior at the mode.
+
+**Step 2 — dominant Hessian term.** Under regularity, the prior's second-derivative contribution $\nabla^2 \log \pi$ is $O(1)$ (the prior does not scale with $n$), while the log-likelihood Hessian satisfies $-\nabla^2 \log L = n \mathbf{I}(\hat\theta) + O_p(\sqrt{n})$. Hence
+
+$$\mathbf{H}(\hat\theta) \;=\; n \mathbf{I}(\hat\theta) \,+\, O_p(\sqrt n),$$
+
+so
+
+$$\log |\mathbf{H}(\hat\theta)| \;=\; k \log n \,+\, \log |\mathbf{I}(\hat\theta)| \,+\, O_p(1/\sqrt n).$$
+
+**Step 3 — MAP vs MLE.** $\hat\theta \to \hat\theta_{\mathrm{MLE}}$ in probability (consistency of MAP under bounded prior, [Topic 14 §14.11 Rem 9](/topics/maximum-likelihood#section-14-11)), so $\log L(\hat\theta) = \log L(\hat\theta_{\mathrm{MLE}}) + O_p(1/n)$.
+
+**Step 4 — substitute.**
+
+$$\log m(\mathbf{y}) \;=\; \log L(\hat\theta_{\mathrm{MLE}}) \,-\, \frac{k}{2}\log n \,+\, \underbrace{\log \pi(\hat\theta) + \frac{k}{2}\log(2\pi) - \frac{1}{2}\log |\mathbf{I}(\hat\theta)|}_{O_p(1)} \,+\, o_p(1).$$
+
+**Step 5 — multiply by $-2$.**
+
+$$-2 \log m(\mathbf{y}) \;=\; -2 \log L(\hat\theta_{\mathrm{MLE}}) \,+\, k \log n \,+\, O_p(1) \;=\; \mathrm{BIC}(\mathbf{y}, \mathcal{M}) \,+\, O_p(1).$$
+
+∎ — using Topic 24 §24.4 Proof 2; Topic 25 §25.8 Rem 16; Topic 14 §14.11 Rem 9; KAS1995 §4.1.
+</ProofBlock>
+
+**Pedagogical reading.** The $-\frac{1}{2}\log|\mathbf{H}|$ term is the log posterior volume around the mode — a Gaussian with covariance $\mathbf{H}^{-1}$ occupies volume $\propto |\mathbf{H}|^{-1/2}$. The prior volume is the integrated prior mass over the parameter space; for a bounded-support or weakly-informative prior this is $O(1)$. The **Occam factor**
+
+$$\mathrm{Occam}(\mathcal{M}) \;:=\; \frac{\text{posterior volume around } \hat\theta}{\text{prior volume}} \;\propto\; |\mathbf{H}|^{-1/2} \;\propto\; n^{-k/2}$$
+
+is the multiplicative penalty a model pays for having $k$ parameters — the factor by which the parameter space must shrink to concentrate on the data. Taking $-2\log$ turns this into the additive $k \log n$ penalty of BIC. **BIC is not a heuristic; it is the asymptotic Occam factor.**
+
+<ExampleBlock number={4} title="Laplace approximation on Beta-Binomial">
+For $(n, y, \alpha, \beta) = (20, 12, 1, 1)$, the unnormalized log-posterior is $\log L + \log \pi = 12 \log\theta + 8 \log(1-\theta)$ (ignoring the binomial coefficient). The mode is $\hat\theta = 12/20 = 0.6$, and the second derivative at the mode is $-12/\hat\theta^2 - 8/(1-\hat\theta)^2 = -12/0.36 - 8/0.16 = -33.33 - 50 = -83.33$. So $H = 83.33$ and the Laplace estimate (after adding the binomial normalization) is
+
+$$\log m \approx \log \binom{20}{12} + 12 \log 0.6 + 8 \log 0.4 + \tfrac{1}{2}\log(2\pi) - \tfrac{1}{2}\log 83.33 \approx -3.06,$$
+
+close to the closed-form $-3.0445$ (Ex 1). The Laplace approximation is accurate to $O(1/n)$ under regularity — impressive given its closed-form simplicity — but deteriorates for small $n$ or multimodal posteriors. `marginalLikelihoodLaplace` in `bayes.ts` handles the general multivariate case via Cholesky log-determinant.
+</ExampleBlock>
+
+<TheoremBlock number={5} title="Bridge sampling identity (Meng–Wong 1996)">
+Let $q_1, q_2$ be unnormalized densities on $\Theta$ with normalizing constants $Z_i = \int q_i(\theta)\, d\theta$ and normalized densities $p_i = q_i/Z_i$. For any bridge function $h: \Theta \to \mathbb{R}$ such that both expectations below exist and are nonzero,
+
+$$\frac{Z_1}{Z_2} \;=\; \frac{\mathbb{E}_{p_2}[\,q_1(\theta)\, h(\theta)\,]}{\mathbb{E}_{p_1}[\,q_2(\theta)\, h(\theta)\,]}.$$
+</TheoremBlock>
+
+<ProofBlock number={3} title="Proof of Thm 5 (bridge identity)">
+**Step 1 — expand numerator.** Write the expectation as an integral against the base density $p_2 = q_2/Z_2$:
+
+$$\mathbb{E}_{p_2}[q_1 h] \;=\; \int q_1(\theta)\, h(\theta)\, p_2(\theta)\, d\theta \;=\; \frac{1}{Z_2} \int q_1(\theta)\, q_2(\theta)\, h(\theta)\, d\theta.$$
+
+**Step 2 — expand denominator.** Similarly
+
+$$\mathbb{E}_{p_1}[q_2 h] \;=\; \int q_2(\theta)\, h(\theta)\, p_1(\theta)\, d\theta \;=\; \frac{1}{Z_1} \int q_1(\theta)\, q_2(\theta)\, h(\theta)\, d\theta.$$
+
+**Step 3 — ratio.** The common integral $\int q_1 q_2 h\, d\theta$ cancels:
+
+$$\frac{\mathbb{E}_{p_2}[q_1 h]}{\mathbb{E}_{p_1}[q_2 h]} \;=\; \frac{1/Z_2}{1/Z_1} \;=\; \frac{Z_1}{Z_2}.$$
+
+∎ — using MEN1996 Eq. 2.1; GEL1998 §3.
+</ProofBlock>
+
+**Application to marginal-likelihood estimation.** Take $q_1(\theta) = L(\theta)\pi(\theta)$ (unnormalized posterior with $Z_1 = m(\mathbf{y})$) and $q_2(\theta) = g(\theta)$ (a proposal density with known $Z_2 = 1$). With $n_1$ posterior draws $\\{\theta_s^{(1)}\\}$ from $p(\theta \mid \mathbf{y})$ (via Topic 26 MCMC) and $n_2$ proposal draws $\\{\theta_s^{(2)}\\}$ from $g$, the estimator is
+
+$$\hat m(\mathbf{y}) \;=\; \frac{n_2^{-1} \sum_{s=1}^{n_2} L(\theta_s^{(2)}) \pi(\theta_s^{(2)}) h(\theta_s^{(2)})}{n_1^{-1} \sum_{s=1}^{n_1} g(\theta_s^{(1)}) h(\theta_s^{(1)})}.$$
+
+**Corollary 5.1 (Meng–Wong optimal bridge, stated).** The bridge function minimizing the relative mean-squared error of $\hat m(\mathbf{y})$ is
+
+$$h^\star(\theta) \;\propto\; \frac{1}{s_1\, L(\theta)\pi(\theta) + s_2\, m(\mathbf{y})\, g(\theta)}, \qquad s_i \;=\; \frac{n_i}{n_1 + n_2}.$$
+
+Since $h^\star$ depends on the unknown $m(\mathbf{y})$, it is computed by fixed-point iteration: initialize $\hat m^{(0)}$ (e.g., importance-sampling estimate), update $h$, recompute $\hat m^{(t+1)}$ from the theorem, iterate until $|\hat m^{(t+1)} - \hat m^{(t)}| < \varepsilon$. The function `bridgeSamplingEstimate` in `bayes.ts` implements the equal-sample-size ($s_1 = s_2 = 1/2$) case with logsumexp throughout for numerical stability. Full derivation of the optimality: MEN1996 §3, Theorem 1.
+
+<ExampleBlock number={5} title="Bridge sampling on Beta-Binomial (verification)">
+Run bridge sampling on $(n, y, \alpha, \beta) = (20, 12, 1, 1)$ with 8000 posterior draws from Beta(13, 9) and 8000 proposal draws from a deliberately-offset Beta(12.7, 9.1). The iterative fixed point converges in 3 iterations to $\log \hat m \approx -3.0446$, matching the closed-form $-3.04452$ (Ex 1) to $\sim 10^{-4}$. Over 30 independent MC seeds the standard deviation is $\approx 7 \times 10^{-4}$ — two orders of magnitude tighter than naive importance sampling on the same sample budget. The `BridgeSamplingConvergence` component below traces the iteration on three preset problems.
+</ExampleBlock>
+
+<BridgeSamplingConvergence client:visible />
+
+<img src="/images/topics/bayesian-model-comparison-and-bma/27-bridge-sampling-convergence.png"
+     alt="Figure 5. Bridge sampling convergence: iteration number (x-axis) vs log m̂ estimate (y-axis). Three curves for three Beta-Binomial preset problems. All three converge within ~5 iterations to the closed-form reference (dashed line). A fourth curve shows the naive IS estimator for comparison — higher variance, no convergence."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<img src="/images/topics/bayesian-model-comparison-and-bma/27-laplace-vs-exact-betabinom.png"
+     alt="Figure 4. Laplace vs exact log m for Beta-Binomial as n grows: at fixed k/n ratio, the Laplace approximation converges to the closed-form value as n increases. Error decays as O(1/n) (visible on log-log inset), matching the theoretical rate of the Stirling-style asymptotic expansion."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<TheoremBlock number={6} title="Path sampling / thermodynamic integration (Gelman–Meng 1998, stated)">
+Let $p_\beta(\theta) \propto L(\theta)^\beta \pi(\theta)$ be the power posterior at inverse temperature $\beta \in [0, 1]$. Then
+
+$$\log m(\mathbf{y}) \;=\; \int_0^1 \mathbb{E}_{p_\beta}\!\left[\log L(\theta)\right]\, d\beta.$$
+
+The estimator replaces the integral with trapezoidal quadrature over a discrete $\beta$-grid $\\{0 = \beta_0 < \beta_1 < \cdots < \beta_K = 1\\}$, and each expectation with an MCMC average over draws from $p_{\beta_j}$.
+</TheoremBlock>
+
+**Proof sketch.** Differentiate $\log m(\beta) := \log \int L(\theta)^\beta \pi(\theta)\, d\theta$ with respect to $\beta$ under the integral; $d/d\beta [\log m(\beta)] = \mathbb{E}_{p_\beta}[\log L]$. Integrate from $0$ to $1$; $\log m(0) = \log \int \pi = 0$ (prior is normalized), $\log m(1) = \log m(\mathbf{y})$. Full derivation: [GEL1998](https://projecteuclid.org/journals/statistical-science/volume-13/issue-2/Simulating-normalizing-constants--from-importance-sampling-to-bridge-sampling/10.1214/ss/1028905934.full) §3. The function `pathSamplingEstimate` in `bayes.ts` implements the trapezoidal quadrature.
+
+<ExampleBlock number={6} title="Path sampling on Beta-Binomial">
+Same inputs as Ex 5. Discretize $\beta$ on $\\{0, 0.1, 0.2, \ldots, 1\\}$ (11 points), sample 2000 draws per $\beta$ via MCMC targeting $L(\theta)^\beta \pi(\theta)$, compute $\widehat{\mathbb{E}_{p_\beta}[\log L]}$ as the sample mean at each temperature, and trapezoidally integrate. Result: $\log \hat m \approx -3.05$, within $\sim 5 \times 10^{-3}$ of the closed form — slightly looser than bridge at the same total sample budget because path sampling spends compute on off-target temperatures. Where path sampling wins: the integrand $\mathbb{E}_{p_\beta}[\log L]$ is smooth in $\beta$, so even a coarse grid gives a decent answer; where it loses: choosing the $\beta$-schedule is a tuning decision with no universal rule (equidistant is fine for quick-and-dirty, geometric $\beta_j \propto 2^{j/K}$ is better for skewed posteriors).
+</ExampleBlock>
+
+<img src="/images/topics/bayesian-model-comparison-and-bma/27-path-sampling-integrand.png"
+     alt="Figure 6. Path sampling integrand: E_{p_β}[log L(θ)] plotted against β ∈ [0, 1] for the Beta-Binomial Ex 6 problem. Smooth monotone curve; area under the curve is log m(y). Trapezoidal-quadrature approximation overlaid at 11 β-points; quadrature error < 0.01 on this problem."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<TheoremBlock number={7} title="Nested sampling (Skilling 2006, stated)">
+Define the prior-mass function $X(\lambda) := \int_{\\{\theta : L(\theta) > \lambda\\}} \pi(\theta)\,d\theta$ — the prior volume at likelihood level $\lambda$ or higher. $X$ is monotone decreasing in $\lambda$ with $X(0) = 1$ and $X(\infty) = 0$. Then
+
+$$m(\mathbf{y}) \;=\; \int_0^\infty X(\lambda)\, d\lambda \;=\; \int_0^1 \lambda(X)\, dX,$$
+
+where $\lambda(X) = X^{-1}$ is the likelihood at prior-mass level $X$.
+
+Skilling's estimator simulates iid live-point draws from the prior, removes the lowest-likelihood point, replaces it with a constrained-prior draw at higher likelihood, and records the removed point's likelihood. After $K$ iterations with $N$ live points, the dead-point likelihoods $L_i$ are associated with expected prior-mass shrinkage $X_i = \exp(-i/N)$, and
+
+$$\hat m(\mathbf{y}) \;\approx\; \sum_{i=1}^K L_i\, (X_{i-1} - X_i) \,+\, \text{live-point remainder}.$$
+</TheoremBlock>
+
+The function `nestedSamplingEstimate` in `bayes.ts` implements the log-space version of this sum. Nested sampling's selling point is that it handles multimodal posteriors gracefully (the constrained-prior sampling naturally explores all modes above the current likelihood threshold) and produces the marginal likelihood as its *primary* output rather than a byproduct.
+
+<img src="/images/topics/bayesian-model-comparison-and-bma/27-nested-sampling-level-sets.png"
+     alt="Figure 7. Nested sampling level sets: contour plot of a two-mode likelihood L(θ_1, θ_2) on a bounded prior. Colored bands show the live-point cloud at successive iterations — as iterations proceed, the constrained-prior sampling concentrates live points into higher-likelihood level sets. Right panel shows the 1-D integral log λ vs log X (prior mass) that the estimator evaluates."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<RemarkBlock number={13} title="Horseshoe and spike-and-slab priors">
+The four estimators above all assume a continuous prior $\pi$. For sparsity-inducing priors — horseshoe (Carvalho–Polson–Scott 2010), spike-and-slab (Mitchell–Beauchamp 1988), Bayesian lasso — the prior has a sharp peak or mixture structure that Laplace handles poorly and bridge sampling requires careful proposal tuning for. Path sampling and nested sampling cope better but need fine $\beta$-grids or dense live-point arrangements near the origin. §27.10 Rem 26 points to formalml for the full development.
+</RemarkBlock>
+
+<RemarkBlock number={14} title="Harmonic-mean estimator: known pathological">
+Newton & Raftery's (1994) harmonic-mean estimator $\hat m = 1 / \mathbb{E}_{p(\theta \mid \mathbf{y})}[1/L(\theta)]$ converts posterior draws into a marginal-likelihood estimate with *no* proposal — just $1/L(\theta_s)$ averaged over posterior draws $\theta_s$. Elegant and seductive, but almost always has infinite variance: the integrand $1/L(\theta)$ has a heavy right tail under the posterior (since the posterior is proportional to $L\pi$, not $1/L$). Radford Neal famously called it "the worst Monte Carlo method ever proposed." `harmonicMeanEstimate` in `bayes.ts` is kept for pedagogical contrast — use it to *demonstrate* the pathology, never in production.
+</RemarkBlock>
+
+<RemarkBlock number={15} title="Bridge vs path vs nested — rules of thumb">
+- **Bridge sampling** is usually the default — stable, fast, handles non-Gaussian posteriors well, works for any dimension where MCMC works.
+- **Path sampling** is the right choice when you already have power-posterior draws (e.g., from parallel tempering) — the marginal-likelihood estimate is a cheap byproduct.
+- **Nested sampling** wins for strongly multimodal posteriors or when the marginal likelihood is the primary target (astrophysics model comparison is where nested sampling originated).
+- **Laplace** is the starting point: a 30-second sanity check you should run before investing in any MCMC-based estimator. If Laplace and bridge disagree by orders of magnitude, one of them is wrong and you need to figure out which.
+</RemarkBlock>
+
+<RemarkBlock number={16} title="The Stone–Dawid–Stone–Zidek paradox">
+An even sharper variant of Lindley's paradox, due to [Stone (1982), Dawid, Stone & Zidek (1973)](https://projecteuclid.org/journals/the-annals-of-statistics/volume-1/issue-5/Marginalization-Paradoxes-in-Bayesian-and-Structural-Inference/10.1214/aos/1176342563.full): with improper (non-integrable) priors, the marginal likelihood is undefined, and *any* Bayes factor between models with improper priors is arbitrary up to a constant. The consequence: never use improper priors for model comparison. Proper priors with sensible scale (Rem 12) are the robust default. Topic 27 doesn't belabor this case because the brief prescribed scope ends at proper priors; [formalml's "Objective Bayes" topic](https://formalml.com/topics/objective-bayes) develops the full story.
+</RemarkBlock>
+
+<RemarkBlock number={17} title="The forward map: what uses these estimators">
+Four downstream constructions consume $\hat m(\mathbf{y})$: (i) posterior model probabilities via §27.2 Thm 1, (ii) Bayes factors via §27.4 Thm 2, (iii) BMA weights via §27.7, (iv) evidence-level hypothesis testing as in §27.5's Lindley paradox. All four treat $\hat m$ as a deterministic input, but MC variance in $\hat m$ propagates to each — bridge's $\sim 10^{-3}$ log-scale SE on Beta-Binomial becomes $\sim 10^{-3}$ SE in the log-BF, which at BF $= 8.57$ translates to $\pm 0.01$ in BF space. Good enough for applied work; worth propagating via bootstrap for high-stakes comparisons.
+</RemarkBlock>
+
+<a id="section-27-7"></a>
+
+## 27.7 Bayesian model averaging
+
+When multiple models have nonzero posterior probability, the principled Bayesian answer is not "pick the best" but **average**:
+
+$$p(\tilde y \mid \mathbf{y}) \;=\; \sum_{k=1}^M p(\tilde y \mid \mathcal{M}_k, \mathbf{y})\, p(\mathcal{M}_k \mid \mathbf{y}).$$
+
+The predictive distribution for new data $\tilde y$ is a mixture of per-model predictives weighted by posterior model probabilities. This is Bayesian model averaging (BMA), and it is the honest way to produce predictions under model uncertainty.
+
+<TheoremBlock number={8} title="BMA predictive under log-loss (stated)">
+Under the log-score loss $\mathcal{L}(\tilde y, q) = -\log q(\tilde y)$, the optimal predictive distribution — the one minimizing expected loss under the joint posterior over $(\mathcal{M}_k, \theta_k)$ — is the BMA mixture
+
+$$q^*(\tilde y) \;=\; \sum_{k=1}^M w_k^{\mathrm{BMA}}\, p(\tilde y \mid \mathcal{M}_k, \mathbf{y}), \qquad w_k^{\mathrm{BMA}} = p(\mathcal{M}_k \mid \mathbf{y}).$$
+
+Any non-BMA predictive — hard model selection, stacking, equal-weight averaging — incurs strictly greater expected log-loss against the posterior-truth. Proof: standard Bayesian-decision-theory argument; see [HOE1999](https://projecteuclid.org/journals/statistical-science/volume-14/issue-4/Bayesian-model-averaging--a-tutorial-with-comments-by-M/10.1214/ss/1009212519.full) §2.
+</TheoremBlock>
+
+Thm 8's caveat is M-closed: the theorem assumes the true data-generating process is in $\mathcal{M}$. Under M-open (§27.2 Rem 3), BMA's weights concentrate on whichever model is closest to truth — which may still be far from truth, leaving BMA over-confident in a single approximation. Stacking (formalml) directly optimizes predictive weights and often outperforms BMA under M-open.
+
+<ExampleBlock number={7} title="BMA over three nested polynomial models">
+Synthetic data: $y_i = \sin(2\pi x_i / 10) + 0.3 x_i + \varepsilon_i$, $\varepsilon_i \sim \mathcal{N}(0, 0.25^2)$, $x_i \sim U(0, 10)$, $n = 20$. Fit three polynomial models — degree 1 (linear), degree 2 (quadratic), degree 3 (cubic) — and compare via BIC-approximated marginal likelihoods. For this specific sample, BIC strongly prefers degree 3 (posterior model probability $\approx 1.00$, weights $(0, 0, 1)$), so BMA collapses to hard selection. The `BMAPredictiveComparison` component lets you flip to uniform weights $(1/3, 1/3, 1/3)$ or single-model weights and watch the predictive-fan change — uniform BMA produces a noticeably wider predictive band in the mid-range where the three models disagree most. The lesson: BMA's predictive uncertainty reflects *model-set uncertainty*; hard selection under-reports it.
+</ExampleBlock>
+
+<BMAPredictiveComparison client:visible />
+
+<img src="/images/topics/bayesian-model-comparison-and-bma/27-bma-predictive.png"
+     alt="Figure 8. BMA predictive for the three-polynomial example. Left panel: model weights as a bar chart (BIC-weighted vs uniform). Middle panel: predictive fan from hard-selected winner (degree 3); 95% predictive band. Right panel: BMA predictive fan using uniform weights (1/3, 1/3, 1/3); noticeably wider, reflecting cross-model uncertainty."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<RemarkBlock number={18} title="BMA as a decision-theoretic optimum, not a truth oracle">
+Thm 8 says BMA is the log-loss optimal predictive — it does *not* say BMA's posterior model probabilities are calibrated measures of "which model is true." A prior over models times a marginal likelihood gives a posterior over models; calling one of those probabilities "the probability that $\mathcal{M}_1$ is true" requires M-closed. In applied work, treat BMA weights as *predictive weights* (sum to 1, used for averaging) rather than *truth probabilities* (calibrated measures of model correctness). The distinction matters when you report "the probability that the effect is real is 0.95" — that claim is BMA's weight, not a frequentist coverage guarantee.
+</RemarkBlock>
+
+<RemarkBlock number={19} title="Occam's window — the practical prune">
+Applied BMA over $M \gg 10$ candidate models is expensive and often fruitless — most models have negligible posterior probability. [Madigan & Raftery (1994)](https://www.jstor.org/stable/2290825) propose **Occam's window**: restrict the candidate set to models whose posterior probability is within a factor $O$ (typically 20 or 100) of the best model. This loses strict decision-theoretic optimality but is tractable. Most applied BMA software implements Occam's window by default; `bmaPredictive` in `bayes.ts` takes pre-computed weights and assumes the pruning (if any) has already happened.
+</RemarkBlock>
+
+<RemarkBlock number={20} title="BMA vs stacking">
+**Stacking** (Breiman 1996, and Yao, Vehtari, Simpson & Gelman 2018 for the Bayesian version) directly optimizes predictive weights on held-out data rather than deriving them from marginal likelihoods. Under M-closed, stacking and BMA converge asymptotically; under M-open, stacking typically wins (it's optimizing the thing you care about — predictive performance — rather than assuming the true model is enumerated). The `BMAPredictiveComparison` component sticks to BMA because Topic 27 is about model comparison under Bayesian principles; [formalml's stacking topic](https://formalml.com/topics/stacking-and-predictive-ensembles) develops the M-open alternative.
+</RemarkBlock>
+
+<a id="section-27-8"></a>
+
+## 27.8 Predictive scoring: DIC, WAIC, PSIS-LOO
+
+Marginal likelihood comparison (Bayes factors, BMA) is one regime; predictive-score comparison is another. Predictive scores target a different question: *how well will the model predict new data from the same DGP?* This is the [Topic 24](/topics/model-selection-and-information-criteria) question in Bayesian dress. Three estimators dominate applied work, in increasing order of sophistication:
+
+1. **DIC** (Deviance Information Criterion, Spiegelhalter 2002) — $\mathrm{DIC} = -2 \log L(\hat\theta) + 2 p_{\mathrm{DIC}}$, where $\hat\theta$ is the posterior mean and $p_{\mathrm{DIC}}$ is the effective parameter count. Fast, requires only posterior-mean log-likelihood and an expectation over posterior draws.
+2. **WAIC** (Widely Applicable Information Criterion, Watanabe 2010) — pointwise $\mathrm{lppd}_i = \log \mathbb{E}_{p(\theta \mid \mathbf{y})}[L(y_i \mid \theta)]$, $p_{\mathrm{WAIC},i} = \mathrm{Var}_{p(\theta \mid \mathbf{y})}[\log L(y_i \mid \theta)]$, $\mathrm{WAIC} = -2 \sum_i (\mathrm{lppd}_i - p_{\mathrm{WAIC},i})$. Unlike DIC, uses the full posterior distribution rather than just the mean.
+3. **PSIS-LOO** (Pareto-Smoothed Importance Sampling LOO, Vehtari 2017) — leave-one-out cross-validation via importance-weighting posterior draws by $1/L(y_i \mid \theta)$, with Pareto smoothing of extreme weights. The gold standard for Bayesian predictive-score comparison when feasible.
+
+All three target $\mathrm{elpd} = \sum_i \mathbb{E}_{p(\theta \mid \mathbf{y})}[\log p(y_i \mid \theta)]$, the expected log pointwise predictive density. [Vehtari–Gelman–Gabry 2017](https://link.springer.com/article/10.1007/s11222-016-9696-4) argues PSIS-LOO $>$ WAIC $>$ DIC in applied practice (more accurate, better uncertainty quantification), but all three are consistent under regularity and all three beat AIC/BIC for posterior-honest predictive comparison.
+
+<ExampleBlock number={8} title="DIC on Beta-Binomial">
+Back to the canonical tiny problem: $n = 5$ Normal observations, $\sigma = 1$, posterior $\mu \mid \mathbf{y} \sim \mathcal{N}(\bar y, \sigma^2/n) = \mathcal{N}(0.04, 0.2)$ with 2000 posterior draws. Compute the deviance $D(\mu) = -2 \sum \log \phi(y_i \mid \mu, 1)$ at each draw, take the posterior mean $\bar D$, compare to $D(\bar\mu)$ at the posterior-mean $\bar\mu = 0.04$. The effective parameter count $p_{\mathrm{DIC}} = \bar D - D(\bar\mu) \approx 1$ (as expected for a one-parameter model under weak prior regularity), and $\mathrm{DIC} = D(\bar\mu) + 2 p_{\mathrm{DIC}} \approx 12.06$. The `dic` function in `bayes.ts` computes this in one line per input.
+</ExampleBlock>
+
+<ExampleBlock number={9} title="WAIC vs PSIS-LOO on regression">
+Fit a simple linear regression $y \mid \beta \sim \mathcal{N}(X\beta, \sigma^2)$ with flat prior and compute both WAIC and PSIS-LOO on the same posterior draws. For a correctly-specified well-conditioned problem both land within 0.1% of each other; for a poorly-specified or outlier-heavy regression, PSIS-LOO can be $\sim 1$ larger (deviance scale) with high Pareto-$\hat k$ diagnostics on the outliers. The `waic` and `psisLoo` functions in `bayes.ts` both accept the same pointwise log-likelihood matrix and return compatible outputs — a direct drop-in comparison with no re-sampling required.
+</ExampleBlock>
+
+<ExampleBlock number={10} title="Pareto-k diagnostic">
+PSIS-LOO's reliability hinges on the Pareto shape parameter $\hat k$ per observation. Vehtari's rule of thumb: $\hat k < 0.5$ means PSIS is reliable; $0.5 \le \hat k < 0.7$ is borderline; $\hat k \ge 0.7$ flags the observation as an outlier whose LOO estimate is unreliable — usually a sign of model misspecification on that point. The `psisLoo` function returns both the aggregate LOO value and a per-observation $\hat k$ vector plus a `nProblematic` count. Operationally: always check the $\hat k$ distribution before reporting LOO values.
+</ExampleBlock>
+
+<img src="/images/topics/bayesian-model-comparison-and-bma/27-waic-vs-loo-pareto.png"
+     alt="Figure 9. WAIC vs PSIS-LOO comparison. Left panel: scatter of per-observation WAIC contribution vs LOO contribution across a regression example; near-diagonal for most points, with outliers falling above diagonal (LOO penalizes more heavily). Right panel: Pareto-k diagnostic distribution; most k values below 0.5, with a few above 0.7 flagged as problematic."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<RemarkBlock number={21} title="DIC's known issues">
+DIC has well-documented pathologies: $p_{\mathrm{DIC}}$ can be negative (spurious), doesn't handle mixture models or hierarchical models well, and depends on the choice of posterior summary ($\bar\mu$ vs posterior median, say). Spiegelhalter himself later (Spiegelhalter et al. 2014) recommended treating DIC as a legacy tool — useful for historical comparison with BUGS-era literature, not a default for new analyses. Modern Bayesian practice defaults to PSIS-LOO or WAIC.
+</RemarkBlock>
+
+<RemarkBlock number={22} title="WAIC ≈ LOO — a statement, not a proof">
+[Watanabe (2010)](https://www.jmlr.org/papers/v11/watanabe10a.html) proved $\mathrm{WAIC} = \mathrm{LOO} + O_p(1/n^2)$ under singular learning theory — an asymptotic equivalence that holds under substantially weaker regularity than DIC/AIC/BIC (no requirement of Fisher-information regularity). The proof requires machinery outside Topic 27's scope; the result is stated-and-cited here. Practically: WAIC and LOO agree to 3–4 significant figures on most well-behaved problems.
+</RemarkBlock>
+
+<RemarkBlock number={23} title="Predictive-score vs marginal-likelihood comparison — when each wins">
+- **Bayes factors** answer: "Under the prior over models, how did the data update my beliefs?" Prior-informative question; sensitive to within-model priors (Rem 7).
+- **Predictive scores** answer: "Which model predicts new data from the same DGP best?" Data-informative question; insensitive to within-model priors as long as they're proper and the posterior is informed.
+
+Both are valid, neither universally best. Applied workflow (GEL2013 §7): report *both*, note where they agree and disagree, and interpret the disagreement. Predictive scores for "which model to use for forecasts"; Bayes factors for "which model best explains the observed data."
+</RemarkBlock>
+
+<a id="section-27-9"></a>
+
+## 27.9 Local FDR, Bayesian multiplicity, and PPCs
+
+[Topic 20](/topics/multiple-testing-and-false-discovery) developed the Benjamini–Hochberg procedure for controlling the false discovery rate across many simultaneous tests. That's a *frequentist* procedure: it controls the expected proportion of false discoveries under $H_0$. The Bayesian counterpart, developed in [Efron (2010)](https://www.cambridge.org/core/books/largescale-inference/A0B183B0080A92966497F12CE5D12589), is the **local false discovery rate**:
+
+$$\mathrm{fdr}(z) \;=\; P(\mathcal{M}_0 \mid z) \;=\; \frac{(1-\pi_1)\, f_0(z)}{f(z)},$$
+
+where $f_0$ is the null density (typically $\mathcal{N}(0, 1)$), $f_1$ the alternative, $\pi_1$ the prior probability of alternative, and $f = (1-\pi_1) f_0 + \pi_1 f_1$ the mixture density of observed z-scores. The two-groups model assumes observed z-scores come from a mixture: null scores from $f_0$, alternative scores from $f_1$, and the task is to recover per-observation posterior probabilities of being from the null.
+
+<ExampleBlock number={11} title="BH vs local FDR on sparse signal">
+Simulate 1000 z-scores with $\pi_1 = 0.1$, $\mu_{\mathrm{alt}} = 2.5$, $\sigma_{\mathrm{alt}} = 1$ — Efron 2010's running example. Apply BH at $q = 0.1$ (expect $\le 10\%$ false discoveries in the rejection set) and local FDR at $\mathrm{fdr}(z) < 0.2$ threshold. The two methods produce overlapping but distinct rejection sets: BH rejects a contiguous tail $|z| > z^*$; local FDR rejects individual z-scores wherever the posterior $P(\mathcal{M}_0 \mid z) < 0.2$, which can leave moderate-z scores unrejected while rejecting extreme outliers. The `LocalFDRExplorer` component visualizes both on adjustable mixtures. Closed-form checks at specific z: $\mathrm{fdr}(3.0) \approx 0.102$, $\mathrm{fdr}(2.0) \approx 0.580$ (brief §6.2 T27.13/T27.14).
+</ExampleBlock>
+
+<LocalFDRExplorer client:visible />
+
+<img src="/images/topics/bayesian-model-comparison-and-bma/27-local-fdr-vs-bh.png"
+     alt="Figure 10. BH vs local FDR on the Efron two-groups example. Upper panel: histogram of 1000 z-scores with theoretical null density (dashed) and fitted mixture density (solid) overlaid. Lower panel: rejection regions under BH (shaded blue in the tails) vs local FDR (shaded orange wherever fdr(z) < 0.2). Disagreement zone near z ≈ 2 highlighted."
+     class="w-full rounded-lg border my-6"
+     style="border-color: var(--color-border);" />
+
+<ExampleBlock number={12} title="Posterior predictive check — Bayesian p-value">
+[Gelman, Meng & Stern (1996)](https://www3.stat.sinica.edu.tw/statistica/oldpdf/A6n41.pdf) define the Bayesian posterior predictive p-value as
+
+$$p_B \;=\; P\!\left(T(\mathbf{y}^{\mathrm{rep}}, \theta) \geq T(\mathbf{y}, \theta) \;\middle|\; \mathbf{y}\right),$$
+
+averaged over the posterior of $\theta$. For $\theta$-independent statistics (sample mean, max, min, quantiles), this simplifies to the empirical proportion of replicated datasets exceeding the observed $T$. Interpretation: $p_B \approx 0.5$ means the observed $T$ is typical under the posterior; extreme $p_B$ (near 0 or 1) signals model misfit. Under a well-specified model, $p_B$ is approximately uniform — but crucially *not* sub-uniform like a frequentist p-value, so $p_B < 0.05$ does not have the same Type I error guarantee. Use PPCs as a *model-criticism* tool, not as a hypothesis test.
+</ExampleBlock>
+
+<RemarkBlock number={24} title="Empirical null vs theoretical null">
+Efron's two-groups model assumes $f_0 = \mathcal{N}(0, 1)$ (the theoretical null) — what you'd expect under standard z-test assumptions. In practice, real-world z-score distributions often have a *wider* null due to miscalibration, unmodeled correlations, or dependence structure — Efron calls this the empirical null. Fitting $(\mu_0, \sigma_0)$ from the central 50% of the z-distribution (central-matching) recovers the empirical null; substituting it for $\mathcal{N}(0, 1)$ often changes rejection sets dramatically. The `localFdr` function accepts a `theoreticalNull: false` flag to switch on empirical-null estimation.
+</RemarkBlock>
+
+<RemarkBlock number={25} title="PPCs are not hypothesis tests">
+The Bayesian posterior predictive p-value looks like a frequentist p-value but behaves differently. GEL1996 warned: $p_B$ is "prior-predictive calibrated" rather than "frequentist-calibrated" — under a correctly specified model with a prior, $p_B$ is uniform on $[0, 1]$ *averaged over the prior*, not for a fixed true $\theta$. In particular, $p_B < 0.05$ does *not* control Type I error at 5%. PPCs are graphical and diagnostic — use them to locate model inadequacy (tail behavior, skewness, dependence), not to make accept/reject decisions.
+</RemarkBlock>
+
+<a id="section-27-10"></a>
+
+## 27.10 Forward-look
+
+Topic 27 delivers Track 7's computational and inferential capstone. Four threads extend into the remaining curriculum:
+
+<RemarkBlock number={26} title="Topic 28 — Hierarchical Bayes & Partial Pooling">
+[Topic 28](/topics/hierarchical-bayes-and-partial-pooling) closes Track 7 by combining Topic 26's MCMC machinery with Topic 27's model-comparison framework for *hierarchical* models — partial pooling across groups, hyperparameter inference, hierarchical BMA. The 8-schools example from §26.9 gets its proper BMA treatment there: different group-level priors compared via Bayes factors, weighted by posterior model probabilities, predictive-averaged for out-of-sample forecasts.
+</RemarkBlock>
+
+<RemarkBlock number={27} title="Stacking and M-open alternatives (formalml)">
+When truth lies outside $\mathcal{M}$ (the M-open case, §27.2 Rem 3), BMA's weights concentrate on the best *approximating* model — which may still be a bad approximation. [Stacking](https://formalml.com/topics/stacking-and-predictive-ensembles), developed by Wolpert (1992) and extended to Bayesian form by Yao et al. (2018), directly optimizes predictive weights on held-out data. Generally outperforms BMA on M-open problems; often underperforms on strictly M-closed problems. The choice: know which regime you're in, report both, interpret the disagreement.
+</RemarkBlock>
+
+<RemarkBlock number={28} title="Variational Bayes for model selection (formalml)">
+When MCMC + bridge sampling is too expensive (large models, big data), the **variational lower bound** (ELBO) gives a tractable approximation to $\log m(\mathbf{y})$. [Variational Bayes for model selection](https://formalml.com/topics/variational-bayes-for-model-selection) develops the KL-projection arguments that justify the approximation, the mean-field decomposition that makes it tractable, and the automatic-differentiation tools that make it routine. The trade-off: ELBO is always an *under*-estimate of the true $\log m$, so ELBO-based model selection can be biased. Modern normalizing-flow variational families close the gap.
+</RemarkBlock>
+
+<RemarkBlock number={29} title="Reversible-jump MCMC (formalml)">
+When the model space is discrete and high-dimensional (e.g., variable selection with $2^p$ candidate models), separate MCMC + bridge-sampling runs for each model are infeasible. [Reversible-jump MCMC](https://formalml.com/topics/reversible-jump-mcmc) (Green 1995) samples directly from the joint posterior over $(\mathcal{M}_k, \theta_k)$, providing BMA weights as a byproduct. Implementation is delicate — proposal distributions across models of different dimension require careful Jacobian bookkeeping — but the payoff is enormous on structured model spaces.
+</RemarkBlock>
+
+<RemarkBlock number={30} title="Bernardo reference priors and objective Bayes (formalml)">
+The "prior matters" lesson of §27.5 motivates an entire subfield: [Bernardo reference priors](https://formalml.com/topics/bernardo-reference-priors) systematically construct priors that maximize the expected KL-divergence between prior and posterior — priors that "let the data speak as much as possible." Under regularity, reference priors coincide with Jeffreys priors in 1-D and generalize to multi-parameter settings via sequential conditional reference. Bayes factors under reference priors have stability properties the Lindley paradox notably lacks.
+</RemarkBlock>
+
+<img src="/images/topics/bayesian-model-comparison-and-bma/27-marginal-likelihood-as-partition.png"
+     alt="Topic 27 closes the computational capstone of Track 7: marginal likelihood as the partition function, Bayes factors and the Lindley paradox as its central puzzle, four estimators for computing it from MCMC draws, BMA for principled prediction under model uncertainty, and three predictive scores for the frequentist-flavored alternative. Topic 28 applies all of this to hierarchical models."
+     class="w-full rounded-lg border my-6 opacity-0 h-0 overflow-hidden"
+     style="border-color: var(--color-border);" />
+
+Topic 27 discharges the forward promises made in Topics 17, 18, 20, 24, 25, and 26 — every hypothesis-testing counterpart, every marginal-likelihood estimator, every local-FDR framework, every BMA pointer. [Topic 28](/topics/hierarchical-bayes-and-partial-pooling) closes Track 7 by applying this machinery to hierarchical structures, where model uncertainty and parameter uncertainty compound and BMA becomes the natural framework rather than an added layer.
+
+---
+
+### References
+
+1. Robert E. Kass & Adrian E. Raftery. (1995). [*Bayes Factors*](https://www.jstor.org/stable/2291091). *Journal of the American Statistical Association*, 90(430), 773–795.
+2. Xiao-Li Meng & Wing Hung Wong. (1996). [*Simulating Ratios of Normalizing Constants via a Simple Identity: A Theoretical Exploration*](https://www3.stat.sinica.edu.tw/statistica/oldpdf/A6n43.pdf). *Statistica Sinica*, 6(4), 831–860.
+3. Andrew Gelman & Xiao-Li Meng. (1998). [*Simulating Normalizing Constants: From Importance Sampling to Bridge Sampling to Path Sampling*](https://projecteuclid.org/journals/statistical-science/volume-13/issue-2/Simulating-normalizing-constants--from-importance-sampling-to-bridge-sampling/10.1214/ss/1028905934.full). *Statistical Science*, 13(2), 163–185.
+4. John Skilling. (2006). [*Nested Sampling for General Bayesian Computation*](https://projecteuclid.org/journals/bayesian-analysis/volume-1/issue-4/Nested-sampling-for-general-Bayesian-computation/10.1214/06-BA127.full). *Bayesian Analysis*, 1(4), 833–859.
+5. Sumio Watanabe. (2010). [*Asymptotic Equivalence of Bayes Cross Validation and Widely Applicable Information Criterion in Singular Learning Theory*](https://www.jmlr.org/papers/v11/watanabe10a.html). *Journal of Machine Learning Research*, 11, 3571–3594.
+6. Aki Vehtari, Andrew Gelman & Jonah Gabry. (2017). [*Practical Bayesian Model Evaluation Using Leave-One-Out Cross-Validation and WAIC*](https://link.springer.com/article/10.1007/s11222-016-9696-4). *Statistics and Computing*, 27(5), 1413–1432.
+7. Bradley Efron. (2010). [*Large-Scale Inference: Empirical Bayes Methods for Estimation, Testing, and Prediction*](https://www.cambridge.org/core/books/largescale-inference/A0B183B0080A92966497F12CE5D12589). Cambridge University Press.
+8. David J. Spiegelhalter, Nicola G. Best, Bradley P. Carlin & Angelika van der Linde. (2002). [*Bayesian Measures of Model Complexity and Fit*](https://rss.onlinelibrary.wiley.com/doi/10.1111/1467-9868.00353). *Journal of the Royal Statistical Society: Series B*, 64(4), 583–639.
+9. Dennis V. Lindley. (1957). [*A Statistical Paradox*](https://www.jstor.org/stable/2333251). *Biometrika*, 44(1–2), 187–192.
+10. Harold Jeffreys. (1961). [*Theory of Probability*](https://global.oup.com/academic/product/the-theory-of-probability-9780198503682) (3rd ed.). Oxford University Press.
+11. Jennifer A. Hoeting, David Madigan, Adrian E. Raftery & Chris T. Volinsky. (1999). [*Bayesian Model Averaging: A Tutorial*](https://projecteuclid.org/journals/statistical-science/volume-14/issue-4/Bayesian-model-averaging--a-tutorial-with-comments-by-M/10.1214/ss/1009212519.full). *Statistical Science*, 14(4), 382–401.
+12. Andrew Gelman, Xiao-Li Meng & Hal Stern. (1996). [*Posterior Predictive Assessment of Model Fitness via Realized Discrepancies*](https://www3.stat.sinica.edu.tw/statistica/oldpdf/A6n41.pdf). *Statistica Sinica*, 6(4), 733–760.
+13. Andrew Gelman, John B. Carlin, Hal S. Stern, David B. Dunson, Aki Vehtari & Donald B. Rubin. (2013). [*Bayesian Data Analysis*](http://www.stat.columbia.edu/~gelman/book/) (3rd ed.). CRC Press.
