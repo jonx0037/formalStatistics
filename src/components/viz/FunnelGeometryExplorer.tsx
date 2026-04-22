@@ -61,7 +61,12 @@ function leapfrog(
   p0: [number, number],
   eps: number,
   L: number,
-): { q: [number, number]; p: [number, number]; divergent: boolean } {
+): {
+  q: [number, number];
+  p: [number, number];
+  divergent: boolean;
+  deltaH: number;
+} {
   const q: [number, number] = [q0[0], q0[1]];
   const p: [number, number] = [p0[0], p0[1]];
   const { U: U0, grad: g0 } = potentialAndGrad(mode, q);
@@ -78,13 +83,14 @@ function leapfrog(
     p[1] -= halfOrFull * eps * grad[1];
     // Defensive divergence detection mid-trajectory.
     if (!Number.isFinite(q[0]) || !Number.isFinite(q[1])) {
-      return { q: q0, p: p0, divergent: true };
+      return { q: q0, p: p0, divergent: true, deltaH: Infinity };
     }
   }
   const { U: U1 } = potentialAndGrad(mode, q);
   const H1 = U1 + 0.5 * (p[0] * p[0] + p[1] * p[1]);
-  const divergent = !Number.isFinite(H1) || Math.abs(H1 - H0) > DIVERGENCE_THRESHOLD;
-  return { q, p, divergent };
+  const deltaH = H1 - H0;
+  const divergent = !Number.isFinite(H1) || Math.abs(deltaH) > DIVERGENCE_THRESHOLD;
+  return { q, p, divergent, deltaH };
 }
 
 export default function FunnelGeometryExplorer() {
@@ -140,13 +146,17 @@ export default function FunnelGeometryExplorer() {
       const BATCH = 20;
       for (let b = 0; b < BATCH && pts.length < HMC_STEPS; b++) {
         const p: [number, number] = [rng.normal(), rng.normal()];
-        const { q: qNew, divergent } = leapfrog(mode, q, p, eps, LEAPFROG_L);
-        if (!divergent) {
-          q = qNew;
-          pts.push({ q0: qNew[0], q1: qNew[1], divergent: false });
-        } else {
+        const { q: qNew, divergent, deltaH } = leapfrog(mode, q, p, eps, LEAPFROG_L);
+        if (divergent) {
           pts.push({ q0: q[0], q1: q[1], divergent: true });
+          continue;
         }
+        // Metropolis-Hastings accept/reject on Δ𝐻 — promotes unadjusted
+        // leapfrog into a genuine HMC kernel that targets p(q) exactly.
+        // (Copilot PR-32; mirrors shared/bayes.ts hamiltonianMonteCarlo.)
+        const accept = rng.random() < Math.min(1, Math.exp(-deltaH));
+        if (accept) q = qNew;
+        pts.push({ q0: q[0], q1: q[1], divergent: false });
       }
       setTrace([...pts]);
       if (pts.length < HMC_STEPS) {
@@ -204,6 +214,29 @@ export default function FunnelGeometryExplorer() {
     const bb = Math.round(252 + (85 - 252) * t);
     return `rgb(${rr},${gg},${bb})`;
   };
+
+  // Memoize the 2,304 heatmap <rect>s so React doesn't reconcile them on every
+  // HMC-trace frame (≈60 fps). Background depends only on mode + layout.
+  // (gemini PR-32)
+  const heatmapRects = useMemo(
+    () =>
+      heatmap.g.flatMap((row, i) =>
+        row.map((v, j) => (
+          <rect
+            key={`${i}-${j}`}
+            x={j * cellW - cellW / 2}
+            y={plotH - i * cellH - cellH / 2}
+            width={cellW + 1}
+            height={cellH + 1}
+            fill={heatColor(v)}
+          />
+        )),
+      ),
+    // heatColor closes over heatmap.vMin/vMax, so listing heatmap alone
+    // is sufficient; cellW/cellH/plotH may change under resize.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [heatmap, cellW, cellH, plotH],
+  );
 
   return (
     <div
@@ -274,19 +307,8 @@ export default function FunnelGeometryExplorer() {
 
       <svg width={chartW} height={chartH} className="block">
         <g transform={`translate(${MARGIN.left}, ${MARGIN.top})`}>
-          {/* Density heatmap */}
-          {heatmap.g.map((row, i) =>
-            row.map((v, j) => (
-              <rect
-                key={`${i}-${j}`}
-                x={j * cellW - cellW / 2}
-                y={plotH - i * cellH - cellH / 2}
-                width={cellW + 1}
-                height={cellH + 1}
-                fill={heatColor(v)}
-              />
-            )),
-          )}
+          {/* Density heatmap (memoized — see heatmapRects) */}
+          {heatmapRects}
 
           {/* Trace (faded where older; opaque where latest) */}
           {trace.map((pt, i) => {

@@ -8,9 +8,10 @@
  * (τ² → 0, complete pooling). Annotates each school with its shrinkage
  * factor B_k = σ²_k/(σ²_k + τ²).
  *
- * Three preset buttons cover the dominant regimes:
- *   — Complete pool (τ² = 0)
- *   — GEL2013 moderate (τ = 5)
+ * Four preset buttons cover the dominant regimes:
+ *   — Complete pool (τ² → 0)
+ *   — Moderate (τ = 5)
+ *   — GEL2013 default (τ = 10)
  *   — Type-II MLE τ̂² (≈ 0 for 8-schools — the boundary MLE, §28.7)
  */
 import { useMemo, useState } from 'react';

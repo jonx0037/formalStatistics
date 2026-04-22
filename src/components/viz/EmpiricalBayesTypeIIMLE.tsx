@@ -121,26 +121,32 @@ export default function EmpiricalBayesTypeIIMLE() {
   const sigmaSq = preset.sigma.map((s) => s * s);
 
   // Grid bounds adapt to the data scale so each preset gets a useful view.
-  const muMin = useMemo(() => {
-    const yMean = yData.reduce((s, v) => s + v, 0) / yData.length;
-    const yRange = Math.max(...yData) - Math.min(...yData);
-    return yMean - yRange;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [presetIdx]);
-  const muMax = useMemo(() => {
-    const yMean = yData.reduce((s, v) => s + v, 0) / yData.length;
-    const yRange = Math.max(...yData) - Math.min(...yData);
-    return yMean + yRange;
+  // One useMemo pass computes mean/range/variance in a single sweep — the
+  // earlier version had a nested reduce inside tauSqMax that was O(n²)
+  // (Copilot PR-32).
+  const { muMin, muMax, tauSqMax } = useMemo(() => {
+    const n = yData.length;
+    let sum = 0;
+    let minVal = Infinity;
+    let maxVal = -Infinity;
+    for (const v of yData) {
+      sum += v;
+      if (v < minVal) minVal = v;
+      if (v > maxVal) maxVal = v;
+    }
+    const mean = sum / n;
+    let sumSq = 0;
+    for (const v of yData) sumSq += (v - mean) ** 2;
+    const variance = n > 1 ? sumSq / (n - 1) : 0;
+    const range = maxVal - minVal;
+    return {
+      muMin: mean - range,
+      muMax: mean + range,
+      tauSqMax: Math.max(100, 10 * variance),
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [presetIdx]);
   const tauSqMin = 0.01;
-  const tauSqMax = useMemo(() => {
-    const yVar =
-      yData.reduce((s, v) => s + (v - yData.reduce((a, b) => a + b, 0) / yData.length) ** 2, 0) /
-      (yData.length - 1);
-    return Math.max(100, 10 * yVar);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [presetIdx]);
 
   // Build log-τ² grid (log-spaced) and μ grid (linear).
   const grid = useMemo(() => {
@@ -259,6 +265,26 @@ export default function EmpiricalBayesTypeIIMLE() {
     return result;
   }, [grid, levels, cellW, cellH, plotH]);
 
+  // Memoize the 3,600 heatmap <rect>s so React doesn't rebuild them on every
+  // marker-drag / "Find MLE" animation frame. Depends only on grid + layout.
+  // (gemini PR-32)
+  const heatmapRects = useMemo(
+    () =>
+      grid.flatMap((row, i) =>
+        row.map((v, j) => (
+          <rect
+            key={`${i}-${j}`}
+            x={j * cellW - cellW / 2}
+            y={plotH - i * cellH - cellH / 2}
+            width={cellW + 1}
+            height={cellH + 1}
+            fill={logMColor(v, gridMin, gridMax)}
+          />
+        )),
+      ),
+    [grid, gridMin, gridMax, cellW, cellH, plotH],
+  );
+
   const handlePointerDown = (e: React.PointerEvent<SVGSVGElement>) => {
     draggingRef.current = true;
     handlePointerMove(e);
@@ -336,19 +362,8 @@ export default function EmpiricalBayesTypeIIMLE() {
         onPointerLeave={handlePointerUp}
       >
         <g transform={`translate(${MARGIN.left}, ${MARGIN.top})`}>
-          {/* Heatmap */}
-          {grid.map((row, i) =>
-            row.map((v, j) => (
-              <rect
-                key={`${i}-${j}`}
-                x={j * cellW - cellW / 2}
-                y={plotH - i * cellH - cellH / 2}
-                width={cellW + 1}
-                height={cellH + 1}
-                fill={logMColor(v, gridMin, gridMax)}
-              />
-            )),
-          )}
+          {/* Heatmap (memoized — see heatmapRects) */}
+          {heatmapRects}
 
           {/* Isocontours */}
           {contours.map((s, i) => (

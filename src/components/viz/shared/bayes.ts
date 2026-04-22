@@ -2550,10 +2550,17 @@ export function jamesSteinPositivePart(
  * Closed-form Stein risk difference R(JS, θ) − R(MLE, θ). Negative for
  * every θ when d ≥ 3 (Stein's paradox). Zero when d ≤ 2.
  *
- *   R(JS, θ) − R(MLE, θ) = −(d−2)² · σ² · E[1/‖X‖²]
+ * For X ~ 𝒩_d(θ, σ² I_d) and JS estimator with shrinkage coefficient
+ * a = (d−2)σ², the risk decomposition gives
  *
- * where X ~ 𝒩_d(θ, σ² I). Uses expectInvNonCentralChiSq for the
- * numerical expectation.  (STE1956 eq. 3.6; LEH1998 §5.5 eq. 5.21)
+ *   R(JS, θ) − R(MLE, θ) = −(d−2)² · σ⁴ · E[1/‖X‖²]
+ *                        = −(d−2)² · σ² · E[1/χ²_d(λ)],
+ *
+ * where λ = ‖θ‖²/σ² is the non-centrality parameter. The σ⁴ from a²
+ * minus one σ² from E[1/‖X‖²] = (1/σ²)·E[1/χ²_d(λ)] leaves the σ²
+ * prefactor on the final expression. Sanity check at θ=0, σ²=4, d=3:
+ * E[1/χ²_3(0)] = 1/(d−2) = 1, so risk diff = −1 · 4 · 1 = −4 (scales
+ * linearly with σ²). (STE1956 eq. 3.6; LEH1998 §5.5 eq. 5.21)
  *
  * @see §28.5 Proof 1.
  */
@@ -2564,9 +2571,8 @@ export function steinRiskDifference(
   const d = theta.length;
   if (d < 3) return 0;
   const lambda = theta.reduce((s, t) => s + t * t, 0) / sigmaSq;
-  // E[1/‖X‖²] = σ⁻² · E[1/χ²_d(λ)]
-  const expInvNormSq = expectInvNonCentralChiSq(d, lambda) / sigmaSq;
-  return -((d - 2) ** 2) * expInvNormSq;
+  const expInvChiSq = expectInvNonCentralChiSq(d, lambda);
+  return -((d - 2) ** 2) * sigmaSq * expInvChiSq;
 }
 
 /**
@@ -2689,21 +2695,49 @@ export function typeIIMLE(
   sigmaSq: number[],
   options: { maxIter?: number; tol?: number } = {}
 ): { mu: number; tauSq: number; iterations: number; converged: boolean } {
-  if (y.length !== sigmaSq.length)
+  const K = y.length;
+  if (K !== sigmaSq.length)
     throw new Error('typeIIMLE: y and sigmaSq length mismatch');
   const maxIter = options.maxIter ?? 200;
   const tol = options.tol ?? 1e-8;
+
+  // Initializer: method-of-moments τ², grand-mean seed under that τ².
   let tauSq = Math.max(0, variance(y) - mean(sigmaSq));
-  let mu = normalNormalGrandMean(y, sigmaSq.map((s) => s + tauSq));
+  let mu: number;
+  {
+    let num = 0;
+    let den = 0;
+    for (let k = 0; k < K; k++) {
+      const w = 1 / (sigmaSq[k] + tauSq);
+      num += y[k] * w;
+      den += w;
+    }
+    mu = num / den;
+  }
+
+  // Hoist the per-iteration scratch arrays — ShrinkageExplorer's Run-500
+  // calls this ~500× per click and the .map/.reduce allocations were
+  // dominating the GC footprint (gemini PR-32).
+  const weights = new Array<number>(K);
+
   for (let i = 0; i < maxIter; i++) {
-    const weights = sigmaSq.map((s) => 1 / (s + tauSq));
-    const W = weights.reduce((a, b) => a + b, 0);
-    const muNew = y.reduce((acc, yk, k) => acc + yk * weights[k], 0) / W;
-    const resSq = y.map((yk) => (yk - muNew) ** 2);
-    const tauSqNew = Math.max(
-      0,
-      resSq.reduce((acc, r, k) => acc + weights[k] * (r - sigmaSq[k]), 0) / W
-    );
+    let W = 0;
+    let muNum = 0;
+    for (let k = 0; k < K; k++) {
+      const w = 1 / (sigmaSq[k] + tauSq);
+      weights[k] = w;
+      W += w;
+      muNum += y[k] * w;
+    }
+    const muNew = muNum / W;
+
+    let tauSqNumer = 0;
+    for (let k = 0; k < K; k++) {
+      const resSq = (y[k] - muNew) ** 2;
+      tauSqNumer += weights[k] * (resSq - sigmaSq[k]);
+    }
+    const tauSqNew = Math.max(0, tauSqNumer / W);
+
     if (Math.abs(muNew - mu) < tol && Math.abs(tauSqNew - tauSq) < tol) {
       return { mu: muNew, tauSq: tauSqNew, iterations: i + 1, converged: true };
     }

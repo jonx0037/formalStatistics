@@ -1225,6 +1225,20 @@ console.log('========================================\n');
   );
 }
 
+// ── T28.3b. Stein risk diff at θ=0, d=3, σ²=4: linear-in-σ² scaling ──────
+// General-variance closed form at θ=0: −(d−2)² · σ² · 1/(d−2) = −(d−2)·σ².
+// d=3, σ²=4 ⇒ −1·4 = −4. Pins the non-default sigmaSq path.
+{
+  const delta = steinRiskDifference([0, 0, 0], 4);
+  check(
+    'T28.3b steinRiskDifference([0,0,0], σ²=4) ≈ −4',
+    approx(delta, -4.0, 1e-4),
+    delta.toFixed(6),
+    '-4',
+    'Linear-in-σ² scaling at θ=0 (Copilot PR-32 regression pin)',
+  );
+}
+
 // ── T28.4. partialPoolingShrinkageFactor(σ²=1, τ²=1) = 0.5 ────────────────
 {
   const B = partialPoolingShrinkageFactor(1, 1);

@@ -11,6 +11,8 @@
  * context lives in the MDX body, not here.
  */
 
+import { eightSchoolsData } from '../components/viz/shared/bayes';
+
 // ── PriorPosteriorExplorer presets ─────────────────────────────────────────
 
 export const priorPosteriorPresets = [
@@ -741,17 +743,17 @@ export const shrinkageExplorerPresets = [
 /**
  * Canonical 8-schools dataset (Rubin 1981, GEL2013 §5.5), exposed as a
  * preset object for the EightSchoolsPartialPooling component (§28.6).
- * Single source of truth alongside `eightSchoolsData()` in bayes.ts —
- * keep values in sync.
+ *
+ * Values are derived from bayes.ts's `eightSchoolsData()` — single source
+ * of truth. The preset wraps the raw arrays with presentation metadata
+ * (source citation, description) for the UI.
  */
 export const eightSchoolsPreset = {
-  names: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'],
-  y: [28, 8, -3, 7, -1, 1, 18, 12],
-  sigma: [15, 10, 16, 11, 9, 11, 10, 18],
+  ...eightSchoolsData(),
   source: 'Rubin (1981), Gelman et al. (2013) §5.5',
   description:
     'Treatment effects of an SAT-V coaching program across 8 schools. The canonical hierarchical-model example.',
-} as const;
+};
 
 /**
  * Presets for EmpiricalBayesTypeIIMLE (§28.7). Each preset includes (y,
