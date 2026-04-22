@@ -2429,3 +2429,355 @@ export function posteriorPredictiveCheck(opts: {
     TRep,
   };
 }
+
+// ==========================================================================
+// TOPIC 28 — Hierarchical & Empirical Bayes (Track 7 closer)
+// ==========================================================================
+//
+// Additions: James-Stein & partial-pooling shrinkage estimators, Type-II
+// marginal-likelihood / empirical-Bayes machinery, 8-schools canonical
+// dataset, centered ↔ non-centered reparameterization, Neal-funnel log-
+// density. See handoff brief §6.1 for full signatures + §6.2 for T28
+// test pins.
+
+// Private helpers (not exported).
+function mean(x: number[]): number {
+  if (x.length === 0) return NaN;
+  let s = 0;
+  for (const v of x) s += v;
+  return s / x.length;
+}
+
+function variance(x: number[]): number {
+  if (x.length < 2) return 0;
+  const m = mean(x);
+  let s = 0;
+  for (const v of x) s += (v - m) ** 2;
+  return s / (x.length - 1);
+}
+
+/**
+ * E[1 / ‖X‖²] with X ~ 𝒩_d(θ, σ²I), equivalent to σ⁻² · E[1 / χ²_d(λ)]
+ * where λ = ‖θ‖²/σ² is the non-centrality parameter. Returns the
+ * un-scaled expectation E[1 / χ²_d(λ)]; caller multiplies by σ⁻²
+ * if σ² ≠ 1 (see steinRiskDifference).
+ *
+ * Closed-form via the Poisson-mixture representation of non-central χ²:
+ *   χ²_d(λ) | J ~ χ²_{d+2J} (central),  J ~ Poisson(λ/2)
+ *   ⇒ E[1/χ²_d(λ)] = e^(-λ/2) · Σ_{j≥0} (λ/2)^j / j! · 1/(d + 2j − 2)
+ *
+ * For λ ≥ 50 the series converges slowly → fall back to 10⁵-draw Monte
+ * Carlo with a deterministic seed (reproducibility in the T28 test pins).
+ * (Johnson-Kotz-Balakrishnan 1995 §29.4; LEH1998 §5.5 eq. 5.21)
+ */
+function expectInvNonCentralChiSq(d: number, lambda: number): number {
+  if (d <= 2) return Infinity; // E[1/χ²_d] diverges for d ≤ 2
+  if (lambda === 0) return 1 / (d - 2);
+
+  if (lambda < 50) {
+    // Poisson-mixture Taylor series, truncated at j=60 (more than enough
+    // for λ < 50: Poisson(25)'s mass is concentrated in j ≤ 50).
+    const halfLambda = lambda / 2;
+    let sum = 0;
+    let poissonWeight = 1; // (λ/2)^j / j! — updated multiplicatively
+    for (let j = 0; j <= 60; j++) {
+      sum += poissonWeight / (d + 2 * j - 2);
+      poissonWeight *= halfLambda / (j + 1);
+    }
+    return Math.exp(-halfLambda) * sum;
+  }
+
+  // MC fallback for λ ≥ 50. Generate χ²_d(λ) via offset Normals:
+  // ‖X‖² = (Z₀ + √λ)² + Z₁² + … + Z_{d-1}²,  Zᵢ iid 𝒩(0,1).
+  const seed = d * 1000 + Math.round(lambda * 10);
+  const rng = createSeededRng(seed);
+  const shift = Math.sqrt(lambda);
+  const N = 100_000;
+  let invSum = 0;
+  for (let n = 0; n < N; n++) {
+    const z0 = rng.normal() + shift;
+    let normSq = z0 * z0;
+    for (let i = 1; i < d; i++) {
+      const z = rng.normal();
+      normSq += z * z;
+    }
+    invSum += 1 / normSq;
+  }
+  return invSum / N;
+}
+
+/**
+ * James-Stein estimator for a multivariate Normal mean (STE1956, JAM1961).
+ * Returns X unchanged if d < 3 (Stein's theorem doesn't apply; the MLE is
+ * admissible in 1–2 dimensions).
+ *
+ * Assumes X ~ 𝒩_d(θ, σ² I_d) with σ² known (default 1).
+ *
+ * @see §28.5 Thm 2.
+ */
+export function jamesSteinEstimator(
+  X: number[],
+  sigmaSq: number = 1
+): number[] {
+  const d = X.length;
+  if (d < 3) return [...X];
+  const normSq = X.reduce((s, x) => s + x * x, 0);
+  if (normSq === 0) return [...X];
+  const shrink = 1 - ((d - 2) * sigmaSq) / normSq;
+  return X.map((x) => shrink * x);
+}
+
+/**
+ * Positive-part James-Stein estimator (Efron-Morris 1973 EFR1973).
+ * Clamps the shrinkage factor at zero so the estimator never flips sign —
+ * dominates plain JS in finite samples.
+ *
+ * @see §28.5 Rem 11.
+ */
+export function jamesSteinPositivePart(
+  X: number[],
+  sigmaSq: number = 1
+): number[] {
+  const d = X.length;
+  if (d < 3) return [...X];
+  const normSq = X.reduce((s, x) => s + x * x, 0);
+  if (normSq === 0) return [...X];
+  const shrink = Math.max(0, 1 - ((d - 2) * sigmaSq) / normSq);
+  return X.map((x) => shrink * x);
+}
+
+/**
+ * Closed-form Stein risk difference R(JS, θ) − R(MLE, θ). Negative for
+ * every θ when d ≥ 3 (Stein's paradox). Zero when d ≤ 2.
+ *
+ *   R(JS, θ) − R(MLE, θ) = −(d−2)² · σ² · E[1/‖X‖²]
+ *
+ * where X ~ 𝒩_d(θ, σ² I). Uses expectInvNonCentralChiSq for the
+ * numerical expectation.  (STE1956 eq. 3.6; LEH1998 §5.5 eq. 5.21)
+ *
+ * @see §28.5 Proof 1.
+ */
+export function steinRiskDifference(
+  theta: number[],
+  sigmaSq: number = 1
+): number {
+  const d = theta.length;
+  if (d < 3) return 0;
+  const lambda = theta.reduce((s, t) => s + t * t, 0) / sigmaSq;
+  // E[1/‖X‖²] = σ⁻² · E[1/χ²_d(λ)]
+  const expInvNormSq = expectInvNonCentralChiSq(d, lambda) / sigmaSq;
+  return -((d - 2) ** 2) * expInvNormSq;
+}
+
+/**
+ * Shrinkage factor B_k in the Normal-Normal hierarchical model (§28.6 Thm 4):
+ *
+ *   B_k = σ² / (n_k · τ² + σ²)
+ *
+ * For the sample-mean case (n_k = 1), reduces to σ²/(σ² + τ²). Bounded to
+ * [0, 1]; edge cases: τ² = 0 → 1 (complete pool), τ² = ∞ → 0 (no pool).
+ */
+export function partialPoolingShrinkageFactor(
+  sigmaSq: number,
+  tauSq: number,
+  nk: number = 1
+): number {
+  if (tauSq === 0) return 1; // complete pool
+  if (!Number.isFinite(tauSq)) return 0; // no pool (flat group-level prior)
+  return sigmaSq / (nk * tauSq + sigmaSq);
+}
+
+/**
+ * Partial-pooling posterior mean in Normal-Normal hierarchical model,
+ * conditional on hyperparameters (μ, τ²). Returns (1 − B_k) y + B_k μ.
+ *
+ * @see §28.6 Proof 2.
+ */
+export function partialPoolingPosteriorMean(
+  y: number,
+  mu: number,
+  sigmaSq: number,
+  tauSq: number,
+  nk: number = 1
+): number {
+  const B = partialPoolingShrinkageFactor(sigmaSq, tauSq, nk);
+  return (1 - B) * y + B * mu;
+}
+
+/**
+ * Partial-pooling posterior variance in Normal-Normal hierarchical model.
+ *   Var(θ_k | y_k, μ, τ²) = σ² · τ² / (n_k · τ² + σ²)
+ *
+ * Edge cases: τ² = 0 → 0 (complete pool: group mean = μ deterministically);
+ * τ² = ∞ → σ²/n_k (no-pool likelihood variance).
+ *
+ * @see §28.6 Thm 4.
+ */
+export function partialPoolingPosteriorVariance(
+  sigmaSq: number,
+  tauSq: number,
+  nk: number = 1
+): number {
+  if (tauSq === 0) return 0;
+  if (!Number.isFinite(tauSq)) return sigmaSq / nk;
+  return (sigmaSq * tauSq) / (nk * tauSq + sigmaSq);
+}
+
+/**
+ * Precision-weighted grand mean of per-group observations:
+ *   μ̂ = Σ (y_k / σ²_k) / Σ (1 / σ²_k)
+ *
+ * The MLE of μ in a Normal-Normal hierarchical model when τ² is fixed at
+ * zero (complete-pool limit). Used across §§28.1/28.4/28.6.
+ */
+export function normalNormalGrandMean(
+  y: number[],
+  sigmaSq: number[]
+): number {
+  if (y.length !== sigmaSq.length)
+    throw new Error('normalNormalGrandMean: y and sigmaSq must have equal length');
+  let numerator = 0;
+  let denominator = 0;
+  for (let k = 0; k < y.length; k++) {
+    const w = 1 / sigmaSq[k];
+    numerator += y[k] * w;
+    denominator += w;
+  }
+  return numerator / denominator;
+}
+
+/**
+ * Type-II marginal log-likelihood log m(y | μ, τ²) in the Normal-Normal
+ * hierarchical model, integrating out θ_k:
+ *
+ *   y_k | μ, τ² ~ 𝒩(μ, σ²_k + τ²) independent across k
+ *   ⇒  log m(y | μ, τ²) = Σ_k log 𝒩(y_k ; μ, σ²_k + τ²)
+ *
+ * The empirical-Bayes objective (§28.7 Def 4).
+ */
+export function typeIIMarginalLogLikelihood(
+  y: number[],
+  sigmaSq: number[],
+  mu: number,
+  tauSq: number
+): number {
+  if (y.length !== sigmaSq.length)
+    throw new Error('typeIIMarginalLogLikelihood: y and sigmaSq length mismatch');
+  let logLik = 0;
+  for (let k = 0; k < y.length; k++) {
+    const v = sigmaSq[k] + tauSq;
+    logLik += -0.5 * Math.log(2 * Math.PI * v) - ((y[k] - mu) ** 2) / (2 * v);
+  }
+  return logLik;
+}
+
+/**
+ * Type-II MLE (empirical-Bayes estimate) of (μ, τ²) in Normal-Normal.
+ * Iterative scheme (Berger 1985 §4.5.1):
+ *   — given τ², update μ = precision-weighted mean of y with weights 1/(σ²_k + τ²)
+ *   — given μ, update τ² = max(0, method-of-moments estimate)
+ *
+ * Initializer: τ² = max(0, Var(y) − mean(σ²)), μ = weighted mean.
+ * Converges geometrically; typical runs finish in <30 iterations.
+ *
+ * Note: τ̂² is floored at 0 because the MLE on the boundary is a
+ * genuine feature (pedagogically central to §28.7 — cf. GEL2006's
+ * half-Cauchy-prior argument).
+ */
+export function typeIIMLE(
+  y: number[],
+  sigmaSq: number[],
+  options: { maxIter?: number; tol?: number } = {}
+): { mu: number; tauSq: number; iterations: number; converged: boolean } {
+  if (y.length !== sigmaSq.length)
+    throw new Error('typeIIMLE: y and sigmaSq length mismatch');
+  const maxIter = options.maxIter ?? 200;
+  const tol = options.tol ?? 1e-8;
+  let tauSq = Math.max(0, variance(y) - mean(sigmaSq));
+  let mu = normalNormalGrandMean(y, sigmaSq.map((s) => s + tauSq));
+  for (let i = 0; i < maxIter; i++) {
+    const weights = sigmaSq.map((s) => 1 / (s + tauSq));
+    const W = weights.reduce((a, b) => a + b, 0);
+    const muNew = y.reduce((acc, yk, k) => acc + yk * weights[k], 0) / W;
+    const resSq = y.map((yk) => (yk - muNew) ** 2);
+    const tauSqNew = Math.max(
+      0,
+      resSq.reduce((acc, r, k) => acc + weights[k] * (r - sigmaSq[k]), 0) / W
+    );
+    if (Math.abs(muNew - mu) < tol && Math.abs(tauSqNew - tauSq) < tol) {
+      return { mu: muNew, tauSq: tauSqNew, iterations: i + 1, converged: true };
+    }
+    mu = muNew;
+    tauSq = tauSqNew;
+  }
+  return { mu, tauSq, iterations: maxIter, converged: false };
+}
+
+/**
+ * Canonical 8-schools dataset (Rubin 1981 RUB1981, GEL2013 §5.5).
+ * Eight educational coaching effects with per-school SE. The spine running
+ * example across §§28.1/28.4/28.6/28.9 and numerous Topic 28 components.
+ */
+export function eightSchoolsData(): {
+  names: string[];
+  y: number[];
+  sigma: number[];
+} {
+  return {
+    names: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'],
+    y: [28, 8, -3, 7, -1, 1, 18, 12],
+    sigma: [15, 10, 16, 11, 9, 11, 10, 18],
+  };
+}
+
+/**
+ * Non-centered transform: θ̃ ↦ θ = μ + τ · θ̃ (§28.9 Thm 7).
+ * Decouples θ from (μ, τ) in the prior — the standard mitigation for
+ * Neal's funnel under HMC/NUTS.
+ */
+export function nonCenteredTransform(
+  thetaTilde: number[],
+  mu: number,
+  tau: number
+): number[] {
+  return thetaTilde.map((t) => mu + tau * t);
+}
+
+/**
+ * Inverse transform: θ ↦ θ̃ = (θ − μ) / τ. Requires τ ≠ 0.
+ * Throws when tau === 0 (the centered→non-centered change of variables is
+ * undefined at the funnel apex; see §28.9 Thm 7).
+ */
+export function centeredToNonCentered(
+  theta: number[],
+  mu: number,
+  tau: number
+): number[] {
+  if (tau === 0)
+    throw new Error('centeredToNonCentered: tau must be nonzero (reparameterization undefined)');
+  return theta.map((t) => (t - mu) / tau);
+}
+
+/**
+ * Neal's canonical funnel joint log-density at (θ, log τ):
+ *   log τ ~ 𝒩(0, 1)
+ *   θ | τ ~ 𝒩(0, τ²)
+ *   ⇒ log p(θ, log τ) = log 𝒩(θ; 0, e^{2 log τ}) + log 𝒩(log τ; 0, 1)
+ *
+ * Used as the target for FunnelGeometryExplorer (§28.9) and as the
+ * simplified stand-in for the 8-schools hierarchical posterior in
+ * component demos.
+ *
+ * (Neal 2003 §8; NEA2011 §4; BET2015 §3.)
+ */
+export function funnelLogDensity(theta: number, logTau: number): number {
+  const tauSq = Math.exp(2 * logTau);
+  const logPTheta =
+    -0.5 * Math.log(2 * Math.PI * tauSq) - (theta * theta) / (2 * tauSq);
+  const logPTau = -0.5 * Math.log(2 * Math.PI) - (logTau * logTau) / 2;
+  return logPTheta + logPTau;
+}
+
+// ==========================================================================
+// END TOPIC 28 ADDITIONS
+// ==========================================================================
