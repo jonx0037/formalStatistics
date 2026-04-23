@@ -23,13 +23,16 @@
  *   • Rényi-spacings generator: Y_(k) = Σ E_i / (n - i + 1), distributionally
  *     identical to iid-Exp(1) order statistics by Rényi 1953.
  *
- * Imports only `quantileStdNormal` from distributions.ts (Acklam rational
- * approximation) for the §11 pointwise KDE confidence interval. Internal
- * helpers: Lanczos log-gamma, binomial PMF, and two Topic 30 utilities
- * (log-spaced / linear-spaced grids).
+ * Imports `quantileStdNormal` and `cdfStdNormal` from distributions.ts
+ * (Acklam rational approximation + Abramowitz-Stegun 26.2.17) for the §11
+ * pointwise KDE confidence interval and the §15 BCa bias-correction /
+ * acceleration terms. Also imports `SeededRng` from bayes.ts (§13–16
+ * resamplers). Internal helpers: Lanczos log-gamma, binomial PMF, and two
+ * Topic 30 utilities (log-spaced / linear-spaced grids).
  */
 
-import { quantileStdNormal as normalQuantile } from './distributions';
+import { cdfStdNormal, quantileStdNormal as normalQuantile } from './distributions';
+import { type SeededRng } from './bayes';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // 1. Order statistics
@@ -851,4 +854,547 @@ function linspace(a: number, b: number, n: number): number[] {
   const out: number[] = new Array(n);
   for (let i = 0; i < n; i++) out[i] = a + i * step;
   return out;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 13. Bootstrap resamplers (Topic 31 extension)
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Draw a single nonparametric bootstrap resample of size n from the data.
+ * Each X*_i is selected uniformly with replacement from x via rng.random().
+ * (EFR1979)
+ *
+ * When `out` is omitted, allocates and returns a fresh array. When `out` is
+ * supplied, fills the buffer in place (must match x.length) and returns it —
+ * use this from hot inner loops (e.g. `studentizedCI`'s outer × inner pass)
+ * to eliminate per-iteration allocations.
+ */
+export function bootstrapResample(
+  x: readonly number[],
+  rng: SeededRng,
+  out?: number[],
+): number[] {
+  const n = x.length;
+  if (n === 0) throw new Error('bootstrapResample: empty sample');
+  if (out && out.length !== n) {
+    throw new Error(
+      `bootstrapResample: out.length=${out.length} must equal x.length=${n}`,
+    );
+  }
+  const buf = out ?? new Array<number>(n);
+  for (let i = 0; i < n; i++) {
+    // Floor(random * n) is uniform on {0, 1, ..., n-1}. random() returns
+    // values in [0, 1), so Math.floor can never equal n.
+    buf[i] = x[Math.floor(rng.random() * n)];
+  }
+  return buf;
+}
+
+/**
+ * Draw B bootstrap replicates of a scalar statistic.
+ * Returns replicates SORTED ascending — CI constructors assume sorted input.
+ * (EFR1979; BIC-FRE1981)
+ */
+export function nonparametricBootstrap(
+  x: readonly number[],
+  stat: (sample: readonly number[]) => number,
+  B: number,
+  rng: SeededRng,
+): number[] {
+  if (B < 1 || !Number.isInteger(B)) {
+    throw new Error(`nonparametricBootstrap: B=${B} must be a positive integer`);
+  }
+  const reps: number[] = new Array(B);
+  for (let b = 0; b < B; b++) {
+    reps[b] = stat(bootstrapResample(x, rng));
+  }
+  reps.sort((a, c) => a - c);
+  return reps;
+}
+
+/**
+ * Parametric bootstrap. `fit` returns a sampler (n, rng) => number[] tied to
+ * the fitted parameters — typically an MLE fit. Resample from the fitted
+ * distribution rather than from F_n. Returns sorted replicates.
+ */
+export function parametricBootstrap(
+  x: readonly number[],
+  fit: (sample: readonly number[]) => (n: number, rng: SeededRng) => number[],
+  stat: (sample: readonly number[]) => number,
+  B: number,
+  rng: SeededRng,
+): number[] {
+  if (B < 1 || !Number.isInteger(B)) {
+    throw new Error(`parametricBootstrap: B=${B} must be a positive integer`);
+  }
+  const sampler = fit(x);
+  const n = x.length;
+  const reps: number[] = new Array(B);
+  for (let b = 0; b < B; b++) {
+    reps[b] = stat(sampler(n, rng));
+  }
+  reps.sort((a, c) => a - c);
+  return reps;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 14. Kolmogorov-distance helpers (Topic 31 extension)
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Kolmogorov distance on two pre-sorted ECDFs. Linear in (m + n); the caller
+ * is responsible for having sorted both inputs ascending. Use this when the
+ * caller already has sorted copies (e.g. bootstrap-replicate caches, MC
+ * references) to avoid a redundant O(N log N) re-sort. For unsorted input,
+ * see `kolmogorovDistance`.
+ */
+export function kolmogorovDistanceSorted(
+  sa: readonly number[],
+  sb: readonly number[],
+): number {
+  const n = sa.length;
+  const m = sb.length;
+  if (n === 0 || m === 0) return 1;
+  // Walk through both sorted arrays in pooled order; at each transition, both
+  // ECDFs are right-continuous step functions, so evaluate AFTER the step.
+  let i = 0;
+  let j = 0;
+  let maxD = 0;
+  while (i < n || j < m) {
+    // Advance whichever pointer has the smaller head; break ties by moving both.
+    let nextVal: number;
+    if (i >= n) nextVal = sb[j];
+    else if (j >= m) nextVal = sa[i];
+    else nextVal = Math.min(sa[i], sb[j]);
+    while (i < n && sa[i] <= nextVal) i++;
+    while (j < m && sb[j] <= nextVal) j++;
+    const d = Math.abs(i / n - j / m);
+    if (d > maxD) maxD = d;
+  }
+  return maxD;
+}
+
+/**
+ * Kolmogorov distance sup_x |F_a(x) - F_b(x)| between two ECDFs.
+ * Inputs need not be sorted; function sorts internally. Right-continuous
+ * ECDF convention: F_a(x) = |{a_i ≤ x}| / n. Match to notebook
+ * `kolmogorov_distance` (searchsorted on the pooled sort). O((m+n) log(m+n)).
+ */
+export function kolmogorovDistance(
+  a: readonly number[],
+  b: readonly number[],
+): number {
+  return kolmogorovDistanceSorted(
+    [...a].sort((p, q) => p - q),
+    [...b].sort((p, q) => p - q),
+  );
+}
+
+/**
+ * KS distance between an empirical sample and an analytic CDF F.
+ * Used in Fig 3 featured panel: for the Normal-mean case, H_n is exactly
+ * N(0, σ²/n), so we compare against the analytic target rather than an MC
+ * reference sample. Two-sided sup: max(D+, D-) where
+ *   D+ = max_i [(i+1)/n - F(x_(i))],   D- = max_i [F(x_(i)) - i/n].
+ * (BIL1999 §14)
+ */
+export function kolmogorovDistanceToCdf(
+  sample: readonly number[],
+  cdf: (x: number) => number,
+): number {
+  const s = [...sample].sort((a, b) => a - b);
+  const n = s.length;
+  if (n === 0) return 1;
+  let maxD = 0;
+  for (let i = 0; i < n; i++) {
+    const Fxi = cdf(s[i]);
+    const dPlus = (i + 1) / n - Fxi;
+    const dMinus = Fxi - i / n;
+    if (dPlus > maxD) maxD = dPlus;
+    if (dMinus > maxD) maxD = dMinus;
+  }
+  return maxD;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 15. Bootstrap CI constructors (Topic 31 extension)
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Quantile from a PRE-SORTED array via Type-7 linear interpolation (NumPy /
+ * R / SciPy default). Private to §§15–16 — the public `sampleQuantile` in §3
+ * sorts defensively; these CI helpers receive already-sorted bootstrap
+ * replicates and avoid the re-sort.
+ */
+function quantileSorted(sorted: readonly number[], p: number): number {
+  const n = sorted.length;
+  if (n === 0) throw new Error('quantileSorted: empty array');
+  if (p <= 0) return sorted[0];
+  if (p >= 1) return sorted[n - 1];
+  const h = (n - 1) * p;
+  const lo = Math.floor(h);
+  const frac = h - lo;
+  if (lo >= n - 1) return sorted[n - 1];
+  return sorted[lo] + frac * (sorted[lo + 1] - sorted[lo]);
+}
+
+export interface BootstrapCI {
+  readonly lower: number;
+  readonly upper: number;
+  readonly method: 'percentile' | 'basic' | 'bca' | 'studentized';
+}
+
+/**
+ * Percentile CI (EFR1979): the α/2 and 1−α/2 empirical quantiles of the
+ * bootstrap replicates. First-order accurate — O(n^{-1/2}) coverage error.
+ * Expects replicates sorted ascending.
+ */
+export function percentileCI(
+  replicates: readonly number[],
+  alpha: number,
+): BootstrapCI {
+  if (replicates.length < 2) {
+    throw new Error(`percentileCI: need ≥ 2 replicates (got ${replicates.length})`);
+  }
+  if (!(alpha > 0 && alpha < 1)) {
+    throw new Error(`percentileCI: alpha=${alpha} must be in (0, 1)`);
+  }
+  return {
+    lower: quantileSorted(replicates, alpha / 2),
+    upper: quantileSorted(replicates, 1 - alpha / 2),
+    method: 'percentile',
+  };
+}
+
+/**
+ * Basic (Hall) CI: reflects the percentile endpoints around θ̂.
+ *   lower = 2 θ̂ − q_{1−α/2},   upper = 2 θ̂ − q_{α/2}.
+ * First-order accurate; differs from percentileCI mainly when the bootstrap
+ * distribution is skewed. (HAL1992 §3.3)
+ */
+export function basicCI(
+  thetaHat: number,
+  replicates: readonly number[],
+  alpha: number,
+): BootstrapCI {
+  if (replicates.length < 2) {
+    throw new Error(`basicCI: need ≥ 2 replicates (got ${replicates.length})`);
+  }
+  if (!(alpha > 0 && alpha < 1)) {
+    throw new Error(`basicCI: alpha=${alpha} must be in (0, 1)`);
+  }
+  const qLo = quantileSorted(replicates, alpha / 2);
+  const qHi = quantileSorted(replicates, 1 - alpha / 2);
+  return {
+    lower: 2 * thetaHat - qHi,
+    upper: 2 * thetaHat - qLo,
+    method: 'basic',
+  };
+}
+
+/**
+ * BCa (bias-corrected accelerated) CI of EFR1987. Second-order accurate —
+ * O(n^{-1}) coverage error (HAL1992 Thm 3.2). Computes:
+ *   • z₀ = Φ^{-1}(#{θ*_b < θ̂} / B)  — bias correction
+ *   • â  = Σ(θ_{(·)} − θ_{(i)})³ / (6 · [Σ(θ_{(·)} − θ_{(i)})²]^{3/2})
+ *          where θ_{(i)} is the jackknife leave-one-out estimate and
+ *          θ_{(·)} is the jackknife mean.
+ *   • adj_p = Φ(z₀ + (z₀ + z_p) / (1 − â(z₀ + z_p))) for p ∈ {α/2, 1−α/2}
+ * Endpoints are the adj_p quantiles of the sorted replicates.
+ *
+ * Sign convention matches the notebook: num = Σ(jack_mean − jack_i)³.
+ * For a right-skewed parent (e.g. Exponential), â > 0.
+ *
+ * Inner-loop cost: O(n · stat-cost) for the jackknife.
+ */
+export function bcaCI(
+  x: readonly number[],
+  stat: (sample: readonly number[]) => number,
+  replicates: readonly number[],
+  alpha: number,
+): BootstrapCI {
+  const n = x.length;
+  const B = replicates.length;
+  if (n < 2) throw new Error(`bcaCI: n=${n} too small`);
+  if (B < 2) throw new Error(`bcaCI: B=${B} too small`);
+  if (!(alpha > 0 && alpha < 1)) throw new Error(`bcaCI: alpha=${alpha} must be in (0, 1)`);
+
+  const thetaHat = stat(x);
+
+  // z0 from proportion of replicates strictly below thetaHat. Clip away from
+  // {0, 1} to avoid ±∞ from Φ^{-1} at the boundary (EFR1993 §14.3 footnote).
+  let below = 0;
+  for (const r of replicates) if (r < thetaHat) below++;
+  let propBelow = below / B;
+  const eps = 1 / B;
+  if (propBelow < eps) propBelow = eps;
+  if (propBelow > 1 - eps) propBelow = 1 - eps;
+  const z0 = normalQuantile(propBelow);
+
+  // Jackknife acceleration. Leave-one-out for each i; theta_bar is the
+  // jackknife mean.
+  const jack: number[] = new Array(n);
+  const loo: number[] = new Array(n - 1);
+  for (let i = 0; i < n; i++) {
+    let k = 0;
+    for (let j = 0; j < n; j++) {
+      if (j !== i) {
+        loo[k++] = x[j];
+      }
+    }
+    jack[i] = stat(loo);
+  }
+  let jackSum = 0;
+  for (const v of jack) jackSum += v;
+  const jackMean = jackSum / n;
+  let num = 0;
+  let den = 0;
+  for (const v of jack) {
+    const d = jackMean - v;
+    num += d * d * d;
+    den += d * d;
+  }
+  const denFull = 6 * Math.pow(den, 1.5);
+  const aHat = denFull > 0 ? num / denFull : 0;
+
+  const zLo = normalQuantile(alpha / 2);
+  const zHi = normalQuantile(1 - alpha / 2);
+  const adjLo = cdfStdNormal(z0 + (z0 + zLo) / (1 - aHat * (z0 + zLo)));
+  const adjHi = cdfStdNormal(z0 + (z0 + zHi) / (1 - aHat * (z0 + zHi)));
+
+  return {
+    lower: quantileSorted(replicates, adjLo),
+    upper: quantileSorted(replicates, adjHi),
+    method: 'bca',
+  };
+}
+
+/**
+ * Internal BCa diagnostic — exposes z₀ and â alongside the endpoints. Used by
+ * test-pin T31.4 internal sanity check (brief §6.2: z₀ ≈ 0.0221, â ≈ 0.0332).
+ * Call signature matches `bcaCI`; returns the same CI plus the two constants.
+ */
+export function bcaCIWithDiagnostics(
+  x: readonly number[],
+  stat: (sample: readonly number[]) => number,
+  replicates: readonly number[],
+  alpha: number,
+): BootstrapCI & { z0: number; aHat: number } {
+  const n = x.length;
+  const B = replicates.length;
+  const thetaHat = stat(x);
+
+  let below = 0;
+  for (const r of replicates) if (r < thetaHat) below++;
+  let propBelow = below / B;
+  const eps = 1 / B;
+  if (propBelow < eps) propBelow = eps;
+  if (propBelow > 1 - eps) propBelow = 1 - eps;
+  const z0 = normalQuantile(propBelow);
+
+  const jack: number[] = new Array(n);
+  const loo: number[] = new Array(n - 1);
+  for (let i = 0; i < n; i++) {
+    let k = 0;
+    for (let j = 0; j < n; j++) if (j !== i) loo[k++] = x[j];
+    jack[i] = stat(loo);
+  }
+  let jackSum = 0;
+  for (const v of jack) jackSum += v;
+  const jackMean = jackSum / n;
+  let num = 0;
+  let den = 0;
+  for (const v of jack) {
+    const d = jackMean - v;
+    num += d * d * d;
+    den += d * d;
+  }
+  const denFull = 6 * Math.pow(den, 1.5);
+  const aHat = denFull > 0 ? num / denFull : 0;
+
+  const ci = bcaCI(x, stat, replicates, alpha);
+  return { ...ci, z0, aHat };
+}
+
+/**
+ * Studentized (bootstrap-t) CI. For each outer-bootstrap replicate, runs an
+ * INNER bootstrap to estimate the standard error of that replicate's
+ * statistic, then builds the studentized pivot
+ *   T*_b = (θ̂*_b - θ̂) / SE*_b
+ * and returns the α/2 and 1-α/2 quantiles of T*_b scaled by the observed SE.
+ * Second-order accurate — O(n^{-1}) coverage error (HAL1992 §3.4).
+ *
+ * Cost: O(B · BInner · n · stat-cost). Default BInner = 50 in brief.
+ */
+export function studentizedCI(
+  x: readonly number[],
+  stat: (sample: readonly number[]) => number,
+  se: (sample: readonly number[]) => number,
+  B: number,
+  BInner: number,
+  alpha: number,
+  rng: SeededRng,
+): BootstrapCI {
+  if (B < 1 || !Number.isInteger(B)) {
+    throw new Error(`studentizedCI: B=${B} must be a positive integer`);
+  }
+  if (BInner < 1 || !Number.isInteger(BInner)) {
+    throw new Error(`studentizedCI: BInner=${BInner} must be a positive integer`);
+  }
+  if (!(alpha > 0 && alpha < 1)) {
+    throw new Error(`studentizedCI: alpha=${alpha} must be in (0, 1)`);
+  }
+  const thetaHat = stat(x);
+  const seObs = se(x);
+  const n = x.length;
+
+  // Hoist all reusable buffers: without these, a B × BInner run with B=1000,
+  // BInner=30 allocates 31,000 arrays (1 outer resample + 30 inner resamples
+  // + 1 inner-stat array per outer replicate). Hoisted: ~4 total.
+  const tStats: number[] = new Array(B);
+  const inner: number[] = new Array(BInner);
+  const xBootBuf: number[] = new Array(n);
+  const innerBuf: number[] = new Array(n);
+
+  for (let b = 0; b < B; b++) {
+    bootstrapResample(x, rng, xBootBuf);
+    const thetaBoot = stat(xBootBuf);
+    for (let bi = 0; bi < BInner; bi++) {
+      bootstrapResample(xBootBuf, rng, innerBuf);
+      inner[bi] = stat(innerBuf);
+    }
+    // SE of inner replicates (Bessel-corrected).
+    let sum = 0;
+    for (const v of inner) sum += v;
+    const mean = sum / BInner;
+    let ss = 0;
+    for (const v of inner) {
+      const d = v - mean;
+      ss += d * d;
+    }
+    const seBoot = Math.sqrt(ss / (BInner - 1));
+    tStats[b] = seBoot > 0 ? (thetaBoot - thetaHat) / seBoot : 0;
+  }
+  tStats.sort((a, c) => a - c);
+  const tLo = quantileSorted(tStats, alpha / 2);
+  const tHi = quantileSorted(tStats, 1 - alpha / 2);
+  // Note the flip — endpoints use the OPPOSITE t-quantile by the pivot's
+  // inversion: if T = (θ̂ - θ) / SE, then θ = θ̂ - T · SE, so large T → small θ.
+  return {
+    lower: thetaHat - tHi * seObs,
+    upper: thetaHat - tLo * seObs,
+    method: 'studentized',
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 16. Smooth bootstrap + bias correction (Topic 31 extension)
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Smooth (kernel-smoothed) bootstrap (SIL-YOU1987). For each resample:
+ *   X*_i = X_{J_i} + h · Z_i,   J_i ~ Uniform{1,...,n},  Z_i ~ N(0, 1).
+ * Equivalent to resampling from the Gaussian KDE f̂_h. Useful when the
+ * statistic of interest depends on local continuity (sample median, quantile
+ * regression). Default bandwidth uses the "robust Silverman" / R bw.nrd0
+ * variant 0.9 · min(SD, IQR/1.34) · n^{-1/5} — NOT the 1.06 factor used by
+ * the public `silvermanBandwidth` in §9. The 0.9 variant undersmooths
+ * slightly and is the de-facto default for smooth-bootstrap practice
+ * (matches Cell 13's T31.8 pin).
+ *
+ * Gaussian kernel is hard-coded; if a non-Gaussian kernel is needed, pass an
+ * explicit h and a custom sampler-based approach via `bootstrapResample`.
+ *
+ * Returns sorted replicates.
+ */
+export function smoothBootstrap(
+  x: readonly number[],
+  stat: (sample: readonly number[]) => number,
+  B: number,
+  rng: SeededRng,
+  h?: number,
+): number[] {
+  if (B < 1 || !Number.isInteger(B)) {
+    throw new Error(`smoothBootstrap: B=${B} must be a positive integer`);
+  }
+  const n = x.length;
+  if (n < 2) throw new Error(`smoothBootstrap: n=${n} too small`);
+  const bandwidth = h ?? smoothBootstrapBandwidth(x);
+  if (bandwidth <= 0) {
+    throw new Error(`smoothBootstrap: bandwidth h=${bandwidth} must be positive`);
+  }
+  const reps: number[] = new Array(B);
+  const buf: number[] = new Array(n);
+  for (let b = 0; b < B; b++) {
+    for (let i = 0; i < n; i++) {
+      const idx = Math.floor(rng.random() * n);
+      buf[i] = x[idx] + bandwidth * rng.normal();
+    }
+    reps[b] = stat(buf);
+  }
+  reps.sort((a, c) => a - c);
+  return reps;
+}
+
+/**
+ * Robust Silverman bandwidth matching R's bw.nrd0 and the notebook convention:
+ *   h = 0.9 · min(SD, IQR/1.34) · n^{-1/5}.
+ * Distinct from the public `silvermanBandwidth` in §9, which uses 1.06.
+ * Exposed so the smooth-bootstrap demo can display h when the user selects
+ * "Silverman (auto)".
+ */
+export function smoothBootstrapBandwidth(sample: readonly number[]): number {
+  const n = sample.length;
+  if (n < 2) throw new Error(`smoothBootstrapBandwidth: n=${n} too small`);
+  // Two-pass variance (numerically stable; avoids catastrophic cancellation
+  // when mean is large relative to variance).
+  let sum = 0;
+  for (const v of sample) sum += v;
+  const mean = sum / n;
+  let ss = 0;
+  for (const v of sample) {
+    const d = v - mean;
+    ss += d * d;
+  }
+  const variance = Math.max(ss / (n - 1), 0);
+  const sd = Math.sqrt(variance);
+  const sorted = [...sample].sort((a, b) => a - b);
+  const iqrScaled = (quantileSorted(sorted, 0.75) - quantileSorted(sorted, 0.25)) / 1.34;
+  const sigmaHat = iqrScaled > 0 ? Math.min(sd, iqrScaled) : sd;
+  return 0.9 * sigmaHat * Math.pow(n, -1 / 5);
+}
+
+/**
+ * Bootstrap bias estimator: mean(replicates) − θ̂. Positive when the
+ * bootstrap-world distribution is centered above the observed statistic.
+ */
+export function bootstrapBias(
+  thetaHat: number,
+  replicates: readonly number[],
+): number {
+  if (replicates.length === 0) {
+    throw new Error('bootstrapBias: empty replicates');
+  }
+  let sum = 0;
+  for (const r of replicates) sum += r;
+  return sum / replicates.length - thetaHat;
+}
+
+/**
+ * Bias-corrected estimator: θ̃ = 2 θ̂ − mean(replicates). Efron 1990's basic
+ * bias correction; removes the first-order bias estimate under the Taylor
+ * linearization. More elaborate corrections (jackknife-after-bootstrap,
+ * iterated bootstrap) are deferred to §31.10's forward-pointing remarks.
+ */
+export function biasCorrected(
+  thetaHat: number,
+  replicates: readonly number[],
+): number {
+  if (replicates.length === 0) {
+    throw new Error('biasCorrected: empty replicates');
+  }
+  let sum = 0;
+  for (const r of replicates) sum += r;
+  return 2 * thetaHat - sum / replicates.length;
 }

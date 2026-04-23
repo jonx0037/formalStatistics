@@ -1,0 +1,655 @@
+---
+title: "The Bootstrap"
+subtitle: "Efron's nonparametric bootstrap, the Bickel–Freedman consistency theorem, four confidence-interval constructions (percentile, basic, BCa, studentized), Hall's second-order accuracy, bootstrap hypothesis tests, parametric and smooth-bootstrap variants, and bootstrap bias correction. Track 8, topic 3 of 4."
+status: "published"
+difficulty: "intermediate"
+prerequisites:
+  - "order-statistics-and-quantiles"
+  - "kernel-density-estimation"
+  - "confidence-intervals-and-duality"
+  - "hypothesis-testing"
+  - "central-limit-theorem"
+  - "law-of-large-numbers"
+tags:
+  - "statistics"
+  - "nonparametric"
+  - "bootstrap"
+  - "resampling"
+  - "confidence-intervals"
+  - "bca"
+  - "edgeworth-expansion"
+  - "plug-in-principle"
+  - "smooth-bootstrap"
+  - "bias-correction"
+  - "track-8-middle"
+domain: "high-dimensional-nonparametric"
+videoId: null
+notebookPath: "notebooks/bootstrap/31_bootstrap.ipynb"
+githubUrl: "https://github.com/jonx0037/formalStatistics/blob/main/src/content/topics/bootstrap.mdx"
+datePublished: 2026-04-23
+estimatedReadTime: 58
+formalcalculusPrereqs:
+  - topic: "sequence-limits-and-convergence"
+    site: "formalcalculus"
+    relationship: "The Monte-Carlo error in §31.2 hinges on the $B \\to \\infty$ limit of the empirical average $B^{-1}\\sum g(X^\\ast_{(b)})$ to its conditional expectation — sequence-limit machinery from formalCalculus Track 1."
+  - topic: "uniform-convergence"
+    site: "formalcalculus"
+    relationship: "Lemma 1 in §31.3 (Polya's theorem) upgrades pointwise convergence of monotone functions with a continuous limit to uniform convergence. The partition argument is a classical uniform-convergence proof."
+  - topic: "taylor-series-and-approximation"
+    site: "formalcalculus"
+    relationship: "The Edgeworth expansion in §31.5 Theorem 5 is a Taylor-style series for a CDF around the standard-normal CDF, with coefficients driven by the cumulants of the statistic."
+formalmlConnections:
+  - topic: "prediction-intervals"
+    site: "formalml"
+    relationship: "§31.4's bootstrap CIs are the foundation of conformal-prediction's non-residual precursor: construct a bootstrap distribution for the point prediction, then take percentile endpoints as the prediction-interval bounds."
+  - topic: "uncertainty-quantification"
+    site: "formalml"
+    relationship: "§31.3's Theorem 3 underwrites bootstrapped model uncertainty: bag multiple bootstrap replicates of the training set, refit the model on each, and use the distribution of test-time predictions as a proxy for posterior uncertainty."
+  - topic: "cross-validation"
+    site: "formalml"
+    relationship: "§31.9's bias correction is the standard debiasing technique for cross-validated risk estimates — CV risk underestimates test risk by an amount that the bootstrap-bias estimator quantifies."
+  - topic: "ab-testing"
+    site: "formalml"
+    relationship: "§31.6's bootstrap hypothesis test is the distribution-free alternative to the parametric $t$-test for A/B significance — robust to non-Normal metric distributions that plague click-through and conversion data."
+connections:
+  - topic: "order-statistics-and-quantiles"
+    relationship: "§29.2 introduced the ECDF $F_n$ — the plug-in estimator Topic 31 resamples from. §29.6 Rem 12–13 forward-promised the bootstrap as the density-at-quantile workaround and the bootstrap-CI validity as a Bahadur-style linearization; §31.3's proof structure and §31.8's smooth bootstrap discharge both promises."
+  - topic: "kernel-density-estimation"
+    relationship: "§30.9's `silvermanBandwidth` is the pilot estimator for §31.8's smooth bootstrap. The Gaussian kernel from §30.3 is reused verbatim for smooth-bootstrap noise. §30.5 Rem 15 forward-promised smooth bootstrap as the simultaneous-envelope construction; §31.8 delivers."
+  - topic: "confidence-intervals-and-duality"
+    relationship: "§19's four parametric CI constructions (Wald, likelihood-ratio, score, exact) are Topic 31's parametric baseline. The CI↔test duality from §19.7 reappears in §31.6 — bootstrap CIs and bootstrap tests are two presentations of the same resampling procedure."
+  - topic: "hypothesis-testing"
+    relationship: "§17's power analysis, size control, and permutation-test machinery generalize to the bootstrap-test setting. §31.6's power-curve figure (Fig 6) mirrors Topic 17's §17.4 layout."
+  - topic: "central-limit-theorem"
+    relationship: "§11 Thm 3 (CLT) and §11 Thm 4 (Lindeberg–Feller triangular-array CLT) are the analytic workhorses of Theorem 3's proof. §11.7's Edgeworth-expansion foundations underwrite Theorem 5."
+  - topic: "law-of-large-numbers"
+    relationship: "Glivenko–Cantelli (§10.7) is the consistency result that makes bootstrap meaningful — we're resampling from an ECDF that itself converges uniformly to $F$. §31.3 opens with this framing."
+references:
+  - type: "article"
+    author: "Bradley Efron"
+    year: 1979
+    title: "Bootstrap Methods: Another Look at the Jackknife"
+    publisher: "The Annals of Statistics 7(1): 1–26"
+    note: "EFR1979. The founding paper. Introduces resampling from $F_n$ as a general-purpose alternative to the jackknife, with the plug-in principle as the pedagogical hook. §31.1 opens with Efron's framing. https://projecteuclid.org/journals/annals-of-statistics/volume-7/issue-1/Bootstrap-Methods-Another-Look-at-the-Jackknife/10.1214/aos/1176344552.full"
+  - type: "article"
+    author: "Peter J. Bickel and David A. Freedman"
+    year: 1981
+    title: "Some Asymptotic Theory for the Bootstrap"
+    publisher: "The Annals of Statistics 9(6): 1196–1217"
+    note: "BIC-FRE1981. The bootstrap consistency theorem. §31.3 Theorem 3 is the scalar sample-mean case; Thm 2.2 of the paper handles the vector case cited but not re-derived in §31.10. https://projecteuclid.org/journals/annals-of-statistics/volume-9/issue-6/Some-Asymptotic-Theory-for-the-Bootstrap/10.1214/aos/1176345637.full"
+  - type: "article"
+    author: "Kesar Singh"
+    year: 1981
+    title: "On the Asymptotic Accuracy of Efron's Bootstrap"
+    publisher: "The Annals of Statistics 9(6): 1187–1195"
+    note: "SIN1981. Companion paper to Bickel–Freedman. Proves that the percentile-bootstrap coverage error is $O(n^{-1/2})$ via Edgeworth expansion; motivates §31.5's second-order-accuracy story. https://projecteuclid.org/journals/annals-of-statistics/volume-9/issue-6/On-the-Asymptotic-Accuracy-of-Efrons-Bootstrap/10.1214/aos/1176345636.full"
+  - type: "article"
+    author: "Bradley Efron"
+    year: 1987
+    title: "Better Bootstrap Confidence Intervals"
+    publisher: "Journal of the American Statistical Association 82(397): 171–185"
+    note: "EFR1987. Introduces the BCa adjustment — bias correction $\\hat z_0$ and acceleration $\\hat a$ — cancelling the skewness term in the percentile CI's Edgeworth expansion. §31.4 Def 4 and §31.5 Thm 5 cite this paper. https://doi.org/10.1080/01621459.1987.10478410"
+  - type: "book"
+    author: "Bradley Efron and Robert J. Tibshirani"
+    year: 1993
+    title: "An Introduction to the Bootstrap"
+    publisher: "Chapman & Hall/CRC"
+    note: "EFR-TIB1993. The book-length treatment. Ch. 14 on BCa, Ch. 17 on bootstrap tests, Ch. 10 on smoothing. Pedagogical reference cited across §§31.4–31.6. https://www.routledge.com/An-Introduction-to-the-Bootstrap/Efron-Tibshirani/p/book/9780412042317"
+  - type: "book"
+    author: "Peter Hall"
+    year: 1992
+    title: "The Bootstrap and Edgeworth Expansion"
+    publisher: "Springer"
+    note: "HAL1992. The Edgeworth-expansion analysis of bootstrap accuracy. §31.5 Thm 5 is Hall's Thm 3.2; the Ch. 3 algebra sketched in the short proof cancels the skewness term for BCa and studentized CIs. https://link.springer.com/book/10.1007/978-1-4612-4384-7"
+  - type: "article"
+    author: "Bernard W. Silverman and G. Alastair Young"
+    year: 1987
+    title: "The Bootstrap: To Smooth or Not to Smooth?"
+    publisher: "Biometrika 74(3): 469–479"
+    note: "SIL-YOU1987. The smooth-bootstrap foundational paper. §31.8's definition and the kernel-jitter resampler match this paper's construction. Shows smooth bootstrap dominates naïve for the sample median in small-$n$ regimes. https://doi.org/10.1093/biomet/74.3.469"
+  - type: "article"
+    author: "Dimitris N. Politis and Joseph P. Romano"
+    year: 1994
+    title: "Large Sample Confidence Regions Based on Subsamples under Minimal Assumptions"
+    publisher: "The Annals of Statistics 22(4): 2031–2050"
+    note: "POL-ROM1994. Subsampling as the without-replacement alternative to the bootstrap. §31.10 Rem 22 cites this as the resample-without-replacement variant that survives heavier-tailed distributions than the standard bootstrap. https://projecteuclid.org/journals/annals-of-statistics/volume-22/issue-4/Large-Sample-Confidence-Regions-Based-on-Subsamples-Under-Minimal-Assumptions/10.1214/aos/1176325770.full"
+  - type: "article"
+    author: "Donald B. Rubin"
+    year: 1981
+    title: "The Bayesian Bootstrap"
+    publisher: "The Annals of Statistics 9(1): 130–134"
+    note: "RUB1981. The Bayesian variant — replace the multinomial weights of the nonparametric bootstrap with Dirichlet weights. §31.10 Rem 21 cites this as the Track-7 connection. https://projecteuclid.org/journals/annals-of-statistics/volume-9/issue-1/The-Bayesian-Bootstrap/10.1214/aos/1176345338.full"
+  - type: "article"
+    author: "Hans R. Künsch"
+    year: 1989
+    title: "The Jackknife and the Bootstrap for General Stationary Observations"
+    publisher: "The Annals of Statistics 17(3): 1217–1241"
+    note: "KUN1989. The block bootstrap for dependent data. §31.10 Rem 23 cites as the dependent-observations generalization; full treatment deferred to formalml time-series chapters. https://projecteuclid.org/journals/annals-of-statistics/volume-17/issue-3/The-Jackknife-and-the-Bootstrap-for-General-Stationary-Observations/10.1214/aos/1176347265.full"
+  - type: "book"
+    author: "Aad W. van der Vaart"
+    year: 2000
+    title: "Asymptotic Statistics"
+    publisher: "Cambridge University Press"
+    note: "vdV2000. §23 on the bootstrap; Lem 2.11 is Polya's theorem cited in §31.3 Lemma 1. Reused from Topics 10, 11, 29, 30. https://www.cambridge.org/core/books/asymptotic-statistics/A3C7DAD3F7E66A1FA60E9C8FE132EE1D"
+  - type: "book"
+    author: "Robert J. Serfling"
+    year: 1980
+    title: "Approximation Theorems of Mathematical Statistics"
+    publisher: "Wiley"
+    note: "SER1980. §2.4 on the jackknife, §3.7 on bootstrap. Reused from Topics 11, 13, 29, 30. https://onlinelibrary.wiley.com/doi/book/10.1002/9780470316481"
+  - type: "book"
+    author: "Erich L. Lehmann"
+    year: 1998
+    title: "Elements of Large-Sample Theory"
+    publisher: "Springer"
+    note: "LEH1998. Ch. 7 on CI comparators — the parametric baseline §31.4 calibrates against. Reused from Topics 13, 14, 16, 19, 23, 28, 29, 30. https://link.springer.com/book/10.1007/b98855"
+---
+
+import TheoremBlock from '../../components/ui/TheoremBlock.astro';
+import ProofBlock from '../../components/ui/ProofBlock.astro';
+import ExampleBlock from '../../components/ui/ExampleBlock.astro';
+import RemarkBlock from '../../components/ui/RemarkBlock.astro';
+import DefinitionBlock from '../../components/ui/DefinitionBlock.astro';
+import ExternalLink from '../../components/ui/ExternalLink.astro';
+
+import BootstrapDistributionExplorer from '../../components/viz/BootstrapDistributionExplorer.tsx';
+import BootstrapCIComparator from '../../components/viz/BootstrapCIComparator.tsx';
+import SmoothBootstrapDemo from '../../components/viz/SmoothBootstrapDemo.tsx';
+
+## 31.1 Motivation: the plug-in principle, extended
+
+Topic 29 built inference on a single load-bearing object: the empirical CDF $F_n(x) = n^{-1}\sum_{i=1}^n \mathbf{1}\{X_i \le x\}$, which Glivenko–Cantelli (Topic 10) guarantees converges uniformly to $F$. Topic 30 smoothed $F_n$ into a density estimator $\hat f_h$ and studied its bias–variance trade-off. Topic 31 now asks the question those two topics were building toward: if we can estimate $F$, can we estimate the *sampling distribution* of a statistic $T_n = T(X_1, \dots, X_n)$ whose analytical distribution we can't write down?
+
+The bootstrap answer is disarmingly simple: treat $F_n$ as if it were $F$ and Monte-Carlo everything else. Draw resamples $X^\ast_1, \dots, X^\ast_n$ with replacement from $F_n$; compute the statistic on each resample to get $T^\ast_n$; repeat many times; use the empirical distribution of the $T^\ast_n$ values as an approximation to the sampling distribution of $T_n$. This is the *plug-in principle*: wherever the true CDF $F$ appears in a formula for a distributional quantity, substitute $F_n$. Topic 17's permutation test was one special case (plug-in under the null); the bootstrap is the general case, and most of the effort in this topic goes into showing that the substitution is rigorous rather than wishful.
+
+<DefinitionBlock number={1} title="The plug-in principle">
+Let $\theta(F)$ be a functional of the unknown distribution $F$ — for example, $\theta(F) = \mathrm{Var}_F(T_n)$, the variance of a statistic under repeated sampling from $F$. The **plug-in estimator** of $\theta$ is $\theta(F_n)$: the same functional evaluated at the empirical distribution. When $\theta$ is sufficiently smooth as a functional of its CDF argument, $\theta(F_n) \to \theta(F)$ — a functional Glivenko–Cantelli. The bootstrap is the plug-in principle applied to the sampling-distribution functional itself.
+</DefinitionBlock>
+
+![Three-panel narrative figure. Left: the true population distribution F with ten highlighted sample points. Middle: the empirical CDF F_n as a step function overlaid on F, matching closely at the highlighted sample points. Right: a bootstrap resample X-star with several points repeated (ties visualised as stacked markers).](/images/topics/bootstrap/31-bootstrap-idea.png)
+
+*Figure 1. The bootstrap idea in three panels. Left: the unknown population distribution $F$ with a sample of size $n = 10$ highlighted. Middle: the empirical CDF $F_n$ as a step function, close to $F$ by Glivenko–Cantelli. Right: a bootstrap resample $X^\ast_1, \dots, X^\ast_{10}$ drawn iid from $F_n$ — some points repeat (stacked markers), which is the ordinary consequence of sampling with replacement from a discrete distribution on the sample points.*
+
+<ExampleBlock number={1} title="Why plug-in works when we can't write the answer">
+Suppose $T_n = \bar X_n$ is the sample mean. Classical theory tells us $\mathrm{Var}_F(\bar X_n) = \sigma^2 / n$, where $\sigma^2 = \mathrm{Var}_F(X_1)$. The plug-in answer is $\mathrm{Var}_{F_n}(\bar X_n) = \hat\sigma^2_n / n$, where $\hat\sigma^2_n = n^{-1}\sum_i (X_i - \bar X_n)^2$ is the sample variance (non-Bessel-corrected — it's the variance of $F_n$, which places mass $1/n$ at each sample point). Both estimators are consistent; the plug-in one matches the classical one. Now replace $\bar X_n$ by the sample median. Classical theory says $\mathrm{Var}_F(\mathrm{median}) \approx (4 n f(\xi_{0.5})^2)^{-1}$, requiring the population density $f$ at the median — an object Topic 29 §29.6 struggled with. The plug-in answer is $\mathrm{Var}_{F_n}(\mathrm{median})$, which the bootstrap computes by Monte Carlo resampling. No density estimate needed; the resampled medians handle everything.
+</ExampleBlock>
+
+<RemarkBlock number={1} title="Two sources of error, cleanly separated">
+The bootstrap introduces *two* distinct approximations: (i) using $F_n$ instead of $F$ — this is the *asymptotic* error that vanishes as $n \to \infty$, and Theorem 3 in §31.3 controls it; and (ii) using a finite number $B$ of Monte Carlo resamples instead of the exact-plug-in answer $\mathrm{Var}_{F_n}(\cdot)$ — this is the *Monte-Carlo* error that vanishes as $B \to \infty$, independently of $n$. In practice we fix $B$ large (say $B = 2000$) and treat the MC error as negligible; the asymptotic error is the object of theoretical study.
+</RemarkBlock>
+
+<RemarkBlock number={2} title="The bootstrap's scope vs. the parametric program">
+Track 4 (Topics 17–20) built hypothesis tests and CIs on parametric models — assume $X_i \sim F_\theta$ for some family $\{F_\theta : \theta \in \Theta\}$, derive the sampling distribution from the model, use likelihood ratios or pivots for inference. The bootstrap drops the family assumption entirely. In exchange, it gives up the efficiency and optimality guarantees that come with correctly-specified parametric models and trades them for distribution-free validity under mild moment conditions. When you don't know the model, or when you know the standard family is wrong (fat tails, mixtures, skew), bootstrap is the non-negotiable answer.
+</RemarkBlock>
+
+<a id="section-31-2"></a>
+
+## 31.2 The nonparametric bootstrap
+
+Make the resampling operation precise, state the two consistency results whose proofs live in §31.3, and check how fast the Monte-Carlo error decays so the reader can calibrate $B$.
+
+<DefinitionBlock number={2} title="Nonparametric bootstrap">
+Given an iid sample $X_1, \dots, X_n \sim F$, the **nonparametric bootstrap** draws a resample $X^\ast_1, \dots, X^\ast_n$ iid from the empirical distribution $F_n$:
+
+$$
+X^\ast_i \mid X_1, \dots, X_n \overset{\text{iid}}{\sim} F_n, \quad i = 1, \dots, n.
+$$
+
+Equivalently, each $X^\ast_i$ selects an index $J_i \sim \mathrm{Uniform}\{1, \dots, n\}$ independently and sets $X^\ast_i = X_{J_i}$. We draw $B$ independent resamples $X^{\ast(1)}, \dots, X^{\ast(B)}$, compute the statistic $T^{\ast(b)} = T(X^{\ast(b)})$ on each, and take the empirical distribution of $\{T^{\ast(b)}\}_{b=1}^B$ as the bootstrap estimate of the sampling distribution of $T_n$. Write $P^\ast, E^\ast$ for probability and expectation conditional on the observed data $X_1, \dots, X_n$ — the *bootstrap world*.
+</DefinitionBlock>
+
+<TheoremBlock number={1} title="Bootstrap SE consistency (stated)">
+Under finite-second-moment regularity, the bootstrap estimator of $\mathrm{Var}(T_n)$,
+
+$$
+\widehat{\mathrm{Var}}^\ast(T_n) = \frac{1}{B-1}\sum_{b=1}^B \bigl(T^{\ast(b)} - \bar T^\ast\bigr)^2,
+$$
+
+satisfies $\widehat{\mathrm{Var}}^\ast(T_n) \to \mathrm{Var}(T_n)$ in probability as $n, B \to \infty$. The rate is controlled by $n^{-1/2}$ for the asymptotic component and $B^{-1/2}$ for the Monte-Carlo component.
+</TheoremBlock>
+
+<TheoremBlock number={2} title="Bootstrap quantile consistency (stated)">
+Under the same regularity, the bootstrap quantile $\hat q^\ast_p = \inf\{t : \hat F^\ast_B(t) \ge p\}$ of the bootstrap empirical CDF $\hat F^\ast_B(t) = B^{-1}\sum_b \mathbf{1}\{T^{\ast(b)} \le t\}$ satisfies $\hat q^\ast_p \to q_p$ in probability, where $q_p$ is the $p$-quantile of the true sampling distribution of $T_n$.
+</TheoremBlock>
+
+![Bootstrap standard-error estimate of the sample mean as B increases on a log scale. Six points at B = 50, 100, 500, 1000, 5000, 10000 with plus-or-minus one Monte-Carlo standard-error bands. The estimate settles around 0.1 by B = 1000 with MC error shrinking as 1 over root B.](/images/topics/bootstrap/31-monte-carlo-convergence.png)
+
+*Figure 2. Bootstrap SE of the sample mean on a Normal$(0, 1)$ fixture, $n = 100$, with $\pm 1$-MC-SE bands. The estimate stabilises by $B \approx 1000$; at that point the Monte-Carlo error is under 1 %. The curve illustrates the $O(B^{-1/2})$ MC-error decay — the more expensive $O(n^{-1/2})$ asymptotic error stays fixed.*
+
+<ExampleBlock number={2} title="Bootstrap SE for the median, no density estimate required">
+On a Normal$(0, 1)$ sample of size $n = 100$ and $B = 10{,}000$, the bootstrap SE of the sample median is approximately $0.125$. The asymptotic formula $(4 n f(\xi_{0.5})^2)^{-1/2} \approx (4 \cdot 100 \cdot \varphi(0)^2)^{-1/2} = (4 \cdot 100 \cdot (2\pi)^{-1})^{-1/2} \approx 0.125$ matches to two digits. The bootstrap recovered the asymptotic answer without requiring $f(0)$ — it did the density estimation implicitly through resampling.
+</ExampleBlock>
+
+<ExampleBlock number={3} title="Bootstrap distribution of a ratio statistic">
+Two samples $(X_i, Y_i)_{i=1}^n$ iid from Exponential$(1) \times$ Exponential$(1)$, $n = 50$. The statistic $T_n = \bar X_n / \bar Y_n$ has no closed-form sampling distribution — it's a ratio of independent Gammas divided by themselves, near-Cauchy in the tails. Classical delta-method intervals rely on a Taylor expansion around $E[X]/E[Y] = 1$ that becomes unstable for small $\bar Y_n$. Bootstrap: generate $B = 2000$ resamples, compute $T^{\ast(b)}$ on each, use the empirical quantiles for a CI. Topic 19's Wald CI gives $(0.74, 1.38)$; the bootstrap percentile CI (coming in §31.4) gives $(0.79, 1.35)$. Both close; the bootstrap's advantage is that it doesn't depend on the delta-method expansion.
+</ExampleBlock>
+
+<ExampleBlock number={4} title="Cross-validation variance estimation">
+Cross-validation estimates out-of-sample risk by holding out folds, but the CV estimate itself has variance that depends on how the folds partition the data. Classical CV-variance formulas exist only for specific setups (leave-one-out on linear regression, for example). Bootstrapping CV is the general answer: resample the training data, run CV on each bootstrap sample, and use the empirical variance of the CV estimates as the CV variance. This is the bootstrap's most common ML application — it shows up whenever someone reports a CI on a cross-validation score.
+</ExampleBlock>
+
+<RemarkBlock number={3} title="Monte-Carlo error vs. asymptotic error">
+Pick a single $n$ and let $B \to \infty$: the bootstrap's answer converges to $\mathrm{Var}_{F_n}(T_n)$ — the plug-in exact answer, which still differs from $\mathrm{Var}_F(T_n)$ by the $O(n^{-1/2})$ asymptotic gap. No amount of MC refinement can close that gap; it's a property of using $F_n$ instead of $F$. The practical consequence: $B$ should be large enough to make MC error negligible relative to asymptotic error, but beyond that, increasing $B$ buys nothing. Topics 29 §29.5's DKW band gives a coarse lower bound on the asymptotic error that can guide $B$-selection.
+</RemarkBlock>
+
+<RemarkBlock number={4} title="Why the bootstrap trains cross-validation intuition">
+Every ML practitioner who has stared at a cross-validation score and wondered "how much should I trust this number?" is asking a bootstrap question. The CV score is a statistic of the training data; its sampling distribution under repeated training-set draws is exactly what bootstrap-CV estimates. The bootstrap gives a CI on the CV estimate without any parametric model of how risk depends on training-set composition — a distribution-free uncertainty quantification tailor-made for the ML use case.
+</RemarkBlock>
+
+<a id="section-31-3"></a>
+
+## 31.3 Bootstrap consistency (Efron–Bickel–Freedman)
+
+This is the featured theorem. Its statement pins down the sense in which the bootstrap distribution approximates the true sampling distribution, and its proof is the template for every Track 8 consistency result.
+
+Start with a lemma we'll need inside the main proof.
+
+<TheoremBlock type="lemma" number={1} title="Kolmogorov-distance upgrade via Polya">
+Let $G_n, G$ be CDFs with $G$ continuous. If $G_n(x) \to G(x)$ pointwise for every $x$, then $\sup_x |G_n(x) - G(x)| \to 0$.
+</TheoremBlock>
+
+<ProofBlock number={1} title="sketch">
+Pointwise convergence of monotone functions, plus continuity of the limit, upgrades to uniform convergence via a partition argument. Fix $\varepsilon > 0$; pick $-\infty = x_0 < x_1 < \dots < x_k = \infty$ with $G(x_{j+1}) - G(x_j) < \varepsilon / 2$ for every $j$ (possible by continuity of $G$). For $x \in [x_j, x_{j+1}]$,
+
+$$
+G_n(x) - G(x) \le G_n(x_{j+1}) - G(x_j) = \bigl[G_n(x_{j+1}) - G(x_{j+1})\bigr] + \bigl[G(x_{j+1}) - G(x_j)\bigr],
+$$
+
+and symmetrically for the lower bound. The first bracket vanishes at each of the $k+1$ grid points as $n \to \infty$; the second is at most $\varepsilon / 2$ by construction. Hence $\limsup_n \sup_x |G_n - G| \le \varepsilon / 2 < \varepsilon$. Since $\varepsilon$ was arbitrary, uniform convergence holds.
+
+$\blacksquare$ — using Polya 1920 as stated in vdV2000 Lem 2.11.
+</ProofBlock>
+
+Now the main theorem. Its statement pairs the bootstrap sampling-distribution CDF with the true sampling-distribution CDF and shows that their Kolmogorov distance vanishes almost surely.
+
+<TheoremBlock number={3} title="Efron–Bickel–Freedman bootstrap consistency">
+Let $X_1, \dots, X_n$ be iid with CDF $F$ satisfying $E[X_1^2] < \infty$. Write $\mu = E[X_1]$, $\sigma^2 = \mathrm{Var}(X_1) > 0$. Let $\bar X_n$ be the sample mean and $\bar X^\ast_n$ the bootstrap-sample mean — conditional on the data, this is the mean of $n$ iid draws from $F_n$. Define
+
+$$
+H_n(x) = P\bigl(\sqrt{n}(\bar X_n - \mu) \le x\bigr), \qquad H^\ast_n(x) = P\bigl(\sqrt{n}(\bar X^\ast_n - \bar X_n) \le x \,\big|\, X_1, \dots, X_n\bigr).
+$$
+
+Then $\sup_x |H^\ast_n(x) - H_n(x)| \to 0$ almost surely as $n \to \infty$.
+</TheoremBlock>
+
+<ProofBlock number={2}>
+Set $Y^\ast_i = X^\ast_i - \bar X_n$ so that conditional on the data, $Y^\ast_1, \dots, Y^\ast_n$ are iid from the centred empirical distribution $F_n - \bar X_n$. They have conditional mean $0$ and conditional variance
+
+$$
+\hat\sigma^2_n := \frac{1}{n}\sum_{i=1}^n (X_i - \bar X_n)^2.
+$$
+
+By the strong law applied to $n^{-1}\sum X_i^2$ and to $\bar X_n^2$, we have $\hat\sigma^2_n \to \sigma^2$ almost surely. Work on the almost-sure event where this convergence holds.
+
+**Step 1 — conditional Lindeberg.** Conditional on the data, the array $\{Y^\ast_i / \sqrt{n}\}_{i=1,\dots,n}$ is a row of a triangular array of iid variables with variance $\hat\sigma^2_n / n$. The Lindeberg condition (Topic 11 §11.6) requires, for every $\varepsilon > 0$,
+
+$$
+\frac{1}{\hat\sigma^2_n} E^\ast\bigl[(X^\ast_1 - \bar X_n)^2 \mathbf{1}\{|X^\ast_1 - \bar X_n| > \varepsilon\sqrt{n}\,\hat\sigma_n\}\bigr] \to 0.
+$$
+
+The conditional expectation equals $n^{-1}\sum_{i=1}^n (X_i - \bar X_n)^2 \mathbf{1}\{|X_i - \bar X_n| > \varepsilon\sqrt{n}\,\hat\sigma_n\}$. Each indicator vanishes for $n$ large: $|X_i - \bar X_n|$ is bounded by a constant depending on $i$, while $\sqrt{n}\,\hat\sigma_n \to \infty$ almost surely. Dominated convergence — the summands are bounded above by $(X_i - \bar X_n)^2$ and average to $\hat\sigma^2_n$, which is itself almost-surely bounded — delivers the limit.
+
+**Step 2 — apply the triangular-array CLT.** Topic 11 Theorem 4 (Lindeberg–Feller) yields, conditionally on the data on the same full-probability event,
+
+$$
+\sqrt{n}(\bar X^\ast_n - \bar X_n) = \frac{1}{\sqrt{n}}\sum_{i=1}^n Y^\ast_i \xrightarrow{d} \mathcal{N}(0, \sigma^2).
+$$
+
+Marginally (unconditionally), Topic 11 Theorem 3 gives the classical CLT $\sqrt{n}(\bar X_n - \mu) \xrightarrow{d} \mathcal{N}(0, \sigma^2)$ with the same limit variance. Thus $H^\ast_n(x) \to \Phi(x / \sigma)$ pointwise almost surely, and $H_n(x) \to \Phi(x / \sigma)$ pointwise.
+
+**Step 3 — upgrade to Kolmogorov distance.** The limit $\Phi(\cdot / \sigma)$ is continuous; apply Lemma 1 to each sequence:
+
+$$
+\sup_x |H^\ast_n(x) - \Phi(x/\sigma)| \to 0 \text{ a.s.}, \qquad \sup_x |H_n(x) - \Phi(x/\sigma)| \to 0.
+$$
+
+Triangle inequality closes: $\sup_x |H^\ast_n(x) - H_n(x)| \to 0$ almost surely.
+
+$\blacksquare$ — using Bickel–Freedman 1981 Thm 2.1, Topic 11 Thm 4 (Lindeberg–Feller), and Lemma 1 above.
+</ProofBlock>
+
+![Featured two-panel figure. Left panel: three overlaid bootstrap histograms at B = 100, 500, and 2000 against a high-precision Monte-Carlo reference of the true sampling distribution, for fixed n = 50 and the sample-mean statistic on N(0, 1); the histograms progressively match the reference as B grows. Right panel: Kolmogorov distance sup over x of the absolute difference between H-n-star and H-n as n increases through 20, 50, and 200, showing the expected decay.](/images/topics/bootstrap/31-sampling-distribution-convergence.png)
+
+*Figure 3. **Featured.** Theorem 3 in action. Left: fixed $n = 50$, Monte-Carlo error shrinks as $B$ grows — the bootstrap histogram matches the reference sampling distribution arbitrarily well given enough replicates. Right: fixed $B = 2000$, asymptotic error shrinks as $n$ grows — the Kolmogorov distance between $H^\ast_n$ and $H_n$ decays at the $n^{-1/2}$ rate the proof supplies. Source: Normal$(0, 1)$, statistic $\bar X_n$.*
+
+<BootstrapDistributionExplorer client:visible />
+
+<ExampleBlock number={5} title="Normal-mean case: analytic reference">
+When $X_i \sim \mathcal{N}(0, 1)$ and $T_n = \bar X_n$, the sampling distribution $H_n$ is analytic: $\sqrt{n}\bar X_n \sim \mathcal{N}(0, 1)$ exactly. So the "true" reference curve in the featured component's first panel is the standard Normal density at sample size $n$, no Monte Carlo needed. The KS-distance panel shows $D_{KS}(H^\ast_n, \Phi) \to 0$ at rate $n^{-1/2}$, exactly the $1/\sqrt{n}$ envelope one would expect from the CLT remainder.
+</ExampleBlock>
+
+<RemarkBlock number={5} title="Bahadur-linearization: the Track 8 template">
+The three-step structure of the proof — (i) write the bootstrap statistic as an empirical average of iid-conditional-on-data terms, (ii) apply a triangular-array CLT to the linear part, (iii) upgrade pointwise convergence to uniform via Polya — is exactly the same template as Topic 29's Bahadur representation of the sample quantile and Topic 30's AMISE derivation for KDE. Every major Track 8 result reduces to this linearization pattern. Topic 29 §29.6 Rem 13 called this out as the unifying thread; Theorem 3's proof makes it literally visible. Topic 32's empirical-process generalization will lift the same structure one level: the "empirical average" becomes a stochastic integral against a sample-path-continuous limit process, the triangular-array CLT becomes Donsker's theorem, and Polya's upgrade becomes the uniform continuity of the limit Gaussian process.
+</RemarkBlock>
+
+<RemarkBlock number={6} title="Bootstrapped model uncertainty">
+The natural ML descendant of Theorem 3: treat a model's predictions as a statistic, bag multiple bootstrap replicates of the training set, refit on each, and use the distribution of test-time predictions as a proxy for posterior uncertainty. This is the theoretical foundation for bagging, for many uncertainty-quantification methods in deep learning, and for the non-parametric half of conformal prediction. Theorem 3 guarantees that as $n$ grows, the bagged-prediction distribution matches the sampling distribution of the model's prediction under re-draw of the training set — which is what honest uncertainty quantification actually asks for.
+</RemarkBlock>
+
+<a id="section-31-4"></a>
+
+## 31.4 Bootstrap confidence intervals
+
+Theorem 3 tells us the bootstrap sampling distribution approximates the true one. The remaining question is how to convert that approximation into a CI. Four constructions — percentile, basic, BCa, studentized — all valid in the sense of Theorem 3 but with different coverage-error rates that §31.5 will analyse.
+
+Fix notation: let $T_n$ be the estimator, $\theta = \theta(F)$ the target parameter, $T^\ast_{(b)}$ the $b$-th bootstrap replicate, and $\hat F^\ast_B$ the empirical CDF of $\{T^\ast_{(b)}\}_{b=1}^B$. All four definitions assume the replicates are sorted so that $T^\ast_{(1)} \le T^\ast_{(2)} \le \dots \le T^\ast_{(B)}$, and we take quantiles of the bootstrap empirical distribution by linear interpolation on the sorted order statistics.
+
+<DefinitionBlock number={3} title="Percentile CI (Efron 1979)">
+The percentile CI at level $1 - \alpha$ is the pair of $\alpha / 2$ and $1 - \alpha/2$ quantiles of the bootstrap replicates:
+
+$$
+\mathrm{CI}^{\mathrm{pct}}_{1-\alpha} = \bigl[\hat q^\ast_{\alpha/2},\ \hat q^\ast_{1-\alpha/2}\bigr].
+$$
+
+This is the intuitive construction — the one that inverts the bootstrap empirical CDF without further adjustment. It's exact under symmetry about $\theta$ but under-covers asymmetric sampling distributions (§31.5 makes this precise).
+</DefinitionBlock>
+
+<DefinitionBlock number={4} title="Basic (Hall) CI">
+The basic CI reflects the percentile endpoints around the observed $T_n$:
+
+$$
+\mathrm{CI}^{\mathrm{bsc}}_{1-\alpha} = \bigl[2 T_n - \hat q^\ast_{1-\alpha/2},\ 2 T_n - \hat q^\ast_{\alpha/2}\bigr].
+$$
+
+The motivation: treat $T^\ast_n - T_n$ as a pivot whose distribution mimics that of $T_n - \theta$; invert the pivot. Under symmetry, basic and percentile coincide; under skewness, they lean in opposite directions. Hall 1992 §3.3 explains why basic is often the better default.
+</DefinitionBlock>
+
+<DefinitionBlock number={5} title="BCa CI (Efron 1987)">
+The **bias-corrected and accelerated** CI uses two plug-in constants to adjust the percentile endpoints. Let $\hat z_0 = \Phi^{-1}\bigl(B^{-1}\sum_b \mathbf{1}\{T^\ast_{(b)} < T_n\}\bigr)$ — the bias correction. Let $\hat a$ be the jackknife acceleration,
+
+$$
+\hat a = \frac{\sum_{i=1}^n (T_{(\cdot)} - T_{(i)})^3}{6 \bigl[\sum_{i=1}^n (T_{(\cdot)} - T_{(i)})^2\bigr]^{3/2}},
+$$
+
+where $T_{(i)}$ is the leave-one-out estimate and $T_{(\cdot)} = n^{-1}\sum_i T_{(i)}$. The adjusted quantile level for $p \in \{\alpha/2,\ 1-\alpha/2\}$ is
+
+$$
+\tilde p = \Phi\!\left(\hat z_0 + \frac{\hat z_0 + z_p}{1 - \hat a(\hat z_0 + z_p)}\right), \qquad z_p = \Phi^{-1}(p).
+$$
+
+The BCa CI is $[\hat q^\ast_{\tilde{p}_\mathrm{lo}},\ \hat q^\ast_{\tilde{p}_\mathrm{hi}}]$, with the adjusted quantile levels substituted for $\alpha/2$ and $1-\alpha/2$.
+</DefinitionBlock>
+
+<DefinitionBlock number={6} title="Studentized (bootstrap-$t$) CI">
+The studentized CI builds a pivot from the studentized statistic. For each outer bootstrap replicate, draw an inner bootstrap to estimate $\mathrm{SE}^\ast_b$, then form
+
+$$
+T^\ast_b = \frac{T^\ast_{(b)} - T_n}{\mathrm{SE}^\ast_b}.
+$$
+
+Let $\hat t^\ast_p$ be the $p$-quantile of $\{T^\ast_b\}_{b=1}^B$. The CI is
+
+$$
+\mathrm{CI}^{\mathrm{stu}}_{1-\alpha} = \bigl[T_n - \hat t^\ast_{1-\alpha/2} \cdot \widehat{\mathrm{SE}}(T_n),\ T_n - \hat t^\ast_{\alpha/2} \cdot \widehat{\mathrm{SE}}(T_n)\bigr],
+$$
+
+where $\widehat{\mathrm{SE}}(T_n)$ is the analytic standard-error estimate on the observed sample. The inversion mimics Topic 19's $t$-CI construction — hence the name "bootstrap-$t$."
+</DefinitionBlock>
+
+The next theorem says all four constructions deliver asymptotically valid coverage. The sketch-proof uses Theorem 3 and the continuous-mapping theorem; §31.5's Theorem 5 will refine the result by computing the coverage-error rate.
+
+<TheoremBlock number={4} title="Asymptotic validity of bootstrap CIs">
+Under the regularity of Theorem 3, each of the four CI constructions above achieves asymptotic coverage $1 - \alpha$ as $n \to \infty$: for each CI type $\mathrm{CI}^{(\bullet)}_{1-\alpha}$,
+
+$$
+P\bigl(\theta \in \mathrm{CI}^{(\bullet)}_{1-\alpha}\bigr) \to 1 - \alpha.
+$$
+</TheoremBlock>
+
+<ProofBlock number={3} title="sketch">
+The percentile and basic CIs follow directly from Theorem 3: the bootstrap empirical CDF $\hat F^\ast_B(\cdot)$ approximates the true sampling CDF of $T_n - \theta$ uniformly, so inverting at $\alpha/2$ and $1-\alpha/2$ recovers the asymptotic quantiles of that sampling distribution. The studentized CI adds one layer: Theorem 3 applied to the studentized statistic $Z_n = \sqrt{n}(T_n - \theta)/\hat\tau_n$ yields uniform approximation of its sampling CDF by the bootstrap analogue. The BCa CI uses the smoothness of the normal-quantile transform and $\hat z_0, \hat a \to 0$ in probability to show the adjusted quantiles $\tilde p$ converge to the target levels, and percentile-consistency carries over.
+
+$\blacksquare$ — using Theorem 3, the continuous mapping theorem, and Lehmann 1998 §7.3 for the studentized upgrade.
+</ProofBlock>
+
+![Coverage and length of five 95% confidence interval methods across sample sizes n in 20, 50, 100, 200, 500. Two rows: row one for sample mean of Normal(0,1); row two for sample mean of Student-t with 3 degrees of freedom. Five curves per panel: percentile, basic, BCa, studentized, and Wald-t. On the Normal row all methods converge to the nominal 95% by n=50. On the t-3 row the bootstrap methods track 95% while the Wald-t curve falls short.](/images/topics/bootstrap/31-ci-comparison.png)
+
+*Figure 4. Five CI methods compared across sample sizes. Top row: Normal$(0, 1)$ — all methods converge quickly to nominal coverage. Bottom row: Student-$t_3$ — the Wald-$t$ baseline degrades because its Normal-tail assumption is wrong, while the bootstrap methods retain validity because they don't make the assumption. The BCa method's slightly faster convergence at small $n$ previews the second-order accuracy §31.5 will prove.*
+
+<BootstrapCIComparator client:visible />
+
+<ExampleBlock number={6} title="Sample median CI, Exp(1) fixture">
+$X_1, \dots, X_{100} \sim \mathrm{Exp}(1)$; target $\theta = \log 2$, the population median. Four bootstrap CIs at $\alpha = 0.05$ with $B = 2000$: percentile $[0.52, 0.88]$, basic $[0.54, 0.90]$, BCa $[0.54, 0.91]$, studentized $[0.53, 0.92]$. All four cover $\log 2 \approx 0.693$; length differences under 5 %. At $n = 30$ the gap between percentile and BCa widens — percentile falls below nominal, BCa holds — which is the small-sample signature of the skewness correction.
+</ExampleBlock>
+
+<ExampleBlock number={7} title="Ratio of means, small $n$, skewed">
+Same ratio-of-means statistic as Example 3, but at $n = 30$. Wald CI $(0.43, 1.61)$ with 92 % coverage over 10 000 simulated datasets (under-coverage from delta-method bias). Bootstrap percentile $(0.51, 1.48)$, 94 %. BCa $(0.56, 1.52)$, 95 %. The BCa correction closes the gap exactly where the Wald method falls short.
+</ExampleBlock>
+
+<ExampleBlock number={8} title="Correlation coefficient CI">
+Classical Fisher $z$-transform CI for the sample correlation works only under bivariate Normal — fails wildly outside that family. Bootstrap percentile on $\hat \rho_n$ directly (no transform, no Normal assumption) tracks nominal coverage for almost any joint distribution. Bootstrap won't rescue us from tiny $n$ or from near-perfect-correlation degeneracy, but it covers the "my data isn't bivariate Normal" case that kills the $z$-transform.
+</ExampleBlock>
+
+<ExampleBlock number={9} title="Prediction-interval construction">
+The bootstrap's workhorse role in ML. Given a trained model $\hat m$ and test point $x_0$, the prediction $\hat y_0 = \hat m(x_0)$ has two sources of uncertainty: model-estimation uncertainty (how would $\hat m$ differ under a re-drawn training set?) and irreducible noise (how would $y_0$ differ given $\hat m$ fixed?). Bootstrap the training set to capture the first; bootstrap the residuals on a holdout to capture the second; the 2.5 % and 97.5 % percentiles of $\hat m^\ast(x_0) + \epsilon^\ast$ are a valid 95 % prediction interval under mild regularity. Conformal prediction's non-residual precursors all descend from this recipe.
+</ExampleBlock>
+
+<RemarkBlock number={7} title="Which CI to pick in practice">
+When the statistic is roughly symmetric and the sample size is moderate, percentile is fine — it's cheapest and the interpretation is the most direct. When the statistic is skewed or moderately small-$n$, BCa is the right default. Studentized is the gold-standard for refined small-sample inference but requires an SE estimator and an inner bootstrap, which can be expensive. Basic is a theoretical bridge more than a practical choice. The `BootstrapCIComparator` above shows all five side by side; picking the right one is mostly a matter of which small-sample distortion you're most worried about.
+</RemarkBlock>
+
+<RemarkBlock number={8} title="CI↔test duality">
+Topic 19 §19.7 established the CI↔test duality: inverting a family of level-$\alpha$ tests produces a $1-\alpha$ CI, and a $1-\alpha$ CI corresponds to a test that rejects $H_0: \theta = \theta_0$ if $\theta_0 \notin \mathrm{CI}$. The duality survives the nonparametric setting: every bootstrap CI induces a bootstrap test of the same form, and §31.6 develops the test-first framing explicitly. The `BootstrapCIComparator`'s coverage panel can be read as a size-calibration panel for the dual tests — a 95 % CI covers under the null 95 % of the time *iff* the dual test has size 5 %.
+</RemarkBlock>
+
+<a id="section-31-5"></a>
+
+## 31.5 BCa second-order accuracy
+
+Theorem 4 says all four CIs cover asymptotically. But how *fast*? The question matters in practice — a CI with $O(n^{-1/2})$ coverage error can be off by 5–10 percentage points at $n = 50$, while one with $O(n^{-1})$ error is typically off by under 1. Hall's theorem, specialized to the BCa and studentized adjustments, gives the sharp rate.
+
+<TheoremBlock number={5} title="Hall 1992 second-order accuracy">
+Under smooth-functional regularity (two-term Edgeworth expansion valid for $T_n$ and its studentized version), the percentile and basic bootstrap CIs have coverage error $O(n^{-1/2})$, while the BCa and studentized CIs achieve coverage error $O(n^{-1})$.
+</TheoremBlock>
+
+<ProofBlock number={4} title="sketch">
+Denote the studentized statistic $Z_n = \sqrt{n}(T_n - \theta)/\hat\tau_n$. Under smoothness (Cramér conditions on the underlying distribution, finite third moment, smooth functional), $Z_n$ admits a one-term Edgeworth expansion
+
+$$
+P(Z_n \le z) = \Phi(z) + n^{-1/2} p_1(z) \phi(z) + O(n^{-1}),
+$$
+
+where $p_1$ is an even polynomial depending on the cumulants of $T_n$. The bootstrap studentized statistic $Z^\ast_n$ admits the analogous conditional expansion; Singh 1981 / Hall 1992 show that $p_1^\ast - p_1 = O_P(n^{-1/2})$ under plug-in moment estimation, yielding second-order agreement:
+
+$$
+\sup_z \bigl|P(Z^\ast_n \le z \mid \text{data}) - P(Z_n \le z)\bigr| = O_P(n^{-1}).
+$$
+
+Inverting the studentized pivot at $z_{\alpha/2}$ gives a studentized CI with $O(n^{-1})$ coverage error, matching the Edgeworth-correction order.
+
+The percentile CI inverts the wrong pivot — the raw $\sqrt{n}(T_n - \theta)$ rather than its studentized version — so its coverage-error expansion retains an uncorrected $n^{-1/2}$ term from skewness; the basic CI shares this defect. The BCa adjustment estimates the bias correction $\hat z_0 = \Phi^{-1}(\hat F^\ast(T_n))$ and acceleration $\hat a$ (jackknife skewness estimator) precisely to cancel this skewness term; Hall 1992 Ch. 3 verifies the cancellation algebraically.
+
+$\blacksquare$ — using Hall 1992 Thm 3.2, Singh 1981, and the Edgeworth machinery of Topic 11 §11.7.
+</ProofBlock>
+
+![Log-log plot of coverage error versus sample size n in 20, 50, 100, 200, 500, 1000 for two CI methods. Percentile curve declines with slope approximately minus one half. BCa curve declines with slope approximately minus one. Statistic is sample mean on a right-skewed exponential-translated distribution.](/images/topics/bootstrap/31-bca-accuracy.png)
+
+*Figure 5. Numerical verification of Theorem 5. Log-log plot of coverage error vs. $n$ for the percentile CI (slope $\approx -1/2$) and BCa CI (slope $\approx -1$) on a sample-mean statistic from a right-skewed exponential-translated distribution. The BCa line is roughly one decade below the percentile line throughout — the practical cash-out of second-order vs. first-order accuracy.*
+
+<a id="section-31-6"></a>
+
+## 31.6 Bootstrap hypothesis tests
+
+By the CI↔test duality, every bootstrap CI already defines a bootstrap test. But the test-first perspective exposes a subtle issue: to test $H_0: \theta = \theta_0$, we need the sampling distribution *under the null*, not under the observed data. Define the bootstrap test properly, then state its size-control theorem, then work examples.
+
+<DefinitionBlock number={7} title="Bootstrap hypothesis test">
+To test $H_0: \theta(F) = \theta_0$ against $H_1: \theta(F) \neq \theta_0$, construct a transformation $F^{(0)}_n$ of the empirical distribution under which $\theta(F^{(0)}_n) = \theta_0$ exactly — typically by shifting, re-centring, or re-scaling $F_n$. Draw $B$ resamples from $F^{(0)}_n$, compute the test statistic $T^{\ast(b)}$ on each, and reject $H_0$ at level $\alpha$ if the observed $T_n$ exceeds the $1 - \alpha$ quantile of the null-resample distribution. Alternative-sided tests adapt the rejection region accordingly; the $p$-value is $B^{-1}\sum_b \mathbf{1}\{T^{\ast(b)} \ge T_n\}$ plus continuity corrections.
+</DefinitionBlock>
+
+<TheoremBlock number={6} title="Bootstrap test size control (stated)">
+Under the regularity of Theorem 3 plus uniform-in-$\theta_0$ Edgeworth validity, the bootstrap test defined above has size $\alpha + O(n^{-1/2})$ (first-order accurate) or $\alpha + O(n^{-1})$ (second-order, when paired with studentized or BCa-adjusted test statistics). Power matches the parametric competitor's to leading order; the bootstrap's advantage shows up when the parametric assumption is violated.
+</TheoremBlock>
+
+![Size and power curves for three tests: bootstrap t-test, permutation test, and parametric t-test. Two-sample setup with n1 = n2 = 30; alternative values mu1 minus mu2 in negative one, negative a half, zero, a half, and one. Bootstrap and permutation curves track each other; parametric t-test curve dips below the others at the large-alternative extremes.](/images/topics/bootstrap/31-bootstrap-test-power.png)
+
+*Figure 6. Two-sample test comparison: bootstrap-$t$, permutation, and parametric $t$-test, $n_1 = n_2 = 30$. Size (centre point at $\mu_1 - \mu_2 = 0$) is controlled at 0.05 for all three. Power matches for moderate alternatives; parametric $t$ loses ground at the extremes where its normal-tail assumption breaks.*
+
+<ExampleBlock number={10} title="Null-resample construction for a difference of means">
+Two-sample test of $H_0: \mu_X = \mu_Y$ against $H_1: \mu_X \neq \mu_Y$. Under the null, the two samples are exchangeable with common mean $\hat\mu = (\bar X_n + \bar Y_m) / 2$ (equal sample sizes; the $\mathrm{mean}$-weighted pooled version for unequal $n, m$). Centre both samples to this common mean: $\tilde X_i = X_i - \bar X_n + \hat\mu$, $\tilde Y_j = Y_j - \bar Y_m + \hat\mu$. Draw bootstrap resamples from $\tilde X$ and $\tilde Y$ separately; compute the difference of resample means; compare to the observed $\bar X_n - \bar Y_m$. This is the bootstrap analogue of the permutation test's label-shuffling — same null calibration, different mechanics.
+</ExampleBlock>
+
+<ExampleBlock number={11} title="A/B test significance">
+Conversion rates $X \in \{0, 1\}$ with $n_A = n_B = 5000$, observed rates $0.043$ vs. $0.051$. Parametric $z$-test $p$-value: $0.041$. Bootstrap-$t$ null-resample $p$-value: $0.038$ ($B = 10000$). The two agree to within MC error because $n$ is large and the Normal approximation is excellent. Now imagine $X$ is a heavy-tailed revenue-per-user metric — the $z$-test's Normal approximation is wrong and the parametric $p$-value drifts; the bootstrap-$t$ tracks the truth because it doesn't assume Normality.
+</ExampleBlock>
+
+<RemarkBlock number={9} title="Bootstrap tests vs. permutation tests">
+Permutation tests are the classical distribution-free alternative. They're exact (no asymptotic error) but require exchangeability under the null — often a stronger assumption than what bootstrap tests need. Bootstrap tests are asymptotic but more flexible: they handle non-exchangeable nulls (e.g., paired-design settings with different variances), and they generalize to multi-parameter nulls where permutation doesn't naturally apply. In the two-sample equal-variance case, the two are equivalent to leading order.
+</RemarkBlock>
+
+<RemarkBlock number={10} title="A/B testing with non-Normal metrics">
+Revenue-per-user, time-on-site, and other heavy-tailed ML metrics routinely violate the Normal-tail assumption that the standard $z$- or $t$-test relies on. Bootstrap tests are the production-grade answer: they give valid $p$-values under the actual metric distribution without requiring the analyst to specify what that distribution is. Every A/B-testing platform that reports a "robust significance" score is running a variant of this construction.
+</RemarkBlock>
+
+<a id="section-31-7"></a>
+
+## 31.7 Parametric bootstrap
+
+When we *do* have a parametric model — even a misspecified one — we can resample from the fitted model instead of from $F_n$. The parametric bootstrap has a lower MC variance at small $n$ (no ties, no discreteness in the resample) but inherits the model's correctness or incorrectness.
+
+<DefinitionBlock number={8} title="Parametric bootstrap">
+Fit a parametric family $\{F_\theta : \theta \in \Theta\}$ to the observed sample via MLE or another estimator, obtaining $\hat\theta_n$. Draw bootstrap resamples $X^\ast_1, \dots, X^\ast_n$ iid from $F_{\hat\theta_n}$ — not from $F_n$. Compute the statistic on each resample and proceed as in the nonparametric bootstrap.
+</DefinitionBlock>
+
+<TheoremBlock number={7} title="Parametric bootstrap consistency (stated)">
+Under the regularity of Topic 14 (parametric MLE consistency) plus Topic 11's Edgeworth validity, the parametric bootstrap distribution $H^{\ast,\mathrm{par}}_n$ converges in Kolmogorov distance to the true sampling distribution $H_n$ at rate $O(n^{-1/2})$, matching the nonparametric bootstrap in first-order accuracy. When the parametric model is correctly specified, the parametric bootstrap achieves the same second-order accuracy as the studentized or BCa versions without needing the studentization step.
+</TheoremBlock>
+
+<ExampleBlock number={12} title="Normal-location bootstrap, right vs. wrong model">
+Data: $n = 100$ iid from Student-$t_3$ (heavy tails). Parametric bootstrap under a Normal model: fit $\hat\mu_n = \bar X_n$, $\hat\sigma^2_n = n^{-1}\sum_i (X_i - \bar X_n)^2$; resample from $\mathcal{N}(\hat\mu_n, \hat\sigma^2_n)$. The CI on $\mu$ is $(\bar X_n \pm 1.96 \hat\sigma_n / \sqrt{n})$, i.e. the Wald interval — and it under-covers because the Normal tails are wrong. Nonparametric bootstrap on the same data gives an interval that correctly includes the $t_3$ tail contribution; its coverage matches nominal within MC error. Misspecification matters for the parametric bootstrap; the nonparametric bootstrap is immune.
+</ExampleBlock>
+
+<RemarkBlock number={11} title="Parametric bootstrap in ML">
+When a neural network or probabilistic model supplies an explicit likelihood $p(y \mid x; \theta)$, parametric bootstrap is the natural uncertainty-quantification tool: sample training data from the fitted model, refit, observe variability. For a correctly specified generative model this recovers posterior-like uncertainty without running MCMC. When the generative model is wrong, so is the bootstrap uncertainty — which is why the nonparametric bootstrap remains the honest default for model-free uncertainty in ML.
+</RemarkBlock>
+
+<RemarkBlock number={12} title="Hybrid (semiparametric) variants">
+Residual bootstrap for regression is the canonical hybrid: parametric for the mean function (linear regression's fitted line), nonparametric for the error distribution (resample residuals with replacement). Wild bootstrap extends this to heteroscedastic errors. These variants are deferred to §31.10's forward-pointing remarks — all live under the same §29–§31 resampling framework but with different assumptions on which part of the model is fitted vs. empirical.
+</RemarkBlock>
+
+<a id="section-31-8"></a>
+
+## 31.8 Smooth bootstrap (Topic 30 bridge)
+
+The nonparametric bootstrap resamples from $F_n$ — a discrete distribution on the sample points. For statistics that depend smoothly on $F$ (mean, most moments), the discreteness is invisible. For statistics that depend on continuity (the median, any quantile, density-ratio estimators), the discreteness causes lattice-artifacts: a bootstrap median must equal one of the observed sample points, so its distribution is supported on at most $n$ atoms. Smooth bootstrap fixes the artifact by resampling from $\hat f_h$ — the KDE from Topic 30 — instead of from $F_n$.
+
+<DefinitionBlock number={9} title="Smooth bootstrap (Silverman–Young 1987)">
+Let $\hat f_h$ be the Gaussian-kernel KDE from Topic 30 with bandwidth $h$ (typically $h$ = Silverman's rule from Topic 30 §30.9). The **smooth bootstrap** resamples from $\hat f_h$ rather than from $F_n$:
+
+$$
+X^\ast_i = X_{J_i} + h Z_i, \qquad J_i \sim \mathrm{Uniform}\{1, \dots, n\}, \quad Z_i \sim \mathcal{N}(0, 1), \quad i = 1, \dots, n.
+$$
+
+The $J_i$ pick a sample point and the Gaussian $h Z_i$ adds a small kernel-shaped jitter. The resulting sample is iid from $\hat f_h$ by construction.
+</DefinitionBlock>
+
+<TheoremBlock number={8} title="Smooth-bootstrap consistency (stated)">
+Under the regularity of Topic 30 Thm 6 (pointwise KDE consistency) plus Theorem 3's moment condition, the smooth-bootstrap sampling distribution converges to the true sampling distribution in Kolmogorov distance, at the same $O(n^{-1/2})$ rate as the nonparametric bootstrap. For density-functional statistics (median, quantiles, integrals of $f$), smooth bootstrap strictly dominates: its MC variance is smaller at every $B$, and the $O(n^{-1/2})$ rate constant is smaller too.
+</TheoremBlock>
+
+![Two histograms of B = 2000 bootstrap medians on the same Normal(0,1) sample of size n = 50. The naive histogram (resampling from F_n) shows spikes at the original sample points; the smooth histogram is continuous. True sampling-distribution reference curve (from high-precision Monte Carlo) overlaid on both; smooth histogram matches the reference closely, naive histogram approximates it piecewise.](/images/topics/bootstrap/31-smooth-bootstrap.png)
+
+*Figure 7. Naïve vs. smooth bootstrap of the sample median, $n = 50$, $B = 2000$. The naïve histogram's spikes are the observed sample points — the median of any resample must be one of them. Smooth bootstrap fills the gaps with kernel-jitter and recovers the true sampling-distribution shape. The smooth SE is roughly 3 % smaller than the naïve SE at this $n$; the gap grows at smaller $n$.*
+
+<SmoothBootstrapDemo client:visible />
+
+<ExampleBlock number={13} title="Simultaneous envelopes via smooth bootstrap">
+Topic 30 §30.5 Rem 15 promised the smooth bootstrap as a simultaneous-envelope tool. Given $\hat f_h$, draw $B$ smooth-bootstrap samples; on each, compute $\hat f^\ast_h$; form the pointwise $2.5$ % and $97.5$ % envelopes across the $B$ replicates. Under mild regularity this recovers a valid $95$ % uniform confidence band for $f$ — the KDE analogue of the DKW band from Topic 29 §29.5. For the median fixture above, the envelope construction on a moderate-$n$ sample gives a smoothly varying band that the naïve bootstrap can't produce because naïve bootstrap places mass only at sample points.
+</ExampleBlock>
+
+<RemarkBlock number={13} title="Bandwidth as a tuning knob">
+Smooth bootstrap introduces the bandwidth $h$ as a new free parameter. Topic 30's data-driven selectors — Silverman (§30.9), Scott (§30.9), Sheather–Jones — all carry over. Silverman's rule is the practical default; it's nearly bandwidth-invariant in the $0.5 h_\mathrm{Silverman}$ to $2 h_\mathrm{Silverman}$ range (the right panel of `SmoothBootstrapDemo` shows this). Under-smoothing ($h \to 0$) recovers the naïve bootstrap; over-smoothing ($h$ large) over-regularizes and biases the smooth-bootstrap SE upward.
+</RemarkBlock>
+
+<RemarkBlock number={14} title="Kernel-based uncertainty for nonparametric regressors">
+Nadaraya–Watson and local-polynomial regressors (forward to formalML) are kernel-weighted averages of $Y_i$. Their prediction intervals are the smooth-bootstrap generalization of §31.4's prediction intervals: smooth-bootstrap the covariates $X_i$, refit the regressor on each bootstrap sample, and take the pointwise percentile envelopes of the predictions. The construction is the Topic 30 → Topic 31 bridge made fully operational for the regression setting.
+</RemarkBlock>
+
+<a id="section-31-9"></a>
+
+## 31.9 Bias correction
+
+Statisticians think of bias as a nuisance to estimate and correct. The bootstrap gives both in one pass.
+
+<DefinitionBlock number={10} title="Bootstrap bias and bias correction">
+The bootstrap bias estimator for $T_n$ as an estimator of $\theta$ is
+
+$$
+\widehat{\mathrm{bias}}^\ast(T_n) = \bar T^\ast - T_n, \qquad \bar T^\ast = \frac{1}{B}\sum_{b=1}^B T^{\ast(b)}.
+$$
+
+The bias-corrected estimator is
+
+$$
+\tilde T_n = T_n - \widehat{\mathrm{bias}}^\ast(T_n) = 2 T_n - \bar T^\ast.
+$$
+
+In words: reflect the bootstrap mean around the observed statistic. The motivation is the Taylor linearization $T_n - \theta \approx (T_n - E[T_n]) + \mathrm{bias}(T_n)$; subtracting the bootstrap-estimated bias gives a reduced-bias estimator at the cost of slightly inflated variance.
+</DefinitionBlock>
+
+<TheoremBlock number={9} title="Bias-correction variance trade-off (stated)">
+Under the regularity of Theorem 3, the bias-corrected estimator satisfies $\mathrm{bias}(\tilde T_n) = O(n^{-2})$ — one order better than the original $T_n$'s $O(n^{-1})$ bias. The variance inflation is $\mathrm{Var}(\tilde T_n) = \mathrm{Var}(T_n) (1 + O(n^{-1}))$, negligible at moderate $n$. MSE-wise, bias correction dominates when the leading-order bias is large relative to the SE — typically at small $n$ or for highly nonlinear statistics.
+</TheoremBlock>
+
+![MSE of two estimators of a ratio-of-means parameter across sample sizes n in 20, 50, 100, 200, 500. Top curve: naive ratio estimator. Bottom curve: bias-corrected ratio estimator. Both curves decay at roughly the same rate but the bias-corrected curve is uniformly lower, with the gap narrowing as n grows.](/images/topics/bootstrap/31-bias-correction.png)
+
+*Figure 8. Bias correction in action: MSE of the naïve vs. bias-corrected ratio-of-means estimator on Exponential$(1)$-by-Exponential$(1)$ fixtures. The bias-corrected estimator's MSE is strictly lower at every $n$, with the gap shrinking as $n$ grows. At $n = 20$ the correction is worth a factor of $1.4$ in MSE; by $n = 200$ the two are within $5$ %.*
+
+<ExampleBlock number={14} title="Bias correction for the sample variance">
+The sample variance $\hat\sigma^2_n = n^{-1}\sum_i (X_i - \bar X_n)^2$ has bias $-\sigma^2/n$ relative to the population variance $\sigma^2$. The Bessel-corrected $s^2_n = \hat\sigma^2_n \cdot n/(n-1)$ fixes this analytically — a well-known first-order correction. The bootstrap bias-correction recovers the same fix without the analytic insight: $\widehat{\mathrm{bias}}^\ast(\hat\sigma^2_n) = -\hat\sigma^2_n / n + O_P(n^{-3/2})$, matching the analytic bias. Subtracting gives $\tilde\sigma^2_n = \hat\sigma^2_n (1 + 1/n) + O_P(n^{-1/2})$, first-order equivalent to $s^2_n$. The bootstrap recovered Bessel's correction by Monte Carlo.
+</ExampleBlock>
+
+<RemarkBlock number={15} title="When not to bias-correct">
+Bias correction inflates variance. At small $n$ the bias dominates and correction helps; at large $n$ the bias is negligible and the variance inflation hurts. A rule of thumb: bias-correct when $|\widehat{\mathrm{bias}}^\ast(T_n)| > \widehat{\mathrm{SE}}^\ast(T_n) / 4$. Below that threshold, leave $T_n$ alone.
+</RemarkBlock>
+
+<RemarkBlock number={16} title="Debiasing cross-validated risk">
+Cross-validation is known to underestimate test risk by the *optimism*: the gap between the training-set risk and the test-set risk. Bootstrap bias-correction of the CV risk is the standard debiasing technique — resample the training set, recompute CV on each resample, use the $\bar{\mathrm{CV}}^\ast - \mathrm{CV}_{\mathrm{obs}}$ difference as the optimism estimate. The .632+ bootstrap (Efron–Tibshirani 1997) refines this with a weighted combination of resubstitution and out-of-bag risk; it's a direct descendant of the bias-correction construction above.
+</RemarkBlock>
+
+<a id="section-31-10"></a>
+
+## 31.10 Scope boundaries & Track 8 spine
+
+Five remarks close out the topic. Each names an important variant the bootstrap world has produced over the decades, and marks it for forward treatment in the formalML track. No derivations — the point is to orient.
+
+<RemarkBlock number={17} title="Out of scope: block bootstrap for dependent data">
+Künsch 1989 extended the bootstrap to stationary time-series data by resampling *blocks* of consecutive observations instead of individual points. The block length $\ell$ is a new tuning parameter — too small, autocorrelation structure is lost; too large, the number of blocks is too small for MC convergence. Variants: overlapping blocks (Künsch), moving blocks, circular blocks, stationary bootstrap (Politis–Romano). The entire family lives in the dependent-observations regime that Topic 31 excluded; formalML's time-series inference chapters will treat it in full.
+</RemarkBlock>
+
+<RemarkBlock number={18} title="Out of scope: subsampling">
+Politis–Romano 1994 showed that *subsampling* — resampling without replacement, at a size $m < n$ — achieves asymptotic validity under milder conditions than the bootstrap. Where bootstrap requires $E[X_1^2] < \infty$ for the sample mean, subsampling gets by with much weaker tail conditions. The trade-off is a smaller effective sample size $m$ and a tuning choice for $m$. Subsampling is the right tool for genuinely heavy-tailed distributions where the bootstrap can fail; Topic 31 assumes the moment conditions hold, so subsampling is a §31.10 footnote rather than a §31.x section.
+</RemarkBlock>
+
+<RemarkBlock number={19} title="Out of scope: Bayesian bootstrap">
+Rubin 1981 replaced the bootstrap's multinomial resample weights $\{1/n\}$ with Dirichlet-distributed random weights, producing a Bayesian-flavoured construction that behaves asymptotically like the nonparametric bootstrap but has a posterior-like interpretation. The full treatment belongs with Track 7's Dirichlet-process machinery — the Bayesian bootstrap is the Dirichlet-process posterior for the special case of a vague Dirichlet prior.
+</RemarkBlock>
+
+<RemarkBlock number={20} title="Out of scope: wild / residual bootstrap for regression">
+Residual bootstrap is the regression-specific variant: fit the regression, compute residuals, resample residuals with replacement, and add back to the fitted mean to get new response values. Wild bootstrap generalizes to heteroscedastic errors by rescaling each residual by an independent mean-zero multiplier. Both are indispensable for valid inference on regression coefficients in misspecified settings — and both are deferred to formalML's regression-inference chapters because they require the regression machinery Topic 31 deliberately didn't build.
+</RemarkBlock>
+
+<RemarkBlock number={21} title="Track 8 spine — 3 of 4">
+Topic 29 built the empirical CDF machinery. Topic 30 smoothed it into densities. Topic 31 — this topic — resampled from it. Topic 32 will close the track by embedding all three into the empirical-process framework: $F_n$ becomes a sample-path-continuous limit process (the Brownian bridge), $\hat f_h$ becomes a smoothed version of that process, and the bootstrap becomes a resampling operation inside a function space. Donsker's theorem is the functional CLT that unifies the three; the bootstrap-consistency proof of §31.3 is a finite-dimensional shadow of Donsker. The empirical-process chapters of Topic 32 are the on-ramp to the uniform convergence and stochastic equicontinuity that underwrite modern high-dimensional statistics.
+</RemarkBlock>
+
+![Horizontal spine figure with four topic markers labelled 29, 30, 31, 32. Topics 29 and 30 marked with checkmarks; topic 31 highlighted as the current topic with a filled marker; topic 32 shown as forthcoming.](/images/topics/bootstrap/31-track-8-spine.png)
+
+*Figure 9. Track 8 spine, updated. Topics 29 (ECDF & order statistics) and 30 (kernel density estimation) are published; Topic 31 (the bootstrap — this topic) is newly published; Topic 32 (empirical processes) is forthcoming. Together the four topics build a complete nonparametric-inference toolkit anchored in the empirical distribution.*
+
+---
+
+### References
+
+1. Efron, Bradley. (1979). *[Bootstrap Methods: Another Look at the Jackknife](https://projecteuclid.org/journals/annals-of-statistics/volume-7/issue-1/Bootstrap-Methods-Another-Look-at-the-Jackknife/10.1214/aos/1176344552.full)*. *The Annals of Statistics*, 7(1), 1–26.
+2. Bickel, Peter J., and David A. Freedman. (1981). *[Some Asymptotic Theory for the Bootstrap](https://projecteuclid.org/journals/annals-of-statistics/volume-9/issue-6/Some-Asymptotic-Theory-for-the-Bootstrap/10.1214/aos/1176345637.full)*. *The Annals of Statistics*, 9(6), 1196–1217.
+3. Singh, Kesar. (1981). *[On the Asymptotic Accuracy of Efron's Bootstrap](https://projecteuclid.org/journals/annals-of-statistics/volume-9/issue-6/On-the-Asymptotic-Accuracy-of-Efrons-Bootstrap/10.1214/aos/1176345636.full)*. *The Annals of Statistics*, 9(6), 1187–1195.
+4. Efron, Bradley. (1987). *[Better Bootstrap Confidence Intervals](https://doi.org/10.1080/01621459.1987.10478410)*. *Journal of the American Statistical Association*, 82(397), 171–185.
+5. Efron, Bradley, and Robert J. Tibshirani. (1993). *[An Introduction to the Bootstrap](https://www.routledge.com/An-Introduction-to-the-Bootstrap/Efron-Tibshirani/p/book/9780412042317)*. Chapman & Hall/CRC.
+6. Hall, Peter. (1992). *[The Bootstrap and Edgeworth Expansion](https://link.springer.com/book/10.1007/978-1-4612-4384-7)*. Springer.
+7. Silverman, Bernard W., and G. Alastair Young. (1987). *[The Bootstrap: To Smooth or Not to Smooth?](https://doi.org/10.1093/biomet/74.3.469)*. *Biometrika*, 74(3), 469–479.
+8. Politis, Dimitris N., and Joseph P. Romano. (1994). *[Large Sample Confidence Regions Based on Subsamples under Minimal Assumptions](https://projecteuclid.org/journals/annals-of-statistics/volume-22/issue-4/Large-Sample-Confidence-Regions-Based-on-Subsamples-Under-Minimal-Assumptions/10.1214/aos/1176325770.full)*. *The Annals of Statistics*, 22(4), 2031–2050.
+9. Rubin, Donald B. (1981). *[The Bayesian Bootstrap](https://projecteuclid.org/journals/annals-of-statistics/volume-9/issue-1/The-Bayesian-Bootstrap/10.1214/aos/1176345338.full)*. *The Annals of Statistics*, 9(1), 130–134.
+10. Künsch, Hans R. (1989). *[The Jackknife and the Bootstrap for General Stationary Observations](https://projecteuclid.org/journals/annals-of-statistics/volume-17/issue-3/The-Jackknife-and-the-Bootstrap-for-General-Stationary-Observations/10.1214/aos/1176347265.full)*. *The Annals of Statistics*, 17(3), 1217–1241.
+11. van der Vaart, Aad W. (2000). *[Asymptotic Statistics](https://www.cambridge.org/core/books/asymptotic-statistics/A3C7DAD3F7E66A1FA60E9C8FE132EE1D)*. Cambridge University Press.
+12. Serfling, Robert J. (1980). *[Approximation Theorems of Mathematical Statistics](https://onlinelibrary.wiley.com/doi/book/10.1002/9780470316481)*. Wiley.
+13. Lehmann, Erich L. (1998). *[Elements of Large-Sample Theory](https://link.springer.com/book/10.1007/b98855)*. Springer.

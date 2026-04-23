@@ -858,6 +858,8 @@ export interface SeededRng {
   random(): number;
   /** Standard Normal via Box-Muller with paired-value cache. */
   normal(): number;
+  /** Chi-squared with `df` degrees of freedom: sum of `df` iid standard-Normal squares. */
+  chiSquared(df: number): number;
   /** Re-seed (resets internal LCG state and clears the normal cache). */
   reseed(seed: number): void;
 }
@@ -964,7 +966,19 @@ export function createSeededRng(seed: number): SeededRng {
     return mag * Math.cos(2 * Math.PI * u2);
   };
 
-  return { random, normal, reseed };
+  const chiSquared = (df: number): number => {
+    if (!Number.isInteger(df) || df < 1) {
+      throw new Error(`chiSquared: df=${df} must be a positive integer`);
+    }
+    let sum = 0;
+    for (let i = 0; i < df; i++) {
+      const z = normal();
+      sum += z * z;
+    }
+    return sum;
+  };
+
+  return { random, normal, chiSquared, reseed };
 }
 
 // ─── Metropolis-Hastings ──────────────────────────────────────────────────

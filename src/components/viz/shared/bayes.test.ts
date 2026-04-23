@@ -1466,6 +1466,49 @@ console.log('========================================\n');
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+// Topic 31 prerequisite: SeededRng.chiSquared determinism + mean approx
+// (The full T31.x pins live in nonparametric.test.ts; these confirm the
+//  primitive the t_3 preset sampler relies on.)
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ── S31.A chiSquared(df=3) mean over 20000 draws ≈ 3 (Var(χ²₃)=6; SE≈0.017) ─
+{
+  const rng = createSeededRng(42);
+  const N = 20000;
+  let sum = 0;
+  for (let i = 0; i < N; i++) sum += rng.chiSquared(3);
+  const mean = sum / N;
+  check(
+    'S31.A chiSquared(df=3) sample mean ≈ 3',
+    approx(mean, 3, 0.1),
+    mean,
+    3,
+    `tol 0.1 over ${N} draws (MC SE ≈ √(6/${N}) ≈ 0.017)`,
+  );
+}
+
+// ── S31.B chiSquared(df) determinism: same seed → same first draw ────────
+{
+  const a = createSeededRng(42).chiSquared(3);
+  const b = createSeededRng(42).chiSquared(3);
+  check(
+    'S31.B chiSquared(df=3) deterministic under identical seed',
+    a === b,
+    a,
+    b,
+    'seed 42 → identical first draw',
+  );
+}
+
+// ── S31.C chiSquared(df) throws on invalid df ──────────────────────────
+{
+  const rng = createSeededRng(42);
+  let threw = false;
+  try { rng.chiSquared(0); } catch { threw = true; }
+  check('S31.C chiSquared(df=0) throws', threw, threw, true, 'df must be a positive integer');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // Summary
 // ═══════════════════════════════════════════════════════════════════════════
 console.log(`\n────────────────────────────────────────`);

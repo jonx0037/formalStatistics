@@ -312,3 +312,28 @@ export const kdeColors = {
 export type KdeColorKey = keyof typeof kdeColors;
 export type KernelColorKey = keyof typeof kdeColors.kernels;
 export type SelectorColorKey = keyof typeof kdeColors.selectors;
+
+/**
+ * Topic 31 (Bootstrap) accent palette. Three new roles on top of Topic 30's
+ * `kdeColors` — the bootstrap presentation inherits KDE-violet and ECDF-blue
+ * from earlier Track 8 topics and adds these three accents for the resample /
+ * BCa / reference distinction:
+ *
+ *   resample   emerald — bootstrap resample markers and histograms (distinct
+ *                        from ECDF-blue so the "X vs X*" contrast is visible)
+ *   bca        rose    — BCa adjustment overlays and second-order-accuracy
+ *                        curves (Fig 5, Fig 8; distinct from KDE's mise rose
+ *                        only by usage context — both are warnings / featured
+ *                        accents in their respective tracks)
+ *   reference  slate   — high-precision MC reference overlays and the true-
+ *                        sampling-distribution line (deliberately desaturated
+ *                        so the bootstrap and reference don't fight for
+ *                        attention in Fig 3)
+ */
+export const bootstrapColors = {
+  resample:  '#10B981',
+  bca:       '#E11D48',
+  reference: '#64748B',
+} as const;
+
+export type BootstrapColorKey = keyof typeof bootstrapColors;
