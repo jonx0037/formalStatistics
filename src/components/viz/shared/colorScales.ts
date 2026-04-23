@@ -275,3 +275,40 @@ export const nonparametricColors = {
 } as const;
 
 export type NonparametricColorKey = keyof typeof nonparametricColors;
+
+/**
+ * Topic 30 (KDE) palette. `kde` deliberately reuses Topic 29's bahadur violet
+ * (`#7C3AED`) — both represent the same Track 8 idea: smooth the empirical
+ * distribution into something differentiable.
+ *
+ *   kde       violet — primary KDE curve
+ *   bias      amber  — integrated-squared-bias overlay (slope +4 in log-log h)
+ *   variance  blue   — integrated variance overlay (slope −1)
+ *   mise      rose   — total MISE = IBias² + IVar (the featured U-shape)
+ *
+ * `kernels` is the 5-kernel comparison palette for Fig 2 and `KernelChoiceExplorer`.
+ * `selectors` is the 4-selector palette for Fig 8 and `PluginBandwidthComparator`.
+ */
+export const kdeColors = {
+  kde:      '#7C3AED',
+  bias:     '#D97706',
+  variance: '#2563EB',
+  mise:     '#E11D48',
+  kernels: {
+    gaussian:     '#2563EB',
+    epanechnikov: '#7C3AED',
+    biweight:     '#059669',
+    triangular:   '#D97706',
+    uniform:      '#94A3B8',
+  },
+  selectors: {
+    silverman:     '#4F46E5',
+    scott:         '#94A3B8',
+    ucv:           '#D97706',
+    sheatherJones: '#7C3AED',
+  },
+} as const;
+
+export type KdeColorKey = keyof typeof kdeColors;
+export type KernelColorKey = keyof typeof kdeColors.kernels;
+export type SelectorColorKey = keyof typeof kdeColors.selectors;

@@ -23,9 +23,13 @@
  *   • Rényi-spacings generator: Y_(k) = Σ E_i / (n - i + 1), distributionally
  *     identical to iid-Exp(1) order statistics by Rényi 1953.
  *
- * No imports from other shared modules — the module is self-contained except for
- * two internal helpers (Lanczos log-gamma and binomial PMF).
+ * Imports only `quantileStdNormal` from distributions.ts (Acklam rational
+ * approximation) for the §11 pointwise KDE confidence interval. Internal
+ * helpers: Lanczos log-gamma, binomial PMF, and two Topic 30 utilities
+ * (log-spaced / linear-spaced grids).
  */
+
+import { quantileStdNormal as normalQuantile } from './distributions';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // 1. Order statistics
@@ -170,31 +174,18 @@ export function sampleQuantile(sample: number[], p: number): number {
 }
 
 /**
- * Empirical density estimate f̂(ξ_p) at the sample p-quantile, using a
- * simple uniform-kernel bin-count. Silverman rule-of-thumb bandwidth
- * h = 1.06 · IQR · n^{-1/5}. Placeholder for Topic 30's KDE; consumed by
+ * Empirical density estimate f̂(ξ_p) at the sample p-quantile. Delegates to
+ * Topic 30's Gaussian KDE (§9) with Silverman's rule-of-thumb bandwidth (§10)
+ * evaluated at the Type-7 sample quantile. Consumed by
  * `QuantileAsymptoticsExplorer` for the Bahadur-limit variance readout.
  */
 export function empiricalDensityAtQuantile(sample: number[], p: number): number {
   const n = sample.length;
-  if (n === 0) return 0;
-  const sorted = [...sample].sort((a, b) => a - b);
-  const quantileOf = (prob: number): number => {
-    if (prob === 0) return sorted[0];
-    if (prob === 1) return sorted[n - 1];
-    const h = (n - 1) * prob;
-    const lo = Math.floor(h);
-    const frac = h - lo;
-    if (lo >= n - 1) return sorted[n - 1];
-    return sorted[lo] + frac * (sorted[lo + 1] - sorted[lo]);
-  };
-  const q = quantileOf(p);
-  const iqr = quantileOf(0.75) - quantileOf(0.25);
-  const h = 1.06 * iqr * Math.pow(n, -0.2);
-  if (h === 0) return 0;
-  let count = 0;
-  for (const xi of sorted) if (Math.abs(xi - q) <= h) count++;
-  return count / (2 * h * n);
+  if (n < 2) return 0;
+  const q = sampleQuantile(sample, p);
+  const h = silvermanBandwidth(sample);
+  if (h <= 0) return 0;
+  return kdeEvaluate(sample, q, h, gaussianKernel);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -463,4 +454,401 @@ function binomialPmf(n: number, p: number, k: number): number {
   if (p === 1) return k === n ? 1 : 0;
   const logCoef = lgamma(n + 1) - lgamma(k + 1) - lgamma(n - k + 1);
   return Math.exp(logCoef + k * Math.log(p) + (n - k) * Math.log(1 - p));
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 8. Kernel functions (Topic 30 extension)
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Kernel function signature. A symmetric, nonnegative function integrating to 1.
+ * Pointwise evaluation: K(u) for u ∈ ℝ.
+ */
+export type KernelFn = (u: number) => number;
+
+/** Named kernel identifier. Union of the five kernels §30.3 tabulates. */
+export type KernelName =
+  | 'gaussian'
+  | 'epanechnikov'
+  | 'biweight'
+  | 'triangular'
+  | 'uniform';
+
+/**
+ * Kernel properties used in AMISE and bandwidth calculations.
+ *   R      = ∫ K(u)² du            (roughness)
+ *   mu2    = ∫ u² K(u) du          (second moment)
+ *   support = [a, b] where K(u) = 0 outside (Gaussian uses ±Infinity)
+ *   efficiency = relative to Epanechnikov (1.0 = optimal)
+ * (SIL1986 §3.3.2; WAN1995 §2.7)
+ */
+export interface KernelSpec {
+  name: string;
+  fn: KernelFn;
+  R: number;
+  mu2: number;
+  support: [number, number];
+  efficiency: number;
+}
+
+/**
+ * Standard Gaussian kernel K(u) = φ(u) = (1/√(2π)) exp(-u²/2).
+ * Infinite support; smooth but non-compact. (ROS1956)
+ */
+export function gaussianKernel(u: number): number {
+  return Math.exp(-0.5 * u * u) / Math.sqrt(2 * Math.PI);
+}
+
+/**
+ * Epanechnikov kernel K_E(u) = (3/4)(1 − u²) · 1{|u| ≤ 1}.
+ * The MISE-optimal symmetric kernel subject to ∫K = 1 and μ₂(K) = 1/5.
+ * Properties: R(K_E) = 3/5, μ₂(K_E) = 1/5. (EPA1969)
+ */
+export function epanechnikovKernel(u: number): number {
+  return Math.abs(u) <= 1 ? 0.75 * (1 - u * u) : 0;
+}
+
+/**
+ * Biweight (quartic) kernel K(u) = (15/16)(1 − u²)² · 1{|u| ≤ 1}.
+ * Smoother than Epanechnikov near the support edges; efficiency ≈ 0.994.
+ * Properties: R = 5/7, μ₂ = 1/7. (SIL1986 §3.3)
+ */
+export function biweightKernel(u: number): number {
+  if (Math.abs(u) > 1) return 0;
+  const m = 1 - u * u;
+  return (15 / 16) * m * m;
+}
+
+/**
+ * Triangular kernel K(u) = (1 − |u|) · 1{|u| ≤ 1}.
+ * Piecewise-linear; efficiency ≈ 0.986. Properties: R = 2/3, μ₂ = 1/6.
+ */
+export function triangularKernel(u: number): number {
+  const abs = Math.abs(u);
+  return abs <= 1 ? 1 - abs : 0;
+}
+
+/**
+ * Uniform (rectangular / boxcar) kernel K(u) = (1/2) · 1{|u| ≤ 1}.
+ * The "moving-histogram" limit. Properties: R = 1/2, μ₂ = 1/3. Efficiency ≈ 0.930.
+ */
+export function uniformKernel(u: number): number {
+  return Math.abs(u) <= 1 ? 0.5 : 0;
+}
+
+/**
+ * Kernel property lookup by name. Returns the full KernelSpec.
+ * Throws on unknown name. All constants exact in closed form.
+ */
+export function kernelProperties(name: KernelName): KernelSpec {
+  switch (name) {
+    case 'gaussian':
+      return {
+        name: 'Gaussian',
+        fn: gaussianKernel,
+        R: 1 / (2 * Math.sqrt(Math.PI)),   // ≈ 0.2820948
+        mu2: 1,
+        support: [-Infinity, Infinity],
+        efficiency: 0.951,
+      };
+    case 'epanechnikov':
+      return {
+        name: 'Epanechnikov',
+        fn: epanechnikovKernel,
+        R: 3 / 5,
+        mu2: 1 / 5,
+        support: [-1, 1],
+        efficiency: 1.0,
+      };
+    case 'biweight':
+      return {
+        name: 'Biweight',
+        fn: biweightKernel,
+        R: 5 / 7,
+        mu2: 1 / 7,
+        support: [-1, 1],
+        efficiency: 0.994,
+      };
+    case 'triangular':
+      return {
+        name: 'Triangular',
+        fn: triangularKernel,
+        R: 2 / 3,
+        mu2: 1 / 6,
+        support: [-1, 1],
+        efficiency: 0.986,
+      };
+    case 'uniform':
+      return {
+        name: 'Uniform',
+        fn: uniformKernel,
+        R: 1 / 2,
+        mu2: 1 / 3,
+        support: [-1, 1],
+        efficiency: 0.930,
+      };
+    default: {
+      // Exhaustiveness check — never reached if KernelName is complete.
+      const _exhaustive: never = name;
+      throw new Error(`kernelProperties: unknown kernel '${_exhaustive}'`);
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 9. Kernel density estimator (Topic 30 extension)
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Evaluate the KDE at a single point x.
+ *   f̂_h(x) = (1 / n h) · Σ K((x − X_i) / h)
+ * Throws if h ≤ 0; returns 0 for empty samples. (PAR1962; SIL1986 §3.1)
+ */
+export function kdeEvaluate(
+  sample: number[],
+  x: number,
+  h: number,
+  kernel: KernelFn = gaussianKernel,
+): number {
+  if (h <= 0) throw new Error(`kdeEvaluate: bandwidth h=${h} must be positive`);
+  const n = sample.length;
+  if (n === 0) return 0;
+  let sum = 0;
+  for (const xi of sample) sum += kernel((x - xi) / h);
+  return sum / (n * h);
+}
+
+/**
+ * Evaluate the KDE on a grid. O(n · G) where G = grid.length.
+ * Useful for plotting; typical G = 400.
+ */
+export function kdeEvaluateGrid(
+  sample: number[],
+  grid: number[],
+  h: number,
+  kernel: KernelFn = gaussianKernel,
+): number[] {
+  return grid.map(x => kdeEvaluate(sample, x, h, kernel));
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 10. Bandwidth selectors (Topic 30 extension)
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Silverman's rule-of-thumb bandwidth, robust variant:
+ *   ĥ_ROT = 1.06 · σ̂ · n^{-1/5},   σ̂ = min(SD, IQR / 1.34).
+ * IQR via the Type-7 sample quantile (Topic 29 §29.4). Assumes Gaussian
+ * kernel and underlying f ≈ Normal — conservative (over-smooths) for
+ * bimodal or heavy-tailed densities. (SIL1986 §3.4.2)
+ */
+export function silvermanBandwidth(sample: number[]): number {
+  const n = sample.length;
+  if (n < 2) throw new Error(`silvermanBandwidth: n=${n} too small`);
+  // Single-pass sum and sum-of-squares → mean and Bessel-corrected variance.
+  let sum = 0;
+  let sumSq = 0;
+  for (const x of sample) {
+    sum += x;
+    sumSq += x * x;
+  }
+  const mean = sum / n;
+  const variance = Math.max((sumSq - n * mean * mean) / (n - 1), 0);
+  const sd = Math.sqrt(variance);
+  // Sort once; read Q1 and Q3 from the sorted array (cheaper than two
+  // independent `sampleQuantile` calls, which each sort internally).
+  const sorted = [...sample].sort((a, b) => a - b);
+  const q = (p: number): number => {
+    const h = (n - 1) * p;
+    const lo = Math.floor(h);
+    const frac = h - lo;
+    if (lo >= n - 1) return sorted[n - 1];
+    return sorted[lo] + frac * (sorted[lo + 1] - sorted[lo]);
+  };
+  const iqrScaled = (q(0.75) - q(0.25)) / 1.34;
+  const sigmaHat = iqrScaled > 0 ? Math.min(sd, iqrScaled) : sd;
+  return 1.06 * sigmaHat * Math.pow(n, -1 / 5);
+}
+
+/**
+ * Scott's rule-of-thumb bandwidth:
+ *   ĥ_Scott = 1.06 · SD · n^{-1/5}.
+ * Uses only the sample SD (no IQR robustness). Numerically close to Silverman
+ * on well-behaved samples; diverges under heavy tails or bimodality.
+ * (SCO2015 §6.5)
+ */
+export function scottBandwidth(sample: number[]): number {
+  const n = sample.length;
+  if (n < 2) throw new Error(`scottBandwidth: n=${n} too small`);
+  // Single-pass mean + variance (same as silvermanBandwidth).
+  let sum = 0;
+  let sumSq = 0;
+  for (const x of sample) {
+    sum += x;
+    sumSq += x * x;
+  }
+  const mean = sum / n;
+  const variance = Math.max((sumSq - n * mean * mean) / (n - 1), 0);
+  const sd = Math.sqrt(variance);
+  return 1.06 * sd * Math.pow(n, -1 / 5);
+}
+
+/**
+ * Unbiased cross-validation (UCV) bandwidth via grid search. Minimises
+ *   UCV(h) = ∫ f̂_h(x)² dx  −  (2 / n) Σ_i f̂_{h, −i}(X_i),
+ * where f̂_{h, −i} is the leave-one-out KDE. O(n² · G) per call;
+ * **capped at n ≤ 2000** for browser use. Default grid is 30 log-spaced
+ * values in [0.1·hS, 2·hS] with hS = Silverman. (SIL1986 §3.4.3)
+ */
+export function ucvBandwidth(
+  sample: number[],
+  kernelName: KernelName = 'gaussian',
+  hGrid?: number[],
+): number {
+  const n = sample.length;
+  if (n < 10) throw new Error(`ucvBandwidth: n=${n} too small for CV`);
+  if (n > 2000) throw new Error(`ucvBandwidth: n=${n} exceeds browser cap of 2000`);
+  const spec = kernelProperties(kernelName);
+  // Silverman's rule returns 0 when the sample has zero spread (all values
+  // equal, or sd = IQR = 0 pathologies). In that case the default log-spaced
+  // grid is undefined — require the caller to supply an explicit hGrid, or
+  // fail fast with a clear message.
+  if (hGrid === undefined) {
+    const hS = silvermanBandwidth(sample);
+    if (!Number.isFinite(hS) || hS <= 0) {
+      throw new Error(
+        `ucvBandwidth: Silverman bandwidth ${hS} is not positive — the ` +
+          `sample may be degenerate (zero spread). Pass an explicit hGrid.`,
+      );
+    }
+    hGrid = logspace(0.1 * hS, 2 * hS, 30);
+  }
+  let bestH = hGrid[0];
+  let bestUCV = Infinity;
+  for (const h of hGrid) {
+    const ucv = ucvObjective(sample, h, spec);
+    if (ucv < bestUCV) {
+      bestUCV = ucv;
+      bestH = h;
+    }
+  }
+  return bestH;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 11. Pointwise CI for f(x) (Topic 30 extension)
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Pointwise (1 − α) Normal-calibrated CI for f(x) via plug-in variance.
+ *   V̂(x) = f̂_h(x) · R(K) / (n · h),
+ *   CI    = f̂_h(x) ± z_{1−α/2} · √V̂(x).
+ * Centered at 𝔼[f̂_h(x)], not f(x); at finite n the bias O(h² μ₂(K) f''(x)/2)
+ * shifts coverage below 1 − α. For simultaneous CIs use the Bickel–Rosenblatt
+ * machinery (deferred to formalml). (vdV2000 §24.1; PAR1962)
+ */
+export function kdePointwiseCI(
+  sample: number[],
+  x: number,
+  h: number,
+  kernelName: KernelName,
+  alpha: number = 0.05,
+): { estimate: number; se: number; lower: number; upper: number } {
+  if (h <= 0) throw new Error(`kdePointwiseCI: bandwidth h=${h} must be positive`);
+  const spec = kernelProperties(kernelName);
+  const estimate = kdeEvaluate(sample, x, h, spec.fn);
+  const n = sample.length;
+  const variance = (estimate * spec.R) / (n * h);
+  const se = Math.sqrt(Math.max(variance, 0));
+  const z = normalQuantile(1 - alpha / 2);
+  return { estimate, se, lower: estimate - z * se, upper: estimate + z * se };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 12. AMISE-optimal bandwidth (Topic 30 extension)
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * AMISE-optimal bandwidth (§30.6 Thm 4):
+ *   h* = ( R(K) / [n · μ₂(K)² · R(f'')] )^{1/5}  = O(n^{-1/5}).
+ * Requires the curvature integral R(f'') = ∫ f''(x)² dx — caller supplies
+ * it either from a closed form (R(φ'') = 3/(8√π) for f = Normal(0,1)) or
+ * a numerical Simpson's-rule integration of the known f''. Used by
+ * `BandwidthExplorer` to draw the oracle h*. (WAN1995 §2.5)
+ */
+export function amiseOptimalBandwidth(
+  R_f_double_prime: number,
+  n: number,
+  kernelName: KernelName,
+): number {
+  if (R_f_double_prime <= 0)
+    throw new Error(`amiseOptimalBandwidth: R(f'') = ${R_f_double_prime} must be > 0`);
+  if (n < 2) throw new Error(`amiseOptimalBandwidth: n = ${n} too small`);
+  const { R, mu2 } = kernelProperties(kernelName);
+  return Math.pow(R / (n * mu2 * mu2 * R_f_double_prime), 1 / 5);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Module-private helpers for §§10–12
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * UCV objective. Numerically integrates ∫ f̂_h² on a padded grid and
+ * subtracts twice the leave-one-out cross-validation term. O(n² + n·G).
+ */
+function ucvObjective(sample: number[], h: number, spec: KernelSpec): number {
+  const n = sample.length;
+  const K = spec.fn;
+  let minX = sample[0];
+  let maxX = sample[0];
+  for (const x of sample) {
+    if (x < minX) minX = x;
+    if (x > maxX) maxX = x;
+  }
+  const pad = 3 * h;
+  const grid = linspace(minX - pad, maxX + pad, 200);
+  const dx = grid[1] - grid[0];
+  const fh = kdeEvaluateGrid(sample, grid, h, K);
+  const integralFhSq = fh.reduce((s, v) => s + v * v, 0) * dx;
+  // Leave-one-out double sum. Since K is symmetric, K(-u) = K(u), so
+  //   Σ_i Σ_{j≠i} K((X_i-X_j)/h) = 2 · Σ_{i<j} K((X_i-X_j)/h)
+  // and we compute only the upper triangle. Halves kernel evaluations.
+  let sumK = 0;
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      sumK += K((sample[i] - sample[j]) / h);
+    }
+  }
+  const sumLOO = (2 * sumK) / ((n - 1) * h);
+  return integralFhSq - (2 * sumLOO) / n;
+}
+
+/** Log-spaced grid on (a, b] with n points. Requires a > 0, b > 0, n >= 2. */
+function logspace(a: number, b: number, n: number): number[] {
+  if (a <= 0 || b <= 0 || !Number.isFinite(a) || !Number.isFinite(b)) {
+    throw new Error(`logspace: endpoints a=${a}, b=${b} must be positive and finite`);
+  }
+  if (n < 2 || !Number.isInteger(n)) {
+    throw new Error(`logspace: n=${n} must be an integer ≥ 2`);
+  }
+  const la = Math.log(a);
+  const lb = Math.log(b);
+  const step = (lb - la) / (n - 1);
+  const out: number[] = new Array(n);
+  for (let i = 0; i < n; i++) out[i] = Math.exp(la + i * step);
+  return out;
+}
+
+/** Linear-spaced grid on [a, b] with n points. Requires n >= 2 and a, b finite. */
+function linspace(a: number, b: number, n: number): number[] {
+  if (!Number.isFinite(a) || !Number.isFinite(b)) {
+    throw new Error(`linspace: endpoints a=${a}, b=${b} must be finite`);
+  }
+  if (n < 2 || !Number.isInteger(n)) {
+    throw new Error(`linspace: n=${n} must be an integer ≥ 2`);
+  }
+  const step = (b - a) / (n - 1);
+  const out: number[] = new Array(n);
+  for (let i = 0; i < n; i++) out[i] = a + i * step;
+  return out;
 }
