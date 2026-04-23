@@ -31,6 +31,7 @@ import {
   studentizedCI,
   type BootstrapCI,
 } from './shared/nonparametric';
+import { quantileStdNormal } from './shared/distributions';
 import {
   expPreset,
   normalPreset,
@@ -74,55 +75,15 @@ const METHOD_LABEL: Record<Method, string> = {
   wald: 'Wald-t',
 };
 
-// Student-t inverse CDF — used by Wald-t. Closed-form only for select df;
-// we use the standard-normal quantile with a small-n correction via the
-// Cornish-Fisher expansion. For df ≥ 15 this is accurate to ~1%; for this
-// demo (n ∈ {15, 30, 50, 100}) that's sufficient.
+// Student-t inverse CDF — used by Wald-t. Uses the shared Acklam approximation
+// for the standard-normal quantile plus Hill's 1970 Cornish-Fisher correction.
+// For df ≥ 15 this is accurate to ~1%; for this demo (n ∈ {15, 30, 50, 100})
+// that's sufficient.
 function tQuantile(p: number, df: number): number {
-  // Hill's 1970 approximation to the Student-t quantile.
-  const z = normalQuantile(p);
+  const z = quantileStdNormal(p);
   const g1 = (z * z * z + z) / 4;
   const g2 = (5 * z ** 5 + 16 * z ** 3 + 3 * z) / 96;
   return z + g1 / df + g2 / (df * df);
-}
-
-function normalQuantile(p: number): number {
-  // Beasley-Springer-Moro inverse normal approximation (matches bayes.ts).
-  if (p <= 0 || p >= 1) throw new Error(`normalQuantile: p=${p} must be in (0, 1)`);
-  const a = [
-    -3.969683028665376e1, 2.209460984245205e2, -2.759285104469687e2,
-    1.38357751867269e2, -3.066479806614716e1, 2.506628277459239,
-  ];
-  const b = [
-    -5.447609879822406e1, 1.615858368580409e2, -1.556989798598866e2,
-    6.680131188771972e1, -1.328068155288572e1,
-  ];
-  const c = [
-    -7.784894002430293e-3, -3.223964580411365e-1, -2.400758277161838,
-    -2.549732539343734, 4.374664141464968, 2.938163982698783,
-  ];
-  const d = [
-    7.784695709041462e-3, 3.224671290700398e-1, 2.445134137142996,
-    3.754408661907416,
-  ];
-  const pLow = 0.02425;
-  const pHigh = 1 - pLow;
-  let q: number;
-  let r: number;
-  if (p < pLow) {
-    q = Math.sqrt(-2 * Math.log(p));
-    return (((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) /
-      ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1);
-  }
-  if (p <= pHigh) {
-    q = p - 0.5;
-    r = q * q;
-    return (((((a[0] * r + a[1]) * r + a[2]) * r + a[3]) * r + a[4]) * r + a[5]) * q /
-      (((((b[0] * r + b[1]) * r + b[2]) * r + b[3]) * r + b[4]) * r + 1);
-  }
-  q = Math.sqrt(-2 * Math.log(1 - p));
-  return -(((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) /
-    ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1);
 }
 
 // ────────────────────────────────────────────────────────────────────────────

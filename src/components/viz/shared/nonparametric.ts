@@ -23,10 +23,12 @@
  *   • Rényi-spacings generator: Y_(k) = Σ E_i / (n - i + 1), distributionally
  *     identical to iid-Exp(1) order statistics by Rényi 1953.
  *
- * Imports only `quantileStdNormal` from distributions.ts (Acklam rational
- * approximation) for the §11 pointwise KDE confidence interval. Internal
- * helpers: Lanczos log-gamma, binomial PMF, and two Topic 30 utilities
- * (log-spaced / linear-spaced grids).
+ * Imports `quantileStdNormal` and `cdfStdNormal` from distributions.ts
+ * (Acklam rational approximation + Abramowitz-Stegun 26.2.17) for the §11
+ * pointwise KDE confidence interval and the §15 BCa bias-correction /
+ * acceleration terms. Also imports `SeededRng` from bayes.ts (§13–16
+ * resamplers). Internal helpers: Lanczos log-gamma, binomial PMF, and two
+ * Topic 30 utilities (log-spaced / linear-spaced grids).
  */
 
 import { cdfStdNormal, quantileStdNormal as normalQuantile } from './distributions';
@@ -861,21 +863,32 @@ function linspace(a: number, b: number, n: number): number[] {
 /**
  * Draw a single nonparametric bootstrap resample of size n from the data.
  * Each X*_i is selected uniformly with replacement from x via rng.random().
- * Read-only input; returns a fresh array. (EFR1979)
+ * (EFR1979)
+ *
+ * When `out` is omitted, allocates and returns a fresh array. When `out` is
+ * supplied, fills the buffer in place (must match x.length) and returns it —
+ * use this from hot inner loops (e.g. `studentizedCI`'s outer × inner pass)
+ * to eliminate per-iteration allocations.
  */
 export function bootstrapResample(
   x: readonly number[],
   rng: SeededRng,
+  out?: number[],
 ): number[] {
   const n = x.length;
   if (n === 0) throw new Error('bootstrapResample: empty sample');
-  const out: number[] = new Array(n);
+  if (out && out.length !== n) {
+    throw new Error(
+      `bootstrapResample: out.length=${out.length} must equal x.length=${n}`,
+    );
+  }
+  const buf = out ?? new Array<number>(n);
   for (let i = 0; i < n; i++) {
     // Floor(random * n) is uniform on {0, 1, ..., n-1}. random() returns
     // values in [0, 1), so Math.floor can never equal n.
-    out[i] = x[Math.floor(rng.random() * n)];
+    buf[i] = x[Math.floor(rng.random() * n)];
   }
-  return out;
+  return buf;
 }
 
 /**
@@ -930,17 +943,16 @@ export function parametricBootstrap(
 // ═══════════════════════════════════════════════════════════════════════════
 
 /**
- * Kolmogorov distance sup_x |F_a(x) - F_b(x)| between two ECDFs.
- * Inputs need not be sorted; function sorts internally. Right-continuous
- * ECDF convention: F_a(x) = |{a_i ≤ x}| / n. Match to notebook
- * `kolmogorov_distance` (searchsorted on the pooled sort). O((m+n) log(m+n)).
+ * Kolmogorov distance on two pre-sorted ECDFs. Linear in (m + n); the caller
+ * is responsible for having sorted both inputs ascending. Use this when the
+ * caller already has sorted copies (e.g. bootstrap-replicate caches, MC
+ * references) to avoid a redundant O(N log N) re-sort. For unsorted input,
+ * see `kolmogorovDistance`.
  */
-export function kolmogorovDistance(
-  a: readonly number[],
-  b: readonly number[],
+export function kolmogorovDistanceSorted(
+  sa: readonly number[],
+  sb: readonly number[],
 ): number {
-  const sa = [...a].sort((p, q) => p - q);
-  const sb = [...b].sort((p, q) => p - q);
   const n = sa.length;
   const m = sb.length;
   if (n === 0 || m === 0) return 1;
@@ -961,6 +973,22 @@ export function kolmogorovDistance(
     if (d > maxD) maxD = d;
   }
   return maxD;
+}
+
+/**
+ * Kolmogorov distance sup_x |F_a(x) - F_b(x)| between two ECDFs.
+ * Inputs need not be sorted; function sorts internally. Right-continuous
+ * ECDF convention: F_a(x) = |{a_i ≤ x}| / n. Match to notebook
+ * `kolmogorov_distance` (searchsorted on the pooled sort). O((m+n) log(m+n)).
+ */
+export function kolmogorovDistance(
+  a: readonly number[],
+  b: readonly number[],
+): number {
+  return kolmogorovDistanceSorted(
+    [...a].sort((p, q) => p - q),
+    [...b].sort((p, q) => p - q),
+  );
 }
 
 /**
@@ -1219,14 +1247,22 @@ export function studentizedCI(
   }
   const thetaHat = stat(x);
   const seObs = se(x);
+  const n = x.length;
 
+  // Hoist all reusable buffers: without these, a B × BInner run with B=1000,
+  // BInner=30 allocates 31,000 arrays (1 outer resample + 30 inner resamples
+  // + 1 inner-stat array per outer replicate). Hoisted: ~4 total.
   const tStats: number[] = new Array(B);
+  const inner: number[] = new Array(BInner);
+  const xBootBuf: number[] = new Array(n);
+  const innerBuf: number[] = new Array(n);
+
   for (let b = 0; b < B; b++) {
-    const xBoot = bootstrapResample(x, rng);
-    const thetaBoot = stat(xBoot);
-    const inner: number[] = new Array(BInner);
+    bootstrapResample(x, rng, xBootBuf);
+    const thetaBoot = stat(xBootBuf);
     for (let bi = 0; bi < BInner; bi++) {
-      inner[bi] = stat(bootstrapResample(xBoot, rng));
+      bootstrapResample(xBootBuf, rng, innerBuf);
+      inner[bi] = stat(innerBuf);
     }
     // SE of inner replicates (Bessel-corrected).
     let sum = 0;
@@ -1311,24 +1347,20 @@ export function smoothBootstrap(
 export function smoothBootstrapBandwidth(sample: readonly number[]): number {
   const n = sample.length;
   if (n < 2) throw new Error(`smoothBootstrapBandwidth: n=${n} too small`);
+  // Two-pass variance (numerically stable; avoids catastrophic cancellation
+  // when mean is large relative to variance).
   let sum = 0;
-  let sumSq = 0;
-  for (const v of sample) {
-    sum += v;
-    sumSq += v * v;
-  }
+  for (const v of sample) sum += v;
   const mean = sum / n;
-  const variance = Math.max((sumSq - n * mean * mean) / (n - 1), 0);
+  let ss = 0;
+  for (const v of sample) {
+    const d = v - mean;
+    ss += d * d;
+  }
+  const variance = Math.max(ss / (n - 1), 0);
   const sd = Math.sqrt(variance);
   const sorted = [...sample].sort((a, b) => a - b);
-  const q = (p: number): number => {
-    const h = (n - 1) * p;
-    const lo = Math.floor(h);
-    const frac = h - lo;
-    if (lo >= n - 1) return sorted[n - 1];
-    return sorted[lo] + frac * (sorted[lo + 1] - sorted[lo]);
-  };
-  const iqrScaled = (q(0.75) - q(0.25)) / 1.34;
+  const iqrScaled = (quantileSorted(sorted, 0.75) - quantileSorted(sorted, 0.25)) / 1.34;
   const sigmaHat = iqrScaled > 0 ? Math.min(sd, iqrScaled) : sd;
   return 0.9 * sigmaHat * Math.pow(n, -1 / 5);
 }

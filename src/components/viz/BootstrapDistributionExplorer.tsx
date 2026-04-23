@@ -26,11 +26,11 @@
  *
  * Statistic is user-selectable: mean, median, variance (Bessel-corrected).
  */
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { createSeededRng, type SeededRng } from './shared/bayes';
-import { kolmogorovDistance } from './shared/nonparametric';
-import { allPresets, type DistributionPreset } from '../../data/nonparametric-data';
+import { kolmogorovDistanceSorted } from './shared/nonparametric';
+import { allPresets, type DistributionPreset, type StatKey } from '../../data/nonparametric-data';
 import { bootstrapColors } from './shared/colorScales';
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -44,8 +44,7 @@ const PANEL_WIDTH = 300;
 const PANEL_HEIGHT = 220;
 const MARGIN = { top: 18, right: 14, bottom: 34, left: 42 };
 
-const STATISTICS = ['mean', 'median', 'variance'] as const;
-type StatKey = (typeof STATISTICS)[number];
+const STATISTICS: readonly StatKey[] = ['mean', 'median', 'variance'];
 
 const STAT_LABEL: Record<StatKey, string> = {
   mean: 'Mean',
@@ -149,12 +148,15 @@ export default function BootstrapDistributionExplorer() {
   const preset = allPresets[presetIdx];
   const statFn = useMemo(() => statistic(statKey), [statKey]);
 
-  // Mobile detection for B-max cap
-  useMemo(() => {
+  // Mobile detection for B-max cap. useEffect (not useMemo) — this is a side
+  // effect with event-listener cleanup, not a pure computation.
+  useEffect(() => {
     if (typeof window === 'undefined') return;
     const mq = window.matchMedia('(max-width: 767px)');
     setIsMobile(mq.matches);
-    return;
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
   }, []);
 
   // ── Panel 1: MC reference — memoized by (preset, statistic, n) ────────────
@@ -174,25 +176,35 @@ export default function BootstrapDistributionExplorer() {
     return drawSample(preset, n, rng);
   }, [preset, n, seed]);
 
-  // ── Bootstrap replicates (unsorted — so we can slice the first B_k in order)
+  // Mobile caps B at 1000; desktop at 5000. We precompute the full replicate
+  // budget (effectiveMaxB) up front so the bootstrap cache only invalidates
+  // when the budget itself shifts — not on every B-slider tick below the cap.
+  const effectiveMaxB = isMobile ? 1000 : 5000;
+
+  // ── Bootstrap replicates (unsorted — so we can slice the first B_k in order).
+  // Buffer `resample` hoisted outside the loop to avoid effectiveMaxB × n
+  // array allocations. Deps: observedSample / statFn / n / effectiveMaxB / seed —
+  // deliberately NOT B, since any B ≤ effectiveMaxB reads from the same cache.
   const unsortedReps = useMemo(() => {
     const rng = createSeededRng(seed + 200_000);
-    const maxB = Math.max(B, KS_CHECKPOINTS[KS_CHECKPOINTS.length - 1]);
-    const out: number[] = new Array(maxB);
-    for (let b = 0; b < maxB; b++) {
-      const resample: number[] = new Array(n);
+    const out: number[] = new Array(effectiveMaxB);
+    const resample: number[] = new Array(n);
+    for (let b = 0; b < effectiveMaxB; b++) {
       for (let i = 0; i < n; i++) {
         resample[i] = observedSample[Math.floor(rng.random() * n)];
       }
       out[b] = statFn(resample);
     }
     return out;
-  }, [observedSample, statFn, n, B, seed]);
+  }, [observedSample, statFn, n, effectiveMaxB, seed]);
 
   // Current bootstrap distribution (first B replicates, in draw order)
   const currentReps = useMemo(() => unsortedReps.slice(0, B), [unsortedReps, B]);
 
   // ── Panel 3: KS distance curve over checkpoint B values ───────────────────
+  // Each checkpoint slice must be sorted (draw order → ascending) so the KS
+  // helper can walk both sequences in linear time. `kolmogorovDistanceSorted`
+  // assumes pre-sorted input — no redundant internal sort.
   const ksCurve = useMemo(() => {
     const mcSorted = mcReference.sorted;
     const maxCheckpoint = Math.min(B, unsortedReps.length);
@@ -200,7 +212,7 @@ export default function BootstrapDistributionExplorer() {
     for (const bk of KS_CHECKPOINTS) {
       if (bk > maxCheckpoint) break;
       const slice = unsortedReps.slice(0, bk).sort((a, b) => a - b);
-      points.push({ B: bk, dKS: kolmogorovDistance(slice, mcSorted) });
+      points.push({ B: bk, dKS: kolmogorovDistanceSorted(slice, mcSorted) });
     }
     return points;
   }, [unsortedReps, mcReference.sorted, B]);

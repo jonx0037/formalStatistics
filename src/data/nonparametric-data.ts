@@ -35,6 +35,14 @@ export type DistributionKey =
   | 'bimodal'
   | 't3';
 
+/**
+ * Keys of scalar statistics the Topic 31 components track. Tightens the
+ * `trueParameterByStat` typing so misspellings like `.meam` fail to compile.
+ * Extend cautiously: components iterate over these keys for their statistic
+ * selector, so adding a new entry means every consumer must handle it.
+ */
+export type StatKey = 'mean' | 'median' | 'variance';
+
 export interface DistributionPreset {
   /** Display name, e.g. "Normal(0, 1)". */
   name: string;
@@ -88,11 +96,11 @@ export interface DistributionPreset {
   /**
    * True population value of named scalar statistics. Used by
    * `BootstrapCIComparator` to draw a vertical reference line for coverage.
-   * Keys come from the component's statistic selector: 'mean' / 'median' /
-   * 'variance'. Omitted for presets where one or more statistics don't
-   * exist (Cauchy's mean, Uniform's skewness, etc.).
+   * Keys are constrained to `StatKey` so misspellings fail at compile time.
+   * Omitted for presets where one or more statistics don't exist (Cauchy's
+   * mean, Uniform's skewness, etc.); partial coverage is allowed.
    */
-  trueParameterByStat?: Record<string, number>;
+  trueParameterByStat?: Partial<Record<StatKey, number>>;
 }
 
 // ────────────────────────────────────────────────────────────────────────────
