@@ -685,7 +685,7 @@ The CI is centered at $\hat f_h(x)$, which is a consistent estimator of $\mathbb
 </RemarkBlock>
 
 <RemarkBlock number={15} title="Simultaneous CIs and the bootstrap">
-Theorem 6 is pointwise — it gives a CI for $f(x_0)$ at a single preselected $x_0$. For a joint CI covering $f$ over a range $[a, b]$ at level $1 - \alpha$, we need Bickel–Rosenblatt-type machinery, which turns out to be a functional CLT in the same Donsker-theory framework Topic 29 §29.8 used for the Kolmogorov limit. The cleanest route in practice is the smooth bootstrap (§30.10 Ex 13), which constructs simultaneous envelopes by resampling from $\hat f_h$ itself. The full treatment is forthcoming on formalml.
+Theorem 6 is pointwise — it gives a CI for $f(x_0)$ at a single preselected $x_0$. For a joint CI covering $f$ over a range $[a, b]$ at level $1 - \alpha$, we need Bickel–Rosenblatt-type machinery, which turns out to be a functional CLT in the same Donsker-theory framework Topic 29 §29.8 used for the Kolmogorov limit. The cleanest route in practice is the smooth bootstrap ([Topic 31 §31.8](/topics/bootstrap#section-31-8); preview at §30.10 Ex 13), which constructs simultaneous envelopes by resampling from $\hat f_h$ itself. The full treatment is forthcoming on formalml.
 </RemarkBlock>
 
 <a id="section-30-8"></a>
@@ -792,7 +792,7 @@ $$
 X_i^\ast \;=\; X_{J_i} \;+\; h \cdot U_i, \qquad U_i \sim K, \text{ iid}.
 $$
 
-The resulting bootstrap distribution is smoothly supported rather than concentrated on $\{X_1, \dots, X_n\}$, which matters when the statistic of interest depends on derivatives or local continuity — e.g., quantile regression estimators or mode estimators. Topic 31 develops the full bootstrap framework; smooth-bootstrap is one of several refinements it covers. The KDE → bootstrap bridge is exactly the Topic 30 → 31 edge in the Track 8 forward-map.
+The resulting bootstrap distribution is smoothly supported rather than concentrated on $\{X_1, \dots, X_n\}$, which matters when the statistic of interest depends on derivatives or local continuity — e.g., quantile regression estimators or mode estimators. [Topic 31: The Bootstrap](/topics/bootstrap) develops the full bootstrap framework; smooth-bootstrap is one of several refinements it covers. The KDE → bootstrap bridge is exactly the Topic 30 → 31 edge in the Track 8 forward-map.
 </ExampleBlock>
 
 ![Track 8 forward-map. Topic 29 (Order Statistics, done) and Topic 30 (KDE, done, centered) are filled boxes. Topics 31 (Bootstrap) and 32 (Empirical Processes) are dashed outline boxes (forthcoming). Forward arrows from Topic 30 to five formalml satellites: kernel-regression, local-regression, normalizing-flows, clustering, density-ratio-estimation. Back-arrows to Topics 7, 10, 11, 13, 19, 29 in grey.](/images/topics/kernel-density-estimation/30-track8-spine-update.png)
@@ -800,7 +800,7 @@ The resulting bootstrap distribution is smoothly supported rather than concentra
 *Figure 9. Track 8 spine with Topic 30 at the center. Topics 29 and 30 are published (filled); Topics 31 and 32 are forthcoming (dashed). Forward arrows fan out to the formalml satellites where KDE machinery is re-used; back-arrows acknowledge the six prerequisite topics.*
 
 <RemarkBlock number={19} title="Topic 31: Bootstrap">
-The bootstrap (Efron 1979) is the Track 8 closer for parametric-inference questions. It resamples from the empirical distribution (or, in the smooth variant, from $\hat f_h$) to simulate the sampling distribution of a statistic without invoking asymptotic normality. Topic 31 will develop nonparametric and parametric bootstraps, bootstrap CIs (percentile, BCa, studentized), and the Edgeworth-expansion-based analysis of bootstrap accuracy. Expect Topic 30's bandwidth selectors to reappear as pilot estimators for smooth bootstraps of sample-quantile statistics.
+The bootstrap (Efron 1979) is the Track 8 closer for parametric-inference questions. It resamples from the empirical distribution (or, in the smooth variant, from $\hat f_h$) to simulate the sampling distribution of a statistic without invoking asymptotic normality. [Topic 31 (now published)](/topics/bootstrap) develops nonparametric and parametric bootstraps, bootstrap CIs (percentile, BCa, studentized), and the Edgeworth-expansion-based analysis of bootstrap accuracy. Expect Topic 30's bandwidth selectors to reappear as pilot estimators for smooth bootstraps of sample-quantile statistics.
 </RemarkBlock>
 
 <RemarkBlock number={20} title="Normalizing flows: learned density estimators">
