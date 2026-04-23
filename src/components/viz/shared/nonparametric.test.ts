@@ -42,7 +42,24 @@ import {
   ucvBandwidth,
   kdePointwiseCI,
   amiseOptimalBandwidth,
+  // Topic 31 (Bootstrap) — §§13–16.
+  bootstrapResample,
+  nonparametricBootstrap,
+  parametricBootstrap,
+  kolmogorovDistance,
+  kolmogorovDistanceToCdf,
+  percentileCI,
+  basicCI,
+  bcaCI,
+  bcaCIWithDiagnostics,
+  studentizedCI,
+  smoothBootstrap,
+  smoothBootstrapBandwidth,
+  bootstrapBias,
+  biasCorrected,
 } from './nonparametric';
+import { createSeededRng } from './bayes';
+import { cdfStdNormal } from './distributions';
 
 let passed = 0;
 let failed = 0;
@@ -504,6 +521,258 @@ check(
     ratio,
     0.158489319246111,
     'closed form, tol 1e-6',
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Topic 31 — Bootstrap verification (T31.1–T31.10)
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// RNG-provenance note. The handoff-brief §6.2 table and notebook Cell 13
+// print pin values computed with NumPy's PCG64 generator (via
+// np.random.default_rng(42)). The TypeScript harness uses the Park-Miller
+// MINSTD LCG from bayes.ts — a DIFFERENT byte stream. Every T31.x pin below
+// is therefore recomputed against the LCG-seeded sample and pinned to the
+// first captured TS-side value. The notebook numbers remain authoritative
+// for Python reproduction and for MDX prose; these pins guard against
+// regressions in the TS port.
+//
+// Tolerance 1e-6 on deterministic helpers (kolmogorovDistance,
+// kolmogorovDistanceToCdf, percentileCI/basicCI from a fixed replicates
+// array) and on the BCa internal z0/a_hat; 1e-3 on stochastic SEs with
+// B ≥ 10000; 5e-3 on the studentizedCI nested-inner variant.
+
+function meanArr(a: readonly number[]): number {
+  let s = 0;
+  for (const v of a) s += v;
+  return s / a.length;
+}
+
+function stdArr(a: readonly number[]): number {
+  const m = meanArr(a);
+  const n = a.length;
+  let ss = 0;
+  for (const v of a) {
+    const d = v - m;
+    ss += d * d;
+  }
+  return Math.sqrt(ss / (n - 1));
+}
+
+function medianSorted(a: readonly number[]): number {
+  const n = a.length;
+  const s = [...a].sort((p, q) => p - q);
+  return n % 2 === 0 ? (s[n / 2 - 1] + s[n / 2]) / 2 : s[(n - 1) / 2];
+}
+
+function makeNormalSample(seed: number, n: number): number[] {
+  const rng = createSeededRng(seed);
+  const out: number[] = new Array(n);
+  for (let i = 0; i < n; i++) out[i] = rng.normal();
+  return out;
+}
+
+function makeExpSample(seed: number, n: number, rate = 1): number[] {
+  // Inverse-CDF sampling: X = -log(1-U)/rate, U ~ U[0,1).
+  const rng = createSeededRng(seed);
+  const out: number[] = new Array(n);
+  for (let i = 0; i < n; i++) out[i] = -Math.log(1 - rng.random()) / rate;
+  return out;
+}
+
+console.log('\n========================================');
+console.log(' Topic 31 · bootstrap verification');
+console.log('========================================\n');
+
+// ── T31.1 — nonparametricBootstrap SE (Normal mean, n=100, B=10000) ───────
+{
+  const x = makeNormalSample(42, 100);
+  const rngB = createSeededRng(42);
+  const reps = nonparametricBootstrap(x, meanArr, 10000, rngB);
+  const se = stdArr(reps);
+  check(
+    'T31.1 nonparametricBootstrap SE (N(0,1) mean, n=100, B=10000)',
+    approx(se, 0.10657132, 1e-6),
+    se,
+    0.10657132,
+    'TS-LCG pin; notebook NumPy-PCG64 value 0.07776935 — RNG divergence expected',
+  );
+}
+
+// ── T31.2 — percentileCI (same fixture, alpha=0.05) ───────────────────────
+{
+  const x = makeNormalSample(42, 100);
+  const rngB = createSeededRng(42);
+  const reps = nonparametricBootstrap(x, meanArr, 10000, rngB);
+  const ci = percentileCI(reps, 0.05);
+  const okLo = approx(ci.lower, -0.25123898, 1e-6);
+  const okHi = approx(ci.upper, 0.16688824, 1e-6);
+  check(
+    'T31.2 percentileCI ≈ (−0.251, 0.167) [TS-LCG pin]',
+    okLo && okHi,
+    `(${ci.lower.toFixed(6)}, ${ci.upper.toFixed(6)})`,
+    '(-0.25123898, 0.16688824)',
+    'tol 1e-6 each; deterministic given TS-LCG replicates',
+  );
+}
+
+// ── T31.3 — basicCI (same replicates) ─────────────────────────────────────
+{
+  const x = makeNormalSample(42, 100);
+  const rngB = createSeededRng(42);
+  const reps = nonparametricBootstrap(x, meanArr, 10000, rngB);
+  const thetaHat = meanArr(x);
+  const ci = basicCI(thetaHat, reps, 0.05);
+  const okLo = approx(ci.lower, -0.24868503, 1e-6);
+  const okHi = approx(ci.upper, 0.16944219, 1e-6);
+  check(
+    'T31.3 basicCI ≈ (−0.249, 0.169) [TS-LCG pin]',
+    okLo && okHi,
+    `(${ci.lower.toFixed(6)}, ${ci.upper.toFixed(6)})`,
+    '(-0.24868503, 0.16944219)',
+    'tol 1e-6 each; deterministic given TS-LCG replicates',
+  );
+}
+
+// ── T31.4 — bcaCI + internal diagnostics (Exp(1) mean, n=100, B=10000) ────
+// Internal sanity: z0 and a_hat. Notebook: z0=0.022060, a_hat=0.033213 for
+// NumPy PCG64. TS-LCG values differ quantitatively; the important invariant
+// is that a_hat > 0 (Exp(1) has positive skew → positive acceleration).
+{
+  const x = makeExpSample(42, 100);
+  const rngB = createSeededRng(42);
+  const reps = nonparametricBootstrap(x, meanArr, 10000, rngB);
+  const diag = bcaCIWithDiagnostics(x, meanArr, reps, 0.05);
+  const okLo = approx(diag.lower, 0.78465171, 1e-6);
+  const okHi = approx(diag.upper, 1.11113124, 1e-6);
+  const okSign = diag.aHat > 0;
+  check(
+    'T31.4 bcaCI ≈ (0.785, 1.111) [TS-LCG pin]',
+    okLo && okHi,
+    `(${diag.lower.toFixed(6)}, ${diag.upper.toFixed(6)})`,
+    '(0.78465171, 1.11113124)',
+    'tol 1e-6 each; deterministic given TS-LCG replicates and jackknife',
+  );
+  check(
+    'T31.4 internal: a_hat > 0 (Exp(1) right-skew → positive acceleration)',
+    okSign,
+    `a_hat=${diag.aHat.toFixed(6)}, z0=${diag.z0.toFixed(6)}`,
+    'a_hat > 0',
+    'skew sign invariant; notebook a_hat=0.0332, z0=0.0221 for NumPy PCG64',
+  );
+}
+
+// ── T31.5 — studentizedCI (Normal mean, n=100, B=1000, BInner=50) ─────────
+{
+  const x = makeNormalSample(42, 100);
+  const se = (s: readonly number[]): number => stdArr(s) / Math.sqrt(s.length);
+  const rngS = createSeededRng(42);
+  const ci = studentizedCI(x, meanArr, se, 1000, 50, 0.05, rngS);
+  const okLo = approx(ci.lower, -0.24281817, 1e-6);
+  const okHi = approx(ci.upper, 0.16494354, 1e-6);
+  check(
+    'T31.5 studentizedCI ≈ (−0.243, 0.165) [TS-LCG pin]',
+    okLo && okHi,
+    `(${ci.lower.toFixed(6)}, ${ci.upper.toFixed(6)})`,
+    '(-0.24281817, 0.16494354)',
+    'tol 1e-6 each; deterministic given TS-LCG outer + inner bootstraps',
+  );
+}
+
+// ── T31.6 — kolmogorovDistance (two Normal samples, n=500, seeds 42/43) ───
+// Fully deterministic given the two LCG-seeded fixtures; tight tol.
+{
+  const a = makeNormalSample(42, 500);
+  const b = makeNormalSample(43, 500);
+  const d = kolmogorovDistance(a, b);
+  check(
+    'T31.6 kolmogorovDistance(seed42, seed43, n=500) = 0.072',
+    approx(d, 0.072, 1e-6),
+    d,
+    0.072,
+    'deterministic given TS-LCG fixtures; tol 1e-6',
+  );
+}
+
+// ── T31.7 — kolmogorovDistanceToCdf (bootstrap scaled means vs N(0,1)) ────
+{
+  const x = makeNormalSample(42, 100);
+  const thetaHat = meanArr(x);
+  const rngB = createSeededRng(42);
+  const reps = nonparametricBootstrap(x, meanArr, 10000, rngB);
+  const scaled = reps.map(r => Math.sqrt(100) * (r - thetaHat));
+  const d = kolmogorovDistanceToCdf(scaled, cdfStdNormal);
+  check(
+    'T31.7 kolmogorovDistanceToCdf(scaled bootstrap means, Φ)',
+    approx(d, 0.01750458, 1e-6),
+    d,
+    0.01750458,
+    'TS-LCG pin; tol 1e-6 deterministic',
+  );
+}
+
+// ── T31.8 — smoothBootstrap SE (Normal median, n=50, Silverman h) ─────────
+{
+  const x = makeNormalSample(42, 50);
+  const hSilver = smoothBootstrapBandwidth(x);
+  const rngS = createSeededRng(42);
+  const reps = smoothBootstrap(x, medianSorted, 10000, rngS, hSilver);
+  const se = stdArr(reps);
+  check(
+    'T31.8 smoothBootstrap SE (N(0,1) median, n=50, Silverman h)',
+    approx(se, 0.16392328, 1e-6),
+    se,
+    0.16392328,
+    `TS-LCG pin; h=${hSilver.toFixed(5)}; notebook 0.14744 (NumPy PCG64); tol 1e-6`,
+  );
+}
+
+// ── T31.9 — bootstrapBias (ratio of means on two Exp(1) samples) ──────────
+{
+  const xs = makeExpSample(42, 100);
+  const ys = makeExpSample(43, 100);
+  const thetaHat = meanArr(xs) / meanArr(ys);
+  const rngB = createSeededRng(42);
+  const B = 10000;
+  const reps: number[] = new Array(B);
+  for (let b = 0; b < B; b++) {
+    const xb = bootstrapResample(xs, rngB);
+    const yb = bootstrapResample(ys, rngB);
+    reps[b] = meanArr(xb) / meanArr(yb);
+  }
+  reps.sort((p, q) => p - q);
+  const bias = bootstrapBias(thetaHat, reps);
+  check(
+    'T31.9 bootstrapBias(ratio of means, n=100, B=10000)',
+    approx(bias, 0.01105252, 5e-3),
+    bias,
+    0.01105252,
+    'TS-LCG pin; tol 5e-3',
+  );
+}
+
+// ── T31.10 — parametricBootstrap SE (Normal MLE, n=100) ───────────────────
+{
+  const x = makeNormalSample(42, 100);
+  // Normal-MLE fit: sampler returns N(μ̂, σ̂²) draws via Box-Muller.
+  const fit = (sample: readonly number[]) => {
+    const mu = meanArr(sample);
+    const sigma = stdArr(sample);
+    return (n: number, rng: { normal(): number }): number[] => {
+      const s: number[] = new Array(n);
+      for (let i = 0; i < n; i++) s[i] = mu + sigma * rng.normal();
+      return s;
+    };
+  };
+  const rngP = createSeededRng(42);
+  const reps = parametricBootstrap(x, fit, meanArr, 10000, rngP);
+  const se = stdArr(reps);
+  check(
+    'T31.10 parametricBootstrap SE (Normal MLE, n=100, B=10000)',
+    approx(se, 0.10756527, 1e-6),
+    se,
+    0.10756527,
+    'TS-LCG pin; tol 1e-6; notebook 0.07716 (NumPy PCG64)',
   );
 }
 
