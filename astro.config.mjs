@@ -18,6 +18,15 @@ export default defineConfig({
       [rehypeExternalLinks, { target: '_blank', rel: ['noopener', 'noreferrer'] }],
     ],
   },
+  // Serialize page rendering so only one KaTeX-heavy MDX is in flight at a
+  // time during SSR. Topics with 100+ `$$` blocks (e.g. Topic 30 with 112)
+  // allocate thousands of transient KaTeX DOM trees per page; rendering
+  // multiple concurrently multiplies peak memory and can OOM on Vercel's
+  // 8 GB standard tier. Trades a modest build-time increase for a much
+  // lower memory ceiling. (Added after Topic 30 OOM on PR 34, 2026-04-23.)
+  build: {
+    concurrency: 1,
+  },
   vite: {
     plugins: [tailwindcss()],
   },
