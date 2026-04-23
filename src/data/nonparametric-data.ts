@@ -20,12 +20,20 @@ import {
   cdfBeta,
   pdfBeta,
 } from '../components/viz/shared/distributions';
+import { type SeededRng } from '../components/viz/shared/bayes';
 
 // ────────────────────────────────────────────────────────────────────────────
 // Types
 // ────────────────────────────────────────────────────────────────────────────
 
-export type DistributionKey = 'normal' | 'exp' | 'beta' | 'cauchy' | 'uniform' | 'bimodal';
+export type DistributionKey =
+  | 'normal'
+  | 'exp'
+  | 'beta'
+  | 'cauchy'
+  | 'uniform'
+  | 'bimodal'
+  | 't3';
 
 export interface DistributionPreset {
   /** Display name, e.g. "Normal(0, 1)". */
@@ -65,6 +73,26 @@ export interface DistributionPreset {
    * Absent means full ℝ (or effectively so for unbounded-support densities).
    */
   support?: [number, number];
+
+  // ── Topic 31 Bootstrap extensions (all optional; backward-compatible) ────
+
+  /**
+   * Bulk SeededRng-based sampler: returns a length-n array of iid draws.
+   * Distinct from `sampler` (single draw from a U(0,1) callable) — the
+   * Topic 31 CI components use this path so they can share one `SeededRng`
+   * across bootstrap replicates without packaging a U(0,1) closure.
+   * Existing Topic 30 components ignore this field.
+   */
+  sample?: (n: number, rng: SeededRng) => number[];
+
+  /**
+   * True population value of named scalar statistics. Used by
+   * `BootstrapCIComparator` to draw a vertical reference line for coverage.
+   * Keys come from the component's statistic selector: 'mean' / 'median' /
+   * 'variance'. Omitted for presets where one or more statistics don't
+   * exist (Cauchy's mean, Uniform's skewness, etc.).
+   */
+  trueParameterByStat?: Record<string, number>;
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -272,6 +300,83 @@ export const kdePresets = [
   bimodalNormalPreset,
   betaPreset,
 ] as const;
+
+// ────────────────────────────────────────────────────────────────────────────
+// Topic 31 heavy-tailed preset (Student-t, df = 3). Promoted from Topic 30's
+// `PluginBandwidthComparator` inline and re-used by the three Topic 31
+// interactive components (`BootstrapDistributionExplorer`,
+// `BootstrapCIComparator`, `SmoothBootstrapDemo`). Finite variance (= 3) but
+// tails heavy enough that parametric-Wald CIs degrade visibly — the motivating
+// case for bootstrap's distribution-free advantage.
+// ────────────────────────────────────────────────────────────────────────────
+
+/** Closed-form Student-t_3 CDF (Abramowitz & Stegun 26.7.3). */
+const t3Cdf = (x: number): number => {
+  const c = x / Math.sqrt(3);
+  return 0.5 + (1 / Math.PI) * (Math.atan(c) + c / (1 + c * c));
+};
+
+/** Student-t_3 PDF: (2/(π√3))·(1 + x²/3)^{−2}. */
+const t3Pdf = (x: number): number =>
+  (2 / (Math.PI * Math.sqrt(3))) * Math.pow(1 + (x * x) / 3, -2);
+
+/** Bisection-inverted quantile for t_3 (no closed-form). Tol ≈ 1e-10 in 60 iters. */
+const t3Quantile = (p: number): number => {
+  if (p <= 0) return -Infinity;
+  if (p >= 1) return Infinity;
+  let lo = -100;
+  let hi = 100;
+  for (let i = 0; i < 60; i++) {
+    const mid = (lo + hi) / 2;
+    if (t3Cdf(mid) < p) lo = mid;
+    else hi = mid;
+  }
+  return (lo + hi) / 2;
+};
+
+/** Student-t distribution with 3 degrees of freedom. */
+export const heavyTailedPreset: DistributionPreset = {
+  name: 'Student-t (df = 3)',
+  key: 't3',
+  cdf: t3Cdf,
+  pdf: t3Pdf,
+  quantile: t3Quantile,
+  // Single-draw sampler via ratio Z / √(V/df): 1 Box-Muller normal + 3 BM
+  // normals for the chi-squared, so 8 U(0,1) draws per t_3 sample.
+  sampler: (rng) => {
+    const bm = (): number => {
+      const u1 = rng();
+      const u2 = rng();
+      return Math.sqrt(-2 * Math.log(1 - u1)) * Math.cos(2 * Math.PI * u2);
+    };
+    const z = bm();
+    const v = bm() ** 2 + bm() ** 2 + bm() ** 2;
+    return z / Math.sqrt(v / 3);
+  },
+  // Bulk SeededRng-based sampler. Uses rng.chiSquared(3) directly.
+  sample: (n, rng) => {
+    const out: number[] = new Array(n);
+    for (let i = 0; i < n; i++) {
+      out[i] = rng.normal() / Math.sqrt(rng.chiSquared(3) / 3);
+    }
+    return out;
+  },
+  domain: [-6, 6],
+  // True parameters: t_3 is symmetric about 0 with finite variance = 3.
+  trueParameterByStat: {
+    mean: 0,
+    median: 0,
+    variance: 3,
+  },
+};
+
+/**
+ * Combined preset set for Topic 31 components: Topic 30's three KDE presets
+ * plus the new heavy-tailed Student-t_3. Topic 31 components iterate over
+ * `allPresets` for the preset selector; Topic 30 components continue to
+ * consume `kdePresets` unchanged.
+ */
+export const allPresets = [...kdePresets, heavyTailedPreset] as const;
 
 // ────────────────────────────────────────────────────────────────────────────
 // Seeded RNG helper — Mulberry32 for reproducibility across component renders.
