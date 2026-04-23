@@ -519,21 +519,34 @@ export default function BandwidthExplorer() {
               opacity={0.6}
             />
           )}
-          {/* AMISE* scatter */}
+          {/* AMISE* reference scatter (fixed 7 n's) */}
           {panelC.amiseStars.map((y, i) => {
             const nk = N_REFS[i];
-            const isCurrent = nk === n;
             return (
               <circle
                 key={`c-pt-${i}`}
                 cx={axC(nk)}
                 cy={ayC(y)}
-                r={isCurrent ? 5 : 3}
-                fill={isCurrent ? '#e11d48' : kdeColors.mise}
-                opacity={isCurrent ? 1 : 0.85}
+                r={3}
+                fill={kdeColors.mise}
+                opacity={0.7}
               />
             );
           })}
+          {/* Current-n marker: the slider can produce any n in [50, 5000],
+              not just the 7 reference values, so we compute AMISE*(dN) at
+              the slider's current deferred value and render it separately.
+              Falls within the axis bounds so it's always visible. */}
+          {Number.isFinite(R_f_dd) && dN >= N_REFS[0] && dN <= N_REFS[N_REFS.length - 1] && (
+            <circle
+              cx={axC(dN)}
+              cy={ayC(amiseStarAt(dN, R_K, mu2, R_f_dd))}
+              r={5.5}
+              fill="#e11d48"
+              stroke="white"
+              strokeWidth={1.5}
+            />
+          )}
           <text x={MARGIN.left} y={MARGIN.top - 4} className="text-[11px] fill-slate-500">
             Panel C · AMISE*(n) vs n · log-log · fitted slope ={' '}
             <tspan className="font-semibold">{fmt(panelC.slope, 4)}</tspan>

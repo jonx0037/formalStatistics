@@ -52,8 +52,14 @@ const PRESETS: ReadonlyArray<DistributionPreset & { id: string }> = [
 
 const NS = [100, 200, 500, 1000] as const;
 
-// Reflect the sample about a support boundary and return a second KDE
-// contribution at x. Total reflected-KDE is the naive KDE at x plus these.
+// Reflection-corrected KDE at point x.
+//
+// By kernel symmetry K(u) = K(-u):
+//   K((x − (2c − X_i)) / h) = K((X_i − (2c − x)) / h) = K(((2c − x) − X_i) / h),
+// so the contribution from the reflected sample {2c − X_i} evaluated at x is
+// identical to the naive KDE contribution of the ORIGINAL sample evaluated at
+// the reflected point 2c − x. This avoids allocating a new reflected array
+// per grid point (saves O(n) allocation per evaluation).
 function kdeReflected(
   sample: number[],
   x: number,
@@ -63,12 +69,10 @@ function kdeReflected(
   if (x < support[0] || x > support[1]) return 0;
   let val = kdeEvaluate(sample, x, h, gaussianKernel);
   if (Number.isFinite(support[0])) {
-    const refl = sample.map((xi) => 2 * support[0] - xi);
-    val += kdeEvaluate(refl, x, h, gaussianKernel);
+    val += kdeEvaluate(sample, 2 * support[0] - x, h, gaussianKernel);
   }
   if (Number.isFinite(support[1])) {
-    const refl = sample.map((xi) => 2 * support[1] - xi);
-    val += kdeEvaluate(refl, x, h, gaussianKernel);
+    val += kdeEvaluate(sample, 2 * support[1] - x, h, gaussianKernel);
   }
   return val;
 }

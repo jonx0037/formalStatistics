@@ -17,7 +17,7 @@
  * Performance: UCV is O(n² G) per call. The "Run 200 resamples" MC mode is
  * capped at n ≤ 500; per-sample rendering is fine up to n = 2000.
  */
-import { useMemo, useState } from 'react';
+import { useDeferredValue, useMemo, useState } from 'react';
 
 import {
   gaussianKernel,
@@ -127,14 +127,20 @@ function sheatherJonesBandwidth(sample: number[]): number {
   const n = sample.length;
   if (n < 10) throw new Error(`SHJ: n=${n} too small`);
   const g = silvermanBandwidth(sample);
-  let sum = 0;
+  // Gaussian K^(4)(u) = (u⁴ − 6u² + 3) · φ(u) is even, so the full double
+  // sum is  n · K^(4)(0) + 2 · Σ_{i<j} K^(4)((X_i − X_j)/g).
+  // K^(4)(0) = 3 · φ(0) = 3/√(2π). Halve the kernel evaluations.
+  const norm = 1 / Math.sqrt(2 * Math.PI);
+  let upperTri = 0;
   for (let i = 0; i < n; i++) {
-    for (let j = 0; j < n; j++) {
+    for (let j = i + 1; j < n; j++) {
       const u = (sample[i] - sample[j]) / g;
-      sum += (u * u * u * u - 6 * u * u + 3) * Math.exp(-0.5 * u * u);
+      const u2 = u * u;
+      upperTri += (u2 * u2 - 6 * u2 + 3) * Math.exp(-0.5 * u2);
     }
   }
-  const normalizer = n * n * Math.pow(g, 5) * Math.sqrt(2 * Math.PI);
+  const sum = n * 3 + 2 * upperTri; // both terms already missing the `norm` factor
+  const normalizer = n * n * Math.pow(g, 5) / norm; // i.e. × √(2π)
   const R_f_dd_hat = Math.max(sum / normalizer, 1e-10);
   const R_K = 1 / (2 * Math.sqrt(Math.PI));
   return Math.pow(R_K / (n * R_f_dd_hat), 1 / 5);
@@ -206,24 +212,33 @@ export default function PluginBandwidthComparator() {
   );
   const [seed, setSeed] = useState(42);
   const [mcResults, setMcResults] = useState<Partial<Record<Selector, { median: number; iqr: number }>> | null>(null);
+  const [mcRunning, setMcRunning] = useState(false);
 
-  const preset = PRESETS.find((p) => p.id === presetId) ?? PRESETS[1];
+  // Defer the expensive inputs (n, seed, presetId) so slider drags keep the
+  // UI responsive while UCV's O(n²G) grid-search runs in the background.
+  // React will render with stale bandwidths briefly while the new sample
+  // sample/bandwidth computation happens in the deferred pass.
+  const dN = useDeferredValue(n);
+  const dSeed = useDeferredValue(seed);
+  const dPresetId = useDeferredValue(presetId);
+
+  const preset = PRESETS.find((p) => p.id === dPresetId) ?? PRESETS[1];
 
   const sample = useMemo(() => {
-    const rng = seededUniform(seed);
-    const out: number[] = new Array(n);
-    for (let i = 0; i < n; i++) out[i] = preset.sampler(rng);
+    const rng = seededUniform(dSeed);
+    const out: number[] = new Array(dN);
+    for (let i = 0; i < dN; i++) out[i] = preset.sampler(rng);
     return out;
-  }, [preset, n, seed]);
+  }, [preset, dN, dSeed]);
 
   const bandwidths = useMemo((): Record<Selector, number> => {
     return {
       silverman: silvermanBandwidth(sample),
       scott: scottBandwidth(sample),
-      ucv: n <= 2000 ? ucvBandwidth(sample, 'gaussian') : silvermanBandwidth(sample),
+      ucv: dN <= 2000 ? ucvBandwidth(sample, 'gaussian') : silvermanBandwidth(sample),
       sheatherJones: sheatherJonesBandwidth(sample),
     };
-  }, [sample, n]);
+  }, [sample, dN]);
 
   const curves = useMemo(() => {
     const [xMin, xMax] = preset.domain;
@@ -266,37 +281,57 @@ export default function PluginBandwidthComparator() {
     setVisible(next);
   };
 
+  // Run 200 Monte-Carlo resamples in chunks of CHUNK_SIZE so the browser
+  // can repaint between batches — a synchronous loop of 200 reps at n=500
+  // runs UCV 200 times (O(n²G) each), freezing the UI for several seconds.
+  // Chunking keeps the button's "Running…" state visible and lets the user
+  // interact with other controls while the MC is in flight.
   const runMc = () => {
-    if (n > 500) return;
+    if (n > 500 || mcRunning) return;
     const REPS = 200;
+    const CHUNK_SIZE = 20;
     const hs: Record<Selector, number[]> = {
       silverman: [],
       scott: [],
       ucv: [],
       sheatherJones: [],
     };
-    for (let r = 0; r < REPS; r++) {
-      const rng = seededUniform(seed + 1 + r);
-      const s: number[] = new Array(n);
-      for (let i = 0; i < n; i++) s[i] = preset.sampler(rng);
-      hs.silverman.push(silvermanBandwidth(s));
-      hs.scott.push(scottBandwidth(s));
-      hs.ucv.push(ucvBandwidth(s, 'gaussian'));
-      hs.sheatherJones.push(sheatherJonesBandwidth(s));
-    }
-    const summarize = (arr: number[]) => {
-      arr.sort((a, b) => a - b);
-      const median = arr[Math.floor(arr.length / 2)];
-      const q1 = arr[Math.floor(arr.length * 0.25)];
-      const q3 = arr[Math.floor(arr.length * 0.75)];
-      return { median, iqr: (q3 - q1) / 1.34 };
+    setMcRunning(true);
+    setMcResults(null);
+    const runChunk = (startRep: number) => {
+      const end = Math.min(startRep + CHUNK_SIZE, REPS);
+      for (let r = startRep; r < end; r++) {
+        const rng = seededUniform(seed + 1 + r);
+        const s: number[] = new Array(n);
+        for (let i = 0; i < n; i++) s[i] = preset.sampler(rng);
+        hs.silverman.push(silvermanBandwidth(s));
+        hs.scott.push(scottBandwidth(s));
+        hs.ucv.push(ucvBandwidth(s, 'gaussian'));
+        hs.sheatherJones.push(sheatherJonesBandwidth(s));
+      }
+      if (end < REPS) {
+        // Yield to the browser so it can repaint, then schedule the next chunk.
+        setTimeout(() => runChunk(end), 0);
+      } else {
+        const summarize = (arr: number[]) => {
+          arr.sort((a, b) => a - b);
+          const median = arr[Math.floor(arr.length / 2)];
+          const q1 = arr[Math.floor(arr.length * 0.25)];
+          const q3 = arr[Math.floor(arr.length * 0.75)];
+          return { median, iqr: (q3 - q1) / 1.34 };
+        };
+        setMcResults({
+          silverman: summarize(hs.silverman),
+          scott: summarize(hs.scott),
+          ucv: summarize(hs.ucv),
+          sheatherJones: summarize(hs.sheatherJones),
+        });
+        setMcRunning(false);
+      }
     };
-    setMcResults({
-      silverman: summarize(hs.silverman),
-      scott: summarize(hs.scott),
-      ucv: summarize(hs.ucv),
-      sheatherJones: summarize(hs.sheatherJones),
-    });
+    // Defer the first chunk one tick so the button's "Running…" state paints
+    // before the compute starts.
+    setTimeout(() => runChunk(0), 0);
   };
 
   const baselineIse = currentIse.silverman;
@@ -358,11 +393,17 @@ export default function PluginBandwidthComparator() {
         <button
           type="button"
           onClick={runMc}
-          disabled={n > 500}
-          title={n > 500 ? 'Cap: Run 200 resamples requires n ≤ 500 (perf)' : 'Monte-Carlo 200 resamples'}
+          disabled={n > 500 || mcRunning}
+          title={
+            n > 500
+              ? 'Cap: Run 200 resamples requires n ≤ 500 (perf)'
+              : mcRunning
+                ? 'Running 200 Monte-Carlo replicates…'
+                : 'Monte-Carlo 200 resamples'
+          }
           className="px-3 py-1.5 text-xs border border-slate-300 rounded hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
         >
-          Run 200 resamples
+          {mcRunning ? 'Running…' : 'Run 200 resamples'}
         </button>
       </div>
 

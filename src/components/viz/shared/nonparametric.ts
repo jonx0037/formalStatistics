@@ -645,12 +645,27 @@ export function kdeEvaluateGrid(
 export function silvermanBandwidth(sample: number[]): number {
   const n = sample.length;
   if (n < 2) throw new Error(`silvermanBandwidth: n=${n} too small`);
-  const mean = sample.reduce((s, x) => s + x, 0) / n;
-  const variance = sample.reduce((s, x) => s + (x - mean) ** 2, 0) / (n - 1);
+  // Single-pass sum and sum-of-squares → mean and Bessel-corrected variance.
+  let sum = 0;
+  let sumSq = 0;
+  for (const x of sample) {
+    sum += x;
+    sumSq += x * x;
+  }
+  const mean = sum / n;
+  const variance = Math.max((sumSq - n * mean * mean) / (n - 1), 0);
   const sd = Math.sqrt(variance);
-  const q1 = sampleQuantile(sample, 0.25);
-  const q3 = sampleQuantile(sample, 0.75);
-  const iqrScaled = (q3 - q1) / 1.34;
+  // Sort once; read Q1 and Q3 from the sorted array (cheaper than two
+  // independent `sampleQuantile` calls, which each sort internally).
+  const sorted = [...sample].sort((a, b) => a - b);
+  const q = (p: number): number => {
+    const h = (n - 1) * p;
+    const lo = Math.floor(h);
+    const frac = h - lo;
+    if (lo >= n - 1) return sorted[n - 1];
+    return sorted[lo] + frac * (sorted[lo + 1] - sorted[lo]);
+  };
+  const iqrScaled = (q(0.75) - q(0.25)) / 1.34;
   const sigmaHat = iqrScaled > 0 ? Math.min(sd, iqrScaled) : sd;
   return 1.06 * sigmaHat * Math.pow(n, -1 / 5);
 }
@@ -665,8 +680,15 @@ export function silvermanBandwidth(sample: number[]): number {
 export function scottBandwidth(sample: number[]): number {
   const n = sample.length;
   if (n < 2) throw new Error(`scottBandwidth: n=${n} too small`);
-  const mean = sample.reduce((s, x) => s + x, 0) / n;
-  const variance = sample.reduce((s, x) => s + (x - mean) ** 2, 0) / (n - 1);
+  // Single-pass mean + variance (same as silvermanBandwidth).
+  let sum = 0;
+  let sumSq = 0;
+  for (const x of sample) {
+    sum += x;
+    sumSq += x * x;
+  }
+  const mean = sum / n;
+  const variance = Math.max((sumSq - n * mean * mean) / (n - 1), 0);
   const sd = Math.sqrt(variance);
   return 1.06 * sd * Math.pow(n, -1 / 5);
 }
@@ -687,11 +709,23 @@ export function ucvBandwidth(
   if (n < 10) throw new Error(`ucvBandwidth: n=${n} too small for CV`);
   if (n > 2000) throw new Error(`ucvBandwidth: n=${n} exceeds browser cap of 2000`);
   const spec = kernelProperties(kernelName);
-  const hS = silvermanBandwidth(sample);
-  const grid = hGrid ?? logspace(0.1 * hS, 2 * hS, 30);
-  let bestH = grid[0];
+  // Silverman's rule returns 0 when the sample has zero spread (all values
+  // equal, or sd = IQR = 0 pathologies). In that case the default log-spaced
+  // grid is undefined — require the caller to supply an explicit hGrid, or
+  // fail fast with a clear message.
+  if (hGrid === undefined) {
+    const hS = silvermanBandwidth(sample);
+    if (!Number.isFinite(hS) || hS <= 0) {
+      throw new Error(
+        `ucvBandwidth: Silverman bandwidth ${hS} is not positive — the ` +
+          `sample may be degenerate (zero spread). Pass an explicit hGrid.`,
+      );
+    }
+    hGrid = logspace(0.1 * hS, 2 * hS, 30);
+  }
+  let bestH = hGrid[0];
   let bestUCV = Infinity;
-  for (const h of grid) {
+  for (const h of hGrid) {
     const ucv = ucvObjective(sample, h, spec);
     if (ucv < bestUCV) {
       bestUCV = ucv;
@@ -776,19 +810,27 @@ function ucvObjective(sample: number[], h: number, spec: KernelSpec): number {
   const dx = grid[1] - grid[0];
   const fh = kdeEvaluateGrid(sample, grid, h, K);
   const integralFhSq = fh.reduce((s, v) => s + v * v, 0) * dx;
-  let sumLOO = 0;
+  // Leave-one-out double sum. Since K is symmetric, K(-u) = K(u), so
+  //   Σ_i Σ_{j≠i} K((X_i-X_j)/h) = 2 · Σ_{i<j} K((X_i-X_j)/h)
+  // and we compute only the upper triangle. Halves kernel evaluations.
+  let sumK = 0;
   for (let i = 0; i < n; i++) {
-    let fLOO = 0;
-    for (let j = 0; j < n; j++) {
-      if (j !== i) fLOO += K((sample[i] - sample[j]) / h);
+    for (let j = i + 1; j < n; j++) {
+      sumK += K((sample[i] - sample[j]) / h);
     }
-    sumLOO += fLOO / ((n - 1) * h);
   }
+  const sumLOO = (2 * sumK) / ((n - 1) * h);
   return integralFhSq - (2 * sumLOO) / n;
 }
 
-/** Log-spaced grid on (a, b] with n points. Requires a > 0. */
+/** Log-spaced grid on (a, b] with n points. Requires a > 0, b > 0, n >= 2. */
 function logspace(a: number, b: number, n: number): number[] {
+  if (a <= 0 || b <= 0 || !Number.isFinite(a) || !Number.isFinite(b)) {
+    throw new Error(`logspace: endpoints a=${a}, b=${b} must be positive and finite`);
+  }
+  if (n < 2 || !Number.isInteger(n)) {
+    throw new Error(`logspace: n=${n} must be an integer ≥ 2`);
+  }
   const la = Math.log(a);
   const lb = Math.log(b);
   const step = (lb - la) / (n - 1);
@@ -797,8 +839,14 @@ function logspace(a: number, b: number, n: number): number[] {
   return out;
 }
 
-/** Linear-spaced grid on [a, b] with n points. */
+/** Linear-spaced grid on [a, b] with n points. Requires n >= 2 and a, b finite. */
 function linspace(a: number, b: number, n: number): number[] {
+  if (!Number.isFinite(a) || !Number.isFinite(b)) {
+    throw new Error(`linspace: endpoints a=${a}, b=${b} must be finite`);
+  }
+  if (n < 2 || !Number.isInteger(n)) {
+    throw new Error(`linspace: n=${n} must be an integer ≥ 2`);
+  }
   const step = (b - a) / (n - 1);
   const out: number[] = new Array(n);
   for (let i = 0; i < n; i++) out[i] = a + i * step;
