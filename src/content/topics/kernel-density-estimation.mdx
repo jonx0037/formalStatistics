@@ -1,0 +1,833 @@
+---
+title: "Kernel Density Estimation"
+subtitle: "The kernel density estimator, the AMISE bias–variance decomposition, the optimal bandwidth h* of order n^(−1/5), Epanechnikov's optimal-kernel theorem, Parzen's pointwise asymptotic normality, and data-driven bandwidth selectors (Silverman, Scott, UCV, Sheather–Jones). Track 8, topic 2 of 4."
+status: "published"
+difficulty: "intermediate"
+prerequisites:
+  - "order-statistics-and-quantiles"
+  - "continuous-distributions"
+  - "law-of-large-numbers"
+  - "central-limit-theorem"
+  - "point-estimation"
+  - "confidence-intervals-and-duality"
+tags:
+  - "statistics"
+  - "nonparametric"
+  - "kernel-density-estimation"
+  - "kde"
+  - "bandwidth-selection"
+  - "amise"
+  - "epanechnikov"
+  - "parzen"
+  - "silverman"
+  - "sheather-jones"
+  - "smoothing"
+  - "track-8-middle"
+domain: "high-dimensional-nonparametric"
+videoId: null
+notebookPath: "notebooks/kernel-density-estimation/30_kernel_density_estimation.ipynb"
+githubUrl: "https://github.com/jonx0037/formalStatistics/blob/main/src/content/topics/kernel-density-estimation.mdx"
+datePublished: 2026-04-23
+estimatedReadTime: 56
+formalcalculusPrereqs:
+  - topic: "taylor-series-and-approximation"
+    site: "formalcalculus"
+    relationship: "§30.4's bias derivation Taylor-expands $f$ around $x$ to second order; §30.6's optimization Taylor-expands AMISE around $h^\\ast$. Both reduce to first- and second-order conditions on standard Taylor expansions."
+  - topic: "multivariable-integration"
+    site: "formalcalculus"
+    relationship: "The MISE integral $\\int \\int (\\hat f_h(x) - f(x))^2 f(y)\\, dy\\, dx$ requires comfort with interchanging expectation and integration — Fubini–Tonelli from multivariable integration."
+  - topic: "calculus-of-variations"
+    site: "formalcalculus"
+    relationship: "§30.6 Thm 5 (Epanechnikov optimality) uses Lagrangian calculus-of-variations — the Euler–Lagrange equation on a quadratic functional with linear constraints."
+formalmlConnections:
+  - topic: "kernel-regression"
+    site: "formalml"
+    relationship: "Nadaraya–Watson kernel regression is the covariate-conditional extension of KDE: average $Y_i$ values weighted by $K_h(x - X_i)$. §30.9 Rem 17 pointer; full development forthcoming on formalml."
+  - topic: "local-regression"
+    site: "formalml"
+    relationship: "Fan–Gijbels 1996 local polynomial regression corrects KDE's boundary bias and generalizes to the regression setting. §30.5 Rem 9 name-checks the local-linear-at-boundary estimator; forthcoming on formalml."
+  - topic: "normalizing-flows"
+    site: "formalml"
+    relationship: "Rezende–Mohamed 2015 normalizing flows replace the kernel-average-of-bumps with a learned invertible transformation of a simple base density. §30.10 Rem 20 pointer; orthogonal to classical AMISE theory."
+  - topic: "clustering"
+    site: "formalml"
+    relationship: "Mean-shift clustering uses gradient ascent on $\\hat f_h$ to find local modes — the KDE's stationary points *are* the cluster centers. §30.9 Rem 18 pointer; forthcoming on formalml."
+  - topic: "density-ratio-estimation"
+    site: "formalml"
+    relationship: "Sugiyama–Suzuki–Kanamori 2012 two-sample density-ratio estimation, the foundation of covariate-shift correction. §30.10 Rem 22 pointer; forthcoming on formalml."
+connections:
+  - topic: "order-statistics-and-quantiles"
+    relationship: "§29.6 Rem 12 named KDE as the tool for estimating $f(\\xi_p)$ — the density in Bahadur's denominator. §30.7 Ex 9 discharges this with a Silverman-bandwidth KDE plug-in and compares the resulting CI against §29.7's distribution-free binomial-exact alternative. §29.10's Track-8 spine figure is mirrored here as §30.10 Fig 9."
+  - topic: "continuous-distributions"
+    relationship: "§7 introduces the Normal, Beta, and Gaussian-mixture densities used as KDE presets throughout §30.3–§30.8. §7.13's 'what's next' list forward-promised KDE as 'coming soon'; Topic 30 discharges that Capital-P Promise."
+  - topic: "law-of-large-numbers"
+    relationship: "Glivenko–Cantelli (§10.7) is the ECDF convergence result that makes KDE meaningful — we smooth a consistent step estimator into a consistent density estimator. §30.1 Motivation opens with this framing."
+  - topic: "central-limit-theorem"
+    relationship: "Parzen's pointwise asymptotic normality (§30.7 Thm 6) applies the Lindeberg–Feller CLT for triangular arrays (Topic 11 §11.6 Thm 2) to the iid kernel-evaluated terms $h^{-1} K((x - X_i)/h)$."
+  - topic: "point-estimation"
+    relationship: "Bias–variance–MSE decomposition (Topic 13) is the structural tool throughout §30.4–§30.6. AMISE is the integrated MSE — Topic 13's MSE summed over the support of the density."
+  - topic: "confidence-intervals-and-duality"
+    relationship: "§19.3's pivotal-quantity machinery is the template for §30.7's pointwise CI for $f(x)$: the normalized $\\sqrt{nh}(\\hat f_h(x) - \\mathbb{E}[\\hat f_h(x)])/\\sqrt{\\hat f_h(x) R(K)}$ is asymptotically $N(0, 1)$; invert for a CI on $f(x)$."
+references:
+  - type: "article"
+    author: "Murray Rosenblatt"
+    year: 1956
+    title: "Remarks on Some Nonparametric Estimates of a Density Function"
+    publisher: "Annals of Mathematical Statistics 27(3): 832–837"
+    note: "ROS1956. The founding paper of the kernel-smoothing program. Introduces the bias–variance framework; proves any smooth density estimator has bias of order $h^2$ under regularity. §30.4 Rem 7 is the Rosenblatt no-free-lunch remark. https://projecteuclid.org/journals/annals-of-mathematical-statistics/volume-27/issue-3/Remarks-on-Some-Nonparametric-Estimates-of-a-Density-Function/10.1214/aoms/1177728190.full"
+  - type: "article"
+    author: "Emanuel Parzen"
+    year: 1962
+    title: "On Estimation of a Probability Density Function and Mode"
+    publisher: "Annals of Mathematical Statistics 33(3): 1065–1076"
+    note: "PAR1962. Generalizes Rosenblatt to arbitrary symmetric kernels; proves pointwise asymptotic normality. §30.7 Thm 6 is Parzen's theorem; the stated-with-sketch proof cites this paper directly. https://projecteuclid.org/journals/annals-of-mathematical-statistics/volume-33/issue-3/On-Estimation-of-a-Probability-Density-Function-and-Mode/10.1214/aoms/1177704472.full"
+  - type: "article"
+    author: "Vassiliy A. Epanechnikov"
+    year: 1969
+    title: "Non-Parametric Estimation of a Multivariate Probability Density"
+    publisher: "Theory of Probability & Its Applications 14(1): 153–158"
+    note: "EPA1969. Proves the MISE-optimal kernel is $K_E(u) = \\tfrac{3}{4}(1 - u^2)\\mathbf{1}\\{|u| \\le 1\\}$. §30.6 Thm 5 is the Epanechnikov optimality theorem — short proof via calculus-of-variations. https://epubs.siam.org/doi/10.1137/1114019"
+  - type: "book"
+    author: "Bernard W. Silverman"
+    year: 1986
+    title: "Density Estimation for Statistics and Data Analysis"
+    publisher: "Chapman and Hall"
+    note: "SIL1986. The standard monograph on univariate KDE. §3.4 derives the rule-of-thumb bandwidth $\\hat h_{\\mathrm{ROT}} = 1.06\\,\\hat\\sigma\\, n^{-1/5}$ (and its robust variant using $\\min(\\hat\\sigma, \\mathrm{IQR}/1.34)$) used throughout §30.8. https://www.taylorfrancis.com/books/mono/10.1201/9781315140919/density-estimation-statistics-data-analysis-bernard-silverman"
+  - type: "article"
+    author: "Simon J. Sheather and M. Chris Jones"
+    year: 1991
+    title: "A Reliable Data-Based Bandwidth Selection Method for Kernel Density Estimation"
+    publisher: "Journal of the Royal Statistical Society: Series B (Methodological) 53(3): 683–690"
+    note: "SHJ1991. The plug-in bandwidth selector that remains the gold standard. §30.8 Thm 7 names Sheather–Jones alongside Silverman; §30.8 Ex 10 uses SHJ as the benchmark the PluginBandwidthComparator component recovers. https://doi.org/10.1111/j.2517-6161.1991.tb01857.x"
+  - type: "book"
+    author: "M. P. Wand and M. C. Jones"
+    year: 1995
+    title: "Kernel Smoothing"
+    publisher: "Chapman and Hall/CRC"
+    note: "WAN1995. The modern monograph. §2.5 has the MISE/AMISE development Topic 30 §30.5–§30.6 follows; §3 has the bandwidth-selection catalog §30.8 cites. The canonical textbook reference for contemporary KDE. https://www.taylorfrancis.com/books/mono/10.1201/b14876/kernel-smoothing-wand-jones"
+  - type: "book"
+    author: "Jianqing Fan and Irène Gijbels"
+    year: 1996
+    title: "Local Polynomial Modelling and Its Applications"
+    publisher: "Chapman and Hall/CRC"
+    note: "FAN1996. The local-polynomial generalization that fixes KDE's boundary bias and extends to covariate-conditional regression. §30.5 Rem 9 name-checks local-linear boundary correction; §30.9 Rem 17 forwards kernel regression to formalml. https://www.taylorfrancis.com/books/mono/10.1201/9780203748725/local-polynomial-modelling-applications-jianqing-fan"
+  - type: "article"
+    author: "Tarn Duong"
+    year: 2007
+    title: "ks: Kernel Density Estimation and Kernel Discriminant Analysis for Multivariate Data in R"
+    publisher: "Journal of Statistical Software 21(7): 1–16"
+    note: "DUO2007. The `ks` R package reference — the de-facto multivariate KDE implementation. §30.10 Rem 21 cites as the standard multivariate tool. https://doi.org/10.18637/jss.v021.i07"
+  - type: "book"
+    author: "David W. Scott"
+    year: 2015
+    edition: "2nd"
+    title: "Multivariate Density Estimation: Theory, Practice, and Visualization"
+    publisher: "Wiley"
+    note: "SCO2015. The multivariate-KDE reference. §30.6 Rem 13 cites Ch. 6 for the multivariate AMISE rate $O(n^{-4/(4+d)})$ — the curse-of-dimensionality rate, a §30.10 forward-pointer. https://onlinelibrary.wiley.com/doi/book/10.1002/9781118575574"
+  - type: "book"
+    author: "Aad W. van der Vaart"
+    year: 2000
+    title: "Asymptotic Statistics"
+    publisher: "Cambridge University Press"
+    note: "vdV2000. §24 covers KDE asymptotics (Parzen, pointwise normality, MISE rates) and §25 on bandwidth selection. Reused from Topics 11, 13, 14, 16, 18, 19, 29. https://www.cambridge.org/core/books/asymptotic-statistics/A3C7DAD3F7E66A1FA60E9C8FE132EE1D"
+  - type: "book"
+    author: "Robert J. Serfling"
+    year: 1980
+    title: "Approximation Theorems of Mathematical Statistics"
+    publisher: "Wiley"
+    note: "SER1980. §1.11 on kernel moment conditions and §2.7 on density-estimator asymptotics. Reused from Topics 11, 13, 29. https://onlinelibrary.wiley.com/doi/book/10.1002/9780470316481"
+  - type: "book"
+    author: "Erich Leo Lehmann and George Casella"
+    year: 1998
+    edition: "2nd"
+    title: "Theory of Point Estimation"
+    publisher: "Springer"
+    note: "LEH1998. §6.5 on nonparametric density estimation — the bias/variance accounting Topic 30 §30.4–§30.5 mirrors. Reused from Topics 13, 14, 16, 23, 28, 29. https://link.springer.com/book/10.1007/b98854"
+---
+
+import TheoremBlock from '../../components/ui/TheoremBlock.astro';
+import ProofBlock from '../../components/ui/ProofBlock.astro';
+import ExampleBlock from '../../components/ui/ExampleBlock.astro';
+import RemarkBlock from '../../components/ui/RemarkBlock.astro';
+import DefinitionBlock from '../../components/ui/DefinitionBlock.astro';
+
+import KernelChoiceExplorer from '../../components/viz/KernelChoiceExplorer.tsx';
+import BandwidthExplorer from '../../components/viz/BandwidthExplorer.tsx';
+import PluginBandwidthComparator from '../../components/viz/PluginBandwidthComparator.tsx';
+import BoundaryBiasDemo from '../../components/viz/BoundaryBiasDemo.tsx';
+
+## 30.1 Motivation: from ECDF to density
+
+Topic 29 built its entire nonparametric toolkit on the empirical CDF $F_n(x) = n^{-1} \sum_{i=1}^n \mathbf{1}\{X_i \le x\}$ — a step function that converges uniformly to the true CDF $F$. But $F_n$ is *not* differentiable, so the density $f = F'$ is unreachable by naïve differentiation. Kernel density estimation is the answer to the obvious question: *what happens when we differentiate $F_n$ using a smooth weighting function instead of a Dirac delta?*
+
+The idea is simple enough to state in a sentence. Replace each sample point $X_i$ with a small bump of area $1/n$ centered at $X_i$; add the bumps up. The sum is a bona fide density (nonnegative, integrates to 1) that *looks like* $f$ as $n$ grows, with a smoothness controlled by the bump width. Histograms are the roughest version — rectangular bumps of constant width, anchored to arbitrary bin edges. KDE replaces those rectangles with a smooth, symmetric, nonnegative kernel and drops the bin-edge arbitrariness entirely.
+
+<ExampleBlock number={1} title="Histograms and KDEs on the same N(0,1) sample">
+Figure 1 takes a single Normal$(0, 1)$ sample of size $n = 200$ and plots three histograms (bin widths $b \in \{0.1, 0.4, 1.0\}$) alongside three Gaussian-kernel KDEs (bandwidths $h \in \{0.08, 0.3, 0.8\}$). At small $b$ or small $h$, both estimators are spiky and variance-dominated; at large $b$ or large $h$, both over-smooth and bias-dominate. The KDEs remove one obvious source of arbitrariness — bin edges — but the bandwidth problem remains, just in a smoother form.
+</ExampleBlock>
+
+![Six-panel figure. Top row: three histograms of the same 200-sample Normal(0,1) draw at bin widths 0.1, 0.4, and 1.0. Bottom row: three Gaussian-KDE curves of the same sample at bandwidths 0.08, 0.3, and 0.8. True Normal(0,1) density overlaid in black on all six panels.](/images/topics/kernel-density-estimation/30-histogram-to-kde.png)
+
+*Figure 1. Histograms (top) and KDEs (bottom) on the same $n = 200$ Normal$(0, 1)$ sample. The bin-width / bandwidth trade-off between spikiness and over-smoothing is visible in both rows; KDE removes the bin-edge arbitrariness but keeps the smoothing-parameter choice.*
+
+<RemarkBlock number={1} title="What KDE gives up vs. histograms">
+Histograms have two genuine advantages KDEs lack: they are exactly piecewise-constant (so integrals over bin intervals are trivial) and they are visually honest about the underlying empirical counts. KDEs are smoother and easier to differentiate further (for mode-finding or density-gradient methods), but the smoothness is *imposed*, not *inherent*. A reader who wants to know "how many data points fell in $[a, b]$?" should look at a histogram; a reader who wants a differentiable density estimate should look at a KDE.
+</RemarkBlock>
+
+<RemarkBlock number={2} title="Distribution-free density estimation">
+Topic 7 built density families (Normal, Gamma, Beta) and fit parametric $\theta$ from data. That program is efficient when the family is right and biased when it's wrong. KDE drops the family assumption and estimates $f$ directly from the sample — a distribution-free procedure in the sense of Topic 29 §29.1 Rem 1. The price is a slower convergence rate: we'll see in §30.6 that AMISE decays at $n^{-4/5}$, slower than the parametric $n^{-1}$, and that this is the price of distribution-freeness.
+</RemarkBlock>
+
+<a id="section-30-2"></a>
+
+## 30.2 The kernel density estimator
+
+With the motivation out of the way, we can write down the estimator formally and check that it is a density. Three definitions (kernel, scaled kernel, KDE) and one stated theorem (KDE is a valid density) — enough to set up everything that follows.
+
+<DefinitionBlock number={1} title="Kernel">
+A **kernel** is a function $K : \mathbb{R} \to \mathbb{R}_{\ge 0}$ satisfying
+
+$$
+\int_{-\infty}^\infty K(u)\,du = 1, \qquad K(-u) = K(u) \text{ for all } u.
+$$
+
+Nonnegativity and unit mass make $K$ a density on $\mathbb{R}$; symmetry makes it a density centered at $0$. We additionally require finite variance $\mu_2(K) := \int u^2 K(u)\,du < \infty$ and finite roughness $R(K) := \int K(u)^2\,du < \infty$, both used throughout §30.4–§30.6.
+</DefinitionBlock>
+
+<DefinitionBlock number={2} title="Scaled kernel">
+For bandwidth $h > 0$, the **scaled kernel** is
+
+$$
+K_h(u) := \frac{1}{h}\, K\!\left(\frac{u}{h}\right).
+$$
+
+The scaling preserves the density property — $\int K_h(u)\,du = 1$ for any $h > 0$ — and turns $h$ into a width parameter: small $h$ makes $K_h$ tall and narrow (close to a Dirac delta); large $h$ makes it short and wide.
+</DefinitionBlock>
+
+<DefinitionBlock number={3} title="Kernel density estimator (KDE)">
+Given an iid sample $X_1, \dots, X_n$ from an unknown density $f$, the **kernel density estimator** with kernel $K$ and bandwidth $h$ is
+
+$$
+\hat f_h(x) \;=\; \frac{1}{n}\sum_{i=1}^n K_h(x - X_i) \;=\; \frac{1}{n\,h}\sum_{i=1}^n K\!\left(\frac{x - X_i}{h}\right).
+$$
+
+Both forms are in active use. The first makes it visually obvious that $\hat f_h$ is an average of $n$ kernel-shaped bumps centered at the data. The second groups the bandwidth normalization into a single $nh$ factor, which will be convenient when we compute bias and variance in §30.4.
+</DefinitionBlock>
+
+<TheoremBlock number={1} title="The KDE is a valid density">
+Under the definitions above, $\hat f_h$ is a bona-fide probability density:
+
+$$
+\hat f_h(x) \ge 0 \text{ for all } x, \qquad \int_{-\infty}^\infty \hat f_h(x)\,dx = 1.
+$$
+
+*Stated; the proof is elementary.* Nonnegativity is immediate from $K \ge 0$. Integration reduces to $\frac{1}{n}\sum_i \int K_h(x - X_i)\,dx = \frac{1}{n}\sum_i 1 = 1$ by the scaled-kernel normalization.
+</TheoremBlock>
+
+<ExampleBlock number={2} title="A hand-computed KDE at two points">
+Take $n = 2$ observations $X_1 = 0$, $X_2 = 1$ and Gaussian kernel $K(u) = \varphi(u) = (2\pi)^{-1/2} e^{-u^2/2}$. At bandwidth $h = 0.5$:
+
+$$
+\hat f_{0.5}(0.5) = \frac{1}{2 \cdot 0.5}\bigl[\varphi(1) + \varphi(-1)\bigr] = \varphi(1) + \varphi(-1) \approx 0.4839,
+$$
+
+where we used $\varphi(1) = \varphi(-1) \approx 0.2420$. The KDE at the midpoint $x = 0.5$ receives equal contribution from both observations and is therefore twice $\varphi(1)/h$. This is the T30.8 test pin — a two-point sanity check on the `kdeEvaluate` implementation.
+</ExampleBlock>
+
+<RemarkBlock number={3} title="Equivalent formulation via convolution">
+Writing $\mathbb{P}_n = n^{-1} \sum_i \delta_{X_i}$ for the empirical distribution (a probability measure that places mass $1/n$ at each sample point), we have $\hat f_h = K_h \ast \mathbb{P}_n$. KDE is the convolution of a smooth kernel with the empirical distribution — equivalently, it is the empirical density against a smoothed observation model. This formulation is convenient in formalml where the convolution structure generalizes to multivariate bandwidths and non-iid samples.
+</RemarkBlock>
+
+<RemarkBlock number={4} title="Why the symmetry and nonnegativity constraints">
+Symmetry $K(-u) = K(u)$ makes the first-moment condition $\int u K(u)\,du = 0$ automatic, which simplifies the bias calculation in §30.4 (the $h f'(x)$ Taylor term drops out). Nonnegativity guarantees $\hat f_h \ge 0$, so the estimator is always a valid density. A fourth-order or higher-order kernel with $\mu_2(K) = 0$ can achieve faster bias rates (down to $O(h^4)$) but requires $K$ to take negative values, and then $\hat f_h$ may be negative in places — a practical complication we'll mention in §30.6 Rem 13 and defer to Serfling 1980 §1.11.
+</RemarkBlock>
+
+<a id="section-30-3"></a>
+
+## 30.3 Kernels: families and properties
+
+Five kernels are standard — Gaussian, Epanechnikov, biweight (quartic), triangular, and uniform — and every modern implementation supports all five. The constants that govern AMISE ($\mu_2(K)$ and $R(K)$) are closed-form for each, and their *efficiency* relative to Epanechnikov sits between 0.93 and 1.00 across the whole family. Kernel choice, in practice, matters much less than bandwidth choice.
+
+<TheoremBlock number={2} title="Standard kernels and their constants">
+The five standard symmetric kernels, with their second moments and roughness:
+
+| Kernel | $K(u)$ | Support | $\mu_2(K)$ | $R(K)$ | Efficiency |
+|---|---|---|---|---|---|
+| Gaussian | $\varphi(u) = (2\pi)^{-1/2} e^{-u^2/2}$ | $\mathbb{R}$ | $1$ | $\frac{1}{2\sqrt\pi} \approx 0.2821$ | $0.951$ |
+| Epanechnikov | $\frac{3}{4}(1 - u^2)\mathbf{1}\{|u| \le 1\}$ | $[-1, 1]$ | $\frac{1}{5}$ | $\frac{3}{5}$ | $1.000$ |
+| Biweight | $\frac{15}{16}(1 - u^2)^2\mathbf{1}\{|u| \le 1\}$ | $[-1, 1]$ | $\frac{1}{7}$ | $\frac{5}{7}$ | $0.994$ |
+| Triangular | $(1 - |u|)\mathbf{1}\{|u| \le 1\}$ | $[-1, 1]$ | $\frac{1}{6}$ | $\frac{2}{3}$ | $0.986$ |
+| Uniform | $\frac{1}{2}\mathbf{1}\{|u| \le 1\}$ | $[-1, 1]$ | $\frac{1}{3}$ | $\frac{1}{2}$ | $0.930$ |
+
+*Stated.* All values are elementary integrals; Example 3 verifies Epanechnikov explicitly, and the `kernelProperties` export in `nonparametric.ts` §8 encodes all five (T30.5–T30.6).
+</TheoremBlock>
+
+<ExampleBlock number={3} title="Epanechnikov moments by direct integration">
+For $K_E(u) = \frac{3}{4}(1 - u^2)\mathbf{1}\{|u| \le 1\}$:
+
+$$
+\int_{-1}^1 K_E(u)\,du = \frac{3}{4}\int_{-1}^1 (1 - u^2)\,du = \frac{3}{4} \cdot \frac{4}{3} = 1 \quad\checkmark,
+$$
+
+$$
+\mu_2(K_E) = \int_{-1}^1 u^2 K_E(u)\,du = \frac{3}{4}\int_{-1}^1 (u^2 - u^4)\,du = \frac{3}{4}\left(\frac{2}{3} - \frac{2}{5}\right) = \frac{1}{5},
+$$
+
+$$
+R(K_E) = \int_{-1}^1 K_E(u)^2\,du = \frac{9}{16}\int_{-1}^1 (1 - u^2)^2\,du = \frac{9}{16} \cdot \frac{16}{15} = \frac{3}{5}.
+$$
+
+The values $\mu_2(K_E) = 1/5$ and $R(K_E) = 3/5$ are load-bearing for Theorem 5's Epanechnikov optimality proof in §30.6.
+</ExampleBlock>
+
+![Five-panel strip showing the Gaussian, Epanechnikov, biweight, triangular, and uniform kernels on a common u-axis, each annotated with its second moment mu2 and roughness R values and its efficiency relative to Epanechnikov.](/images/topics/kernel-density-estimation/30-kernel-family-overlay.png)
+
+*Figure 2. The five standard kernels on a common axis. Gaussian extends into the tails; the other four have compact support on $[-1, 1]$. Efficiency — the figure of merit from §30.6 Theorem 5 — ranges from $0.930$ (uniform) to $1.000$ (Epanechnikov).*
+
+<KernelChoiceExplorer client:visible />
+
+<RemarkBlock number={5} title="Why the kernel choice rarely matters">
+The efficiencies in Theorem 2 all lie in $[0.93, 1.00]$. Substituting into the AMISE-optimal formula from §30.6, switching from Epanechnikov to Gaussian changes the optimal AMISE value by less than 5%, and the optimal bandwidths differ only by a multiplicative constant. The practical consequence: once we've committed to using *a* kernel with finite variance and roughness, the bandwidth choice does almost all the work. §30.8 is the real bandwidth chapter; §30.3 is a tour of an almost-equivalence class.
+</RemarkBlock>
+
+<a id="section-30-4"></a>
+
+## 30.4 Leading-order bias and variance
+
+The kernel and bandwidth are in place. Next we compute the mean and variance of $\hat f_h(x)$ at a fixed $x$ and extract their leading-order behavior as $n \to \infty$, $h \to 0$. This is Rosenblatt 1956's original calculation; it sets up everything that follows.
+
+<TheoremBlock number={3} title="Leading-order bias and variance of the KDE">
+Let $X_1, \dots, X_n$ be iid with density $f$ having bounded, continuous second derivative $f''$ in a neighborhood of $x$ with $f(x) > 0$. Let $K$ be a symmetric kernel satisfying the moment conditions $\int K = 1$, $\int u K = 0$, $\mu_2(K) < \infty$, $R(K) < \infty$. As $n \to \infty$, $h \to 0$, and $nh \to \infty$:
+
+$$
+\mathrm{Bias}\bigl(\hat f_h(x)\bigr) = \frac{h^2}{2}\,\mu_2(K)\, f''(x) + o(h^2),
+$$
+
+$$
+\mathrm{Var}\bigl(\hat f_h(x)\bigr) = \frac{f(x)\, R(K)}{n\,h} + o\!\left(\frac{1}{nh}\right).
+$$
+
+*Stated here; the derivation is Step (i) and Step (ii) of the §30.6 Theorem 4 proof. Both calculations are a second-order Taylor expansion of $f$ around $x$ combined with the kernel moment conditions.*
+</TheoremBlock>
+
+<ExampleBlock number={4} title="Bias and variance at the peak of N(0,1)">
+For $f = \varphi$ (standard Normal), $x = 0$, Gaussian kernel ($\mu_2 = 1$, $R = (2\sqrt\pi)^{-1}$), $h = 0.5$, $n = 200$:
+
+$$
+f''(0) = -\varphi(0) = -\frac{1}{\sqrt{2\pi}} \approx -0.399, \quad f(0) = \varphi(0) \approx 0.399,
+$$
+
+$$
+\mathrm{Bias} \approx \frac{0.25}{2} \cdot 1 \cdot (-0.399) = -0.0499, \quad \mathrm{Var} \approx \frac{0.399 \cdot 0.2821}{200 \cdot 0.5} \approx 0.00113.
+$$
+
+The bias is roughly 13% of $f(0)$; the standard deviation is roughly 8%. The leading-order formulas predict this at large $n$; at $n = 200$ there is finite-$n$ slippage, but the orders of magnitude are right.
+</ExampleBlock>
+
+<RemarkBlock number={6} title="Why the first-order bias term vanishes">
+The Taylor expansion of $f(x - hu)$ around $x$ has a linear $-hu f'(x)$ term. When integrated against the symmetric kernel $K$, the linear term is $-h f'(x) \int u K(u)\,du = 0$. Symmetry of $K$ is doing work here — without it we'd pick up an $O(h)$ bias term, and the AMISE-optimal bandwidth in §30.6 would have a very different rate. This is also why asymmetric kernels (one-sided boundary kernels in §30.5) need separate treatment.
+</RemarkBlock>
+
+<RemarkBlock number={7} title="Rosenblatt's no-free-lunch result">
+Theorem 3 says bias is $O(h^2)$ and variance is $O((nh)^{-1})$ under standard regularity — the two rates are intrinsic to the kernel-smoothing program and cannot be both improved without changing the estimator class. A fourth-order kernel with $\mu_2(K) = 0$ can achieve $O(h^4)$ bias but potentially negative $\hat f_h$ (§30.2 Rem 4); local polynomial regression (Fan–Gijbels 1996; §30.5 Rem 9) trades one estimator structure for another. In the plain-KDE world with a symmetric nonnegative kernel, Rosenblatt 1956 is the ceiling.
+</RemarkBlock>
+
+<a id="section-30-5"></a>
+
+## 30.5 MISE, AMISE, and boundary behavior
+
+Bias and variance at a single point $x$ are the building blocks. The relevant global loss — the one AMISE-optimal bandwidth is minimizing — integrates pointwise mean-squared error over the full domain. We derive this integrated form and then flag the one regime where Theorem 3 does *not* hold: the boundary of a bounded-support density.
+
+The pointwise mean-squared error is $\mathrm{MSE}(x) = \mathrm{Bias}^2(x) + \mathrm{Var}(x)$. Integrating over $x$,
+
+$$
+\mathrm{MISE}(h) \;=\; \mathbb{E}\!\int\bigl(\hat f_h(x) - f(x)\bigr)^2\,dx \;=\; \int \mathrm{Bias}^2(x)\,dx + \int \mathrm{Var}(x)\,dx
+$$
+
+is the **mean integrated squared error**, the canonical global loss functional. The **asymptotic MISE** (AMISE) keeps only the leading-order terms from Theorem 3:
+
+$$
+\mathrm{AMISE}(h) \;=\; \frac{h^4\,\mu_2(K)^2\, R(f'')}{4} \;+\; \frac{R(K)}{n\,h},
+$$
+
+where $R(f'') := \int f''(x)^2\,dx$ is the **curvature integral** of $f$. The two terms are the integrated squared bias (the first) and the integrated variance (the second) — a log-log plot shows them as a line with slope $+4$ and a line with slope $-1$, whose sum has a unique minimum we'll compute in §30.6.
+
+<ExampleBlock number={5} title="MISE vs AMISE at finite n">
+For $f = \varphi$, Gaussian kernel, $n = 200$: the closed-form AMISE-optimal bandwidth (from §30.6 Thm 4) is $h^\ast \approx 0.3705$. At that $h$, AMISE $\approx 0.01025$. The exact MISE computed by numerical integration over the same grid is $\approx 0.01058$ — about 3% higher than AMISE. The gap is the $o(h^2)$ and $o(1/(nh))$ terms we dropped; at $n = 200$ they are nonzero but small, and they vanish as $n \to \infty$.
+</ExampleBlock>
+
+![Three-panel log-log plot. Left: integrated squared bias h^4 mu2(K)^2 R(f'')/4 vs h, a line with slope +4. Middle: integrated variance R(K)/(nh) vs h, a line with slope -1. Right: AMISE = IBias^2 + IVar vs h with the h* minimum marked by a vertical dashed line. For f = N(0,1), Gaussian kernel, n = 200.](/images/topics/kernel-density-estimation/30-bias-variance-mise-vs-h.png)
+
+*Figure 3. The integrated squared bias (slope +4), integrated variance (slope −1), and their sum AMISE on log-log axes for $f = $ Normal$(0, 1)$, Gaussian kernel, $n = 200$. The AMISE minimum at $h^\ast \approx 0.37$ marks the AMISE-optimal bandwidth Theorem 4 characterizes.*
+
+<ExampleBlock number={6} title="Boundary bias on Beta(2, 5)">
+Beta$(2, 5)$ has density $f(x) = 30 x (1 - x)^4$ on $[0, 1]$ and $f(x) = 0$ outside. A naïve Gaussian KDE on a Beta$(2, 5)$ sample places nonzero density at negative $x$ (where the true density is zero) because the Gaussian kernel has infinite support. The leakage is not a small correction: at $n = 500$ with Silverman bandwidth $h \approx 0.09$, the mass below $x = 0$ is approximately $0.02$, or 2% of the total probability mass. Figure 4 shows the naïve and reflection-corrected KDEs side by side; the reflection trick (augment the sample with $\{-X_i\}$ and renormalize) recovers nearly all the leaked mass.
+</ExampleBlock>
+
+![Two-panel figure. Left: naive Gaussian KDE on a Beta(2,5) sample with mass leaked below zero, over-smoothing the boundary. Right: reflection-corrected KDE on the same sample, with leaked mass restored. True Beta(2,5) density overlaid in black on both panels.](/images/topics/kernel-density-estimation/30-boundary-bias-beta25.png)
+
+*Figure 4. Naïve Gaussian KDE (left) vs. Jones 1993 reflection-corrected KDE (right) on a Beta$(2, 5)$ sample at $n = 500$. The naïve estimator over-smooths across the lower boundary; reflection restores the mass and matches the true density much more closely near $x = 0$.*
+
+<BoundaryBiasDemo client:visible />
+
+<RemarkBlock number={8} title="Why boundary bias is not a small correction">
+For a density with bounded support $[a, b]$ and a kernel with support $[-r, r]$ (or all of $\mathbb{R}$ with rapid decay), the KDE near $x = a$ averages over $X_i$ values in a window that extends below $a$. But no $X_i$ values *are* below $a$ — the sample is entirely on $[a, b]$. The KDE therefore under-estimates $f(a)$ and smooths probability mass into the forbidden region $(-\infty, a)$. At $x$ exactly at the boundary, the bias is $O(h)$ — worse than the interior $O(h^2)$ — and the AMISE analysis of §30.6 does not apply. Any production density estimator for bounded-support data needs a boundary correction.
+</RemarkBlock>
+
+<RemarkBlock number={9} title="Reflection, local-linear, and the path to formalml">
+Three standard boundary corrections: Jones 1993 **reflection** (simplest; used by `BoundaryBiasDemo`); Müller 1991 **boundary kernels** (asymmetric kernels within one bandwidth of the boundary); Fan–Gijbels 1996 **local polynomial regression**, which automatically adapts at the boundary as a byproduct of fitting a local polynomial rather than a local constant. Local polynomial is the modern standard and generalizes cleanly to the regression setting $E[Y \mid X]$; the full treatment is deferred to formalml `local-regression`. Topic 30 keeps things simple with reflection.
+</RemarkBlock>
+
+<a id="section-30-6"></a>
+
+## 30.6 Optimal bandwidth and Epanechnikov's theorem
+
+Two theorems anchor the featured section. Theorem 4 derives the AMISE-optimal bandwidth from the decomposition in §30.5 — the full four-step proof is the load-bearing calculation of the topic. Theorem 5 picks the kernel that minimizes the resulting AMISE among symmetric nonnegative kernels with a fixed second moment — a short calculus-of-variations argument whose answer is Epanechnikov's $K_E$.
+
+<TheoremBlock number={4} title="AMISE decomposition and optimal bandwidth (featured)">
+Let $X_1, \dots, X_n$ be iid with density $f$ having bounded, continuous second derivative $f''$. Let $K$ be a symmetric kernel with $\int K = 1$, $\int u K = 0$, $\mu_2(K) \in (0, \infty)$, $R(K) < \infty$. As $n \to \infty$, $h \to 0$, $nh \to \infty$,
+
+$$
+\mathrm{AMISE}(h) \;=\; \frac{R(K)}{nh} + \frac{h^4\,\mu_2(K)^2\, R(f'')}{4},
+$$
+
+where $R(f'') := \int f''(x)^2\,dx$. The AMISE-optimal bandwidth is
+
+$$
+h^\ast \;=\; \left(\frac{R(K)}{n\,\mu_2(K)^2\, R(f'')}\right)^{1/5} \;=\; O(n^{-1/5}),
+$$
+
+with matching minimum AMISE
+
+$$
+\mathrm{AMISE}^\ast \;=\; \frac{5}{4}\,\bigl\{R(K)^4\, \mu_2(K)^2\, R(f'')\bigr\}^{1/5}\, n^{-4/5}.
+$$
+</TheoremBlock>
+
+<ProofBlock>
+The proof has four steps: (i) compute the bias via Taylor expansion of $f$; (ii) compute the variance via the iid-sum identity; (iii) integrate over $x$ to obtain AMISE; (iv) minimize in $h$.
+
+**Step (i): Bias.** Substitute $u = (x - y)/h$ in the definition of the expected value:
+
+$$
+\mathbb{E}\bigl[\hat f_h(x)\bigr] = \int \frac{1}{h} K\!\left(\frac{x-y}{h}\right) f(y)\,dy = \int K(u)\, f(x - hu)\,du.
+$$
+
+Taylor-expand $f(x - hu)$ around $x$ to second order, using the regularity of $f''$:
+
+$$
+f(x - hu) = f(x) - hu\, f'(x) + \frac{(hu)^2}{2}\, f''(x) + o(h^2),
+$$
+
+where the remainder is $o(h^2)$ uniformly in $u$ on the support of $K$. Substituting into the expectation integral,
+
+$$
+\mathbb{E}\bigl[\hat f_h(x)\bigr] = f(x)\int K(u)\,du - h\, f'(x)\int u\, K(u)\,du + \frac{h^2}{2}\, f''(x)\int u^2\, K(u)\,du + o(h^2).
+$$
+
+Applying the kernel moment conditions (K1)–(K3):
+
+$$
+\mathbb{E}\bigl[\hat f_h(x)\bigr] = f(x) \cdot 1 - h\, f'(x) \cdot 0 + \frac{h^2}{2}\, f''(x)\, \mu_2(K) + o(h^2).
+$$
+
+Subtracting $f(x)$ yields the leading-order bias $\mathrm{Bias}(\hat f_h(x)) = \frac{h^2}{2}\,\mu_2(K)\, f''(x) + o(h^2)$.
+
+**Step (ii): Variance.** Since $\hat f_h(x) = \frac{1}{n}\sum_i Z_i$ where $Z_i := h^{-1} K((x-X_i)/h)$ are iid,
+
+$$
+\mathrm{Var}\bigl(\hat f_h(x)\bigr) = \frac{1}{n}\, \mathrm{Var}(Z_1) = \frac{1}{n}\!\left\{\mathbb{E}[Z_1^2] - \mathbb{E}[Z_1]^2\right\}.
+$$
+
+Compute the second moment of $Z_1$ by the same substitution:
+
+$$
+\mathbb{E}[Z_1^2] = \int \frac{1}{h^2}\, K\!\left(\frac{x-y}{h}\right)^{\!2} f(y)\,dy = \frac{1}{h}\int K(u)^2\, f(x - hu)\,du.
+$$
+
+Using $f(x - hu) = f(x) + O(h)$ (first-order Taylor),
+
+$$
+\mathbb{E}[Z_1^2] = \frac{1}{h}\, f(x) \int K(u)^2\,du + O(1) = \frac{f(x)\, R(K)}{h} + O(1).
+$$
+
+The first-moment-squared term is $\mathbb{E}[Z_1]^2 = (f(x) + O(h^2))^2 = f(x)^2 + O(h^2)$, which is $O(1)$ and therefore negligible compared to the $O(1/h)$ leading term. Combining:
+
+$$
+\mathrm{Var}\bigl(\hat f_h(x)\bigr) = \frac{1}{n}\!\left\{\frac{f(x)\, R(K)}{h} + O(1)\right\} = \frac{f(x)\, R(K)}{nh} + O\!\left(\frac{1}{n}\right).
+$$
+
+Under the regime $nh \to \infty$, the $O(1/n)$ term is $o(1/(nh))$.
+
+**Step (iii): Integrate to AMISE.** The pointwise mean-squared error is $\mathrm{MSE}(x) = \mathrm{Bias}^2(x) + \mathrm{Var}(x)$. Integrating over $x$ and keeping only the leading terms,
+
+$$
+\mathrm{AMISE}(h) = \int \mathrm{Bias}^2(x)\,dx + \int \mathrm{Var}(x)\,dx.
+$$
+
+The integrated squared bias is
+
+$$
+\int \mathrm{Bias}^2(x)\,dx = \int \left(\frac{h^2}{2}\,\mu_2(K)\,f''(x)\right)^{\!2} dx = \frac{h^4\,\mu_2(K)^2}{4}\,R(f''),
+$$
+
+where $R(f'') := \int f''(x)^2\,dx$. The integrated variance is
+
+$$
+\int \mathrm{Var}(x)\,dx = \int \frac{f(x)\,R(K)}{nh}\,dx = \frac{R(K)}{nh}\int f(x)\,dx = \frac{R(K)}{nh},
+$$
+
+using $\int f = 1$. Summing,
+
+$$
+\mathrm{AMISE}(h) = \frac{R(K)}{nh} + \frac{h^4\,\mu_2(K)^2\,R(f'')}{4}.
+$$
+
+**Step (iv): Minimize in $h$.** Differentiate AMISE with respect to $h$:
+
+$$
+\frac{d\,\mathrm{AMISE}}{dh} = -\frac{R(K)}{n\,h^2} + h^3\,\mu_2(K)^2\,R(f'').
+$$
+
+Setting to zero and solving for $h$:
+
+$$
+h^5 = \frac{R(K)}{n\,\mu_2(K)^2\,R(f'')}, \qquad h^\ast = \left(\frac{R(K)}{n\,\mu_2(K)^2\,R(f'')}\right)^{\!1/5}.
+$$
+
+The second derivative
+
+$$
+\frac{d^2\,\mathrm{AMISE}}{dh^2} = \frac{2R(K)}{n\,h^3} + 3 h^2\,\mu_2(K)^2\,R(f'') > 0,
+$$
+
+confirms $h^\ast$ is the unique minimum. Substituting $h^\ast$ into AMISE: the first term evaluates to
+
+$$
+\frac{R(K)}{n\,h^\ast} = \frac{R(K)}{n}\left(\frac{n\,\mu_2(K)^2\,R(f'')}{R(K)}\right)^{\!1/5} = R(K)^{4/5}\, \mu_2(K)^{2/5}\, R(f'')^{1/5}\, n^{-4/5},
+$$
+
+and the second term evaluates to
+
+$$
+\frac{(h^\ast)^4\, \mu_2(K)^2\, R(f'')}{4} = \frac{1}{4}\, R(K)^{4/5}\, \mu_2(K)^{2/5}\, R(f'')^{1/5}\, n^{-4/5}.
+$$
+
+Their sum is $\mathrm{AMISE}^\ast = \frac{5}{4}\, R(K)^{4/5}\, \mu_2(K)^{2/5}\, R(f'')^{1/5}\, n^{-4/5} = \frac{5}{4}\bigl\{R(K)^4\, \mu_2(K)^2\, R(f'')\bigr\}^{1/5}\, n^{-4/5}$.
+
+$\blacksquare$ — using kernel moment conditions (K1)–(K4), second-order Taylor expansion of $f$, iid-variance accounting, and elementary calculus (ROS1956; PAR1962; WAN1995 §2.5; SIL1986 §3.3).
+</ProofBlock>
+
+<TheoremBlock number={5} title="Epanechnikov's optimality theorem">
+Consider the class of symmetric kernels $K : \mathbb{R} \to \mathbb{R}_{\ge 0}$ satisfying $\int K = 1$ and $\mu_2(K) = \sigma_0^2$ for a fixed positive constant $\sigma_0^2$. The kernel minimizing $R(K) = \int K^2$ subject to these constraints is the **Epanechnikov kernel**
+
+$$
+K_E(u) = \frac{3}{4}\,(1 - u^2)\,\mathbf{1}\{|u| \le 1\}, \qquad \mu_2(K_E) = \frac{1}{5}, \quad R(K_E) = \frac{3}{5}.
+$$
+
+(By rescaling $h$, the conclusion holds for any fixed $\sigma_0^2 > 0$; the statement with $\sigma_0^2 = 1/5$ fixes the conventional support $[-1, 1]$.)
+</TheoremBlock>
+
+<ProofBlock>
+Minimizing the quadratic functional $R(K) = \int K(u)^2\,du$ subject to the two linear constraints $\int K = 1$ and $\int u^2 K = \frac{1}{5}$ plus the symmetry and nonnegativity constraints, we form the Lagrangian
+
+$$
+\mathcal{L}[K] = \int K(u)^2\,du + \lambda_0\!\left(\int K - 1\right) + \lambda_2\!\left(\int u^2 K - \frac{1}{5}\right).
+$$
+
+Symmetry fixes the first-moment multiplier at zero. The pointwise Euler–Lagrange first-order condition is $2 K(u) + \lambda_0 + \lambda_2 u^2 = 0$, giving
+
+$$
+K(u) = -\frac{\lambda_0}{2} - \frac{\lambda_2}{2}\, u^2 = a - b\, u^2
+$$
+
+on the region where this is positive, with $K = 0$ outside. Write $K(u) = a(1 - u^2/r^2)\,\mathbf{1}\{|u| \le r\}$, where $r := \sqrt{a/b}$ is the support radius (forced by $K(\pm r) = 0$). The two constraints pin $a$ and $r$:
+
+$$
+\int K = a \int_{-r}^{r}(1 - u^2/r^2)\,du = a\,\frac{4r}{3} = 1 \implies a = \frac{3}{4r},
+$$
+
+$$
+\int u^2 K = a \int_{-r}^{r}(u^2 - u^4/r^2)\,du = a\left(\frac{2r^3}{3} - \frac{2r^3}{5}\right) = \frac{4ar^3}{15} = \frac{r^2}{5}\quad\text{(using $a = 3/(4r)$).}
+$$
+
+Setting $\mu_2(K) = 1/5$ gives $r^2 = 1$, so $r = 1$ and $a = 3/4$, yielding
+
+$$
+K_E(u) = \frac{3}{4}\,(1 - u^2)\, \mathbf{1}\{|u| \le 1\}.
+$$
+
+The second-derivative test is automatic: the objective $\int K^2$ is strictly convex in $K$, so the stationary point is a global minimum. Computing the optimum:
+
+$$
+R(K_E) = \int_{-1}^{1} \frac{9}{16}(1 - u^2)^2\,du = \frac{9}{16} \cdot \frac{16}{15} = \frac{3}{5}.
+$$
+
+$\blacksquare$ — using Lagrangian variational principles with linear constraints and nonnegativity, the Euler–Lagrange condition for a quadratic objective, and elementary Calculus-of-Variations (EPA1969; WAN1995 §2.7).
+</ProofBlock>
+
+<BandwidthExplorer client:visible />
+
+<ExampleBlock number={7} title="Oracle h* for f = N(0,1), Gaussian kernel, n = 100">
+With $f = \varphi$ and Gaussian kernel, the constants are $R(K) = 1/(2\sqrt\pi) \approx 0.2821$, $\mu_2(K) = 1$, and $R(\varphi'') = 3/(8\sqrt\pi) \approx 0.2116$. Substituting into Theorem 4:
+
+$$
+h^\ast = \left(\frac{0.2821}{100 \cdot 1 \cdot 0.2116}\right)^{\!1/5} = (0.01333)^{1/5} \approx 0.4217.
+$$
+
+This matches the T30.12 test pin — the oracle-bandwidth computation at $n = 100$ for $f = N(0, 1)$. At $n = 1000$ the bandwidth shrinks by the factor $10^{-1/5} \approx 0.631$ (T30.13), and the optimal AMISE shrinks by $10^{-4/5} \approx 0.158$ (T30.14).
+</ExampleBlock>
+
+![Two-panel AMISE figure. Left: AMISE curves for Gaussian, Epanechnikov, biweight, and triangular kernels at f = N(0,1), n = 200. All four minima land near h* between 0.37 and 0.40. Right: zoom on the minimum region showing the near-alignment of the four optima.](/images/topics/kernel-density-estimation/30-amise-and-optimal-bandwidth.png)
+
+*Figure 5. AMISE for four kernels on $f = $ Normal$(0, 1)$, $n = 200$. Left: full range. Right: zoom on $[0.2, 0.4]$ showing the near-identical minima, confirming that kernel choice barely matters relative to bandwidth choice.*
+
+![Log-log plot of AMISE* versus n for n in {50, 100, 200, 500, 1000, 2000, 5000, 10000} at f = N(0,1) with Gaussian kernel. The empirical slope matches the theoretical -0.8 rate; a dotted parametric-rate line at slope -1 is shown for reference.](/images/topics/kernel-density-estimation/30-mise-rate-vs-n.png)
+
+*Figure 6. Oracle AMISE$^\ast$ vs $n$ on log-log axes. The slope is the theoretical $-4/5 = -0.8$; the faint dotted line at slope $-1$ is the parametric comparison. The gap between the two slopes is the price of distribution-freeness.*
+
+<RemarkBlock number={10} title="Why the n^(-1/5) rate is slower than parametric">
+A parametric MLE of a Normal mean has MSE $O(n^{-1})$ — the square of the standard $\sqrt n$ convergence. The KDE's AMISE rate $O(n^{-4/5})$ is slower because we're estimating an *entire function*, not a finite-dimensional parameter. The rate is a direct consequence of Theorem 4: the bias–variance trade-off forces $h \to 0$ at rate $n^{-1/5}$, not the $n^{-1/2}$ that parametric estimators enjoy. In high dimensions the rate gets worse still — Scott 2015 Ch. 6 derives the multivariate rate $O(n^{-4/(4+d)})$, which we'll pointer-forward in §30.10.
+</RemarkBlock>
+
+<RemarkBlock number={11} title="Structural parallel to Bahadur linearization">
+The AMISE-optimal $h^\ast$ is the first-order condition on a quadratic-in-$h^2$ loss function. The structural parallel to the [Bahadur representation of the sample quantile](/topics/order-statistics-and-quantiles#section-29-6) (Topic 29 §29.6) is that *both* reduce nonparametric inference to a balance between a variance term that shrinks with more data and a bias term controlled by an asymptotic parameter: bandwidth $h$ in the KDE case, remainder-term order in the Bahadur case. Every Track 8 result is a version of this trade-off — bootstrap, empirical processes, and density-ratio estimation each have their own "h": a resample count, a bracketing radius, a regularization strength.
+</RemarkBlock>
+
+<RemarkBlock number={12} title="Kernel choice negligibility">
+Theorem 5 minimizes $R(K)$ subject to $\mu_2(K) = \sigma_0^2$. Substituting into $\mathrm{AMISE}^\ast$, the kernel enters through $\{R(K)^4 \mu_2(K)^2\}^{1/5}$. For the five standard kernels, this combined factor ranges from $0.98^{1/5}$ (uniform) to $1.00$ (Epanechnikov) — a spread of under 2%. In log-space, switching kernels moves AMISE$^\ast$ by less than 0.01. Bandwidth choice, by contrast, can move AMISE by an order of magnitude. The practical advice: pick any standard kernel (Gaussian for simplicity, Epanechnikov for compact support), and spend your energy on bandwidth selection (§30.8).
+</RemarkBlock>
+
+<RemarkBlock number={13} title="Higher-order kernels and faster rates">
+A **fourth-order kernel** is a kernel with $\mu_2(K) = 0$; the bias in Theorem 3 then vanishes to leading order, and the next term is $O(h^4)$ involving $f^{(4)}$. The AMISE rate improves from $n^{-4/5}$ to $n^{-8/9}$ — a meaningful speedup at large $n$. The catch: a fourth-order kernel must take negative values (to integrate $u^2 K = 0$ with $\int K = 1$), so $\hat f_h$ can be negative. In practice this is usually patched by truncation, but Topic 30 follows the standard monograph convention of restricting to second-order kernels. Serfling 1980 §1.11 and Wand–Jones 1995 §2.8 cover higher-order kernels at length; formalml may return to them in the context of density-ratio estimation.
+</RemarkBlock>
+
+<a id="section-30-7"></a>
+
+## 30.7 Pointwise asymptotic normality and confidence intervals
+
+Theorem 4 gives us the MISE rate; Theorem 6 gives us pointwise asymptotic normality, from which Gaussian-calibrated confidence intervals for $f(x)$ follow immediately. The proof technique — Lindeberg–Feller for triangular arrays — is the same machinery that powered Topic 11 §11.6's general CLT; we state it and sketch the verification.
+
+<TheoremBlock number={6} title="Parzen's pointwise asymptotic normality (stated with sketch)">
+Under the hypotheses of Theorem 4 (symmetric kernel satisfying $\int K = 1$, $\int u K = 0$, $\mu_2(K) < \infty$, $R(K) < \infty$; $f$ continuous at $x$ with $f(x) > 0$), and under the bandwidth regime $h \to 0$, $nh \to \infty$,
+
+$$
+\sqrt{nh}\,\Bigl(\hat f_h(x) - \mathbb{E}[\hat f_h(x)]\Bigr) \;\xrightarrow{d}\; \mathcal{N}\!\left(0,\; f(x)\, R(K)\right).
+$$
+</TheoremBlock>
+
+<ProofBlock>
+Write $\hat f_h(x) = \frac{1}{n}\sum_{i=1}^n Z_{n,i}$, where $Z_{n,i} := h^{-1} K((x - X_i)/h)$ form a **triangular array** of iid random variables — iid within each row indexed by $n$, but their distribution depends on $n$ through the bandwidth $h = h(n)$. The variance per term is
+
+$$
+\mathrm{Var}(Z_{n,i}) = \frac{f(x)\,R(K)}{h}\,(1 + o(1)),
+$$
+
+from Theorem 3 (Step (ii) of Theorem 4's proof, multiplied through by the $h^{-1}$ normalization). Multiplying the standardizing factor $\sqrt{nh}$ onto the centered sum gives
+
+$$
+\sqrt{nh}\,\bigl(\hat f_h(x) - \mathbb{E}[\hat f_h(x)]\bigr) = \frac{1}{\sqrt{n/h}}\sum_{i=1}^n (Z_{n,i} - \mathbb{E}[Z_{n,i}]),
+$$
+
+whose variance is $\frac{nh}{n} \cdot \mathrm{Var}(Z_{n,i}) = h \cdot f(x) R(K)/h \cdot (1 + o(1)) = f(x)\,R(K) + o(1)$. Apply the **Lindeberg–Feller central limit theorem** for triangular arrays (Topic 11 §11.6 Thm 2): check the Lindeberg condition
+
+$$
+\lim_{n \to \infty}\; \frac{n}{f(x)\,R(K)}\,\mathbb{E}\!\left[\bigl(Z_{n,1}/\sqrt{n/h} - \mathbb{E}[Z_{n,1}]/\sqrt{n/h}\bigr)^2\, \mathbf{1}\{\cdots > \varepsilon\}\right] = 0 \quad \text{for all } \varepsilon > 0.
+$$
+
+Boundedness of $K$ (compact support in the Epanechnikov case, or $e^{-u^2/2}$ decay in the Gaussian case) ensures $|Z_{n,i}| \le \|K\|_\infty / h$, and the event inside the indicator becomes empty for $n$ large enough because the standardized summand is $O(h^{-1/2}/\sqrt{n}) = O(1/\sqrt{nh}) \to 0$. The Lindeberg condition holds.
+
+$\blacksquare$ — using the Lindeberg–Feller CLT for triangular arrays (Topic 11 §11.6 Thm 2), the variance calculation from Thm 3, and boundedness of $K$ (PAR1962 §3–§5; vdV2000 §24.1).
+</ProofBlock>
+
+Theorem 6 centers the CI at $\mathbb{E}[\hat f_h(x)]$, not at $f(x)$. At finite $n$ there is a bias shift of magnitude $\frac{h^2}{2}\mu_2(K) f''(x)$, and the resulting pointwise CI has coverage slightly below the nominal $1 - \alpha$. For the purposes of this topic, we ignore the bias correction and use the plug-in variance
+
+$$
+\hat V(x) \;=\; \frac{\hat f_h(x)\, R(K)}{n\,h}, \qquad \mathrm{CI}_{1-\alpha}(x) \;=\; \hat f_h(x) \;\pm\; z_{1 - \alpha/2}\,\sqrt{\hat V(x)},
+$$
+
+noting the coverage will be biased-low at modest $n$ and small $h$.
+
+<ExampleBlock number={8} title="Pointwise CI at x = 0 for N(0,1), n = 500">
+For a Normal$(0, 1)$ sample of size $n = 500$ (seed-42 NumPy draw, $\hat\sigma \approx 0.98$), Silverman's bandwidth $\hat h_{\mathrm{ROT}} \approx 0.300$. At $x = 0$:
+
+$$
+\hat f_h(0) \approx 0.388, \qquad \hat V(0) = \frac{0.388 \cdot 0.2821}{500 \cdot 0.300} \approx 7.30 \times 10^{-4}, \qquad \sqrt{\hat V(0)} \approx 0.027.
+$$
+
+The 95% pointwise CI is $0.388 \pm 1.96 \cdot 0.027 = [0.335, 0.441]$. The true density value $f(0) = \varphi(0) \approx 0.399$ lies comfortably inside. This is the T30.11 test pin.
+</ExampleBlock>
+
+<ExampleBlock number={9} title="Density-at-quantile: Bahadur's plug-in (discharge of Topic 29 §29.6 Rem 12)">
+[Topic 29 §29.6 Rem 12](/topics/order-statistics-and-quantiles#section-29-6) named KDE as *the* tool for estimating $f(\xi_p)$ — the density in Bahadur's limit variance $\sigma^2 = p(1 - p)/f(\xi_p)^2$. Here we discharge that promise.
+
+Take a Normal$(0, 1)$ sample of size $n = 500$ and focus on the upper quartile $p = 0.9$. The [Type-7 sample quantile](/topics/order-statistics-and-quantiles#section-29-4) is $\hat\xi_{0.9} \approx 1.30$. The Silverman-bandwidth KDE evaluated at that quantile is
+
+$$
+\hat f_{\hat h}(\hat\xi_{0.9}) \approx 0.175,
+$$
+
+giving the Bahadur-plug-in asymptotic standard error
+
+$$
+\hat{\mathrm{SE}}(\hat\xi_{0.9}) \;=\; \sqrt{\frac{0.9 \cdot 0.1}{500 \cdot 0.175^2}} \;\approx\; 0.0242.
+$$
+
+The resulting 95% asymptotic CI is $1.30 \pm 1.96 \cdot 0.0242 = [1.25, 1.35]$. For comparison, the [distribution-free binomial-exact CI](/topics/order-statistics-and-quantiles#section-29-7) from Topic 29 §29.7 is $[X_{(r)}, X_{(s)}]$ with $r$ and $s$ chosen so the coverage is at least $1 - \alpha$; at $n = 500$, $p = 0.9$, $\alpha = 0.05$ the CI is approximately $[1.24, 1.37]$. The Bahadur-plug-in CI is noticeably tighter — asymptotic efficiency at the cost of nominal-coverage validity at finite $n$.
+</ExampleBlock>
+
+![Plot of empirical coverage vs sample size n for the pointwise 95% CI at x=0 under f = N(0,1). Bars extend from the coverage observed over 2000 MC replicates at each n in {100, 200, 500, 1000, 2000, 5000}. At small n coverage is below 95% because of the bias shift; at large n it approaches nominal.](/images/topics/kernel-density-estimation/30-pointwise-ci-coverage.png)
+
+*Figure 7. Empirical coverage of the 95% pointwise CI for $f(0)$ under $f = $ Normal$(0, 1)$ across sample sizes. At small $n$ the bias shift in Theorem 6 depresses coverage below $95\%$; by $n = 5000$ the coverage is within Monte-Carlo noise of nominal.*
+
+<RemarkBlock number={14} title="Why the CI has biased coverage at small n">
+The CI is centered at $\hat f_h(x)$, which is a consistent estimator of $\mathbb{E}[\hat f_h(x)] = f(x) + \frac{h^2}{2}\mu_2(K) f''(x) + o(h^2)$ — not $f(x)$ itself. At the oracle bandwidth $h^\ast$ the bias is $O(n^{-2/5})$, and the interval width is $O(n^{-2/5})$ as well, so the bias is of the same order as the width. Coverage improves as $n$ grows (the $o(h^2)$ terms shrink faster than the width) but remains biased-low at the finite $n$ ML practitioners see in practice. Bias-corrected CIs (plug-in estimates of $f''$, or undersmoothing) exist; vdV2000 §24.1 is a standard reference.
+</RemarkBlock>
+
+<RemarkBlock number={15} title="Simultaneous CIs and the bootstrap">
+Theorem 6 is pointwise — it gives a CI for $f(x_0)$ at a single preselected $x_0$. For a joint CI covering $f$ over a range $[a, b]$ at level $1 - \alpha$, we need Bickel–Rosenblatt-type machinery, which turns out to be a functional CLT in the same Donsker-theory framework Topic 29 §29.8 used for the Kolmogorov limit. The cleanest route in practice is the smooth bootstrap (§30.10 Ex 13), which constructs simultaneous envelopes by resampling from $\hat f_h$ itself. The full treatment is forthcoming on formalml.
+</RemarkBlock>
+
+<a id="section-30-8"></a>
+
+## 30.8 Data-driven bandwidth selection
+
+The oracle $h^\ast$ from Theorem 4 requires the curvature integral $R(f'')$, which the practitioner does not know. Data-driven bandwidth selectors estimate $R(f'')$ — or skip it entirely — and return a data-dependent $\hat h$. The four standard selectors are:
+
+- **Silverman's rule-of-thumb** (the default in R's `bw.nrd0`): a Normal-scale plug-in that assumes $f \approx N(\mu, \sigma^2)$.
+- **Scott's rule**: Silverman without the IQR-robustness adjustment.
+- **Unbiased cross-validation (UCV)**: minimizes an estimator of MISE $-$ ∫$f^2$.
+- **Sheather–Jones plug-in (SHJ)**: a one-step direct plug-in that estimates $R(f'')$ from a pilot KDE.
+
+Silverman and Scott are cheap closed forms; UCV is a grid search at cost $O(n^2 G)$ per evaluation; SHJ is an $O(n^2)$ double-sum followed by a closed-form plug-in. All four are implemented in `nonparametric.ts` §10 or inlined in `PluginBandwidthComparator` (§5.3).
+
+<DefinitionBlock number={4} title="Mean integrated squared error (MISE)">
+For an estimator $\hat f_h$ of a density $f$, the **mean integrated squared error** is
+
+$$
+\mathrm{MISE}(h) \;:=\; \mathbb{E}\!\int\bigl(\hat f_h(x) - f(x)\bigr)^2\,dx.
+$$
+
+The AMISE from §30.5 is the leading-order approximation to MISE; bandwidth selectors typically minimize one or the other. Note $\mathrm{MISE}(h) = \int \mathrm{Var}(\hat f_h(x))\,dx + \int \mathrm{Bias}^2(x)\,dx$ — the integrated decomposition that drives everything in Theorem 4.
+</DefinitionBlock>
+
+<TheoremBlock number={7} title="Silverman's rule of thumb">
+Under the Normal-scale reference rule — assume $f$ is Normal$(\mu, \sigma^2)$ — the AMISE-optimal bandwidth (Theorem 4) with Gaussian kernel simplifies to
+
+$$
+h^\ast_{\text{Silverman}} \;=\; \left(\frac{4}{3 n}\right)^{\!1/5} \hat\sigma \;\approx\; 1.06\, \hat\sigma\, n^{-1/5},
+$$
+
+where $\hat\sigma$ is a scale estimate. **Silverman's robust variant** uses $\hat\sigma = \min(\mathrm{SD}, \mathrm{IQR}/1.34)$ to guard against heavy tails or mild bimodality. *Stated*; the derivation substitutes $R(\varphi'') = 3/(8\sqrt\pi)$ into Theorem 4 and rearranges. (SIL1986 §3.4.2)
+</TheoremBlock>
+
+<ExampleBlock number={10} title="Silverman over-smooths bimodal mixtures">
+Take a 50/50 mixture of Normal$(-1.5, 1)$ and Normal$(1.5, 1)$, $n = 200$. This is the `bimodalNormalPreset` from `nonparametric-data.ts` — the overall standard deviation is $\hat\sigma \approx \sqrt{1 + 1.5^2} \approx 1.80$, so Silverman gives
+
+$$
+\hat h_{\mathrm{Silverman}} \;=\; 1.06 \cdot 1.80 \cdot 200^{-1/5} \;\approx\; 0.66.
+$$
+
+But the oracle bandwidth $h^\ast$ (Theorem 4, using the closed-form $R(f'') \approx 0.092$ for this mixture) is $\approx 0.38$. Silverman is nearly $2\times$ too large; the resulting KDE merges the two modes into a single plateau. UCV and Sheather–Jones both estimate $R(f'')$ from the data rather than assuming a Normal reference, and both recover the bimodality cleanly. Figure 8 shows the three side by side.
+</ExampleBlock>
+
+![Three KDE curves on a bimodal 0.5 N(-1.5,1) + 0.5 N(1.5,1) sample at n = 200. Silverman's rule (indigo) over-smooths into a single-mode curve. UCV (amber) under-smooths with visible noise. Sheather-Jones (violet) recovers both modes cleanly. True density overlaid in black.](/images/topics/kernel-density-estimation/30-bandwidth-selectors-bimodal.png)
+
+*Figure 8. Three bandwidth selectors on a bimodal mixture at $n = 200$. Silverman over-smooths; UCV is noisy; Sheather–Jones cleanly recovers the bimodality. The pedagogical payoff: rule-of-thumb selectors are conservative by design, and their conservatism bites at densities whose curvature is not well-approximated by a Normal reference.*
+
+<PluginBandwidthComparator client:visible />
+
+<RemarkBlock number={16} title="Why Silverman over-smooths bimodals">
+Silverman's rule substitutes a Normal reference for $R(f'')$: for $f = N(\mu, \sigma^2)$, $R(f'') = 3/(8\sqrt\pi \sigma^5)$. For a bimodal density with separation $|\mu_1 - \mu_2| \approx 3\sigma$, the true $R(f'')$ can be $5$–$10\times$ larger than the Normal-reference value — the two modes create sharp peaks and sharp valleys that contribute heavily to $\int f''^2$. Silverman therefore underestimates $R(f'')$ by the same factor, which puts $\hat h$ roughly $(5\text{–}10)^{1/5} \approx 1.4$–$1.6\times$ too large. The fix is to estimate $R(f'')$ from the data — UCV does this implicitly (by cross-validating against the sample), SHJ does it explicitly (via a pilot KDE's second derivative). The `PluginBandwidthComparator` lets you see the effect directly: switch presets and watch the Silverman bandwidth diverge from the oracle on the bimodal case, match it on the unimodal case.
+</RemarkBlock>
+
+<a id="section-30-9"></a>
+
+## 30.9 ML bridges: anomaly detection and density-based classification
+
+KDE is a direct ingredient in two classic ML workflows — unsupervised anomaly detection and the plug-in Bayes classifier — and an indirect one in modern neural density estimators. We describe both direct cases concretely; the connection to Nadaraya–Watson regression and mean-shift clustering is a forward pointer.
+
+<ExampleBlock number={11} title="Anomaly detection via low-density flagging">
+Given a training sample $X_1, \dots, X_n$ representing "normal" observations, fit a Gaussian KDE $\hat f_h$ with Silverman bandwidth. At test time, flag a new point $x$ as anomalous if $\hat f_h(x) < t$ for some threshold $t$. A natural choice is $t$ = the empirical 5%-quantile of $\{\hat f_h(X_i) : i = 1, \dots, n\}$ — the KDE density values *at the training points themselves*. Under this choice, approximately 5% of training points are (ex post) flagged, and new points that fall into regions of similar sparsity are flagged at test time.
+
+This is the kernel-density-estimate version of **one-class classification**; it requires no labeled anomalies, only a clean sample of normals. In production, practitioners usually replace KDE with a denser estimator (Gaussian Mixture Models, Isolation Forest, Autoencoders) as $n$ grows into the millions, but the KDE version remains the pedagogical entry point and a useful sanity check at low $n$.
+</ExampleBlock>
+
+<ExampleBlock number={12} title="Density-based Bayes classifier and naïve Bayes">
+The **plug-in Bayes classifier** (Fix–Hodges 1951) estimates class-conditional densities $\hat f_{h, c}(x)$ via a separate KDE on each class's training sample, then assigns test point $x$ to
+
+$$
+\hat c(x) \;=\; \arg\max_c\; \hat\pi_c \cdot \hat f_{h, c}(x),
+$$
+
+where $\hat\pi_c = n_c/n$ is the estimated class prior. In $d$ dimensions, full multivariate KDE suffers from the curse of dimensionality (§30.10 Rem 21), so **naïve Bayes with KDE** factors the class density as $\hat f_{h, c}(x) = \prod_{j=1}^d \hat f_{h, c, j}(x_j)$ — a product of $d$ univariate KDEs, one per feature. Naïve-Bayes-with-KDE is the standard ML baseline for mixed continuous-discrete features; `scikit-learn` ships it as `KernelDensity` + `ClassifierMixin`.
+
+Compared to parametric discriminant analysis (LDA, QDA from Topic 15), the KDE version trades parametric efficiency for distribution-freeness — it works on class densities that are skewed, bimodal, or otherwise non-Normal, without any parametric assumption.
+</ExampleBlock>
+
+<RemarkBlock number={17} title="Kernel regression via Nadaraya–Watson">
+The covariate-conditional extension of KDE is **kernel regression** (Nadaraya 1964; Watson 1964):
+
+$$
+\hat m_h(x) \;=\; \frac{\sum_i Y_i\, K_h(x - X_i)}{\sum_i K_h(x - X_i)}.
+$$
+
+This is a weighted average of the $Y_i$ values, with weights decaying as $|x - X_i|$ grows. It is the kernel-smoothing companion to the KDE: KDE estimates the marginal density $f(x)$, NW estimates the conditional expectation $E[Y \mid X = x]$. The two share the Theorem 3 bias–variance structure and the Theorem 6 asymptotic-normality story, so everything we built for $\hat f_h$ carries over. The full development — including local polynomial refinements — is the forthcoming formalml *kernel-regression* chapter.
+</RemarkBlock>
+
+<RemarkBlock number={18} title="Mean-shift clustering">
+**Mean-shift** (Fukunaga–Hostetler 1975; Comaniciu–Meer 2002) is an unsupervised clustering algorithm that performs gradient ascent on $\hat f_h$. Starting from each data point, iterate $x \leftarrow x + h \cdot \nabla \log \hat f_h(x)$ until convergence; the fixed points are the local modes of the KDE, and points that converge to the same mode are assigned to the same cluster. The advantage over k-means is that mean-shift does not require specifying $k$ in advance — the number of modes *is* the number of clusters. The disadvantage is computational: gradient ascent + KDE evaluation is $O(n^2)$ per iteration, so it doesn't scale past modest $n$. Modern variants (spectral mean-shift, blurring mean-shift) are forthcoming on formalml.
+</RemarkBlock>
+
+<a id="section-30-10"></a>
+
+## 30.10 Track 8 forward-map and the KDE → bootstrap bridge
+
+Topic 30 closes with a forward-pointer figure (Fig 9) and a set of remarks that place KDE inside the larger Track 8 spine. Topic 29 (order statistics) opened the track; Topic 30 (KDE) is the mid-track hinge; Topics 31 (bootstrap) and 32 (empirical processes) close it. Beyond Track 8 itself, KDE is a load-bearing ingredient in several formalml chapters — kernel regression, local regression, normalizing flows, clustering, density-ratio estimation — each of which extends the KDE framework to a different ML-relevant context.
+
+<ExampleBlock number={13} title="Smooth bootstrap: resampling from the KDE">
+The standard nonparametric bootstrap resamples from the empirical distribution $F_n$ — a step function that places mass $1/n$ at each $X_i$. Silverman–Young 1987's **smooth bootstrap** resamples from $\hat f_h$ instead: draw $X_i^\ast \sim \hat f_h$ by first picking an observation $X_{J_i}$ uniformly from the sample (where $J_i$ is uniform on $\{1, \dots, n\}$) and then perturbing it by an independent draw from the kernel $K_h$:
+
+$$
+X_i^\ast \;=\; X_{J_i} \;+\; h \cdot U_i, \qquad U_i \sim K, \text{ iid}.
+$$
+
+The resulting bootstrap distribution is smoothly supported rather than concentrated on $\{X_1, \dots, X_n\}$, which matters when the statistic of interest depends on derivatives or local continuity — e.g., quantile regression estimators or mode estimators. Topic 31 develops the full bootstrap framework; smooth-bootstrap is one of several refinements it covers. The KDE → bootstrap bridge is exactly the Topic 30 → 31 edge in the Track 8 forward-map.
+</ExampleBlock>
+
+![Track 8 forward-map. Topic 29 (Order Statistics, done) and Topic 30 (KDE, done, centered) are filled boxes. Topics 31 (Bootstrap) and 32 (Empirical Processes) are dashed outline boxes (forthcoming). Forward arrows from Topic 30 to five formalml satellites: kernel-regression, local-regression, normalizing-flows, clustering, density-ratio-estimation. Back-arrows to Topics 7, 10, 11, 13, 19, 29 in grey.](/images/topics/kernel-density-estimation/30-track8-spine-update.png)
+
+*Figure 9. Track 8 spine with Topic 30 at the center. Topics 29 and 30 are published (filled); Topics 31 and 32 are forthcoming (dashed). Forward arrows fan out to the formalml satellites where KDE machinery is re-used; back-arrows acknowledge the six prerequisite topics.*
+
+<RemarkBlock number={19} title="Topic 31: Bootstrap">
+The bootstrap (Efron 1979) is the Track 8 closer for parametric-inference questions. It resamples from the empirical distribution (or, in the smooth variant, from $\hat f_h$) to simulate the sampling distribution of a statistic without invoking asymptotic normality. Topic 31 will develop nonparametric and parametric bootstraps, bootstrap CIs (percentile, BCa, studentized), and the Edgeworth-expansion-based analysis of bootstrap accuracy. Expect Topic 30's bandwidth selectors to reappear as pilot estimators for smooth bootstraps of sample-quantile statistics.
+</RemarkBlock>
+
+<RemarkBlock number={20} title="Normalizing flows: learned density estimators">
+Modern neural density estimators — normalizing flows (Rezende–Mohamed 2015; Papamakarios et al. 2021) — replace the kernel-average-of-bumps $\hat f_h$ with a learned invertible transformation $g_\theta$ from a simple base density to the target: $\hat f(x) = p_{\text{base}}(g_\theta^{-1}(x)) |\det \partial g_\theta^{-1}/\partial x|$. The AMISE framework of §30.6 doesn't directly apply — flows are parametric within a specified flow family — but the bias-vs-capacity intuition carries over. The forthcoming formalml *normalizing-flows* chapter will contrast the two estimator classes head-to-head; they have complementary strengths (KDE at low $n$ and low $d$; flows at high $n$ and moderate $d$).
+</RemarkBlock>
+
+<RemarkBlock number={21} title="Multivariate KDE and the curse of dimensionality">
+In $d$ dimensions, the KDE generalizes via a product kernel or a full bandwidth matrix $\mathbf{H}$: $\hat f_\mathbf{H}(\mathbf{x}) = n^{-1} |\mathbf{H}|^{-1} \sum_i K(\mathbf{H}^{-1}(\mathbf{x} - \mathbf{X}_i))$. The AMISE rate deteriorates to $O(n^{-4/(4+d)})$ — the **curse of dimensionality** for density estimation. At $d = 10$, $n = 1000$ is effectively $n^{4/14} \approx 6$ in the univariate-equivalent rate, which is why high-dimensional density estimation is hard. Duong 2007's `ks` R package is the standard multivariate implementation; Scott 2015 Ch. 6 is the standard reference. The forthcoming formalml *density-estimation-multivariate* chapter treats the full story.
+</RemarkBlock>
+
+<RemarkBlock number={22} title="Density-ratio estimation and covariate shift">
+In many ML problems we care about the ratio $r(x) = p(x)/q(x)$ rather than the densities themselves — e.g., importance weighting for covariate shift, off-policy evaluation, or generative-adversarial-network discriminator outputs. The naïve plug-in $\hat r(x) = \hat f^{(p)}_h(x)/\hat f^{(q)}_h(x)$ has the same $n^{-4/5}$ rate but amplifies bias in the tails. Direct density-ratio estimation (Sugiyama–Suzuki–Kanamori 2012) sidesteps the denominator entirely by fitting $r$ directly via loss minimization. The full treatment is forthcoming on formalml as *density-ratio-estimation*; Topic 30's KDE machinery is the starting point.
+</RemarkBlock>
+
+---
+
+### References
+
+1. Rosenblatt, Murray. (1956). *[Remarks on Some Nonparametric Estimates of a Density Function](https://projecteuclid.org/journals/annals-of-mathematical-statistics/volume-27/issue-3/Remarks-on-Some-Nonparametric-Estimates-of-a-Density-Function/10.1214/aoms/1177728190.full)*. *Annals of Mathematical Statistics*, 27(3), 832–837.
+2. Parzen, Emanuel. (1962). *[On Estimation of a Probability Density Function and Mode](https://projecteuclid.org/journals/annals-of-mathematical-statistics/volume-33/issue-3/On-Estimation-of-a-Probability-Density-Function-and-Mode/10.1214/aoms/1177704472.full)*. *Annals of Mathematical Statistics*, 33(3), 1065–1076.
+3. Epanechnikov, Vassiliy A. (1969). *[Non-Parametric Estimation of a Multivariate Probability Density](https://epubs.siam.org/doi/10.1137/1114019)*. *Theory of Probability & Its Applications*, 14(1), 153–158.
+4. Silverman, Bernard W. (1986). *[Density Estimation for Statistics and Data Analysis](https://www.taylorfrancis.com/books/mono/10.1201/9781315140919/density-estimation-statistics-data-analysis-bernard-silverman)*. Chapman and Hall.
+5. Sheather, Simon J., and M. Chris Jones. (1991). *[A Reliable Data-Based Bandwidth Selection Method for Kernel Density Estimation](https://doi.org/10.1111/j.2517-6161.1991.tb01857.x)*. *Journal of the Royal Statistical Society: Series B (Methodological)*, 53(3), 683–690.
+6. Wand, M. P., and M. C. Jones. (1995). *[Kernel Smoothing](https://www.taylorfrancis.com/books/mono/10.1201/b14876/kernel-smoothing-wand-jones)*. Chapman and Hall/CRC.
+7. Fan, Jianqing, and Irène Gijbels. (1996). *[Local Polynomial Modelling and Its Applications](https://www.taylorfrancis.com/books/mono/10.1201/9780203748725/local-polynomial-modelling-applications-jianqing-fan)*. Chapman and Hall/CRC.
+8. Duong, Tarn. (2007). *[ks: Kernel Density Estimation and Kernel Discriminant Analysis for Multivariate Data in R](https://doi.org/10.18637/jss.v021.i07)*. *Journal of Statistical Software*, 21(7), 1–16.
+9. Scott, David W. (2015). *[Multivariate Density Estimation: Theory, Practice, and Visualization](https://onlinelibrary.wiley.com/doi/book/10.1002/9781118575574)* (2nd ed.). Wiley.
+10. van der Vaart, Aad W. (2000). *[Asymptotic Statistics](https://www.cambridge.org/core/books/asymptotic-statistics/A3C7DAD3F7E66A1FA60E9C8FE132EE1D)*. Cambridge University Press.
+11. Serfling, Robert J. (1980). *[Approximation Theorems of Mathematical Statistics](https://onlinelibrary.wiley.com/doi/book/10.1002/9780470316481)*. Wiley.
+12. Lehmann, Erich Leo, and George Casella. (1998). *[Theory of Point Estimation](https://link.springer.com/book/10.1007/b98854)* (2nd ed.). Springer.

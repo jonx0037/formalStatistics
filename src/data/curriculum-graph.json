@@ -36,7 +36,7 @@
     { "id": "hierarchical-bayes", "label": "Hierarchical & Empirical Bayes", "domain": "bayesian-statistics", "status": "published", "url": "/topics/hierarchical-bayes-and-partial-pooling" },
 
     { "id": "order-statistics-and-quantiles", "label": "Order Statistics & Quantiles", "domain": "high-dimensional-nonparametric", "status": "published", "url": "/topics/order-statistics-and-quantiles" },
-    { "id": "kernel-density-estimation", "label": "Kernel Density Estimation", "domain": "high-dimensional-nonparametric", "status": "planned", "url": "/topics/kernel-density-estimation" },
+    { "id": "kernel-density-estimation", "label": "Kernel Density Estimation", "domain": "high-dimensional-nonparametric", "status": "published", "url": "/topics/kernel-density-estimation" },
     { "id": "bootstrap", "label": "The Bootstrap", "domain": "high-dimensional-nonparametric", "status": "planned", "url": "/topics/bootstrap" },
     { "id": "empirical-processes", "label": "Empirical Processes & Uniform Convergence", "domain": "high-dimensional-nonparametric", "status": "planned", "url": "/topics/empirical-processes" }
   ],
@@ -151,6 +151,12 @@
     { "source": "confidence-intervals-and-duality", "target": "order-statistics-and-quantiles" },
     { "source": "order-statistics-and-quantiles", "target": "kernel-density-estimation" },
     { "source": "continuous-distributions", "target": "kernel-density-estimation" },
+    { "source": "law-of-large-numbers", "target": "kernel-density-estimation" },
+    { "source": "central-limit-theorem", "target": "kernel-density-estimation" },
+    { "source": "point-estimation", "target": "kernel-density-estimation" },
+    { "source": "confidence-intervals-and-duality", "target": "kernel-density-estimation" },
+    { "source": "kernel-density-estimation", "target": "bootstrap" },
+    { "source": "kernel-density-estimation", "target": "empirical-processes" },
     { "source": "expectation-moments", "target": "bootstrap" },
     { "source": "point-estimation", "target": "bootstrap" },
     { "source": "confidence-intervals-and-duality", "target": "bootstrap" },

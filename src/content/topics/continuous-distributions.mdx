@@ -914,7 +914,7 @@ $$
 \hat{f}(x) = \frac{1}{n} \sum_{i=1}^n \frac{1}{h} \varphi\!\left(\frac{x - x_i}{h}\right)
 $$
 
-The bandwidth $h$ controls the bias-variance tradeoff: small $h$ gives a spiky estimate (low bias, high variance), large $h$ gives a smooth estimate (high bias, low variance). The Normal PDF's smoothness and infinite support make it the default kernel. Kernel Density Estimation (coming soon) will develop the full theory, including optimal bandwidth selection.
+The bandwidth $h$ controls the bias-variance tradeoff: small $h$ gives a spiky estimate (low bias, high variance), large $h$ gives a smooth estimate (high bias, low variance). The Normal PDF's smoothness and infinite support make it the default kernel. [Kernel Density Estimation (Topic 30)](/topics/kernel-density-estimation) develops the full theory, including the AMISE bias-variance decomposition, the AMISE-optimal bandwidth $h^\ast = O(n^{-1/5})$, Epanechnikov's optimal-kernel theorem, and data-driven bandwidth selectors (Silverman, Scott, UCV, Sheather-Jones). Topic 30 §30.6 is the featured section.
 </ExampleBlock>
 
 <ExampleBlock number={7} title="The t-Test: Comparing Means with Unknown σ">
