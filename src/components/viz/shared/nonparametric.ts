@@ -59,14 +59,19 @@ export function orderStatisticDensity(
 ): number {
   const Fx = cdf(x);
   const fx = pdf(x);
-  if (Fx <= 0 && i > 1) return 0;
-  if (Fx >= 1 && i < n) return 0;
+  const leftPower = i - 1;
+  const rightPower = n - i;
+  // Boundary handling: treat 0 * log(0) as 0 (the mass-at-boundary limit). This
+  // is what the density actually is there: for i=1 at Fx=0 we should get
+  // n * (1 - 0)^{n-1} * f(x), not NaN. Without these special-cases, the
+  // Uniform preset's i=1 or i=n endpoints would render as NaN.
+  if (Fx <= 0 && leftPower > 0) return 0;
+  if (Fx >= 1 && rightPower > 0) return 0;
   if (fx <= 0) return 0;
-  // log n! - log (i-1)! - log (n-i)!  + (i-1) log F + (n-i) log(1-F) + log f
   const logCoef = lgamma(n + 1) - lgamma(i) - lgamma(n - i + 1);
-  const logDensity =
-    logCoef + (i - 1) * Math.log(Fx) + (n - i) * Math.log(1 - Fx) + Math.log(fx);
-  return Math.exp(logDensity);
+  const leftLogTerm = leftPower === 0 ? 0 : leftPower * Math.log(Fx);
+  const rightLogTerm = rightPower === 0 ? 0 : rightPower * Math.log(1 - Fx);
+  return Math.exp(logCoef + leftLogTerm + rightLogTerm + Math.log(fx));
 }
 
 /**
@@ -125,6 +130,7 @@ export function ecdf(sample: number[], x: number): number {
 export function ecdfFn(sample: number[]): (x: number) => number {
   const sorted = [...sample].sort((a, b) => a - b);
   const n = sorted.length;
+  if (n === 0) return () => 0; // mirror `ecdf` on empty input
   return (x: number): number => {
     let lo = 0;
     let hi = n;
@@ -170,13 +176,24 @@ export function sampleQuantile(sample: number[], p: number): number {
  * `QuantileAsymptoticsExplorer` for the Bahadur-limit variance readout.
  */
 export function empiricalDensityAtQuantile(sample: number[], p: number): number {
-  const q = sampleQuantile(sample, p);
   const n = sample.length;
-  const iqr = sampleQuantile(sample, 0.75) - sampleQuantile(sample, 0.25);
+  if (n === 0) return 0;
+  const sorted = [...sample].sort((a, b) => a - b);
+  const quantileOf = (prob: number): number => {
+    if (prob === 0) return sorted[0];
+    if (prob === 1) return sorted[n - 1];
+    const h = (n - 1) * prob;
+    const lo = Math.floor(h);
+    const frac = h - lo;
+    if (lo >= n - 1) return sorted[n - 1];
+    return sorted[lo] + frac * (sorted[lo + 1] - sorted[lo]);
+  };
+  const q = quantileOf(p);
+  const iqr = quantileOf(0.75) - quantileOf(0.25);
   const h = 1.06 * iqr * Math.pow(n, -0.2);
   if (h === 0) return 0;
   let count = 0;
-  for (const xi of sample) if (Math.abs(xi - q) <= h) count++;
+  for (const xi of sorted) if (Math.abs(xi - q) <= h) count++;
   return count / (2 * h * n);
 }
 
@@ -215,12 +232,18 @@ export function ksTwoSample(sample1: number[], sample2: number[]): number {
   const s2 = [...sample2].sort((a, b) => a - b);
   const n = s1.length;
   const m = s2.length;
+  if (n === 0 || m === 0) return 0;
   let i = 0;
   let j = 0;
   let maxDiff = 0;
-  while (i < n && j < m) {
-    if (s1[i] <= s2[j]) i++;
-    else j++;
+  // Walk the union of sample values, advancing past all ties in both samples
+  // before measuring the ECDF gap — otherwise e.g. ksTwoSample([1], [1]) returns 1
+  // instead of 0 because the two-sample step happens at the same x but the loop
+  // only increments one pointer at a time.
+  while (i < n || j < m) {
+    const x = Math.min(i < n ? s1[i] : Infinity, j < m ? s2[j] : Infinity);
+    while (i < n && s1[i] === x) i++;
+    while (j < m && s2[j] === x) j++;
     const diff = Math.abs(i / n - j / m);
     if (diff > maxDiff) maxDiff = diff;
   }
@@ -263,9 +286,13 @@ export function kolmogorovCDF(x: number): number {
 export function kolmogorovQuantile(p: number): number {
   if (p <= 0 || p >= 1)
     throw new Error(`kolmogorovQuantile: p=${p} out of (0,1)`);
-  let lo = 0.01;
+  // Start lo at 0 (kolmogorovCDF(0) = 0) so the bracket always contains the
+  // root, including for very small p. Cap iterations as a numerical-safety
+  // belt; convergence normally lands in ~30 bisections.
+  let lo = 0;
   let hi = 5;
-  while (hi - lo > 1e-8) {
+  for (let iter = 0; iter < 64; iter++) {
+    if (hi - lo <= 1e-8) break;
     const mid = 0.5 * (lo + hi);
     if (kolmogorovCDF(mid) < p) lo = mid;
     else hi = mid;
@@ -296,6 +323,8 @@ export function ksPValue(n: number, d: number): number {
  * (DVO1956 / MAS1990)
  */
 export function dkwBand(n: number, alpha: number): number {
+  if (!Number.isInteger(n) || n < 1)
+    throw new Error(`dkwBand: n=${n} must be a positive integer`);
   if (alpha <= 0 || alpha >= 1)
     throw new Error(`dkwBand: alpha=${alpha} out of (0,1)`);
   return Math.sqrt(Math.log(2 / alpha) / (2 * n));
@@ -315,12 +344,23 @@ export function quantileCIOrderStatisticBounds(
   p: number,
   alpha: number
 ): { r: number; s: number; actualLevel: number } {
+  // Hoist loop-invariant log-space terms (shared by both cumulative sweeps).
+  const logNFactorial = lgamma(n + 1);
+  const logP = Math.log(p);
+  const log1mP = Math.log(1 - p);
+  const pmf = (k: number): number => {
+    if (k < 0 || k > n) return 0;
+    if (p === 0) return k === 0 ? 1 : 0;
+    if (p === 1) return k === n ? 1 : 0;
+    const logCoef = logNFactorial - lgamma(k + 1) - lgamma(n - k + 1);
+    return Math.exp(logCoef + k * logP + (n - k) * log1mP);
+  };
   // Largest r with P(Bin(n,p) < r) ≤ α/2. After iteration k completes,
   // cumLower = P(B ≤ k), and r = k + 1 satisfies P(B < r) = P(B ≤ k) ≤ α/2.
   let r = 0;
   let cumLower = 0;
   for (let k = 0; k <= n; k++) {
-    const next = cumLower + binomialPmf(n, p, k);
+    const next = cumLower + pmf(k);
     if (next > alpha / 2) break;
     cumLower = next;
     r = k + 1;
@@ -331,7 +371,7 @@ export function quantileCIOrderStatisticBounds(
   let s = n;
   let cumUpper = 0;
   for (let k = n; k >= 0; k--) {
-    const next = cumUpper + binomialPmf(n, p, k);
+    const next = cumUpper + pmf(k);
     if (next > alpha / 2) break;
     cumUpper = next;
     s = k;

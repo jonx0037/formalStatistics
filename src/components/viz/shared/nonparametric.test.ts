@@ -28,6 +28,7 @@ import {
   ecdfFn,
   sampleQuantile,
   ksStatistic,
+  ksTwoSample,
   kolmogorovCDF,
   kolmogorovQuantile,
   dkwBand,
@@ -190,6 +191,31 @@ console.log('========================================\n');
     `{r=6, s=15, level=0.958611}`,
     'tol 1e-4 on level',
   );
+}
+
+// ── T29.16+ (regressions from PR #33 review) ─────────────────────────────
+// ksTwoSample([1],[1]) should be 0, not 1 — tie handling regression from PR 33.
+{
+  const v = ksTwoSample([1], [1]);
+  check('T29.16. ksTwoSample([1],[1]) (ties)', v === 0, v, 0, 'regression for PR 33 gemini');
+}
+{
+  const v = ksTwoSample([1, 2, 3], [1, 2, 3]);
+  check('T29.17. ksTwoSample identical samples', v === 0, v, 0, 'regression for PR 33 gemini');
+}
+// orderStatisticDensity at Uniform boundaries — Copilot CP1.
+// For i=1, n=10, Uniform: at x=0, density = n * (1-0)^{n-1} * 1 = 10.
+{
+  const uCdf = (u: number) => Math.max(0, Math.min(1, u));
+  const uPdf = (u: number) => (u >= 0 && u <= 1 ? 1 : 0);
+  const v = orderStatisticDensity(0, 1, 10, uCdf, uPdf);
+  check('T29.18. orderStatisticDensity Uniform i=1 at x=0', approx(v, 10, 1e-8), v, 10, 'regression for PR 33 copilot');
+}
+{
+  const uCdf = (u: number) => Math.max(0, Math.min(1, u));
+  const uPdf = (u: number) => (u >= 0 && u <= 1 ? 1 : 0);
+  const v = orderStatisticDensity(1, 10, 10, uCdf, uPdf);
+  check('T29.19. orderStatisticDensity Uniform i=n at x=1', approx(v, 10, 1e-8), v, 10, 'regression for PR 33 copilot');
 }
 
 // ── Summary ───────────────────────────────────────────────────────────────

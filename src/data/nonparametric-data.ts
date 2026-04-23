@@ -166,14 +166,15 @@ export const ksPresets: Record<string, DistributionPreset> = {
 };
 
 // ────────────────────────────────────────────────────────────────────────────
-// Seeded RNG helper — linear congruential generator (LCG) for reproducibility
-// across component renders. Not cryptographically strong; fine for Monte Carlo.
+// Seeded RNG helper — Mulberry32 for reproducibility across component renders.
+// Not cryptographically strong; fine for Monte Carlo.
 // ────────────────────────────────────────────────────────────────────────────
 
 /**
- * Returns a deterministic U(0, 1) draw generator seeded by `seed`. Standard
- * mulberry32 LCG (m=2³², 32-bit). Each component uses this to make the
- * "Resample" button predictable — same seed, same picture.
+ * Returns a deterministic U(0, 1) draw generator seeded by `seed`. Uses
+ * Mulberry32 (Tommy Ettinger 2017) — a fast 32-bit counter-based RNG with a
+ * period of 2^32. Each component uses this to make the "Resample" button
+ * predictable: same seed, same picture.
  */
 export function seededUniform(seed: number): () => number {
   let state = seed | 0;

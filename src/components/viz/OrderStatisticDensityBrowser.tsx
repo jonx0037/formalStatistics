@@ -105,17 +105,25 @@ export default function OrderStatisticDensityBrowser() {
   const innerW = panelWidth - MARGIN.left - MARGIN.right;
   const innerH = panelHeight - MARGIN.top - MARGIN.bottom;
   const [xLo, xHi] = preset.domain;
-  const xScaleAB = scaleLinear(xLo, xHi, 0, innerW);
-  const yScaleAB = scaleLinear(0, yMaxAB, innerH, 0);
-  const xScaleC = scaleLinear(0, 1, 0, innerW);
-  const yScaleC = scaleLinear(0, panelCYMax, innerH, 0);
+  const xScaleAB = useMemo(() => scaleLinear(xLo, xHi, 0, innerW), [xLo, xHi, innerW]);
+  const yScaleAB = useMemo(() => scaleLinear(0, yMaxAB, innerH, 0), [yMaxAB, innerH]);
+  const xScaleC = useMemo(() => scaleLinear(0, 1, 0, innerW), [innerW]);
+  const yScaleC = useMemo(() => scaleLinear(0, panelCYMax, innerH, 0), [panelCYMax, innerH]);
 
-  const densityPathA = gridDensityA
-    .map((y, k) => `${k === 0 ? 'M' : 'L'}${xScaleAB(grid[k])},${yScaleAB(y)}`)
-    .join(' ');
-  const densityPathC = panelCDensity
-    .map((y, k) => `${k === 0 ? 'M' : 'L'}${xScaleC(panelCGrid[k])},${yScaleC(y)}`)
-    .join(' ');
+  const densityPathA = useMemo(
+    () =>
+      gridDensityA
+        .map((y, k) => `${k === 0 ? 'M' : 'L'}${xScaleAB(grid[k])},${yScaleAB(y)}`)
+        .join(' '),
+    [gridDensityA, grid, xScaleAB, yScaleAB],
+  );
+  const densityPathC = useMemo(
+    () =>
+      panelCDensity
+        .map((y, k) => `${k === 0 ? 'M' : 'L'}${xScaleC(panelCGrid[k])},${yScaleC(y)}`)
+        .join(' '),
+    [panelCDensity, panelCGrid, xScaleC, yScaleC],
+  );
 
   return (
     <div className="my-6 rounded-lg border border-stone-200 bg-white p-4 text-sm shadow-sm dark:border-stone-700 dark:bg-stone-900">

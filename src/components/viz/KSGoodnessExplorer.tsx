@@ -119,37 +119,50 @@ export default function KSGoodnessExplorer() {
   const innerW = panelWidth - MARGIN.left - MARGIN.right;
   const innerH = panelHeight - MARGIN.top - MARGIN.bottom;
 
-  // Panels A and B share x-range [0, ~2.2] for √n D_n.
-  const xMax = Math.max(...nullRootNDn, ...altRootNDn, dAlphaCrit * 1.2) * 1.05;
-  const nBinsAB = 40;
-  const histNull = histogram(nullRootNDn, nBinsAB, 0, xMax);
-  const histAlt = histogram(altRootNDn, nBinsAB, 0, xMax);
+  // Group derived values that share dependencies into one useMemo
+  // (Gemini PR #33 discussion): all of xMax, histograms, overlayGrid, scales,
+  // overlayPath, and powerPath depend on the same MC samples + panel geometry.
+  const derived = useMemo(() => {
+    const xMax =
+      Math.max(...nullRootNDn, ...altRootNDn, dAlphaCrit * 1.2) * 1.05;
+    const nBinsAB = 40;
+    const histNull = histogram(nullRootNDn, nBinsAB, 0, xMax);
+    const histAlt = histogram(altRootNDn, nBinsAB, 0, xMax);
+    const overlayGrid = Array.from({ length: 160 }, (_, i) => {
+      const x = (i / 159) * xMax;
+      // Density of √n D_n ≈ derivative of Kolmogorov CDF. Finite difference.
+      const h = 1e-3;
+      const dk = (kolmogorovCDF(x + h) - kolmogorovCDF(x - h)) / (2 * h);
+      return { x, y: Math.max(0, dk) };
+    });
+    const yMaxAB =
+      Math.max(
+        ...histNull.density,
+        ...histAlt.density,
+        ...overlayGrid.map((g) => g.y),
+      ) * 1.15 || 1;
+    const xScaleAB = scaleLinear(0, xMax, 0, innerW);
+    const yScaleAB = scaleLinear(0, yMaxAB, innerH, 0);
+    const overlayPath = overlayGrid
+      .map((g, i) => `${i === 0 ? 'M' : 'L'}${xScaleAB(g.x)},${yScaleAB(g.y)}`)
+      .join(' ');
+    const xScaleC = scaleLinear(0, 2, 0, innerW);
+    const yScaleC = scaleLinear(0, 1, innerH, 0);
+    const powerPath = POWER_DELTAS.map(
+      (d, i) => `${i === 0 ? 'M' : 'L'}${xScaleC(d)},${yScaleC(powerCurve[i])}`,
+    ).join(' ');
+    return {
+      xMax, histNull, histAlt, yMaxAB,
+      xScaleAB, yScaleAB, xScaleC, yScaleC,
+      overlayPath, powerPath,
+    };
+  }, [nullRootNDn, altRootNDn, powerCurve, dAlphaCrit, innerW, innerH]);
 
-  const overlayGrid = Array.from({ length: 160 }, (_, i) => {
-    const x = (i / 159) * xMax;
-    // Density of √n D_n ≈ derivative of Kolmogorov CDF. Finite difference.
-    const h = 1e-3;
-    const dk = (kolmogorovCDF(x + h) - kolmogorovCDF(x - h)) / (2 * h);
-    return { x, y: Math.max(0, dk) };
-  });
-  const yMaxAB = Math.max(
-    ...histNull.density,
-    ...histAlt.density,
-    ...overlayGrid.map((g) => g.y),
-  ) * 1.15 || 1;
-  const xScaleAB = scaleLinear(0, xMax, 0, innerW);
-  const yScaleAB = scaleLinear(0, yMaxAB, innerH, 0);
-
-  const overlayPath = overlayGrid
-    .map((g, i) => `${i === 0 ? 'M' : 'L'}${xScaleAB(g.x)},${yScaleAB(g.y)}`)
-    .join(' ');
-
-  // Panel C geometry
-  const xScaleC = scaleLinear(0, 2, 0, innerW);
-  const yScaleC = scaleLinear(0, 1, innerH, 0);
-  const powerPath = POWER_DELTAS.map(
-    (d, i) => `${i === 0 ? 'M' : 'L'}${xScaleC(d)},${yScaleC(powerCurve[i])}`,
-  ).join(' ');
+  const {
+    xMax, histNull, histAlt, yMaxAB,
+    xScaleAB, yScaleAB, xScaleC, yScaleC,
+    overlayPath, powerPath,
+  } = derived;
 
   return (
     <div className="my-6 rounded-lg border border-stone-200 bg-white p-4 text-sm shadow-sm dark:border-stone-700 dark:bg-stone-900">

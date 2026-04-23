@@ -40,23 +40,6 @@ function drawSample(preset: DistributionPreset, n: number, rng: () => number): n
   return out;
 }
 
-// Envelope contains F iff sup_x |F_n(x) − F(x)| ≤ ε_n. We evaluate on a grid.
-function envelopeContainsCdf(
-  sample: number[],
-  preset: DistributionPreset,
-  eps: number,
-): boolean {
-  const F = ecdfFn(sample);
-  const [lo, hi] = preset.domain;
-  for (let i = 0; i <= GRID_POINTS; i++) {
-    const x = lo + (i / GRID_POINTS) * (hi - lo);
-    const fn = F(x);
-    const fx = preset.cdf(x);
-    if (Math.abs(fn - fx) > eps) return false;
-  }
-  return true;
-}
-
 export default function ECDFDKWBandExplorer() {
   const [presetKey, setPresetKey] = useState<string>('normal');
   const [n, setN] = useState(100);
@@ -70,30 +53,31 @@ export default function ECDFDKWBandExplorer() {
   const dSeed = useDeferredValue(seed);
   const preset = ecdfDkwPresets[dPreset];
 
-  const { sample, eps, dn, contains, F, curve } = useMemo(() => {
+  const { sortedSample, eps, dn, contains, curve } = useMemo(() => {
     const rng = seededUniform(dSeed);
     const s = drawSample(preset, dN, rng);
+    const sorted = [...s].sort((a, b) => a - b);
     const e = dkwBand(dN, dAlpha);
     const d = ksStatistic(s, preset.cdf);
-    const c = envelopeContainsCdf(s, preset, e);
+    // For continuous F, `ksStatistic` gives the exact sup, so `dn <= eps` is
+    // the exact containment check — more accurate and cheaper than the finite
+    // grid we used to walk. (Copilot PR #33 discussion.)
+    const c = d <= e;
     const fFn = ecdfFn(s);
     const [lo, hi] = preset.domain;
     const grid = Array.from({ length: GRID_POINTS + 1 }, (_, i) => {
       const x = lo + (i / GRID_POINTS) * (hi - lo);
       return { x, fTrue: preset.cdf(x), fn: fFn(x) };
     });
-    return { sample: s, eps: e, dn: d, contains: c, F: fFn, curve: grid };
+    return { sortedSample: sorted, eps: e, dn: d, contains: c, curve: grid };
   }, [preset, dN, dAlpha, dSeed]);
-
-  void sample;
-  void F;
 
   function runCoverage() {
     let hits = 0;
     const rng = seededUniform(dSeed + 1000);
     for (let r = 0; r < COVERAGE_REPLICATES; r++) {
       const s = drawSample(preset, dN, rng);
-      if (envelopeContainsCdf(s, preset, eps)) hits++;
+      if (ksStatistic(s, preset.cdf) <= eps) hits++;
     }
     setCoverage({ pct: hits / COVERAGE_REPLICATES, runs: COVERAGE_REPLICATES });
   }
@@ -107,46 +91,46 @@ export default function ECDFDKWBandExplorer() {
   const xScale = scaleLinear(xLo, xHi, 0, innerW);
   const yScale = scaleLinear(0, 1, innerH, 0);
 
-  // Build ECDF step-function path + DKW envelope area.
-  const sortedSample = useMemo(() => {
-    const r = seededUniform(dSeed);
-    return drawSample(preset, dN, r).sort((a, b) => a - b);
-  }, [preset, dN, dSeed]);
-
-  const stepPath = (() => {
-    if (sortedSample.length === 0) return '';
-    const parts: string[] = [];
-    parts.push(`M${xScale(xLo)},${yScale(0)}`);
-    let prev = 0;
-    for (let i = 0; i < sortedSample.length; i++) {
-      const xi = sortedSample[i];
-      const yPrev = prev;
-      const yCur = (i + 1) / sortedSample.length;
-      parts.push(`L${xScale(xi)},${yScale(yPrev)}`);
-      parts.push(`L${xScale(xi)},${yScale(yCur)}`);
-      prev = yCur;
+  // Memoize the three SVG path strings — each depends only on memoized data.
+  const { stepPath, envelopeArea, truePath } = useMemo(() => {
+    // ECDF step-function
+    let step = '';
+    if (sortedSample.length > 0) {
+      const parts: string[] = [];
+      parts.push(`M${xScale(xLo)},${yScale(0)}`);
+      let prev = 0;
+      for (let i = 0; i < sortedSample.length; i++) {
+        const xi = sortedSample[i];
+        const yPrev = prev;
+        const yCur = (i + 1) / sortedSample.length;
+        parts.push(`L${xScale(xi)},${yScale(yPrev)}`);
+        parts.push(`L${xScale(xi)},${yScale(yCur)}`);
+        prev = yCur;
+      }
+      parts.push(`L${xScale(xHi)},${yScale(prev)}`);
+      step = parts.join(' ');
     }
-    parts.push(`L${xScale(xHi)},${yScale(prev)}`);
-    return parts.join(' ');
-  })();
-
-  // DKW envelope: clip true CDF ±ε_n into [0,1].
-  const envelopeArea = curve
-    .map((g) => {
-      const upper = Math.min(1, g.fTrue + eps);
-      return `${xScale(g.x)},${yScale(upper)}`;
-    })
-    .concat(
-      [...curve].reverse().map((g) => {
-        const lower = Math.max(0, g.fTrue - eps);
-        return `${xScale(g.x)},${yScale(lower)}`;
-      }),
-    )
-    .join(' ');
-
-  const truePath = curve
-    .map((g, i) => `${i === 0 ? 'M' : 'L'}${xScale(g.x)},${yScale(g.fTrue)}`)
-    .join(' ');
+    // DKW envelope centered on the ECDF (Copilot PR #33 discussion): the
+    // band [F_n(x) - ε_n, F_n(x) + ε_n] is the distribution-free confidence
+    // envelope for F(x), so the true CDF is what the band is *containing*,
+    // and the ECDF is the center line.
+    const env = curve
+      .map((g) => {
+        const upper = Math.min(1, g.fn + eps);
+        return `${xScale(g.x)},${yScale(upper)}`;
+      })
+      .concat(
+        [...curve].reverse().map((g) => {
+          const lower = Math.max(0, g.fn - eps);
+          return `${xScale(g.x)},${yScale(lower)}`;
+        }),
+      )
+      .join(' ');
+    const tru = curve
+      .map((g, i) => `${i === 0 ? 'M' : 'L'}${xScale(g.x)},${yScale(g.fTrue)}`)
+      .join(' ');
+    return { stepPath: step, envelopeArea: env, truePath: tru };
+  }, [sortedSample, curve, eps, xScale, yScale, xLo, xHi]);
 
   return (
     <div className="my-6 rounded-lg border border-stone-200 bg-white p-4 text-sm shadow-sm dark:border-stone-700 dark:bg-stone-900">

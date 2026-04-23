@@ -15,6 +15,14 @@
  * Sliders: distribution preset, p, n, seed. Debounced at 200 ms.
  */
 import { useDeferredValue, useMemo, useState } from 'react';
+
+// Tune MC replicate count so total work (replicates × n × sort) stays bounded
+// as n grows — prevents long UI stalls at the slider max. Larger samples have
+// lower sampling variance per replicate, so fewer replicates still give a
+// tight histogram overlay. (Copilot PR #33 discussion.)
+function mcReplicatesForN(n: number): number {
+  return Math.max(500, Math.min(3000, Math.floor(800000 / (n * Math.log2(Math.max(2, n))))));
+}
 import {
   sampleQuantile,
   bahadurResidual,
@@ -27,7 +35,6 @@ import {
 import { nonparametricColors } from './shared/colorScales';
 
 const HISTOGRAM_BINS = 50;
-const MC_REPLICATES = 3000;
 const RESIDUAL_REPLICATES = 250;
 const RESIDUAL_NS = [50, 100, 200, 500, 1000, 2000, 5000] as const;
 const MARGIN = { top: 28, right: 20, bottom: 40, left: 48 };
@@ -104,8 +111,9 @@ export default function QuantileAsymptoticsExplorer() {
   const histogramData = useMemo(() => {
     const rng = seededUniform(dSeed);
     const truthXi = preset.quantile(dP);
-    const samples: number[] = new Array(MC_REPLICATES);
-    for (let j = 0; j < MC_REPLICATES; j++) {
+    const replicates = mcReplicatesForN(dN);
+    const samples: number[] = new Array(replicates);
+    for (let j = 0; j < replicates; j++) {
       const sample = new Array(dN);
       for (let k = 0; k < dN; k++) sample[k] = preset.sampler(rng);
       const xiHat = sampleQuantile(sample, dP);
@@ -120,7 +128,7 @@ export default function QuantileAsymptoticsExplorer() {
     const sdTheory = fAtXi > 0
       ? Math.sqrt((dP * (1 - dP)) / (fAtXi * fAtXi))
       : Infinity;
-    return { samples, hist: h, mean, sdEmpirical, sdTheory, truthXi, fAtXi };
+    return { samples, hist: h, mean, sdEmpirical, sdTheory, truthXi, fAtXi, replicates };
   }, [preset, dN, dP, dSeed]);
 
   // ── Bottom-panel MC: median|R_n| decay vs Kiefer envelope.
@@ -232,8 +240,9 @@ export default function QuantileAsymptoticsExplorer() {
       </div>
 
       <div className="mt-3 text-xs text-stone-500 dark:text-stone-400">
-        {MC_REPLICATES.toLocaleString()} MC replicates per histogram ·
-        {` ${RESIDUAL_REPLICATES}`} per residual point over {RESIDUAL_NS.length} values of n.
+        {histogramData.replicates.toLocaleString()} MC replicates per histogram
+        (adaptive in n) · {RESIDUAL_REPLICATES} per residual point over{' '}
+        {RESIDUAL_NS.length} values of n.
       </div>
     </div>
   );
