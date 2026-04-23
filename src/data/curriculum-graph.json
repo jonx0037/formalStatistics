@@ -35,7 +35,7 @@
     { "id": "bayesian-model-comparison", "label": "Bayesian Model Comparison & BMA", "domain": "bayesian-statistics", "status": "published", "url": "/topics/bayesian-model-comparison-and-bma" },
     { "id": "hierarchical-bayes", "label": "Hierarchical & Empirical Bayes", "domain": "bayesian-statistics", "status": "published", "url": "/topics/hierarchical-bayes-and-partial-pooling" },
 
-    { "id": "order-statistics", "label": "Order Statistics & Quantiles", "domain": "high-dimensional-nonparametric", "status": "planned", "url": "/topics/order-statistics" },
+    { "id": "order-statistics-and-quantiles", "label": "Order Statistics & Quantiles", "domain": "high-dimensional-nonparametric", "status": "published", "url": "/topics/order-statistics-and-quantiles" },
     { "id": "kernel-density-estimation", "label": "Kernel Density Estimation", "domain": "high-dimensional-nonparametric", "status": "planned", "url": "/topics/kernel-density-estimation" },
     { "id": "bootstrap", "label": "The Bootstrap", "domain": "high-dimensional-nonparametric", "status": "planned", "url": "/topics/bootstrap" },
     { "id": "empirical-processes", "label": "Empirical Processes & Uniform Convergence", "domain": "high-dimensional-nonparametric", "status": "planned", "url": "/topics/empirical-processes" }
@@ -143,15 +143,19 @@
     { "source": "point-estimation", "target": "hierarchical-bayes" },
     { "source": "regularization", "target": "hierarchical-bayes" },
 
-    { "source": "random-variables", "target": "order-statistics" },
-    { "source": "continuous-distributions", "target": "order-statistics" },
-    { "source": "order-statistics", "target": "kernel-density-estimation" },
+    { "source": "random-variables", "target": "order-statistics-and-quantiles" },
+    { "source": "continuous-distributions", "target": "order-statistics-and-quantiles" },
+    { "source": "law-of-large-numbers", "target": "order-statistics-and-quantiles" },
+    { "source": "sufficient-statistics", "target": "order-statistics-and-quantiles" },
+    { "source": "central-limit-theorem", "target": "order-statistics-and-quantiles" },
+    { "source": "confidence-intervals-and-duality", "target": "order-statistics-and-quantiles" },
+    { "source": "order-statistics-and-quantiles", "target": "kernel-density-estimation" },
     { "source": "continuous-distributions", "target": "kernel-density-estimation" },
     { "source": "expectation-moments", "target": "bootstrap" },
     { "source": "point-estimation", "target": "bootstrap" },
     { "source": "confidence-intervals-and-duality", "target": "bootstrap" },
     { "source": "modes-of-convergence", "target": "empirical-processes" },
     { "source": "law-of-large-numbers", "target": "empirical-processes" },
-    { "source": "order-statistics", "target": "empirical-processes" }
+    { "source": "order-statistics-and-quantiles", "target": "empirical-processes" }
   ]
 }

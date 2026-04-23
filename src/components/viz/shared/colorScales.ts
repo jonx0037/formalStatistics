@@ -243,3 +243,35 @@ export const chainLineStyles = [
  * for SVG/D3 rendering use `chainLineStyles` above.
  */
 export const CHAIN_LINESTYLES = ['-', '--', '-.', ':'] as const;
+
+/**
+ * Topic 29 — Track 8 opener palette. Four accent tokens name the new objects
+ * this track introduces (ECDF, DKW envelope, Bahadur residual, KS statistic);
+ * `families` supplies a distribution-comparison palette used by
+ * QuantileAsymptoticsExplorer and OrderStatisticDensityBrowser.
+ *
+ * `bahadur` deliberately reuses Track 7's `--color-shrink` violet (`#7C3AED`):
+ * both represent "the estimator-equals-ECDF-gap-over-density linearization"
+ * family — Topic 28's James-Stein shrinkage and Topic 29's Bahadur residual
+ * are the same visual idea in two different contexts (shrink the MLE toward
+ * the prior / linearize the quantile against the ECDF).
+ *
+ *   ecdf    blue   — the empirical distribution (primary Track 8 object)
+ *   dkw     teal   — DKW envelope / non-asymptotic confidence band
+ *   bahadur violet — Bahadur residual / sample quantile (reuses SHRINK token)
+ *   ks      orange — KS statistic / Kolmogorov distribution
+ */
+export const nonparametricColors = {
+  ecdf:    '#2563EB',
+  dkw:     '#14B8A6',
+  bahadur: '#7C3AED',
+  ks:      '#F97316',
+  families: {
+    normal: '#2563EB',
+    exp:    '#059669',
+    beta:   '#D97706',
+    cauchy: '#E11D48',
+  },
+} as const;
+
+export type NonparametricColorKey = keyof typeof nonparametricColors;
