@@ -181,7 +181,7 @@ The distinction between *estimator* and *estimate* is the same as that between t
 Suppose $X_1, \ldots, X_n$ are iid with unknown mean $\mu$ and finite variance. Three candidate estimators of $\mu$:
 
 1. **Sample mean:** $\hat{\mu}_1 = \bar{X}_n = \frac{1}{n}\sum_{i=1}^n X_i$.
-2. **Sample median:** $\hat{\mu}_2 = \operatorname{median}(X_1, \ldots, X_n)$, the middle order statistic.
+2. **Sample median:** $\hat{\mu}_2 = \operatorname{median}(X_1, \ldots, X_n)$, the middle order statistic — whose asymptotics are developed in [Topic 29 §29.6](/topics/order-statistics-and-quantiles#section-29-6).
 3. **Trimmed mean:** $\hat{\mu}_3$ = mean of the sample after discarding the top $10\%$ and bottom $10\%$ of observations.
 
 All three are statistics (they depend only on the data), all three target the same $\mu$, and all three are reasonable candidates. They produce different values on the same sample, and their sampling distributions are different shapes. Which one is "best" depends on the underlying distribution and on what we mean by "best" — the rest of this topic builds the vocabulary to answer that question precisely.
@@ -839,7 +839,7 @@ The Cramér–Rao proof requires **regularity conditions** that allow interchang
 - **Shifted exponentials:** $f(x; \theta) = e^{-(x-\theta)}$ for $x \geq \theta$. Same issue — boundary of the support moves with $\theta$.
 - **Heavy-tailed distributions** with infinite Fisher information (Cauchy w.r.t. scale, for instance): the bound is $1/\infty = 0$, which is trivially satisfied but uninformative.
 
-When regularity holds, the CRLB is the ceiling: no unbiased estimator can beat $1/(nI(\theta))$. When regularity fails, different tools — the $L_1$ theory, order-statistics asymptotics, the Hájek-Le Cam framework — take over. For standard statistical modeling, regularity holds and the CRLB is the right benchmark.
+When regularity holds, the CRLB is the ceiling: no unbiased estimator can beat $1/(nI(\theta))$. When regularity fails, different tools — the $L_1$ theory, order-statistics asymptotics ([Topic 29 §29.6](/topics/order-statistics-and-quantiles#section-29-6)), the Hájek-Le Cam framework — take over. For standard statistical modeling, regularity holds and the CRLB is the right benchmark.
 </RemarkBlock>
 
 <FisherInformationExplorer client:visible />

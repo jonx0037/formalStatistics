@@ -730,7 +730,7 @@ A $(1-\alpha)$ Bayesian credible interval is a set $C$ with posterior probabilit
 | GLM coefficient, large model | Wald (§19.4) | Speed — refit cost of profile |
 | One-sided bound on risk / rate | One-sided Wilson (§19.9) | Worst-case guarantee |
 | Bioequivalence / noninferiority | TOST (§19.9) | FDA standard |
-| Nonparametric, distribution unknown | Bootstrap (Track 8) | No parametric assumption |
+| Nonparametric, distribution unknown | [Order-statistic CIs for quantiles (§29.7)](/topics/order-statistics-and-quantiles#section-29-7); bootstrap (Track 8) | No parametric assumption |
 | Posterior-probability claim needed | [Bayesian credible (Topic 25)](/topics/bayesian-foundations-and-prior-selection#section-25-6) | Different framework |
 
 Default: **Wilson for binomial, profile-LRT for GLM coefficients, t-CI for Normal mean, bootstrap BCa for everything else.**

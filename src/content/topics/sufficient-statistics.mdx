@@ -218,7 +218,7 @@ A vector statistic $T(X) = (T_1(X), \ldots, T_k(X))$ is **jointly sufficient** f
 </DefinitionBlock>
 
 <TheoremBlock number={1} title="Order statistic is always sufficient for iid samples">
-For iid data $X_1, \ldots, X_n$ from any common distribution $P_\theta$, the order statistic $T(X) = (X_{(1)}, \ldots, X_{(n)})$ is sufficient for $\theta$.
+For iid data $X_1, \ldots, X_n$ from any common distribution $P_\theta$, the order statistic $T(X) = (X_{(1)}, \ldots, X_{(n)})$ is sufficient for $\theta$. [Topic 29](/topics/order-statistics-and-quantiles) makes the order statistic the central object of nonparametric statistics — Track 8 begins there precisely because this theorem tells us no nonparametric procedure ever discards information in the sorted sample.
 </TheoremBlock>
 
 The reason is structural: the iid joint density is symmetric in the arguments, so $f(x; \theta) = f(x_{\sigma(1)}, \ldots, x_{\sigma(n)}; \theta)$ for every permutation $\sigma$. Conditioning on the order statistic is equivalent to conditioning on the *unordered* sample — and given the unordered sample, the distribution over labelings is uniform over all $n!$ permutations regardless of $\theta$. The order statistic is sufficient by construction. It is rarely *minimal* — for most families, a much smaller statistic also suffices.
@@ -660,7 +660,7 @@ This is the independence that makes the t-statistic $t = \sqrt{n}(\bar X - \mu)/
 </ExampleBlock>
 
 <ExampleBlock number={22} title="Uniform(0, θ): X₍ₙ₎ complete sufficient, X₍ₙ₋₁₎/X₍ₙ₎ ancillary ⇒ independent">
-For $X_1, \ldots, X_n$ iid $\mathrm{Uniform}(0, \theta)$, $T = X_{(n)}$ is complete sufficient for $\theta$ (a standard exercise — completeness follows from the fact that any zero-expectation function $g(T)$ must satisfy $\int_0^\theta g(t) \cdot n t^{n-1}/\theta^n \, dt = 0$ for all $\theta$, which by differentiation in $\theta$ forces $g \equiv 0$ on $(0, \infty)$). The ratio $A = X_{(n-1)}/X_{(n)}$ has distribution $\mathrm{Beta}(n-1, 1)$ regardless of $\theta$ — pure scale-equivariance — so $A$ is ancillary. Basu's theorem then gives $X_{(n)} \perp\!\!\!\perp X_{(n-1)}/X_{(n)}$, a non-obvious consequence of the structure of order statistics. This kind of independence underlies many likelihood-ratio test statistics and pivotal quantities for scale parameters.
+For $X_1, \ldots, X_n$ iid $\mathrm{Uniform}(0, \theta)$, $T = X_{(n)}$ is complete sufficient for $\theta$ (a standard exercise — completeness follows from the fact that any zero-expectation function $g(T)$ must satisfy $\int_0^\theta g(t) \cdot n t^{n-1}/\theta^n \, dt = 0$ for all $\theta$, which by differentiation in $\theta$ forces $g \equiv 0$ on $(0, \infty)$). The ratio $A = X_{(n-1)}/X_{(n)}$ has distribution $\mathrm{Beta}(n-1, 1)$ regardless of $\theta$ — pure scale-equivariance — so $A$ is ancillary. Basu's theorem then gives $X_{(n)} \perp\!\!\!\perp X_{(n-1)}/X_{(n)}$, a non-obvious consequence of the structure of order statistics. (The uniform-order-statistics structure this exploits is developed in [Topic 29 §29.3](/topics/order-statistics-and-quantiles#section-29-3).) This kind of independence underlies many likelihood-ratio test statistics and pivotal quantities for scale parameters.
 </ExampleBlock>
 
 <RemarkBlock number={10} title="Basu is load-bearing for Track 5 — t-distribution independence">

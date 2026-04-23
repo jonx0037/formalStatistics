@@ -1,0 +1,799 @@
+---
+title: "Order Statistics & Quantiles"
+subtitle: "Topic 29 opens Track 8 — the nonparametric track. Three full proofs: Rényi's exponential-spacings representation, the Bahadur representation of the sample quantile (featured), and the partial proof of the Kolmogorov limit via Donsker. Along the way: the ECDF, the DKW inequality with Massart's tight constant, distribution-free quantile CIs via order-statistic pairs, and the one-sample Kolmogorov–Smirnov test. The track's spine — KDE, bootstrap, empirical processes — is previewed in §29.10."
+status: "published"
+difficulty: "intermediate"
+prerequisites:
+  - "continuous-distributions"
+  - "law-of-large-numbers"
+  - "sufficient-statistics"
+  - "central-limit-theorem"
+  - "confidence-intervals-and-duality"
+tags:
+  - "statistics"
+  - "nonparametric"
+  - "order-statistics"
+  - "quantiles"
+  - "sample-quantile"
+  - "empirical-cdf"
+  - "dkw-inequality"
+  - "bahadur-representation"
+  - "kolmogorov-smirnov"
+  - "glivenko-cantelli"
+  - "renyi-spacings"
+  - "distribution-free"
+  - "track-8-opener"
+domain: "high-dimensional-nonparametric"
+videoId: null
+notebookPath: "notebooks/order-statistics-and-quantiles/29_order_statistics.ipynb"
+githubUrl: "https://github.com/jonx0037/formalStatistics/blob/main/src/content/topics/order-statistics-and-quantiles.mdx"
+datePublished: 2026-04-22
+estimatedReadTime: 58
+formalcalculusPrereqs:
+  - topic: "multivariable-integration"
+    site: "formalcalculus"
+    relationship: "The joint-density derivation in §29.2 is a Jacobian change-of-variables calculation over the ordered simplex. Rényi's proof (§29.3) uses the same machinery on the spacings map."
+  - topic: "taylor-series-and-approximation"
+    site: "formalcalculus"
+    relationship: "Bahadur's proof (§29.6) Taylor-expands $F$ around $\\xi_p$ and controls the remainder — the first-order term is load-bearing, the second-order term is $O(1/n)$."
+formalmlConnections:
+  - topic: "extreme-value-theory"
+    site: "formalml"
+    relationship: "Fisher–Tippett–Gnedenko trichotomy for the limit of properly normalized $X_{(n)}$. Topic 29 covers $\\hat\\xi_p$ at interior $p$; EVT covers $\\hat\\xi_p$ as $p \\to 1$. §29.10 Rem 18 pointer; forthcoming on formalml."
+  - topic: "quantile-regression"
+    site: "formalml"
+    relationship: "Koenker–Bassett check-loss regression. Topic 29 handles the scalar-intercept case via §29.4/§29.6; quantile regression is the covariate-conditional extension. §29.10 Rem 19 pointer; forthcoming on formalml."
+  - topic: "rank-tests"
+    site: "formalml"
+    relationship: "Wilcoxon signed-rank, Mann–Whitney U, Kruskal–Wallis. Permutation-distribution machinery is orthogonal to Bahadur asymptotics and deferred. §29.10 Rem 20 pointer; forthcoming on formalml."
+  - topic: "conformal-prediction"
+    site: "formalml"
+    relationship: "Vovk–Gammerman–Shafer distribution-free prediction. §29.10 Rem 21 motivates via §29.7's quantile-CI perspective; forthcoming on formalml."
+  - topic: "statistical-depth"
+    site: "formalml"
+    relationship: "Tukey / Mahalanobis / halfspace depths — multivariate generalizations of the quantile function. §29.10 Rem 22 pointer; forthcoming on formalml."
+connections:
+  - topic: "continuous-distributions"
+    relationship: "§7.10 introduced the Beta distribution via the Uniform order-statistic story and §7.13 forward-promised the general proof; §29.3 Thm 2 + Cor 1 discharge that promise. Exponential, Gamma, and Cauchy densities anchor §29.3's Rényi proof and §29.6's heavy-tail quantile examples."
+  - topic: "law-of-large-numbers"
+    relationship: "§10.7 proved Glivenko–Cantelli via the ε-net argument and named DKW + Kolmogorov distribution as forthcoming. §29.5 Thm 6 gives DKW with Massart's tight constant; §29.8 Thm 7 completes the Kolmogorov-distribution forecast."
+  - topic: "sufficient-statistics"
+    relationship: "§16 Thm 1 established that the order statistic $(X_{(1)}, \\dots, X_{(n)})$ is sufficient for every iid model. §29.2 Rem 2 cross-references — the order statistic is the maximally-informative summary under no distributional assumption, which is why Track 8 starts here."
+  - topic: "central-limit-theorem"
+    relationship: "CLT-for-indicators (§11 Thm 2) is the asymptotic-normality input to §29.6 Cor 1. Without CLT, Bahadur's representation reduces to an algebraic identity."
+  - topic: "confidence-intervals-and-duality"
+    relationship: "§19.3's pivotal-quantity machinery is the template for §29.7's distribution-free quantile CI via order-statistic pairs. §19.10 Rem 20 punted bootstrap to Track 8; §29.10 Rem 14 names Topic 31 as the bootstrap chapter, and §29.7 ships the exact (non-bootstrap) distribution-free alternative for quantiles specifically."
+  - topic: "hypothesis-testing"
+    relationship: "§29.8's KS test is a Topic 17 goodness-of-fit test with a specific null distribution — the Kolmogorov distribution. Rejection rules, p-values, and size/power language inherit from §17.3."
+  - topic: "point-estimation"
+    relationship: "§13.11 Rem pointed to 'order-statistics asymptotics' as the regularity-failure tool; §29.6 Cor 1 + §29.6 Ex 8 (Cauchy median) deliver that half of the pointer."
+  - topic: "likelihood-ratio-tests-and-np"
+    relationship: "§18.10 Rem 25 named KS / Mann–Whitney / permutation tests as Track 8 territory. §29.8 delivers KS in full; rank tests defer to forthcoming formalml."
+references:
+  - type: "article"
+    author: "Raghu Raj Bahadur"
+    year: 1966
+    title: "A Note on Quantiles in Large Samples"
+    publisher: "Annals of Mathematical Statistics 37(3): 577–580"
+    note: "BAH1966. The original Bahadur representation. §29.6 Thm 6 is the featured theorem of Topic 29. https://projecteuclid.org/journals/annals-of-mathematical-statistics/volume-37/issue-3/A-Note-on-Quantiles-in-Large-Samples/10.1214/aoms/1177699450.full"
+  - type: "article"
+    author: "Jack Kiefer"
+    year: 1967
+    title: "On Bahadur's Representation of Sample Quantiles"
+    publisher: "Annals of Mathematical Statistics 38(5): 1323–1342"
+    note: "KIE1967. Sharpens the Bahadur remainder to $O_p(n^{-3/4} \\sqrt{\\log n})$. §29.6 Thm 6 quotes the Kiefer rate. https://projecteuclid.org/journals/annals-of-mathematical-statistics/volume-38/issue-5/On-Bahadurs-Representation-of-Sample-Quantiles/10.1214/aoms/1177698690.full"
+  - type: "article"
+    author: "Alfréd Rényi"
+    year: 1953
+    title: "On the Theory of Order Statistics"
+    publisher: "Acta Mathematica Academiae Scientiarum Hungaricae 4(3–4): 191–231"
+    note: "REN1953. Origin of the exponential-spacings representation. §29.3 Thm 3 full proof. https://doi.org/10.1007/BF02127580"
+  - type: "article"
+    author: "Aryeh Dvoretzky, Jack Kiefer & Jacob Wolfowitz"
+    year: 1956
+    title: "Asymptotic Minimax Character of the Sample Distribution Function and of the Classical Multinomial Estimator"
+    publisher: "Annals of Mathematical Statistics 27(3): 642–669"
+    note: "DVO1956. Original DKW paper; constant not yet optimal. §29.5 Thm 6 attribution. https://projecteuclid.org/journals/annals-of-mathematical-statistics/volume-27/issue-3/Asymptotic-Minimax-Character-of-the-Sample-Distribution-Function-and-of/10.1214/aoms/1177728174.full"
+  - type: "article"
+    author: "Pascal Massart"
+    year: 1990
+    title: "The Tight Constant in the Dvoretzky–Kiefer–Wolfowitz Inequality"
+    publisher: "Annals of Probability 18(3): 1269–1283"
+    note: "MAS1990. Proves $C = 2$ is optimal. §29.5 Thm 6 uses Massart's constant. https://projecteuclid.org/journals/annals-of-probability/volume-18/issue-3/The-Tight-Constant-in-the-Dvoretzky-Kiefer-Wolfowitz-Inequality/10.1214/aop/1176990746.full"
+  - type: "article"
+    author: "Nikolai Vasilyevich Smirnov"
+    year: 1948
+    title: "Table for Estimating the Goodness of Fit of Empirical Distributions"
+    publisher: "Annals of Mathematical Statistics 19(2): 279–281"
+    note: "SMI1948. Smirnov's finite-sample formula for the KS null distribution. §29.8 Thm 7 attribution. https://projecteuclid.org/journals/annals-of-mathematical-statistics/volume-19/issue-2/Table-for-Estimating-the-Goodness-of-Fit-of-Empirical-Distributions/10.1214/aoms/1177730256.full"
+  - type: "article"
+    author: "Andrey Nikolaevich Kolmogorov"
+    year: 1933
+    title: "Sulla determinazione empirica di una legge di distribuzione"
+    publisher: "Giornale dell'Istituto Italiano degli Attuari 4: 83–91"
+    note: "KOL1933. Historical Italian journal; no stable URL. §29.8 Rem 13 attribution."
+  - type: "book"
+    author: "Herbert Aron David & Haikady Navada Nagaraja"
+    year: 2003
+    edition: "3rd"
+    title: "Order Statistics"
+    publisher: "Wiley"
+    note: "DAV2003. Standard reference; §29.2 Thm 1 attribution to Ch. 2; §29.2 Rem 3 cites Ch. 5–6 for non-iid extensions. https://onlinelibrary.wiley.com/doi/book/10.1002/0471722162"
+  - type: "article"
+    author: "Rob J. Hyndman & Yanan Fan"
+    year: 1996
+    title: "Sample Quantiles in Statistical Packages"
+    publisher: "The American Statistician 50(4): 361–365"
+    note: "HYN1996. Establishes the nine quantile-definition conventions. §29.4 Def 3 adopts Type 7 (default in R, NumPy, SciPy). https://doi.org/10.1080/00031305.1996.10473566"
+  - type: "book"
+    author: "Robert J. Serfling"
+    year: 1980
+    title: "Approximation Theorems of Mathematical Statistics"
+    publisher: "Wiley"
+    note: "SER1980. §2.3 on order statistics; §2.5 on quantile functions; §2.4 on the ECDF. Reused from Topics 11, 13. https://onlinelibrary.wiley.com/doi/book/10.1002/9780470316481"
+  - type: "book"
+    author: "Erich L. Lehmann & George Casella"
+    year: 1998
+    edition: "2nd"
+    title: "Theory of Point Estimation"
+    publisher: "Springer"
+    note: "LEH1998. §6.3 on order statistics; §5.7 on quantile asymptotics. Reused from Topics 13, 14, 16, 23, 28. https://link.springer.com/book/10.1007/b98854"
+  - type: "book"
+    author: "Aad W. van der Vaart"
+    year: 2000
+    title: "Asymptotic Statistics"
+    publisher: "Cambridge University Press"
+    note: "vdV2000. §21 on sample quantiles (Bahadur representation); §19 on empirical processes (Donsker, KS limit). Reused across Topics 11, 13, 14, 16, 18, 19. https://www.cambridge.org/core/books/asymptotic-statistics/A3C7DAD3F7E66A1FA60E9C8FE132EE1D"
+  - type: "book"
+    author: "Patrick Billingsley"
+    year: 1999
+    edition: "2nd"
+    title: "Convergence of Probability Measures"
+    publisher: "Wiley"
+    note: "BIL1999. §14 on Brownian bridge + KS distribution; §16 on Donsker. §29.8 Thm 7's partial proof quotes BIL1999 §14.4. Reused from Topic 11. https://onlinelibrary.wiley.com/doi/book/10.1002/9780470316962"
+---
+
+import TheoremBlock from '../../components/ui/TheoremBlock.astro';
+import ProofBlock from '../../components/ui/ProofBlock.astro';
+import ExampleBlock from '../../components/ui/ExampleBlock.astro';
+import RemarkBlock from '../../components/ui/RemarkBlock.astro';
+import DefinitionBlock from '../../components/ui/DefinitionBlock.astro';
+
+import QuantileAsymptoticsExplorer from '../../components/viz/QuantileAsymptoticsExplorer.tsx';
+import ECDFDKWBandExplorer from '../../components/viz/ECDFDKWBandExplorer.tsx';
+import OrderStatisticDensityBrowser from '../../components/viz/OrderStatisticDensityBrowser.tsx';
+import KSGoodnessExplorer from '../../components/viz/KSGoodnessExplorer.tsx';
+
+## 29.1 Motivation: the empirical distribution
+
+Every topic so far has started from a parametric assumption — Normal, Gamma, Bernoulli, or a Beta-binomial compound. We picked a family $P_\theta$, wrote down likelihoods, and argued about estimators for $\theta$. That program has a clean asymptotic theory (MLE efficiency, Bernstein–von Mises, GLMs), but it rests on an assumption the data can violate silently: the family is right.
+
+Track 8 begins by dropping that assumption. The data come from *some* distribution $F$, continuous but otherwise unrestricted. The only summary we insist exists is the sample itself, and the only derived statistic we rely on without apology is the sorted sample:
+
+$$
+X_{(1)} \le X_{(2)} \le \cdots \le X_{(n)}.
+$$
+
+These are the **order statistics**. They are the raw material of nonparametric statistics — the place where ranks, ECDFs, quantile estimators, distribution-free CIs, and goodness-of-fit tests all live. Topic 16 already proved (§16 Thm 1) that the tuple $(X_{(1)}, \dots, X_{(n)})$ is sufficient for any iid model; Topic 29 takes that as license to build a full inferential toolkit on order statistics alone.
+
+Topic 29 opens Track 8 — the nonparametric-and-high-dimensional track. The four topics of this track (29, 30 kernel density estimation, 31 bootstrap, 32 empirical processes) all reduce, at one level or another, to claims about how the **empirical CDF**
+
+$$
+F_n(x) := \frac{1}{n} \sum_{i=1}^n \mathbb{1}\{X_i \le x\}
+$$
+
+behaves as $n$ grows. Topic 10 §10.7 already proved one such claim — the Glivenko–Cantelli theorem says $\sup_x |F_n(x) - F(x)| \to 0$ almost surely. Topic 29 refines it in two directions: the non-asymptotic Dvoretzky–Kiefer–Wolfowitz inequality (§29.5) gives an exponential rate, and the Kolmogorov distribution (§29.8) gives the exact limiting distribution of $\sqrt n \sup_x |F_n(x) - F(x)|$. Together, DKW and the Kolmogorov limit promote $F_n$ from "close to $F$" to "close to $F$ with quantifiable confidence."
+
+<ExampleBlock number={1} title="The ECDF as a visual object">
+Figure 1 plots realizations of $F_n$ for iid standard-Normal samples at $n = 20$, $200$, and $1000$. At $n = 20$, $F_n$ is a jagged step-function whose staircase shape is very different from the smooth $\Phi$. At $n = 200$, the steps compress into what visually reads as $\Phi$ with small wobbles. At $n = 1000$, the wobbles are invisible at this resolution — the ECDF is a plausible stand-in for $\Phi$. The annotated supremum distance $D_n = \sup_x |F_n(x) - \Phi(x)|$ shrinks from 0.22 at $n = 20$ to 0.06 at $n = 200$ to 0.03 at $n = 1000$, following the $1/\sqrt n$ rate that §29.5's DKW inequality proves non-asymptotically.
+</ExampleBlock>
+
+![Three-panel illustration of the empirical CDF for iid standard-Normal samples at n=20, n=200, and n=1000, with the true CDF Phi overlaid in black. As n grows, the step-function Fn visually approaches the smooth Phi; the supremum distance Dn is annotated in each panel and shrinks from 0.22 at n=20 to 0.03 at n=1000.](/images/topics/order-statistics-and-quantiles/29-ecdf-convergence.png)
+
+*Figure 1. The empirical CDF of a standard-Normal sample at three sample sizes. At small $n$ the ECDF is visibly jagged; at large $n$ it is indistinguishable from the true CDF within plotting resolution.*
+
+<RemarkBlock number={1} title="Why 'distribution-free' is load-bearing">
+Nonparametric statistics has two distinct meanings in the ML literature. The one Topic 29 cares about is **distribution-free inference**: the validity of a procedure does not depend on the form of $F$. A bootstrap CI, a KS test, a Wilcoxon test, and a quantile CI built from order-statistic pairs are all distribution-free. The other meaning — "flexible modeling with infinite-dimensional parameters" — covers Bayesian nonparametrics (Dirichlet processes, Gaussian processes) and kernel methods; those are in formalml.
+
+Distribution-freeness is what makes KS useful for real ML workflows: detecting distribution shift between training and deployment samples, validating that a model's calibration stays the same across data slices, or checking that a simulator reproduces the empirical distribution of a sensor. None of those applications specify $F$ up front, so a t-test is the wrong tool.
+</RemarkBlock>
+
+<RemarkBlock number={2} title="What Track 8 is about, in one sentence">
+Classical statistics assumes a parametric model; nonparametric statistics lets the data specify the model via the empirical distribution, and the order statistics are the lens through which we study that empirical distribution. §29.10's forward-map spells out how Topics 30 (KDE), 31 (Bootstrap), and 32 (Empirical Processes) each sharpen one aspect of this sentence.
+</RemarkBlock>
+
+<a id="section-29-2"></a>
+
+## 29.2 Order statistics: joint density
+
+The order-statistic joint density has a clean closed form for continuous $F$ — one of the few places in statistics where a multivariate density has an elementary derivation via the change-of-variables formula.
+
+<DefinitionBlock number={1} title="Order statistics">
+For iid $X_1, \dots, X_n \sim F$ with $F$ continuous, the **order statistics** are the sorted sample, written with parenthesized indices:
+
+$$
+X_{(1)} \le X_{(2)} \le \cdots \le X_{(n)}.
+$$
+
+The parentheses distinguish $X_{(i)}$ (the $i$-th smallest value in the sample) from $X_i$ (the $i$-th draw, in the order collected). When $F$ is continuous, ties occur with probability zero, so the inequalities are strict almost surely.
+</DefinitionBlock>
+
+<TheoremBlock number={1} title="Joint density of the order statistics (stated)">
+For iid $X_1, \dots, X_n$ with continuous CDF $F$ and density $f$, the joint density of $(X_{(1)}, \dots, X_{(n)})$ on the ordered simplex $\{x_1 \le x_2 \le \cdots \le x_n\}$ is
+
+$$
+f_{X_{(1)}, \dots, X_{(n)}}(x_1, \dots, x_n) \;=\; n! \, \prod_{i=1}^n f(x_i), \qquad x_1 \le x_2 \le \cdots \le x_n,
+$$
+
+and zero outside that simplex. The marginal density of the $i$-th order statistic is
+
+$$
+f_{X_{(i)}}(x) \;=\; \frac{n!}{(i - 1)!\,(n - i)!}\, F(x)^{i - 1}\,\bigl(1 - F(x)\bigr)^{n - i}\, f(x).
+$$
+
+(DAV2003 §2.1–§2.2.)
+</TheoremBlock>
+
+The joint density has a clean combinatorial reading: the $n!$ factor counts the number of ways to assign $n$ unordered draws to $n$ ordered slots, and $\prod f(x_i)$ is the iid-joint density of the unordered sample. The marginal formula comes from integrating over the other $n - 1$ coordinates and recognizing the binomial coefficient $\binom{n - 1}{i - 1}$ in the result — $i - 1$ draws must fall below $x$, $n - i$ must fall above, and one sits at $x$.
+
+<ExampleBlock number={2} title="The minimum and the maximum">
+For $i = 1$, the marginal density reduces to $n\,(1 - F(x))^{n - 1}\,f(x)$ — the minimum's density is the density at $x$ times the probability that the other $n - 1$ draws are all above. For $i = n$, the marginal is $n\,F(x)^{n - 1}\,f(x)$ — the maximum's density is $f(x)$ times the probability the rest are all below. In both cases, as $n$ grows, the density concentrates near the lower or upper support endpoint respectively. The rate is governed by $F(x)^{n-1}$ (upper tail) or $(1 - F(x))^{n-1}$ (lower tail), which decays exponentially in $n$ away from the boundary — a topic fully developed at formalml `extreme-value-theory`.
+</ExampleBlock>
+
+<ExampleBlock number={3} title="Joint density of two order statistics">
+The joint density of $(X_{(i)}, X_{(j)})$ for $i < j$ comes from marginalizing Thm 1:
+
+$$
+f_{X_{(i)}, X_{(j)}}(x_i, x_j) = \frac{n!}{(i-1)!\,(j - i - 1)!\,(n - j)!}\, F(x_i)^{i-1}\, \bigl(F(x_j) - F(x_i)\bigr)^{j - i - 1}\, \bigl(1 - F(x_j)\bigr)^{n - j}\, f(x_i)\, f(x_j),
+$$
+
+valid for $x_i < x_j$. The combinatorial factor counts placements: $i - 1$ below $x_i$, one at $x_i$, $j - i - 1$ between, one at $x_j$, $n - j$ above. §29.7 uses the special case $(i, j)$ to build distribution-free quantile CIs — pick $r, s$ so that $\Pr\bigl(X_{(r)} \le \xi_p \le X_{(s)}\bigr) \ge 1 - \alpha$.
+</ExampleBlock>
+
+<RemarkBlock number={3} title="Non-iid extensions are a separate story">
+For non-iid data (record values, concomitants, ranked-set sampling, progressive censoring) the joint density takes a different combinatorial form — the $n!$ symmetry is broken. DAV2003 Chapters 5–6 develop the non-iid theory in full; Topic 29 restricts to iid throughout. The one use case outside iid order statistics that recurs in ML is *censoring* — survival analysis estimates $F$ from partially observed data — which we flag as an extension but do not develop.
+</RemarkBlock>
+
+<RemarkBlock number={4} title="Sufficiency: the order statistic is the maximally-informative summary">
+Topic 16 §16 Thm 1 established that for any iid model, the order-statistic tuple $T(X) = (X_{(1)}, \dots, X_{(n)})$ is sufficient for $\theta$: the conditional distribution of $X$ given $T$ does not depend on $\theta$. The same result holds nonparametrically — for any $F$, the order statistic captures every feature of the sample that $F$ influences. This is the structural justification for Track 8: the objects §29 develops are the raw features of every nonparametric procedure, because no statistic that respects the iid assumption can ever discard information in the order statistic. Independence notation $\perp\!\!\!\perp$ (Topic 16 §16.9) carries forward: $X_{(1)}, \dots, X_{(n)}$ are *not* independent (ordering is the whole point), but for iid $X_i$, the vector of ranks $\{R_i\}$ satisfies $(R_1, \dots, R_n) \perp\!\!\!\perp (X_{(1)}, \dots, X_{(n)})$ — a fact exploited by rank tests (forthcoming on formalml).
+</RemarkBlock>
+
+<a id="section-29-3"></a>
+
+## 29.3 The uniform case and Rényi's representation
+
+The Uniform(0, 1) distribution is the reference case for order-statistic theory. Three facts make it special: the density is constant, so the marginal formula in Thm 1 collapses; the CDF is the identity, so the probability-integral transform connects it directly to the general-$F$ case; and the spacings (gaps between consecutive order statistics) have a surprisingly clean joint structure that Rényi exploited in 1953.
+
+<TheoremBlock number={2} title="Uniform order statistics are Beta-distributed (stated)">
+For iid $U_1, \dots, U_n \sim \mathrm{Uniform}(0, 1)$, the $i$-th order statistic $U_{(i)}$ has density
+
+$$
+f_{U_{(i)}}(u) \;=\; \frac{n!}{(i - 1)!\,(n - i)!}\, u^{i - 1}\,(1 - u)^{n - i} \;=\; \frac{1}{B(i, n - i + 1)}\, u^{i - 1}\,(1 - u)^{n - i}, \quad u \in (0, 1),
+$$
+
+i.e. $U_{(i)} \sim \mathrm{Beta}(i,\, n - i + 1)$. This is Thm 1 specialized to $F(u) = u,\, f(u) = 1$ on $(0,1)$; the Beta-density normalization follows from $B(i, n-i+1) = (i-1)!(n-i)!/n!$.
+
+**Corollary 1** (general $F$). If $X_{(i)}$ is the $i$-th order statistic of an iid $F$-sample and $F$ is continuous, then $F(X_{(i)}) \sim \mathrm{Beta}(i, n - i + 1)$, since $F(X_i) \sim \mathrm{Uniform}(0, 1)$ under the probability-integral transform, so sorting the $F$-values gives the Uniform order statistics.
+
+(DAV2003 §2.2.)
+</TheoremBlock>
+
+Corollary 1 is a *universal* statement: the Beta distribution governs $F(X_{(i)})$ regardless of $F$. The `OrderStatisticDensityBrowser` below (Panel C) makes this visible — switching between Uniform, Exponential, and Normal changes the density of $X_{(i)}$ (Panels A and B), but the transformed statistic $F(X_{(i)})$ always sits on the same Beta curve.
+
+Topic 7 §7.13 forward-promised this result as "coming soon"; Thm 2 + Cor 1 discharge it. The `OrderStatisticDensityBrowser` interactive lets the reader sweep $i$ from 1 to $n$ and watch the density shift from left to right across the support — a visual confirmation of the $\frac{i}{n+1}$ location for $\mathbb{E}[U_{(i)}]$.
+
+<OrderStatisticDensityBrowser client:visible />
+
+![Two-panel illustration of the Beta-form density of Uniform order statistics. Left panel: marginal density of U_(i) at n=5 for i=1,2,3,4,5 — five Beta curves sharing one family motif, color-graded from light to dark. Right panel: same at n=10 for i=1,3,5,8,10, showing the center-of-mass sweeping from left to right as i grows. Each curve is labeled Beta(i, n-i+1).](/images/topics/order-statistics-and-quantiles/29-uniform-beta-order-stats.png)
+
+*Figure 2. Uniform order-statistic densities at $n = 5$ (left) and $n = 10$ (right). Each curve is a Beta density with shape parameters $(i, n - i + 1)$ — the reader can verify that the mean $\frac{i}{n + 1}$ moves smoothly from the left endpoint toward the right endpoint as $i$ grows.*
+
+The uniform case has one further structural property that motivates a named theorem: the **spacings** of a Uniform(0, 1) sample — the gaps $U_{(i)} - U_{(i-1)}$ — have a clean distribution that Rényi (1953) discovered for the exponential case. Because Exp and Uniform are connected by $U = 1 - e^{-Y}$ (the inverse of the exponential CDF), the two stories are the same story. We state it for the exponential family where the algebra is prettiest.
+
+![Schematic of Rényi's decomposition of exponential order statistics. Three horizontal rows: top row shows n=6 iid Exp(1) draws as tick marks on the real line; middle row shows the sorted sample with spacings W_k = Y_(k) - Y_(k-1) annotated as segments; bottom row shows rescaled spacings E_k = (n-k+1) W_k as iid Exp(1) bars of varying length.](/images/topics/order-statistics-and-quantiles/29-renyi-spacings-schematic.png)
+
+*Figure 3. Rényi's decomposition. Top: $n = 6$ iid $\mathrm{Exp}(1)$ draws. Middle: sorted, with spacings $W_k$ between consecutive order statistics. Bottom: rescaled spacings $E_k = (n - k + 1) W_k$, which Theorem 3 proves are iid $\mathrm{Exp}(1)$.*
+
+<TheoremBlock number={3} title="Rényi's representation of exponential order statistics">
+Let $Y_1, \dots, Y_n$ be iid $\mathrm{Exp}(1)$. Define the **normalized spacings** $W_k = Y_{(k)} - Y_{(k - 1)}$ for $k = 1, \dots, n$ (with $Y_{(0)} = 0$). Then the rescaled spacings $E_k := (n - k + 1)\, W_k$ are iid $\mathrm{Exp}(1)$, and
+
+$$
+Y_{(k)} \;\stackrel{d}{=}\; \sum_{i = 1}^{k} \frac{E_i}{n - i + 1},
+$$
+
+where $E_1, \dots, E_n$ on the right-hand side are iid $\mathrm{Exp}(1)$.
+</TheoremBlock>
+
+<ProofBlock number={1} title="Proof of Thm 3 (Rényi's representation)">
+
+The joint density of iid $\mathrm{Exp}(1)$ samples on the ordered simplex $\{0 \le y_1 \le \cdots \le y_n\}$ is
+
+$$
+f_{Y_{(1)}, \dots, Y_{(n)}}(y_1, \dots, y_n) \;=\; n! \, \exp\!\Big(- \sum_{i = 1}^n y_i\Big), \qquad 0 \le y_1 \le y_2 \le \cdots \le y_n,
+$$
+
+by Thm 1 specialized to the $\mathrm{Exp}(1)$ density $f(y) = e^{-y}$ on $y \ge 0$.
+
+We change variables from $(y_1, \dots, y_n)$ to the spacings $(w_1, \dots, w_n)$ via $w_k = y_k - y_{k - 1}$ (with $y_0 = 0$), so that $y_k = w_1 + w_2 + \cdots + w_k$. The Jacobian of this map is $1$ — the transformation matrix is lower-triangular with unit diagonal. The inverse image of the ordered simplex is the positive orthant $\{w_1, \dots, w_n \ge 0\}$.
+
+The sum in the exponent rewrites as
+
+$$
+\sum_{i = 1}^n y_i \;=\; \sum_{i = 1}^n \sum_{j = 1}^{i} w_j \;=\; \sum_{j = 1}^n (n - j + 1)\, w_j,
+$$
+
+where the swap of summation order counts how many times each $w_j$ appears in the sum of partial sums — namely $n - j + 1$ times.
+
+Substituting, the joint density of $(W_1, \dots, W_n)$ on the positive orthant is
+
+$$
+f_{W_1, \dots, W_n}(w_1, \dots, w_n) \;=\; n! \, \exp\!\Big(- \sum_{j = 1}^n (n - j + 1)\, w_j\Big).
+$$
+
+This density **factorizes** across coordinates: $W_1, \dots, W_n$ are independent with $W_j \sim \mathrm{Exp}(n - j + 1)$. Note that $n! = \prod_{j = 1}^n (n - j + 1)$, so the joint density is exactly the product of $n$ exponential densities with rates $n, n - 1, \dots, 1$, confirming the normalization.
+
+Defining $E_j := (n - j + 1)\, W_j$ rescales each coordinate by its rate, converting the $\mathrm{Exp}(n - j + 1)$ coordinate into $\mathrm{Exp}(1)$. So $E_1, \dots, E_n$ are iid $\mathrm{Exp}(1)$. Finally,
+
+$$
+Y_{(k)} \;=\; \sum_{j = 1}^{k} W_j \;=\; \sum_{j = 1}^{k} \frac{E_j}{n - j + 1}.
+$$
+
+$\blacksquare$ — using the general order-statistic joint density (Thm 1), the Jacobian change-of-variables formula, and the factorization of the spacings density (REN1953; DAV2003 §2.5).
+
+</ProofBlock>
+
+<ExampleBlock number={4} title="Rényi gives $\mathbb{E}[Y_{(k)}]$ in closed form">
+From Theorem 3,
+
+$$
+\mathbb{E}[Y_{(k)}] \;=\; \sum_{i = 1}^{k} \frac{1}{n - i + 1} \;=\; H_n - H_{n - k},
+$$
+
+where $H_m = 1 + \tfrac{1}{2} + \cdots + \tfrac{1}{m}$ is the harmonic number. The minimum's expectation is $H_n - H_{n - 1} = 1/n$ — the smallest of $n$ iid Exp(1) variables is itself Exp($n$), mean $1/n$. The maximum's expectation is $H_n - H_0 = H_n \approx \log n + \gamma$ — the largest of $n$ iid Exp(1) grows logarithmically. Both are lessons that recur in EVT (forthcoming on formalml): the maximum of iid Exp grows *slowly*, which is why the Gumbel distribution is the right asymptotic limit for Gumbel-domain tails.
+</ExampleBlock>
+
+<RemarkBlock number={5} title="Why the rate-rescaling works">
+The factor $n - k + 1$ in Theorem 3 counts the "remaining" iid samples at step $k$: among $n$ iid Exp(1) draws, the minimum is Exp($n$); conditional on the minimum, the second smallest is the minimum of the remaining $n - 1$ — which by memorylessness is Exp($n - 1$); and so on. The spacing structure is memorylessness in disguise. This is the exponential-family property that makes §29.6's Bahadur residual have a clean form — the tail of the ECDF at quantile $p$ decomposes into iid contributions via the probability-integral transform onto Uniform, and then onto Exp via $U \mapsto -\log U$.
+</RemarkBlock>
+
+<RemarkBlock number={6} title="Connection to the Poisson process">
+Rényi's representation is the order-statistic reading of a Poisson-process fact: if we sprinkle $n$ iid $\mathrm{Exp}(\lambda)$-distributed inter-arrival times on $[0, \infty)$, we get a Poisson process of rate $\lambda$. The sorted arrival times are $Y_{(1)} < Y_{(2)} < \cdots$, and the conditional distribution given $Y_{(n+1)} = T$ is uniform order statistics on $[0, T]$. Theorem 3 is a direct restatement of the inter-arrival independence in the forward direction. Point-process machinery (formalml `point-processes`, forthcoming) makes this connection structural.
+</RemarkBlock>
+
+<RemarkBlock number={7} title="Basu's theorem and the uniform-order-statistics ratio">
+Topic 16 §16.14 Ex 13 proved an unexpected consequence of Basu's theorem: for iid $\mathrm{Uniform}(0, \theta)$, the ratio $X_{(n - 1)} / X_{(n)}$ is independent of the maximum $X_{(n)}$. The uniform-order-statistics structure Theorem 2 and Rényi's representation exploit is the reason: once you change variables to the Uniform-order-statistics simplex, the joint density factorizes in ways that let Basu's theorem detect independence cleanly. Basu in Topic 16 was an early hint of the uniform-order-statistics structure that §29.3 develops in full.
+</RemarkBlock>
+
+<a id="section-29-4"></a>
+
+## 29.4 The sample quantile: Type 7
+
+With order statistics in hand, we can define the **sample quantile** at level $p$. The definition is less trivial than it looks: for $p = k/n$ with integer $k$, the "obvious" answer is $X_{(k)}$, but for $p$ in between — say $p = 0.5$ with $n = 4$ — there are many defensible choices. Hyndman and Fan (1996) catalogued nine conventions in use across statistical packages. Topic 29 adopts Type 7, the default in R, NumPy, and SciPy — matching a reader's numpy environment is a pedagogical priority.
+
+<DefinitionBlock number={2} title="Population quantile">
+The **population quantile** at level $p \in (0, 1)$ is
+
+$$
+\xi_p \;:=\; F^{-1}(p) \;=\; \inf\{x : F(x) \ge p\}.
+$$
+
+For continuous strictly-increasing $F$, $\xi_p = F^{-1}(p)$ in the usual inverse-function sense. The left-continuous-inverse definition handles atoms and flat regions of $F$ cleanly.
+</DefinitionBlock>
+
+<DefinitionBlock number={3} title="Sample quantile (Hyndman–Fan Type 7)">
+Let $X_{(1)} \le \cdots \le X_{(n)}$ be the order statistics of an iid sample. The **Type-7 sample quantile** at level $p \in [0, 1]$ is
+
+$$
+\hat\xi_p \;:=\; X_{(\lfloor h \rfloor + 1)} + (h - \lfloor h \rfloor)\, \bigl(X_{(\lfloor h \rfloor + 2)} - X_{(\lfloor h \rfloor + 1)}\bigr), \qquad h := (n - 1)\, p.
+$$
+
+Equivalently: $\hat\xi_p$ linearly interpolates between the two order statistics bracketing the position $(n - 1)\, p + 1$ in the sorted sample. For $p = 0$, $\hat\xi_p = X_{(1)}$; for $p = 1$, $\hat\xi_p = X_{(n)}$; for $p = 0.5$ with odd $n$, $\hat\xi_p = X_{((n + 1)/2)}$, the sample median.
+
+(HYN1996, default convention in R `quantile()`, NumPy `quantile`, SciPy `scipy.stats.mstats.mquantiles`.)
+</DefinitionBlock>
+
+<ExampleBlock number={5} title="Sample quartiles of a small sample">
+For the sample $\{1, 2, 3, 4, 5\}$ with $n = 5$: at $p = 0.5$, $h = (5 - 1)(0.5) = 2$, so $\hat\xi_{0.5} = X_{(3)} = 3$ exactly. At $p = 0.25$, $h = 1$, so $\hat\xi_{0.25} = X_{(2)} = 2$. At $p = 0.9$, $h = 3.6$, so $\hat\xi_{0.9} = X_{(4)} + 0.6 (X_{(5)} - X_{(4)}) = 4 + 0.6 = 4.6$. These match the `numpy.quantile([1,2,3,4,5], q)` defaults exactly — a sanity check that the Type-7 convention is what the reader's tooling uses.
+</ExampleBlock>
+
+<RemarkBlock number={8} title="Why Type 7 and not something else">
+The nine Hyndman–Fan conventions differ in how they interpolate when $p$ is not at an integer order-statistic position. Type 1 (inverse-CDF) picks $X_{(\lceil n p \rceil)}$ with no interpolation — it's discontinuous in $p$. Type 5 and Type 6 are older conventions still used in some engineering packages. Type 7 is the unique member of the family that (i) is a continuous piecewise-linear function of $p$ and (ii) hits the boundary exactly ($\hat\xi_0 = X_{(1)}$ and $\hat\xi_1 = X_{(n)}$). Because R, NumPy, and SciPy all adopt Type 7 by default, a reader writing Python code to reproduce §29's figures gets Type-7 numbers without setting a flag. Any other convention would introduce a silent discrepancy.
+</RemarkBlock>
+
+<RemarkBlock number={9} title="Streaming-quantile approximations live outside this topic">
+Exact sample quantiles require sorting the sample — $O(n \log n)$ and $O(n)$ memory. In streaming or high-cardinality settings, approximate quantile sketches (Jain–Chlamtac 1985's P² algorithm; Greenwald–Khanna 2001; Dunning's t-digest 2021) trade small guaranteed error for bounded memory. These are widely used in ML production systems for real-time latency monitoring. Topic 29 does not develop them — streaming quantiles are an engineering sub-topic of its own. The relevant entry point is Dunning 2021 (t-digest) for practical use.
+</RemarkBlock>
+
+<a id="section-29-5"></a>
+
+## 29.5 ECDF, Glivenko–Cantelli, DKW
+
+Topic 10 §10.7 introduced the empirical CDF $F_n$ and proved it converges uniformly to $F$ almost surely — the Glivenko–Cantelli theorem. §29.5 sharpens that a.s. statement into a non-asymptotic bound via the Dvoretzky–Kiefer–Wolfowitz inequality, then converts DKW into a finite-sample confidence envelope that can be read off any realization of $F_n$ without knowing $F$.
+
+<TheoremBlock number={4} title="Glivenko–Cantelli theorem (restated from §10.7)">
+For iid $X_1, \dots, X_n \sim F$ with $F$ any CDF,
+
+$$
+\sup_x \bigl|F_n(x) - F(x)\bigr| \;\xrightarrow{\text{a.s.}}\; 0 \qquad \text{as } n \to \infty.
+$$
+
+The supremum distance $D_n := \sup_x |F_n(x) - F(x)|$ is the **one-sample Kolmogorov–Smirnov statistic**. Glivenko–Cantelli says $D_n \to 0$ almost surely. (Topic 10 §10.7 Thm 5; see there for the ε-net argument.)
+</TheoremBlock>
+
+Glivenko–Cantelli is qualitative — it says "eventually" $D_n$ is small — but does not tell us *how small* for any given $n$. The Dvoretzky–Kiefer–Wolfowitz inequality provides a non-asymptotic exponential bound.
+
+<TheoremBlock number={5} title="Dvoretzky–Kiefer–Wolfowitz inequality (DKW)">
+For iid $X_1, \dots, X_n \sim F$ and every $\varepsilon > 0$,
+
+$$
+\Pr\!\Bigl(\sup_x |F_n(x) - F(x)| > \varepsilon\Bigr) \;\le\; 2\, e^{-2 n \varepsilon^2}.
+$$
+
+The constant $2$ is optimal (Massart 1990) when $\varepsilon \ge \sqrt{\ln 2 / (2n)}$; DVO1956 originally proved the bound with a larger, unspecified constant. Inverting the bound at confidence level $1 - \alpha$ gives a **distribution-free finite-sample confidence envelope**: the band $[F_n(x) - \varepsilon_n, F_n(x) + \varepsilon_n]$ with
+
+$$
+\varepsilon_n \;=\; \sqrt{\frac{\log(2 / \alpha)}{2 n}}
+$$
+
+contains $F$ uniformly in $x$ with probability $\ge 1 - \alpha$.
+
+**Corollary 2** (the DKW envelope). With $\varepsilon_n$ as above, $\Pr\bigl(F_n(x) - \varepsilon_n \le F(x) \le F_n(x) + \varepsilon_n \text{ for all } x\bigr) \ge 1 - \alpha$ regardless of $F$. (DVO1956; MAS1990.)
+</TheoremBlock>
+
+DKW is a finite-sample strengthening of Glivenko–Cantelli that (i) holds for every $n \ge 1$, (ii) is distribution-free — $F$ does not appear in the bound — and (iii) has the optimal constant $C = 2$. It is the workhorse inequality behind every distribution-free uniform-deviation statement the rest of Track 8 uses. The envelope $[F_n \pm \varepsilon_n]$ is a *simultaneous* confidence band for $F$ at every $x$, not just a pointwise CI at a single $x$.
+
+![Three-panel figure showing the DKW envelope against the empirical CDF of Normal(0,1) samples at n=20, 100, 1000. The true CDF Phi is overlaid in black. At alpha=0.05, the envelope width is epsilon_n ≈ 0.301 at n=20, 0.135 at n=100, and 0.043 at n=1000 — roughly the 1/sqrt(n) rate DKW predicts. The envelope visibly contains Phi in each panel.](/images/topics/order-statistics-and-quantiles/29-dkw-envelope.png)
+
+*Figure 4. The DKW confidence envelope at $\alpha = 0.05$. At $n = 20$ the envelope is wide (±0.301) but already informative; at $n = 1000$ it narrows to ±0.043. The true CDF $\Phi$ is contained by the envelope at every $x$ in each realization — this is guaranteed with probability $\ge 0.95$ by DKW, and the `ECDFDKWBandExplorer` below lets the reader empirically verify the coverage rate.*
+
+<ECDFDKWBandExplorer client:visible />
+
+<ExampleBlock number={6} title="DKW as a two-sample diagnostic">
+A common ML workflow: you suspect the distribution of a production feature has shifted since training. Collect $n_1$ training samples and $n_2$ production samples. Compute the ECDFs $F_{n_1}^{\text{train}}$ and $F_{n_2}^{\text{prod}}$ and their sup-norm distance $D = \sup_x |F_{n_1}^{\text{train}}(x) - F_{n_2}^{\text{prod}}(x)|$. The one-sample DKW envelopes give simultaneous confidence bands for the true train and production CDFs; if those bands overlap at every $x$, no detectable shift. For the formal two-sample test — including the asymptotic null distribution — see §29.8 (with the two-sample variant a one-line extension to ksTwoSample in `nonparametric.ts`). Production systems run this test nightly to flag shift on each logged feature.
+</ExampleBlock>
+
+<RemarkBlock number={10} title="DKW vs CLT-for-one-point">
+CLT says $\sqrt n\, (F_n(x) - F(x)) \Rightarrow \mathcal{N}(0, F(x)(1 - F(x)))$ for each fixed $x$ — a pointwise asymptotic statement. DKW says $\sup_x |F_n(x) - F(x)|$ is bounded non-asymptotically with probability $\ge 1 - \alpha$ — a uniform finite-sample statement. Both are useful: CLT gives the pointwise limiting distribution that §29.8 Thm 7 upgrades to uniform (via Donsker); DKW gives the uniform bound that does not require any asymptotic machinery. The Bahadur proof (§29.6) exploits both: CLT at the point $\xi_p$ plus a uniform-over-neighborhood fluctuation bound that DKW is the finite-sample analog of.
+</RemarkBlock>
+
+<RemarkBlock number={11} title="DKW is sharp; CLT is not (at $x = F^{-1}(1/2)$)">
+For $x$ at the median of $F$, CLT gives asymptotic variance $F(x)(1 - F(x)) = 1/4$. DKW's exponential rate $2 e^{-2n\varepsilon^2}$ at $\varepsilon = 1/\sqrt{2n}$ gives probability $\ge 2/e \approx 0.74$ that the sup-norm gap is below $1/\sqrt{2n}$, which matches the CLT tail probability to within constants. For $x$ deep in the tails where $F(x) \approx 0$ or $1$, CLT gives much smaller pointwise variance than $1/4$, so the DKW uniform bound is loose at tails — a property exploited by the *tail-aware* inequalities of Talagrand (Talagrand 1994) developed at formalml `concentration-inequalities` (forthcoming).
+</RemarkBlock>
+
+<a id="section-29-6"></a>
+
+## 29.6 Bahadur representation and asymptotic normality
+
+§29.6 is the centerpiece of Topic 29. Bahadur's 1966 representation linearizes the sample quantile $\hat\xi_p$ into an empirical-CDF term plus a small remainder — the same "score-function-like" decomposition that gives every classical estimator its asymptotic-normality corollary. The featured theorem + its corollary resolve the question "what is the limiting distribution of the sample median?" for essentially every distribution with positive density at its median, including heavy-tailed ones like the Cauchy where the usual variance-based CLT does not apply.
+
+<TheoremBlock number={6} title="Bahadur representation of the sample quantile (featured)">
+Let $X_1, X_2, \dots, X_n$ be iid with CDF $F$. Fix $p \in (0, 1)$ and assume $F$ is differentiable at $\xi_p = F^{-1}(p)$ with $F'(\xi_p) = f(\xi_p) > 0$ and that $F$ is twice-differentiable in a neighborhood of $\xi_p$ with bounded second derivative. Let $\hat\xi_p$ be the Type-7 sample quantile (Def 3). Then
+
+$$
+\hat\xi_p - \xi_p \;=\; -\frac{F_n(\xi_p) - p}{f(\xi_p)} \;+\; R_n,
+$$
+
+where the remainder satisfies $R_n = O_p\!\bigl(n^{-3/4}\,\sqrt{\log n}\bigr)$ (Kiefer 1967 rate).
+
+**Corollary 1** (asymptotic normality). Under the same hypotheses,
+
+$$
+\sqrt{n}\,\bigl(\hat\xi_p - \xi_p\bigr) \;\Rightarrow\; \mathcal{N}\!\left(0,\; \frac{p\,(1 - p)}{f(\xi_p)^2}\right).
+$$
+
+(BAH1966; KIE1967; SER1980 §2.5; vdV2000 §21.)
+</TheoremBlock>
+
+The representation's structure is the important part. The leading term $-(F_n(\xi_p) - p)/f(\xi_p)$ is a **linear functional of the ECDF** evaluated at the true quantile — it is $-\sqrt n^{-1}$ times a centered Bernoulli average with success probability $p$ and variance $p(1 - p)$, which converges to a Normal by the CLT-for-indicators of §11 Thm 2. The remainder $R_n$ is smaller than $n^{-1/2}$ — at the Kiefer rate $n^{-3/4}\sqrt{\log n}$ — and is asymptotically negligible.
+
+Corollary 1 falls out immediately: the leading term is Normal by CLT, the remainder is $o_p(n^{-1/2})$, and Slutsky's lemma assembles them.
+
+<ProofBlock number={2} title="Proof of Thm 6 (Bahadur representation — featured)">
+
+Throughout, write $\tilde F_n(t) := F_n(\xi_p + t/\sqrt n)$ for the empirical CDF at a $1/\sqrt n$-scale neighborhood of $\xi_p$. Define the centered empirical process $U_n(t) := \sqrt{n}\bigl(\tilde F_n(t) - F(\xi_p + t/\sqrt n)\bigr)$. By the CLT applied to indicator variables (Topic 11 Thm 2), for each fixed $t$,
+
+$$
+U_n(t) \;\Rightarrow\; \mathcal{N}\bigl(0, \; F(\xi_p)(1 - F(\xi_p))\bigr) \;=\; \mathcal{N}\bigl(0, \; p(1 - p)\bigr).
+$$
+
+**Step 1: Smoothness of $F$ near $\xi_p$.** By the second-derivative hypothesis and Taylor's theorem,
+
+$$
+F(\xi_p + t/\sqrt n) \;=\; p + \frac{t\, f(\xi_p)}{\sqrt n} + \frac{t^2\, F''(\tilde\xi)}{2 n}
+$$
+
+for some $\tilde\xi$ between $\xi_p$ and $\xi_p + t/\sqrt n$. Since $F''$ is bounded on a neighborhood of $\xi_p$, the remainder is $O(t^2/n)$ uniformly for $|t| \le K$ with any fixed $K$.
+
+**Step 2: The sample quantile equation.** By the Type-7 definition, $\hat\xi_p$ satisfies $F_n(\hat\xi_p^{-}) \le p \le F_n(\hat\xi_p)$, which gives $F_n(\hat\xi_p) = p + O(1/n)$. Let $T_n := \sqrt n\, (\hat\xi_p - \xi_p)$ denote the scaled quantile deviation. Substituting $t = T_n$ into $\tilde F_n(t) = F(\xi_p + t/\sqrt n) + U_n(t)/\sqrt n$,
+
+$$
+F(\xi_p + T_n/\sqrt n) + \frac{U_n(T_n)}{\sqrt n} \;=\; p + O(1/n).
+$$
+
+Using the Step-1 Taylor expansion,
+
+$$
+p + \frac{T_n\, f(\xi_p)}{\sqrt n} + \frac{T_n^2\, F''(\tilde\xi)}{2 n} + \frac{U_n(T_n)}{\sqrt n} \;=\; p + O(1/n).
+$$
+
+Rearranging and multiplying by $\sqrt n$,
+
+$$
+T_n\, f(\xi_p) \;=\; -U_n(T_n) - \frac{T_n^2\, F''(\tilde\xi)}{2 \sqrt n} + O(1/\sqrt n).
+$$
+
+**Step 3: Approximate $U_n(T_n)$ by $U_n(0)$.** The empirical-process oscillation bound (Kiefer 1967 Thm 1; SER1980 §2.5 Thm A) states that for any fixed $K > 0$,
+
+$$
+\sup_{|t| \le K} \bigl|\, U_n(t) - U_n(0) \,\bigr| \;=\; O_p\!\bigl(n^{-1/4}\,\sqrt{\log n}\bigr).
+$$
+
+Since $T_n = O_p(1)$ (the sample quantile is root-$n$ consistent — which follows from the Step-2 equation plus the fact that $U_n(T_n)$ is bounded in probability), we may restrict to $|T_n| \le K$ on an event of probability tending to one, yielding
+
+$$
+U_n(T_n) \;=\; U_n(0) + O_p\!\bigl(n^{-1/4}\,\sqrt{\log n}\bigr).
+$$
+
+**Step 4: Assemble the representation.** Substituting $U_n(T_n) = U_n(0) + O_p(n^{-1/4}\sqrt{\log n})$ into the Step-2 equation and recalling $U_n(0) = \sqrt n\,(F_n(\xi_p) - p)$,
+
+$$
+T_n\, f(\xi_p) \;=\; -\sqrt n\, \bigl(F_n(\xi_p) - p\bigr) + O_p\!\bigl(n^{-1/4}\,\sqrt{\log n}\bigr) + O_p\!\bigl(1/\sqrt n\bigr).
+$$
+
+*Figure 5 renders here* — the Monte Carlo decay of the median-absolute residual $|R_n|$ against the Kiefer envelope $c \cdot n^{-3/4} \sqrt{\log n}$, verifying empirically what Step 4 proves analytically.
+
+![Log-log plot of the Bahadur residual decay for F = Normal(0,1). Two panels: left, p=0.5; right, p=0.9. Each panel shows Monte-Carlo estimates of median |R_n| at n ∈ {50, 100, 200, 500, 1000, 2000, 5000} (filled circles) plotted against the Kiefer envelope c · n^{-3/4} sqrt(log n) (dashed line, constant c fitted to pass through n=500). The log-log slope approaches -0.75 as n grows.](/images/topics/order-statistics-and-quantiles/29-bahadur-residual-decay.png)
+
+*Figure 5. Empirical verification of the Kiefer rate. Left: $p = 0.5$; right: $p = 0.9$. The slow-decaying $\sqrt{\log n}$ factor means the empirical log-log slope is less negative than $-0.75$ at moderate $n$ — the curves approach but don't match the Kiefer envelope until $n \gtrsim 5000$. The `QuantileAsymptoticsExplorer` lets the reader verify this across distributions.*
+
+**Step 5: Finalize.** Dividing by $\sqrt n\, f(\xi_p)$ and reading off $\hat\xi_p - \xi_p = T_n/\sqrt n$,
+
+$$
+\hat\xi_p - \xi_p \;=\; -\frac{F_n(\xi_p) - p}{f(\xi_p)} + O_p\!\bigl(n^{-3/4}\,\sqrt{\log n}\bigr).
+$$
+
+The remainder rate is sharp: Kiefer (1967) proved both the upper bound above and the matching lower bound $R_n \ne o_p(n^{-3/4}\sqrt{\log n})$.
+
+$\blacksquare$ — using Taylor's theorem, the empirical-process oscillation bound (KIE1967 Thm 1), and CLT-for-indicators (Topic 11 Thm 2). Full details: BAH1966 for the original $o_p(n^{-1/2})$ statement; KIE1967 for the sharp rate; SER1980 §2.5 and vdV2000 §21.2 for modern treatments.
+
+</ProofBlock>
+
+The corollary's asymptotic variance $p(1 - p)/f(\xi_p)^2$ has a striking feature: it does not involve any moments of $F$ — only the value of the density at the population quantile. This is what makes the Bahadur representation the right tool for heavy-tailed data where moments may not exist. The `QuantileAsymptoticsExplorer` below makes this vivid via the Cauchy preset: Cauchy has no mean or variance, but its density at the median is $1/\pi$, so the sample median's limiting variance is $0.25 / (1/\pi)^2 = \pi^2/4 \approx 2.47$ — finite and small.
+
+<QuantileAsymptoticsExplorer client:visible />
+
+![Three-panel histogram showing asymptotic-normality of sqrt(n)(sample-median - population-median) at n=100 over 5000 MC replicates, for F in {Normal(0,1), Exp(1), Cauchy(0,1)}. Each panel overlays the Bahadur-limit Normal density N(0, p(1-p)/f(xi_p)^2). Normal limit variance is 1.571; Exp limit variance is 0.25; Cauchy limit variance is 2.467. All three histograms visibly match the overlaid limits.](/images/topics/order-statistics-and-quantiles/29-asymptotic-normality-three-families.png)
+
+*Figure 6. The Bahadur limit overlay for three distributions with very different moment behavior. Cauchy has no mean, no variance — but the sample median is still root-$n$ Normal, with limit variance finite because $f(\xi_{0.5}) = 1/\pi > 0$. The Bahadur representation is distribution-free in this sense: regularity lives at $\xi_p$, not globally.*
+
+<ExampleBlock number={7} title="The sample median for Normal data">
+For $X_i \sim \mathcal{N}(0, 1)$ at $p = 0.5$: $\xi_{0.5} = 0$, $f(0) = 1/\sqrt{2\pi}$. Bahadur Cor 1 gives
+
+$$
+\sqrt n\,(\hat\xi_{0.5} - 0) \;\Rightarrow\; \mathcal{N}\!\left(0, \frac{0.25}{1/(2\pi)}\right) \;=\; \mathcal{N}\!\left(0, \frac{\pi}{2}\right).
+$$
+
+The limiting standard error of the sample median is $\sqrt{\pi/2} \approx 1.253$, compared to $1.0$ for the sample mean. The median is less efficient than the mean under exact Normal data by the factor $2/\pi \approx 0.637$ — the asymptotic relative efficiency ARE(median, mean) = $2/\pi$. Under heavier tails this ratio flips; see Ex 8.
+</ExampleBlock>
+
+<ExampleBlock number={8} title="The sample median for Cauchy data">
+For $X_i \sim \mathrm{Cauchy}(0, 1)$ at $p = 0.5$: $\xi_{0.5} = 0$, $f(0) = 1/\pi$. Bahadur Cor 1 gives
+
+$$
+\sqrt n\,(\hat\xi_{0.5} - 0) \;\Rightarrow\; \mathcal{N}\!\left(0, \frac{0.25}{1/\pi^2}\right) \;=\; \mathcal{N}\!\left(0, \frac{\pi^2}{4}\right).
+$$
+
+The limiting standard error is $\pi/2 \approx 1.571$ — slightly larger than the Normal case, but finite. The sample *mean* of Cauchy data is undefined asymptotically (the variance of $\bar X$ is infinite; CLT does not apply), so the sample median is *infinitely more efficient* than the sample mean for Cauchy — ARE is $+\infty$. This is the money-shot example that motivates Bahadur: regularity is about the density at $\xi_p$, not about moments.
+</ExampleBlock>
+
+<RemarkBlock number={12} title="The density-at-quantile problem">
+The limit variance $p(1-p)/f(\xi_p)^2$ depends on $f(\xi_p)$ — a *nuisance parameter* the reader typically does not know. Plug-in estimation requires estimating $f$ at $\xi_p$. Topic 30 (Kernel Density Estimation) develops the general KDE machinery that provides consistent estimators $\hat f_n(\xi_p)$ with controlled bandwidth. Alternatively, the bootstrap (Topic 31) sidesteps this entirely by resampling the full empirical process — the plug-in variance is never computed directly.
+</RemarkBlock>
+
+<RemarkBlock number={13} title="Bahadur is the 'score function' of nonparametric inference">
+The Bahadur representation is structurally identical to the Taylor-expansion-of-the-score-function argument that underpins MLE asymptotic normality (Topic 14 §14.6):
+
+$$
+\hat\theta_{\text{MLE}} - \theta \;=\; -\frac{\sum_i \nabla \log f(X_i; \theta) / n}{I(\theta)} + o_p(n^{-1/2}),
+$$
+
+where the leading term is a mean-zero empirical average divided by a fixed constant, and the remainder is asymptotically negligible. Bahadur's remainder rate $n^{-3/4}\sqrt{\log n}$ is worse than MLE's $o_p(n^{-1/2})$, but the functional form — "linearize into a known empirical average, bound the remainder, apply CLT" — is identical. Every Track 8 result reduces to a Bahadur-style linearization: KDE bandwidth asymptotics (Topic 30), bootstrap-CI validity (Topic 31), empirical-process functionals (Topic 32), and quantile-regression (forthcoming on formalml) all use this template.
+</RemarkBlock>
+
+<RemarkBlock number={14} title="What $p = 0$ and $p = 1$ break">
+Bahadur requires $f(\xi_p) > 0$. At extreme $p$ — near 0 or 1 — the density may vanish ($f(\xi_0)$ or $f(\xi_1)$ may be zero or undefined if the support is unbounded). In those regimes the sample quantile's asymptotic distribution is *not* Normal at rate $\sqrt n$; it is governed by the **Fisher–Tippett–Gnedenko trichotomy** (Gumbel, Fréchet, Weibull) at rate determined by the tail behavior of $F$. Extreme-value theory is the subject of formalml `extreme-value-theory` (forthcoming); Topic 29 restricts to interior $p$ where Bahadur applies.
+</RemarkBlock>
+
+<a id="section-29-7"></a>
+
+## 29.7 Distribution-free quantile confidence intervals
+
+Bahadur Cor 1 gives an asymptotic CI for $\xi_p$ — but implementing it requires estimating $f(\xi_p)$. In some applications you want a CI whose validity does not require estimating any density. Order-statistic pairs provide exactly that: an **exact** (not asymptotic) finite-sample CI for $\xi_p$ whose coverage is a closed-form binomial probability, distribution-free.
+
+<TheoremBlock number={7} title="Distribution-free quantile CI (stated)">
+For iid $X_1, \dots, X_n$ with continuous CDF $F$, and $p \in (0, 1)$, let $r < s$ be integers with $1 \le r \le s \le n$. Then
+
+$$
+\Pr\!\bigl(X_{(r)} \le \xi_p \le X_{(s)}\bigr) \;=\; \Pr\bigl(r \le B \le s - 1\bigr), \qquad B \sim \mathrm{Bin}(n, p),
+$$
+
+regardless of $F$. Choosing $r, s$ so that this binomial probability is $\ge 1 - \alpha$ yields a distribution-free exact $(1 - \alpha)$-CI for $\xi_p$. The canonical choice picks the largest $r$ with $\Pr(B < r) \le \alpha / 2$ and the smallest $s$ with $\Pr(B \ge s) \le \alpha / 2$; this gives a two-sided CI with exact coverage $1 - \Pr(B < r) - \Pr(B \ge s) \ge 1 - \alpha$. (SER1980 §2.6.1.)
+</TheoremBlock>
+
+The key fact behind Theorem 7: the number $B$ of sample points $X_i \le \xi_p$ is $\mathrm{Bin}(n, p)$, since $\Pr(X_i \le \xi_p) = F(\xi_p) = p$. So $X_{(r)} \le \xi_p$ iff at least $r$ points fall below $\xi_p$ iff $B \ge r$; and $X_{(s)} \ge \xi_p$ iff at most $s - 1$ points fall strictly below iff $B \le s - 1$ (using continuity to ignore ties). Combining gives the claim. Coverage is exactly the binomial tail probability — no asymptotics, no plug-in.
+
+Because $r$ and $s$ are integers, coverage is a *step function* of $n$: for the 95th-percentile CI at $p = 0.95$, the bounds shift discretely as $n$ crosses thresholds where the binomial tail probabilities change which integers are selected. The consequence: **distribution-free quantile CIs over-cover at intermediate $n$** — the actual coverage is typically strictly greater than $1 - \alpha$. Figure 7 makes this visible.
+
+![Coverage plot of the 95 percent distribution-free CI for the 75th percentile of Exp(1) across n in {20, 30, 50, 100, 200, 500}. Empirical coverage (filled circles) lies slightly above the 0.95 target line, drifting toward 0.95 as n grows. Step structure is visible: coverage jumps discretely at n-thresholds where a new (r,s) pair becomes the chosen bound.](/images/topics/order-statistics-and-quantiles/29-quantile-ci-coverage.png)
+
+*Figure 7. Empirical coverage of the 95% distribution-free CI for the 75th percentile of $\mathrm{Exp}(1)$ over 2,000 MC replicates. Coverage is a step function of $n$: exact CIs over-cover at intermediate $n$, tightening only when the binomial tail probabilities support a larger or smaller $(r, s)$ window. The 0.75 quantile-level was chosen over 0.95 because at $p = 0.95$ with $n = 20$ the binomial tail already exceeds $\alpha/2$ from only the extreme $(n-1, n)$ pair, producing degenerate one-sided CIs that don't illustrate the step structure pedagogically.*
+
+<ExampleBlock number={9} title="CI for the median at $n = 20$">
+For $n = 20$, $p = 0.5$, $\alpha = 0.05$: by symmetry of $\mathrm{Bin}(20, 0.5)$, the largest $r$ with $\Pr(\mathrm{Bin}(20, 0.5) < r) \le 0.025$ is $r = 6$ (since $\Pr(\mathrm{Bin} \le 5) \approx 0.021$), and symmetrically $s = 15$. The CI is $[X_{(6)}, X_{(15)}]$, with exact coverage $1 - 2 \cdot 0.021 \approx 0.959$ — slightly over-covering the nominal 0.95. This is the `quantileCIOrderStatisticBounds(20, 0.5, 0.05)` result pinned in the T29.15 test — $r = 6$, $s = 15$, actual level $\approx 0.9586$.
+</ExampleBlock>
+
+<ExampleBlock number={10} title="CI for a latency percentile">
+Production ML systems often set SLOs on latency percentiles — e.g., the 95th-percentile response time should be below 200ms. The distribution-free CI is a natural monitoring tool: collect $n = 500$ request latencies in the past hour, compute $[X_{(r)}, X_{(s)}]$ at $p = 0.95$ and $\alpha = 0.05$. The resulting CI has guaranteed coverage $\ge 0.95$ *without any assumption about the latency distribution* — which matters because latency distributions are usually heavy-tailed (lognormal or Pareto-like) and asymptotic-Normal CIs based on $\bar{X}$ are misleading in the tails. Conformal-prediction wrappers (forthcoming on formalml) generalize this construction to arbitrary prediction sets.
+</ExampleBlock>
+
+<RemarkBlock number={15} title="Bootstrap as the general distribution-free CI machinery">
+§29.7's exact CI works specifically for quantiles — one of the few statistics where the coverage probability is binomial and closed-form. For a general statistic $T(X)$ (mean, variance, regression coefficient), the same distribution-free spirit is captured by the **bootstrap**: resample from $F_n$ and use the empirical distribution of $T(X^*)$ as the reference. Topic 31 develops bootstrap-CIs in full (percentile, BCa, studentized), with Hall's second-order accuracy result as the anchor. §19.10 Rem 20 punted bootstrap to Track 8; Topic 31 is where that promise lands. The order-statistic CI of §29.7 is the distribution-free CI "done in closed form" for quantiles specifically; the bootstrap is the general nonparametric CI machinery for every other statistic.
+</RemarkBlock>
+
+<a id="section-29-8"></a>
+
+## 29.8 The Kolmogorov–Smirnov test
+
+§29.5 Thm 4 restated Glivenko–Cantelli's $D_n \to 0$ almost surely, and Thm 5 gave the non-asymptotic DKW bound. §29.8 completes the picture: the asymptotic distribution of $\sqrt n\, D_n$ is the **Kolmogorov distribution**, and this yields the one-sample **Kolmogorov–Smirnov goodness-of-fit test** — testing whether an iid sample was drawn from a specified continuous CDF $F_0$.
+
+<TheoremBlock number={8} title="Asymptotic Kolmogorov distribution of $\sqrt n\, D_n$ (partial proof; Donsker stated)">
+Let $X_1, \dots, X_n$ be iid from a continuous CDF $F$ and let $D_n = \sup_x |F_n(x) - F(x)|$. Then
+
+$$
+\sqrt n\, D_n \;\Rightarrow\; K \qquad \text{as } n \to \infty,
+$$
+
+where $K$ is the **Kolmogorov distribution** with CDF
+
+$$
+\Pr(K \le x) \;=\; 1 - 2 \sum_{k = 1}^{\infty} (-1)^{k - 1}\, e^{-2 k^2 x^2}, \qquad x > 0.
+$$
+
+The asymptotic null distribution $K$ is *distribution-free*: it does not depend on $F$. The partial proof below assumes Donsker's theorem (proved at Topic 32 §32.5) and derives the Kolmogorov limit as a consequence. (KOL1933; SMI1948; BIL1999 §14.)
+</TheoremBlock>
+
+<ProofBlock number={3} title="Proof of Thm 8 (Kolmogorov-distribution limit, partial)">
+
+The proof has three ingredients: (i) the **probability-integral transform** reduces the general-$F$ case to $F = \mathrm{Uniform}(0, 1)$; (ii) **Donsker's theorem** — taken as given here, proved at Topic 32 — gives a distributional limit for the normalized empirical process; (iii) the **continuous mapping theorem** extracts the sup-norm distribution from that limit.
+
+**Ingredient (i): reduce to uniform.** Define $U_i := F(X_i)$. Since $F$ is continuous, $U_i \sim \mathrm{Uniform}(0, 1)$. The empirical CDF of $\{U_i\}$ at level $t$ equals the empirical CDF of $\{X_i\}$ at $F^{-1}(t)$:
+
+$$
+G_n(t) := \frac{1}{n} \sum_{i = 1}^n \mathbb{1}\{U_i \le t\} = F_n(F^{-1}(t)).
+$$
+
+Substituting $t = F(x)$ gives $G_n(F(x)) = F_n(x)$, so
+
+$$
+D_n = \sup_x |F_n(x) - F(x)| = \sup_t |G_n(t) - t|,
+$$
+
+which is the KS statistic for the uniform case. Henceforth assume $F = \mathrm{Uniform}(0, 1)$.
+
+**Ingredient (ii): Donsker's theorem (stated; proved at Topic 32 §32.5).** Define the uniform empirical process $\mathbb{G}_n(t) := \sqrt n\, (G_n(t) - t)$ for $t \in [0, 1]$. Donsker's theorem (BIL1999 §16) states that $\mathbb{G}_n$ converges in distribution in the space $D[0, 1]$ (with the Skorokhod topology) to a **standard Brownian bridge** $\mathbb{B}^\circ$ — a centered Gaussian process on $[0, 1]$ with covariance $\mathrm{Cov}(\mathbb{B}^\circ(s), \mathbb{B}^\circ(t)) = s \wedge t - s t$ and boundary conditions $\mathbb{B}^\circ(0) = \mathbb{B}^\circ(1) = 0$. Topic 32 develops the full empirical-process machinery — including the Skorokhod topology, tightness arguments, and finite-dimensional convergence — and proves Donsker as its centerpiece. Here we take it as given.
+
+**Ingredient (iii): continuous mapping.** The sup-norm functional $\phi: D[0, 1] \to \mathbb{R}$ defined by $\phi(f) = \sup_{t \in [0, 1]} |f(t)|$ is continuous — indeed, 1-Lipschitz with respect to the uniform metric. By the continuous mapping theorem (Topic 9 §9.5),
+
+$$
+\sqrt n\, D_n = \phi(\mathbb{G}_n) \;\Rightarrow\; \phi(\mathbb{B}^\circ) = \sup_{t \in [0, 1]} |\mathbb{B}^\circ(t)|.
+$$
+
+**The Kolmogorov formula.** The distribution of $\sup_{t \in [0, 1]} |\mathbb{B}^\circ(t)|$ is classical (BIL1999 §14 Thm 14.4):
+
+$$
+\Pr\!\left(\sup_{t \in [0, 1]} |\mathbb{B}^\circ(t)| \le x\right) \;=\; 1 - 2 \sum_{k = 1}^{\infty} (-1)^{k - 1}\, e^{-2 k^2 x^2}, \qquad x > 0.
+$$
+
+This is derived from the reflection principle applied to Brownian motion and conditioning on $B(1) = 0$; we quote the formula rather than re-deriving it, since the full derivation uses the Brownian-motion technology developed at formalml `stochastic-processes`. Combining with Ingredient (iii) gives the claimed limit.
+
+$\blacksquare$ (assuming Donsker — proved at Topic 32 — and the sup-norm-of-Brownian-bridge distribution — quoted from BIL1999 §14.4.)
+
+</ProofBlock>
+
+The KS statistic with the asymptotic Kolmogorov null distribution gives the one-sample KS test. Critical values are standard: $d_{0.10} \approx 1.224$, $d_{0.05} \approx 1.358$, $d_{0.01} \approx 1.628$, all divided by $\sqrt n$ for the un-scaled statistic.
+
+![Two-panel figure for the KS null distribution. Left panel: Monte-Carlo histogram of sqrt(n) D_n at n=100 under H0 (F = Normal(0,1)) over 10000 replicates, with the asymptotic Kolmogorov density overlaid in red. Right panel: Q-Q plot of the MC sample against the asymptotic Kolmogorov quantile function, with the diagonal reference line — the points lie visibly on the diagonal, confirming the asymptotic approximation is excellent at n=100.](/images/topics/order-statistics-and-quantiles/29-ks-null-distribution.png)
+
+*Figure 8. Empirical validation of the Kolmogorov asymptotic at $n = 100$. Left: MC histogram of $\sqrt n\, D_n$ under $H_0$ with the Kolmogorov density overlay — nearly exact match. Right: Q-Q plot against the Kolmogorov quantile function — points lie on the diagonal. The asymptotic is reliable for $n \ge 100$; for smaller $n$, the Smirnov finite-sample formula (SMI1948) is more accurate.*
+
+<KSGoodnessExplorer client:visible />
+
+<ExampleBlock number={11} title="KS as a distribution-shift detector">
+Train a classifier on last month's data, deploy this month. Pull 500 prediction confidences from last month's validation set and 500 from this month's live traffic. Run KS on each feature (or on the confidence scores themselves) against the training ECDF. Large $D_n$ relative to $d_\alpha / \sqrt n$ triggers retraining. This is the most common KS application in production ML — and it is distribution-free in exactly the sense §29.1 Rem 1 emphasizes: no assumption about the shape of the confidence distribution.
+</ExampleBlock>
+
+<ExampleBlock number={12} title="KS against the uniform distribution as a PIT check">
+A common calibration check for probabilistic classifiers: the **probability-integral transform (PIT)** values $F(y_i | x_i)$ should be Uniform(0, 1) if the predictive distribution $F(\cdot | x)$ is well-calibrated. Running KS on the PIT values against Uniform is a standard calibration test. KS detects systematic miscalibration (e.g., the classifier is overconfident and PIT is concentrated near 0 and 1) without assuming any specific miscalibration structure. Gneiting–Raftery 2007 develops the full calibration theory; the KS test is the entry-level distribution-free version.
+</ExampleBlock>
+
+<RemarkBlock number={16} title="Finite-sample vs asymptotic p-values">
+For $n < 40$, the asymptotic Kolmogorov CDF is not a great approximation to the finite-sample null distribution of $\sqrt n\, D_n$. Smirnov (SMI1948) gives a finite-sample formula based on the combinatorial reflection principle; modern implementations (`scipy.stats.kstest`, R `ks.test`) use Smirnov's formula for small $n$ and the Kolmogorov asymptotic for $n \ge 40$ (or thereabouts — the exact crossover depends on the implementation). For ML production workflows where $n$ is typically $\ge 500$, the asymptotic is always sufficient. The `nonparametric.ts` module ships the asymptotic-only `ksPValue` for component usage; wrapping SciPy's exact formula is standard for notebook-side work.
+</RemarkBlock>
+
+<a id="section-29-9"></a>
+
+## 29.9 ML bridges: ranks, conformal prediction, quantile regression
+
+Three themes recur in the ML literature that use the nonparametric machinery of §§29.2–29.8 as substrate. Topic 29 states their structural connection and forward-points to dedicated development.
+
+<ExampleBlock number={13} title="Ranks and Wilcoxon-style tests">
+The **rank transform** replaces each $X_i$ by its rank $R_i$ in the sorted sample — a discrete analog of the probability-integral transform. For iid continuous $X_i$, the rank vector $(R_1, \dots, R_n)$ is uniform on the symmetric group, independent of the order statistic, and governs the null distribution of Wilcoxon's signed-rank test, Mann–Whitney's U test, and Kruskal–Wallis's multi-sample test. These **rank tests** are permutation-based nonparametric alternatives to t-tests / F-tests / ANOVA, valid without any distributional assumption. They are the standard tool when the data are ordinal, or when the distributional shape is unknown and the user does not want to risk KS's loss of power to narrow-band alternatives. Full development: formalml `rank-tests` (forthcoming).
+</ExampleBlock>
+
+<ExampleBlock number={14} title="Conformal prediction as a distribution-free CI wrapper">
+**Conformal prediction** (Vovk–Gammerman–Shafer 2005; Shafer–Vovk 2008) is a modern machine-learning tool that builds distribution-free prediction intervals around any black-box predictor $\hat f$. The construction: given a calibration set $\{(X_i, Y_i)\}_{i=1}^n$ and a non-conformity score $s(x, y)$ (e.g., $|y - \hat f(x)|$), the $(1 - \alpha)$-conformal prediction interval for a new $X^{\text{new}}$ is
+
+$$
+C_\alpha(X^{\text{new}}) = \{y : s(X^{\text{new}}, y) \le \hat q_{1 - \alpha}\},
+$$
+
+where $\hat q_{1 - \alpha}$ is the $(1 - \alpha)$ sample quantile of the calibration non-conformity scores. The coverage guarantee $\Pr(Y^{\text{new}} \in C_\alpha(X^{\text{new}})) \ge 1 - \alpha$ is *distribution-free* — it follows from exchangeability alone, with no parametric assumption on $Y | X$. §29.7's order-statistic CI is the distribution-free CI for the population quantile; conformal prediction applies the same exchangeability argument to the quantile of a learned score function. Full development: formalml `conformal-prediction` (forthcoming).
+</ExampleBlock>
+
+<RemarkBlock number={17} title="Quantile regression as the covariate-conditional extension">
+Topic 29's sample quantile $\hat\xi_p$ estimates the scalar intercept $\xi_p$ of a distribution with no covariates. **Quantile regression** (Koenker–Bassett 1978; Koenker 2005) extends this to the covariate-conditional case: estimate $\xi_p(x) := F^{-1}_{Y|X = x}(p)$, the $p$-quantile of the conditional distribution. The estimator minimizes the **check loss** $\rho_\tau(u) = u\,(\tau - \mathbb{1}\{u < 0\})$ averaged over the sample, a convex loss tied directly to the population quantile. Topic 15 §15.9 already named check-loss regression as the natural-forward-pointer target; Topic 29 discharges the scalar case via §29.4/§29.6, and formalml `quantile-regression` (forthcoming) handles the conditional extension. L-statistics and trimmed means (SER1980 §8) are a sibling topic — linear functionals of the order-statistics vector — covered in §31 (bootstrap asymptotics) and formalml.
+</RemarkBlock>
+
+<a id="section-29-10"></a>
+
+## 29.10 Track 8 forward-map and spine
+
+Track 8 has three topics after this one:
+
+- **Topic 30 — Kernel Density Estimation (KDE).** The density $f$ in Bahadur's denominator is estimated non-parametrically via kernel smoothing of the ECDF. KDE is "what happens when you differentiate $F_n$ using a smooth weighting function." The Silverman rule-of-thumb bandwidth, cross-validation bandwidth selection, and higher-order kernels all sit there.
+- **Topic 31 — Bootstrap.** The bootstrap replaces the unknown $F$ with $F_n$ (the ECDF) and resamples with replacement. Every bootstrap statement is a pushforward of Topic 29's ECDF-convergence results through a functional. Hall's second-order accuracy for BCa is the anchor result.
+- **Topic 32 — Empirical Processes (track closer).** The functional view: $\mathbb{G}_n(f) = \sqrt n\,(\int f\, dF_n - \int f\, dF)$ for function classes $\mathcal{F}$. DKW, Bahadur, and the Kolmogorov distribution are all consequences of **Donsker's theorem** — the empirical process converges to the Gaussian Brownian-bridge process in $\ell^\infty(\mathcal{F})$ for Donsker classes. Topic 32 proves Donsker; Topic 29 used it once (§29.8 Thm 7).
+
+![Forward-map diagram showing Topic 29 at center with arrows to Topic 30 (Kernel Density Estimation, labeled 'density in the Bahadur denominator'), Topic 31 (Bootstrap, labeled 'ECDF replacement'), and Topic 32 (Empirical Processes, labeled 'Donsker'). Up-arrows connect to five forthcoming formalml boxes: extreme-value-theory, quantile-regression, rank-tests, conformal-prediction, statistical-depth. Back-arrows in grey connect Topic 29 to its predecessors (Topics 7, 10, 16, 19). A small color legend in the corner identifies ECDF blue, DKW teal, Bahadur violet, KS orange.](/images/topics/order-statistics-and-quantiles/29-track8-forward-map.png)
+
+*Figure 9. The Track 8 spine, as seen from its opener. Topic 29 → 30, 31, 32 build the full nonparametric-and-empirical-process toolkit; the five formalml satellites develop domain-specific applications (extremes, quantile regression, rank tests, conformal, depth).*
+
+<RemarkBlock number={18} title="Forward-pointer: Extreme Value Theory">
+Topic 29's Bahadur asymptotics cover $\hat\xi_p$ for interior $p$, where $f(\xi_p) > 0$. When $p \to 1$ (or 0), the density vanishes and Bahadur fails. The correct asymptotic theory — the **Fisher–Tippett–Gnedenko trichotomy** (Gumbel, Fréchet, Weibull) — lives at formalml `extreme-value-theory` (forthcoming). The maximum $X_{(n)}$, properly centered and rescaled, converges in distribution to one of three limit types depending on the tail behavior of $F$. EVT is essential for risk management (financial tail losses), reliability engineering (component failure times), and LLM-latency worst-case bounds.
+</RemarkBlock>
+
+<RemarkBlock number={19} title="Forward-pointer: Quantile Regression">
+Koenker–Bassett 1978 quantile regression extends §29.4/§29.6's scalar-intercept case to the conditional case $\xi_p(x) = F^{-1}_{Y|X = x}(p)$. Check-loss minimization yields estimators with Bahadur-style asymptotic normality — the linearization survives, but the influence function now involves the conditional density $f_{Y|X}(\xi_p(x) | x)$ at each covariate value. Full development: formalml `quantile-regression` (forthcoming).
+</RemarkBlock>
+
+<RemarkBlock number={20} title="Forward-pointer: Rank Tests">
+Wilcoxon signed-rank, Mann–Whitney U, and Kruskal–Wallis are the three classical rank-based nonparametric alternatives to the t-test, two-sample t-test, and one-way ANOVA respectively. The permutation-distribution machinery they depend on is *orthogonal* to Topic 29's Bahadur asymptotics — the null distribution comes from rank uniformity, not from empirical-process limits. A proper treatment requires its own chapter. Full development: formalml `rank-tests` (forthcoming). §18.10 Rem 25 previewed this as Track 8 territory.
+</RemarkBlock>
+
+<RemarkBlock number={21} title="Forward-pointer: Conformal Prediction">
+Conformal prediction (VOV2005; SHA2008) wraps any black-box predictor with distribution-free prediction intervals using exchangeability and quantile machinery. §29.7's order-statistic CI is the distribution-free CI for the population quantile; conformal prediction is the distribution-free CI for a learned score function's quantile. The two are the same idea at different levels of generality. Full development: formalml `conformal-prediction` (forthcoming).
+</RemarkBlock>
+
+<RemarkBlock number={22} title="Forward-pointer: Statistical Depth (multivariate generalization)">
+Topic 29 is scalar throughout — one-dimensional $X_i$. For multivariate $X_i \in \mathbb{R}^d$, there is no canonical ordering, so the univariate order-statistic / quantile machinery does not apply directly. **Statistical depth functions** — Tukey depth, Mahalanobis depth, halfspace depth, zonoid depth — generalize the quantile function to multivariate settings. Full development: formalml `statistical-depth` (forthcoming). The univariate case is embedded naturally: Tukey depth in 1D reduces to $\min(F(x), 1 - F(x))$, recovering §29.4's $\xi_p$ via the level set of depth.
+</RemarkBlock>
+
+Track 8's organizing thesis, stated at the top of §29.1 and worth repeating here: *classical statistics assumes a parametric model; nonparametric statistics lets the data specify the model via the empirical distribution, and the order statistics are the lens through which we study that empirical distribution.* Everything that follows — KDE's smoothing of $F_n$ into a density, bootstrap's pushforward of $F_n$ through a functional, empirical processes' view of $F_n$ as a random function — reads that thesis at a different zoom level.
+
+---
+
+### References
+
+1. Bahadur, R. R. (1966). [*A Note on Quantiles in Large Samples*](https://projecteuclid.org/journals/annals-of-mathematical-statistics/volume-37/issue-3/A-Note-on-Quantiles-in-Large-Samples/10.1214/aoms/1177699450.full). *Annals of Mathematical Statistics*, 37(3), 577–580.
+2. Kiefer, J. (1967). [*On Bahadur's Representation of Sample Quantiles*](https://projecteuclid.org/journals/annals-of-mathematical-statistics/volume-38/issue-5/On-Bahadurs-Representation-of-Sample-Quantiles/10.1214/aoms/1177698690.full). *Annals of Mathematical Statistics*, 38(5), 1323–1342.
+3. Rényi, A. (1953). [*On the Theory of Order Statistics*](https://doi.org/10.1007/BF02127580). *Acta Mathematica Academiae Scientiarum Hungaricae*, 4(3–4), 191–231.
+4. Dvoretzky, A., Kiefer, J., & Wolfowitz, J. (1956). [*Asymptotic Minimax Character of the Sample Distribution Function and of the Classical Multinomial Estimator*](https://projecteuclid.org/journals/annals-of-mathematical-statistics/volume-27/issue-3/Asymptotic-Minimax-Character-of-the-Sample-Distribution-Function-and-of/10.1214/aoms/1177728174.full). *Annals of Mathematical Statistics*, 27(3), 642–669.
+5. Massart, P. (1990). [*The Tight Constant in the Dvoretzky–Kiefer–Wolfowitz Inequality*](https://projecteuclid.org/journals/annals-of-probability/volume-18/issue-3/The-Tight-Constant-in-the-Dvoretzky-Kiefer-Wolfowitz-Inequality/10.1214/aop/1176990746.full). *Annals of Probability*, 18(3), 1269–1283.
+6. Smirnov, N. V. (1948). [*Table for Estimating the Goodness of Fit of Empirical Distributions*](https://projecteuclid.org/journals/annals-of-mathematical-statistics/volume-19/issue-2/Table-for-Estimating-the-Goodness-of-Fit-of-Empirical-Distributions/10.1214/aoms/1177730256.full). *Annals of Mathematical Statistics*, 19(2), 279–281.
+7. Kolmogorov, A. N. (1933). *Sulla determinazione empirica di una legge di distribuzione*. *Giornale dell'Istituto Italiano degli Attuari*, 4, 83–91. (Historical Italian journal; no stable URL.)
+8. David, H. A., & Nagaraja, H. N. (2003). [*Order Statistics*](https://onlinelibrary.wiley.com/doi/book/10.1002/0471722162) (3rd ed.). Wiley.
+9. Hyndman, R. J., & Fan, Y. (1996). [*Sample Quantiles in Statistical Packages*](https://doi.org/10.1080/00031305.1996.10473566). *The American Statistician*, 50(4), 361–365.
+10. Serfling, R. J. (1980). [*Approximation Theorems of Mathematical Statistics*](https://onlinelibrary.wiley.com/doi/book/10.1002/9780470316481). Wiley.
+11. Lehmann, E. L., & Casella, G. (1998). [*Theory of Point Estimation*](https://link.springer.com/book/10.1007/b98854) (2nd ed.). Springer.
+12. van der Vaart, A. W. (2000). [*Asymptotic Statistics*](https://www.cambridge.org/core/books/asymptotic-statistics/A3C7DAD3F7E66A1FA60E9C8FE132EE1D). Cambridge University Press.
+13. Billingsley, P. (1999). [*Convergence of Probability Measures*](https://onlinelibrary.wiley.com/doi/book/10.1002/9780470316962) (2nd ed.). Wiley.
