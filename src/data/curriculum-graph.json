@@ -37,7 +37,7 @@
 
     { "id": "order-statistics-and-quantiles", "label": "Order Statistics & Quantiles", "domain": "high-dimensional-nonparametric", "status": "published", "url": "/topics/order-statistics-and-quantiles" },
     { "id": "kernel-density-estimation", "label": "Kernel Density Estimation", "domain": "high-dimensional-nonparametric", "status": "published", "url": "/topics/kernel-density-estimation" },
-    { "id": "bootstrap", "label": "The Bootstrap", "domain": "high-dimensional-nonparametric", "status": "planned", "url": "/topics/bootstrap" },
+    { "id": "bootstrap", "label": "The Bootstrap", "domain": "high-dimensional-nonparametric", "status": "published", "url": "/topics/bootstrap" },
     { "id": "empirical-processes", "label": "Empirical Processes & Uniform Convergence", "domain": "high-dimensional-nonparametric", "status": "planned", "url": "/topics/empirical-processes" }
   ],
   "edges": [
@@ -160,6 +160,11 @@
     { "source": "expectation-moments", "target": "bootstrap" },
     { "source": "point-estimation", "target": "bootstrap" },
     { "source": "confidence-intervals-and-duality", "target": "bootstrap" },
+    { "source": "order-statistics-and-quantiles", "target": "bootstrap" },
+    { "source": "hypothesis-testing", "target": "bootstrap" },
+    { "source": "central-limit-theorem", "target": "bootstrap" },
+    { "source": "law-of-large-numbers", "target": "bootstrap" },
+    { "source": "bootstrap", "target": "empirical-processes" },
     { "source": "modes-of-convergence", "target": "empirical-processes" },
     { "source": "law-of-large-numbers", "target": "empirical-processes" },
     { "source": "order-statistics-and-quantiles", "target": "empirical-processes" }
