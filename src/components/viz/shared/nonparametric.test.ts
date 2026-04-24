@@ -57,6 +57,12 @@ import {
   smoothBootstrapBandwidth,
   bootstrapBias,
   biasCorrected,
+  // Topic 32 (Empirical processes) — §§17–18.
+  empiricalProcess,
+  brownianBridgePath,
+  supNorm,
+  vcShatterCheck,
+  growthFunctionSauerBound,
 } from './nonparametric';
 import { createSeededRng } from './bayes';
 import { cdfStdNormal } from './distributions';
@@ -774,6 +780,229 @@ console.log('========================================\n');
     0.10756527,
     'TS-LCG pin; tol 1e-6; notebook 0.07716 (NumPy PCG64)',
   );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Topic 32 — Empirical processes & uniform convergence (T32.1 – T32.14)
+// ═══════════════════════════════════════════════════════════════════════════
+
+console.log('\n========================================');
+console.log(' Topic 32 · empirical processes verification');
+console.log('========================================\n');
+
+// ── T32.1 — kolmogorovCDF(1.36) ≈ 0.95051412 (AUTHORITATIVE) ──────────────
+// Brief §6.2 drafted 0.9499732027 (corresponds to K(1.358099), the 5% critical
+// value — transcription drift: someone computed K at the quantile rather than
+// at x=1.36). Authoritative value matches the existing Topic-29 implementation
+// AND scipy.stats.kstwobign.cdf(1.36) to 1e-10.
+{
+  const v = kolmogorovCDF(1.36);
+  check('T32.1  kolmogorovCDF(x=1.36)', approx(v, 0.95051412, 1e-6), v, 0.95051412, 'AUTHORITATIVE — supersedes brief §6.2 drift; tol 1e-6');
+}
+
+// ── T32.2 — kolmogorovCDF(1.0) ≈ 0.7300003283 (tightened) ─────────────────
+// Supersedes T29.12's 1e-4 tolerance with a tighter 1e-6 re-check on the
+// Topic-29 implementation. Serves as a guard against regressions when
+// future edits touch §4's Kolmogorov CDF.
+{
+  const v = kolmogorovCDF(1.0);
+  check('T32.2  kolmogorovCDF(x=1.0) tight', approx(v, 0.7300003283, 1e-6), v, 0.7300003283, 'tol 1e-6');
+}
+
+// ── T32.3 — growthFunctionSauerBound(v=1, n=10) = 11 ──────────────────────
+// Σ_{k=0}^{1} C(10, k) = 1 + 10 = 11.
+{
+  const v = growthFunctionSauerBound(1, 10);
+  check('T32.3  growthFunctionSauerBound(v=1, n=10)', v === 11, v, 11, 'exact');
+}
+
+// ── T32.4 — growthFunctionSauerBound(v=4, n=50) = 251176 ──────────────────
+// Σ_{k=0}^{4} C(50, k) = 1 + 50 + 1225 + 19600 + 230300 = 251176.
+{
+  const v = growthFunctionSauerBound(4, 50);
+  check('T32.4  growthFunctionSauerBound(v=4, n=50)', v === 251176, v, 251176, 'exact');
+}
+
+// ── T32.5 — supNorm([0.3, -0.8, 0.5, -0.1]) = 0.8 ─────────────────────────
+{
+  const v = supNorm([0.3, -0.8, 0.5, -0.1]);
+  check('T32.5  supNorm([0.3, -0.8, 0.5, -0.1])', v === 0.8, v, 0.8, 'exact');
+}
+
+// ── T32.6 — vcShatterCheck('halfline', [0.2]) = true ──────────────────────
+// 1-point set is trivially shatterable by any binary class.
+{
+  const v = vcShatterCheck('halfline', [0.2]);
+  check('T32.6  vcShatterCheck(halfline, 1 point)', v === true, v, true, 'exact');
+}
+
+// ── T32.7 — vcShatterCheck('halfline', [0.2, 0.5]) = false ────────────────
+// 2-point halfline obstruction: no halfline {x ≤ t} realises the labelling
+// {0.2 → negative, 0.5 → positive}; VC(halfline) = 1.
+{
+  const v = vcShatterCheck('halfline', [0.2, 0.5]);
+  check('T32.7  vcShatterCheck(halfline, 2 points)', v === false, v, false, 'exact');
+}
+
+// ── T32.8 — vcShatterCheck('halfspace-2d', 3 non-collinear) = true ────────
+// VC(halfspace-2d) = 3. Three non-collinear points shatter.
+{
+  const v = vcShatterCheck('halfspace-2d', [[0, 0], [1, 0], [0, 1]]);
+  check('T32.8  vcShatterCheck(halfspace-2d, 3 non-collinear)', v === true, v, true, 'exact');
+}
+
+// ── T32.8a — rectangle-2d shatters the 4-point diamond ────────────────────
+// Classical shatter witness: 4 points arranged so each pair has a tight
+// bounding box that excludes the other two. Each of the 2⁴ subsets is
+// realisable by an axis-aligned rectangle.
+{
+  const v = vcShatterCheck('rectangle-2d', [[0.5, 0], [1, 0.5], [0.5, 1], [0, 0.5]]);
+  check('T32.8a rectangle-2d(4-point diamond)', v === true, v, true, 'exact');
+}
+
+// ── T32.8b — rectangle-2d FAILS on the 4 square corners ───────────────────
+// Counterexample per Copilot review (PR #36): the 4 corners of the unit
+// square are NOT shatterable — the diagonal labelling {(0,0), (1,1)} can't
+// be realised because any rectangle containing them contains the full
+// [0,1]² bounding box, which includes the off-diagonal (0,1) and (1,0) on
+// its boundary. Regression test — the previous strict-interior heuristic
+// incorrectly reported this as shatterable.
+{
+  const v = vcShatterCheck('rectangle-2d', [[0, 0], [0, 1], [1, 0], [1, 1]]);
+  check('T32.8b rectangle-2d(4 square corners)', v === false, v, false, 'exact — diagonal labelling blocked by boundary points');
+}
+
+// ── T32.8c — rectangle-2d always false for n ≥ 5 ──────────────────────────
+// VC(axis-aligned rectangles) = 4; any 5-point configuration is past the
+// VC dimension and cannot be shattered.
+{
+  const v = vcShatterCheck('rectangle-2d', [
+    [0.5, 0], [1, 0.5], [0.5, 1], [0, 0.5], [0.5, 0.5],
+  ]);
+  check('T32.8c rectangle-2d(n = 5 past VC dim)', v === false, v, false, 'exact — always false past VC dim');
+}
+
+// ── T32.9 — Brownian-bridge variance at t=0.5, MC over 2000 paths ≈ 0.25 ──
+// Theoretical Var B°(t) = t(1 − t) = 0.25 at t = 0.5. Seeded LCG; tolerance
+// absorbs MC variance at 2000 paths.
+{
+  const rng = createSeededRng(42);
+  const nSteps = 500;
+  const reps = 2000;
+  const halfIdx = Math.floor((nSteps - 1) / 2);
+  const vals: number[] = new Array(reps);
+  for (let r = 0; r < reps; r++) {
+    const path = brownianBridgePath(nSteps, rng);
+    vals[r] = path[halfIdx];
+  }
+  let sum = 0;
+  for (const v of vals) sum += v;
+  const mean = sum / reps;
+  let ss = 0;
+  for (const v of vals) {
+    const d = v - mean;
+    ss += d * d;
+  }
+  const varHat = ss / (reps - 1);
+  check(
+    'T32.9  Brownian-bridge MC variance at t=0.5',
+    approx(varHat, 0.25, 0.03),
+    varHat,
+    0.25,
+    'tol 0.03; 2000 paths, LCG seed 42; theoretical t(1−t)=0.25',
+  );
+}
+
+// ── T32.10 — empiricalProcess MC variance, n=100 Uniform at t=0.5 ≈ 0.25 ──
+// Theoretical Var √n(F_n(t) − F(t)) = F(t)(1 − F(t)) = 0.25 at F(t) = 0.5.
+{
+  const rng = createSeededRng(42);
+  const tGrid = [0.5];
+  const reps = 2000;
+  const vals: number[] = new Array(reps);
+  for (let r = 0; r < reps; r++) {
+    const sample: number[] = new Array(100);
+    for (let i = 0; i < 100; i++) sample[i] = rng.random();
+    const g = empiricalProcess(sample, tGrid, (t) => t);
+    vals[r] = g[0];
+  }
+  let sum = 0;
+  for (const v of vals) sum += v;
+  const mean = sum / reps;
+  let ss = 0;
+  for (const v of vals) {
+    const d = v - mean;
+    ss += d * d;
+  }
+  const varHat = ss / (reps - 1);
+  check(
+    'T32.10 empiricalProcess MC variance (n=100 Uniform, t=0.5)',
+    approx(varHat, 0.25, 0.05),
+    varHat,
+    0.25,
+    'tol 0.05; 2000 reps; theoretical F(0.5)(1−F(0.5))=0.25',
+  );
+}
+
+// ── T32.11 — empiricalProcess sup-norm MC mean (n=500 Uniform) ≈ 0.86 ─────
+// E[√n ‖F_n − F‖_∞] → E[K] ≈ 0.8687 as n → ∞ (Kolmogorov-distribution mean).
+// At n=500 with an LCG-seeded 200-point grid, finite-sample drift + MC noise
+// pull the estimate ≈ 0.85 ± 0.05 — comfortably inside tolerance.
+{
+  const rng = createSeededRng(42);
+  const gridN = 200;
+  const tGrid = Array.from({ length: gridN }, (_, i) => i / (gridN - 1));
+  const reps = 500;
+  const sups: number[] = new Array(reps);
+  for (let r = 0; r < reps; r++) {
+    const sample: number[] = new Array(500);
+    for (let i = 0; i < 500; i++) sample[i] = rng.random();
+    const g = empiricalProcess(sample, tGrid, (t) => t);
+    sups[r] = supNorm(g);
+  }
+  let sum = 0;
+  for (const v of sups) sum += v;
+  const mean = sum / reps;
+  check(
+    'T32.11 empiricalProcess sup-norm MC mean (n=500 Uniform)',
+    approx(mean, 0.861, 0.05),
+    mean,
+    0.861,
+    'tol 0.05; 500 reps; asymptotic E[K] ≈ 0.8687',
+  );
+}
+
+// ── T32.12 — kolmogorovQuantile(0.95) ≈ 1.3581 (re-check from T29.13) ────
+// Classical 5% KS critical value; kept as a Topic-32 re-check because the
+// Figure-4 featured component overlays this quantile on its histogram.
+{
+  const v = kolmogorovQuantile(0.95);
+  check('T32.12 kolmogorovQuantile(0.95)', approx(v, 1.3581, 1e-3), v, 1.3581, 'tol 1e-3');
+}
+
+// ── T32.13 — growthFunctionSauerBound(2, 50) = 1276 ≤ (50+1)² = 2601 ──────
+// Sanity check that the combinatorial sum never exceeds the polynomial
+// upper bound (n+1)^V.
+{
+  const g = growthFunctionSauerBound(2, 50);
+  const poly = (50 + 1) * (50 + 1);
+  const ok = g === 1276 && g <= poly;
+  check(
+    'T32.13 growthFunctionSauerBound(2, 50) ≤ (n+1)²',
+    ok,
+    `g=${g}, (n+1)²=${poly}`,
+    'g=1276, (n+1)²=2601',
+    'exact on g; sanity on bound',
+  );
+}
+
+// ── T32.14 — median influence-function variance under N(0,1) = π/2 ────────
+// Bahadur: Var(med) = p(1−p) / f(F⁻¹(p))² at p = 0.5 → 0.25 / φ(0)² = π/2.
+// Formula-level sanity check consumed by FunctionalDeltaExplorer's preset.
+{
+  const phi0 = 1 / Math.sqrt(2 * Math.PI);
+  const v = 0.25 / (phi0 * phi0);
+  check('T32.14 median IC variance under N(0,1) = π/2', approx(v, Math.PI / 2, 1e-10), v, Math.PI / 2, 'tol 1e-10');
 }
 
 // ── Summary ───────────────────────────────────────────────────────────────

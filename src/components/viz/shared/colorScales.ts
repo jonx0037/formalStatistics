@@ -337,3 +337,36 @@ export const bootstrapColors = {
 } as const;
 
 export type BootstrapColorKey = keyof typeof bootstrapColors;
+
+/**
+ * Topic 32 (Empirical Processes) palette — Track 8 closer / curriculum closer.
+ *
+ * Five accent tokens naming the new objects this topic adds (the empirical
+ * process as random function, the Brownian-bridge limit, VC shatter highlights,
+ * functional-delta demonstrations, and an auxiliary grey for reference overlays).
+ * Inherits Topic 29's ECDF-blue and Topic 30's KDE-violet at the conceptual
+ * level, but redeclares both here under Topic-32-appropriate names so the
+ * three components (EmpiricalProcessExplorer, VCShatteringDemo,
+ * FunctionalDeltaExplorer) can be edited independently without chasing
+ * imports across tracks.
+ *
+ *   empirical      blue    — observed empirical-process paths and $\mathbb{G}_n$
+ *   bridge         violet  — Brownian-bridge limit $\mathbb{B}^\circ, \mathbb{B}_F$
+ *   vcHighlight    ochre   — VC shatter highlights, growth-function bound curves
+ *   delta          teal    — functional-delta demonstrations, Hadamard derivatives
+ *   reference      slate   — grey auxiliary overlays (Kolmogorov PDF, reference lines)
+ *
+ * `brownianBridgeAlpha` is the semi-transparency applied to bridge reference
+ * paths when overlaid on data-world empirical paths — 0.4 keeps the reference
+ * visible without drowning the data.
+ */
+export const empiricalProcessColors = {
+  empirical:   '#2563eb',
+  bridge:      '#8b5cf6',
+  vcHighlight: '#d97706',
+  delta:       '#0d9488',
+  reference:   '#64748b',
+  brownianBridgeAlpha: 0.4,
+} as const;
+
+export type EmpiricalProcessColorKey = keyof typeof empiricalProcessColors;

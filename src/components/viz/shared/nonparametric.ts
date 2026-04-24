@@ -1398,3 +1398,218 @@ export function biasCorrected(
   for (const r of replicates) sum += r;
   return 2 * thetaHat - sum / replicates.length;
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 17. Empirical-process machinery (Topic 32 extension)
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Empirical process 𝔾_n(t) = √n (F_n(t) − F(t)) evaluated on a grid.
+ *
+ * Uses a sorted copy of the sample plus binary search to compute F_n(t_j) in
+ * O(log n) per grid point — total O((n + |tGrid|) log n).
+ *
+ * Used by EmpiricalProcessExplorer (§32.5) and FunctionalDeltaExplorer (§32.7).
+ */
+export function empiricalProcess(
+  sample: readonly number[],
+  tGrid: readonly number[],
+  Fcdf: (t: number) => number,
+): number[] {
+  const n = sample.length;
+  if (n === 0) throw new Error('empiricalProcess: empty sample');
+  const sorted = [...sample].sort((a, b) => a - b);
+  const sqrtN = Math.sqrt(n);
+  const out: number[] = new Array(tGrid.length);
+  for (let j = 0; j < tGrid.length; j++) {
+    const t = tGrid[j];
+    // Binary search for the rightmost index with sorted[i] ≤ t.
+    let lo = 0;
+    let hi = n;
+    while (lo < hi) {
+      const mid = (lo + hi) >>> 1;
+      if (sorted[mid] <= t) lo = mid + 1;
+      else hi = mid;
+    }
+    const Fn = lo / n;
+    out[j] = sqrtN * (Fn - Fcdf(t));
+  }
+  return out;
+}
+
+/**
+ * Simulate a standard Brownian bridge path on [0, 1] with `nSteps` grid points.
+ *
+ * Construction: B°(t) = W(t) − t·W(1), where W is a standard Brownian motion
+ * built from iid N(0, 1/nSteps) increments (so Var W(1) = 1). By this exact
+ * algebra, `out[0] = 0` and `out[nSteps − 1] = 0` to within floating-point
+ * rounding (the residual is bounded by O(ε_machine · nSteps)).
+ *
+ * @param nSteps  grid resolution; path length = nSteps
+ * @param rng     SeededRng from `bayes.ts` (uses `.normal()`)
+ */
+export function brownianBridgePath(
+  nSteps: number,
+  rng: SeededRng,
+): number[] {
+  if (!Number.isInteger(nSteps) || nSteps < 2) {
+    throw new Error(`brownianBridgePath: nSteps=${nSteps} must be integer ≥ 2`);
+  }
+  const dt = 1 / (nSteps - 1);
+  const sd = Math.sqrt(dt);
+  // First build W on the grid 0, dt, 2 dt, …, 1 via cumulative N(0, dt) increments.
+  const w: number[] = new Array(nSteps);
+  w[0] = 0;
+  for (let k = 1; k < nSteps; k++) {
+    w[k] = w[k - 1] + sd * rng.normal();
+  }
+  const w1 = w[nSteps - 1];
+  // Now subtract t · W(1). Setting t = k · dt = k / (nSteps − 1).
+  const out: number[] = new Array(nSteps);
+  for (let k = 0; k < nSteps; k++) {
+    const t = k / (nSteps - 1);
+    out[k] = w[k] - t * w1;
+  }
+  return out;
+}
+
+/**
+ * Sup-norm (L∞) of a finite vector: max_i |vals[i]|.
+ *
+ * Utility used heavily by EmpiricalProcessExplorer's histogram accumulator;
+ * separate export (not a closure inside it) to keep the hot path allocation-free.
+ */
+export function supNorm(vals: readonly number[]): number {
+  let m = 0;
+  for (const v of vals) {
+    const a = v < 0 ? -v : v;
+    if (a > m) m = a;
+  }
+  return m;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 18. VC-class shatter check + Sauer-Shelah-Vapnik growth bound (Topic 32)
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Check whether a binary function class shatters a finite point set.
+ *
+ * For the three locked classes from Figure 3 / VCShatteringDemo we use
+ * analytic certificates rather than a generic 2ⁿ parameter search:
+ *
+ *   • `'halfline'`      — halflines {x ≤ t} on ℝ. VC = 1. Shatterable iff
+ *                         |points| ≤ 1. (Two points always admit the labelling
+ *                         "smaller point positive, larger point negative",
+ *                         which no halfline realises.)
+ *
+ *   • `'halfspace-2d'`  — halfspaces {w·x ≤ b} on ℝ². VC = 3. We recognise
+ *                         shatterability only when |points| ≤ 3: any set of
+ *                         size 0, 1, or 2 is treated as trivially shatterable,
+ *                         and a 3-point set is shatterable iff the three points
+ *                         are in general position (not collinear), tested via
+ *                         the triangle-area determinant. For n ≥ 4 we return
+ *                         false by Radon's theorem — any 4 points in ℝ² admit
+ *                         a Radon partition that no halfspace can separate.
+ *
+ *   • `'rectangle-2d'`  — axis-aligned rectangles [a₁,b₁]×[a₂,b₂] on ℝ². VC = 4.
+ *                         For |points| ≤ 4 we perform an exact enumeration of
+ *                         all 2ⁿ labellings: a subset S is realisable iff the
+ *                         axis-aligned bounding box of S contains no non-S
+ *                         point (including boundary). Shatterable iff every
+ *                         subset is realisable. For n ≥ 5 we return false.
+ *                         (The "no strictly-interior point" heuristic fails for
+ *                         configurations like the 4 square corners, where the
+ *                         diagonal labelling is obstructed by boundary-on-bbox
+ *                         non-subset points.)
+ *
+ * Passing an unknown `classKind` returns false.
+ */
+export type VCClassKind = 'halfline' | 'halfspace-2d' | 'rectangle-2d';
+
+export function vcShatterCheck(
+  classKind: VCClassKind,
+  points: readonly (number | readonly number[])[],
+): boolean {
+  const n = points.length;
+  if (n === 0) return true;
+  if (classKind === 'halfline') {
+    // VC(halfline) = 1: shatterable iff at most 1 point.
+    return n <= 1;
+  }
+  if (classKind === 'halfspace-2d') {
+    // VC(halfspace-2d) = 3. For n ≤ 3 we need general position
+    // (no three collinear) to shatter.
+    if (n > 3) return false;
+    if (n <= 2) return true;
+    // n = 3 — check for collinearity via the triangle-area determinant.
+    const [p0, p1, p2] = points as readonly [readonly number[], readonly number[], readonly number[]];
+    const area2 = (p1[0] - p0[0]) * (p2[1] - p0[1]) - (p2[0] - p0[0]) * (p1[1] - p0[1]);
+    return Math.abs(area2) > 1e-10;
+  }
+  if (classKind === 'rectangle-2d') {
+    // VC(axis-aligned rectangles) = 4. For n > 4 we're past the VC
+    // dimension, so the set cannot be shattered.
+    if (n > 4) return false;
+    const pts = points as readonly (readonly number[])[];
+    // Exact enumeration: for every non-empty subset S (mask), form its
+    // axis-aligned bounding box and verify that no non-S point lies
+    // inside (inclusive-boundary). The full-set mask (all bits on)
+    // is vacuously realisable (no non-S points to exclude), so the
+    // loop body short-circuits correctly for it too.
+    for (let mask = 1; mask < 1 << n; mask++) {
+      let xMin = Infinity;
+      let xMax = -Infinity;
+      let yMin = Infinity;
+      let yMax = -Infinity;
+      for (let i = 0; i < n; i++) {
+        if ((mask & (1 << i)) === 0) continue;
+        const [x, y] = [pts[i][0], pts[i][1]];
+        if (x < xMin) xMin = x;
+        if (x > xMax) xMax = x;
+        if (y < yMin) yMin = y;
+        if (y > yMax) yMax = y;
+      }
+      for (let i = 0; i < n; i++) {
+        if ((mask & (1 << i)) !== 0) continue;
+        const [x, y] = [pts[i][0], pts[i][1]];
+        // Non-strict boundary: a point on the edge of the bbox is still
+        // inside any rectangle that contains the bbox.
+        if (x >= xMin && x <= xMax && y >= yMin && y <= yMax) return false;
+      }
+    }
+    return true;
+  }
+  // Unknown class — conservative false.
+  return false;
+}
+
+/**
+ * Growth-function Sauer-Shelah-Vapnik upper bound:
+ *   s_F(n) ≤ Σ_{k=0}^{V} C(n, k),   where V is the VC dimension.
+ *
+ * Returned as the exact combinatorial sum, not the polynomial bound
+ * (n+1)^V that's often quoted; the combinatorial form is sharp for the
+ * three Figure-3 classes (halflines V=1, halfspaces-2d V=3, rectangles-2d V=4).
+ *
+ * Uses the multiplicative recursion C(n, k) = C(n, k−1) · (n − k + 1) / k to
+ * stay in number precision. For v ≤ 10 and n ≤ 200 (well above the demo cap)
+ * the result stays below Number.MAX_SAFE_INTEGER; beyond that, BigInt would
+ * be required — not currently needed.
+ */
+export function growthFunctionSauerBound(v: number, n: number): number {
+  if (!Number.isInteger(v) || v < 0) {
+    throw new Error(`growthFunctionSauerBound: v=${v} must be nonnegative integer`);
+  }
+  if (!Number.isInteger(n) || n < 0) {
+    throw new Error(`growthFunctionSauerBound: n=${n} must be nonnegative integer`);
+  }
+  const kMax = Math.min(v, n);
+  let sum = 1; // C(n, 0)
+  let binom = 1;
+  for (let k = 1; k <= kMax; k++) {
+    binom = (binom * (n - k + 1)) / k;
+    sum += binom;
+  }
+  return sum;
+}

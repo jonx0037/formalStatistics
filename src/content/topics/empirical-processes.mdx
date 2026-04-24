@@ -1,0 +1,1195 @@
+---
+title: "Empirical Processes & Uniform Convergence"
+subtitle: "The empirical process, indexed by a class of functions rather than a single point, is the central object of modern nonparametric statistics. Two organising theorems — a functional Glivenko–Cantelli for VC classes (uniform LLN) and Donsker's theorem for the distribution-function class (uniform CLT) — discharge the Donsker IOU Topic 29 left open and close Track 8. Applications include the Cramér–von-Mises statistic, the two-sample Kolmogorov–Smirnov test, the bootstrap empirical process, Talagrand's concentration inequality, and the functional delta method, which provides the on-ramp to formalML's semiparametric and causal-inference tracks. Track 8, topic 4 of 4 — the curriculum closer."
+status: "published"
+difficulty: "advanced"
+prerequisites:
+  - "order-statistics-and-quantiles"
+  - "bootstrap"
+  - "kernel-density-estimation"
+  - "modes-of-convergence"
+  - "law-of-large-numbers"
+  - "central-limit-theorem"
+  - "point-estimation"
+  - "confidence-intervals-and-duality"
+  - "hypothesis-testing"
+tags:
+  - "statistics"
+  - "nonparametric"
+  - "empirical-processes"
+  - "donsker"
+  - "uniform-convergence"
+  - "vc-dimension"
+  - "bracketing-entropy"
+  - "brownian-bridge"
+  - "glivenko-cantelli"
+  - "functional-delta-method"
+  - "kolmogorov-smirnov"
+  - "curriculum-closer"
+  - "track-8-close"
+domain: "high-dimensional-nonparametric"
+videoId: null
+notebookPath: "notebooks/empirical_processes/32_empirical_processes.ipynb"
+githubUrl: "https://github.com/jonx0037/formalStatistics/blob/main/src/content/topics/empirical-processes.mdx"
+estimatedReadTime: 62
+formalcalculusPrereqs:
+  - topic: "sequences-and-limits"
+    site: "formalcalculus"
+    relationship: "Pointwise vs uniform convergence of function sequences is the analytic backbone of every §32 theorem; §32.1 opens with that contrast."
+  - topic: "continuity"
+    site: "formalcalculus"
+    relationship: "§32.7's Hadamard differentiability is the uniform-convergence analog of pointwise differentiability; §32.7 Rem 17 cites continuity on function spaces directly."
+  - topic: "metric-spaces"
+    site: "formalcalculus"
+    relationship: "Covering and bracketing numbers are metric-entropy constructions on $(\\mathcal{F}, L^2(P))$; §32.6 uses the metric-entropy vocabulary introduced there."
+formalmlConnections:
+  - topic: "generalization-bounds"
+    site: "formalml"
+    relationship: "§32.4's G-C-for-VC bound is the empirical-process core of PAC generalization bounds; formalML develops the learning-theory framing with Rademacher complexity and uniform convergence of risk."
+  - topic: "pac-bayes-bounds"
+    site: "formalml"
+    relationship: "PAC-Bayes lifts Topic 32's function-class complexity arguments to a posterior-over-hypotheses setting; McAllester's 1999 bound uses the same symmetrization technique §32.4 introduces."
+  - topic: "conformal-prediction"
+    site: "formalml"
+    relationship: "Conformal prediction constructs distribution-free CIs via exchangeability rather than empirical-process asymptotics; the two meet at Topic 29 §29.5's DKW inequality and Topic 32's uniform bands."
+  - topic: "semiparametric-inference"
+    site: "formalml"
+    relationship: "M-estimator asymptotics — the modern nonparametric-plus-parametric-component framework — is built on local empirical-process theory (local Donsker, local bracketing), which §32.10 Rem 22 defers."
+  - topic: "causal-inference-methods"
+    site: "formalml"
+    relationship: "Targeted maximum likelihood, augmented inverse-propensity weighting, and efficient-influence-function methods all rest on the functional delta method (§32.7) applied to nuisance-parameter empirical processes."
+  - topic: "extreme-value-theory"
+    site: "formalml"
+    relationship: "Fisher–Tippett–Gnedenko asymptotics for the maximum $X_{(n)}$ and the generalized Pareto; forward-pointed from Topic 29 §29.10 Rem 18, orthogonal to §32 but listed here for completeness of the formalML handoff."
+connections:
+  - topic: "order-statistics-and-quantiles"
+    relationship: "§29.8 Proof 3 stated Donsker as given and built the Kolmogorov limit on top of it via CMT. §32.5 provides the full Donsker proof and §32.8 Ex 10 recapitulates the CMT application — the load-bearing IOU of the curriculum is discharged here. §29.10's Track-8 spine forward-pointed Topic 32 as the track closer."
+  - topic: "bootstrap"
+    relationship: "§31.3's Bickel–Freedman consistency proof was structured as a Bahadur-style linearization; §32.5 lifts the same three-step structure (fidi CLT + tightness + uniform-continuity upgrade) to the functional setting. §32.8 Thm 8 covers the bootstrap empirical process CLT (Giné–Zinn 1990)."
+  - topic: "kernel-density-estimation"
+    relationship: "§30.5 Rem 15 deferred simultaneous CIs to 'Bickel–Rosenblatt-type functional-CLT machinery'; §32.6 Rem 14 names the result and the metric-entropy conditions that make it rigorous."
+  - topic: "modes-of-convergence"
+    relationship: "§9 defined a.s., in-probability, in-distribution, $L^p$, and uniform convergence; §32.3 extends these to weak convergence in $\\ell^\\infty(\\mathcal{F})$ and §32.7 uses the continuous-mapping theorem (§9.5) in its strongest form."
+  - topic: "law-of-large-numbers"
+    relationship: "§10.7 Ex 8 + Rem 6 anchored Glivenko–Cantelli to statistical learning and forward-pointed empirical-process theory. §32.4 delivers the promised G-C-for-VC-classes result in full proof, and Rem 9 names the 'fundamental theorem of statistical learning' explicitly."
+  - topic: "central-limit-theorem"
+    relationship: "§11's Lindeberg–Feller for triangular arrays is the finite-dimensional engine of §32.5's fidi-convergence step — the multivariate version applied to indicators of a finite set of cells."
+references:
+  - type: "book"
+    author: "Aad W. van der Vaart and Jon A. Wellner"
+    year: 1996
+    title: "Weak Convergence and Empirical Processes: With Applications to Statistics"
+    publisher: "Springer Series in Statistics"
+    note: "VDW1996. ISBN 978-0387946405. The standard reference for the subject. Topic 32's §32.3 notation conventions, §32.5 Donsker-proof structure, §32.6 bracketing-integral bound, and §32.7 Hadamard-differentiability framework all follow vdV-Wellner's treatment. https://link.springer.com/book/10.1007/978-1-4757-2545-2"
+  - type: "book"
+    author: "Michael R. Kosorok"
+    year: 2008
+    title: "Introduction to Empirical Processes and Semiparametric Inference"
+    publisher: "Springer Series in Statistics"
+    note: "KOS2008. ISBN 978-0387749778. Modern readable treatment. Kosorok's Ch. 9 functional-delta exposition is the template for §32.7. https://link.springer.com/book/10.1007/978-0-387-74978-5"
+  - type: "book"
+    author: "David Pollard"
+    year: 1984
+    title: "Convergence of Stochastic Processes"
+    publisher: "Springer Series in Statistics"
+    note: "POL1984. ISBN 978-0387909905. The covering-number-based route to uniform convergence. Pollard's Ch. II symmetrization argument is the §32.4 proof template. https://link.springer.com/book/10.1007/978-1-4612-5254-2"
+  - type: "book"
+    author: "David Pollard"
+    year: 1990
+    title: "Empirical Processes: Theory and Applications"
+    publisher: "NSF-CBMS Regional Conference Series in Probability and Statistics, Vol. 2"
+    note: "POL1990. ISBN 978-0940600164. Short monograph; §32.6's metric-entropy exposition follows Pollard's §4. https://projecteuclid.org/ebooks/nsf-cbms-regional-conference-series-in-probability-and-statistics/Empirical-Processes--Theory-and-Applications/toc/10.1214/cbms/1462061091"
+  - type: "article"
+    author: "R. M. Dudley"
+    year: 1978
+    title: "Central Limit Theorems for Empirical Measures"
+    publisher: "Annals of Probability 6(6): 899–929"
+    note: "DUD1978. The founding paper for Donsker classes and the bracketing-integral condition. §32.6 Thm 4 is Dudley's theorem; §32.6 Rem 13 credits the paper. https://projecteuclid.org/journals/annals-of-probability/volume-6/issue-6/Central-Limit-Theorems-for-Empirical-Measures/10.1214/aop/1176995384.full"
+  - type: "book"
+    author: "R. M. Dudley"
+    year: 1999
+    title: "Uniform Central Limit Theorems"
+    publisher: "Cambridge University Press"
+    note: "DUD1999. ISBN 978-0521461023. Comprehensive treatment. Dudley's metric-entropy integral and the Brownian-bridge-construction proofs at Ch. 3–4 are the §32.5 technical sources. https://www.cambridge.org/core/books/uniform-central-limit-theorems/AE550D3CDFD1F2A23D4089CCA92C7518"
+  - type: "book"
+    author: "Evarist Giné and Richard Nickl"
+    year: 2016
+    title: "Mathematical Foundations of Infinite-Dimensional Statistical Models"
+    publisher: "Cambridge Series in Statistical and Probabilistic Mathematics"
+    note: "GIN2016. ISBN 978-1107043169. The modern nonparametric-statistics treatise. §32.6's bracketing bounds and §32.10 Rem 23's Banach-space-CLT forward pointer follow Giné–Nickl Ch. 3. https://www.cambridge.org/core/books/mathematical-foundations-of-infinitedimensional-statistical-models/C9D2A07B20A0F37F89EF78998E44A1B1"
+  - type: "article"
+    author: "Michel Talagrand"
+    year: 1996
+    title: "New Concentration Inequalities in Product Spaces"
+    publisher: "Inventiones Mathematicae 126(3): 505–563"
+    note: "TAL1996. The concentration inequality that supersedes Bernstein/Bennett for empirical processes. §32.9 Thm 9 is Talagrand 1996; the proof is deferred (stated). https://link.springer.com/article/10.1007/s002220050108"
+  - type: "book"
+    author: "Michel Ledoux and Michel Talagrand"
+    year: 1991
+    title: "Probability in Banach Spaces: Isoperimetry and Processes"
+    publisher: "Springer Ergebnisse der Mathematik"
+    note: "LED1991. ISBN 978-3540520139. The reference for concentration, Gaussian processes, and entropy methods in the Banach-space setting. §32.9 and §32.10 Rem 23 cite repeatedly. https://link.springer.com/book/10.1007/978-3-642-20212-4"
+  - type: "article"
+    author: "V. N. Vapnik and A. Ya. Chervonenkis"
+    year: 1971
+    title: "On the Uniform Convergence of Relative Frequencies of Events to Their Probabilities"
+    publisher: "Theory of Probability and Its Applications 16(2): 264–280"
+    note: "VAP1971. The founding paper of VC theory. §32.4 Thm 2 is the Vapnik–Chervonenkis theorem; §32.4 Rem 9 traces the history to this paper. https://doi.org/10.1137/1116025"
+  - type: "article"
+    author: "Norbert Sauer"
+    year: 1972
+    title: "On the Density of Families of Sets"
+    publisher: "Journal of Combinatorial Theory, Series A 13(1): 145–147"
+    note: "SAU1972. Sauer's lemma — the combinatorial upper bound on shatter coefficients. Stated as Lemma 3 at §32.4. https://doi.org/10.1016/0097-3165(72)90019-2"
+  - type: "article"
+    author: "Monroe D. Donsker"
+    year: 1952
+    title: "Justification and Extension of Doob's Heuristic Approach to the Kolmogorov–Smirnov Theorems"
+    publisher: "Annals of Mathematical Statistics 23(2): 277–281"
+    note: "DON1952. The founding paper of the classical functional CLT. §32.5's featured theorem carries Donsker's name in his honor. https://projecteuclid.org/journals/annals-of-mathematical-statistics/volume-23/issue-2/Justification-and-Extension-of-Doobs-Heuristic-Approach-to-the-Kolmogorov/10.1214/aoms/1177729445.full"
+  - type: "book"
+    author: "Patrick Billingsley"
+    year: 1999
+    edition: "2nd"
+    title: "Convergence of Probability Measures"
+    publisher: "Wiley Series in Probability and Statistics"
+    note: "BIL1999. ISBN 978-0471197454. Classical reference for weak convergence in metric spaces. §32.3 cites §14 (Brownian bridge) and §16 (Donsker in $D[0, 1]$) heavily; reused from Topics 9, 11, 29, 31. https://onlinelibrary.wiley.com/doi/book/10.1002/9780470316962"
+  - type: "book"
+    author: "Aad W. van der Vaart"
+    year: 2000
+    title: "Asymptotic Statistics"
+    publisher: "Cambridge Series in Statistical and Probabilistic Mathematics"
+    note: "VDV2000. ISBN 978-0521784504. Reused from Topics 13–20, 23–24, 29–31. Topic 32 cites §18–19 (weak convergence + Donsker) and §25 (M-estimation asymptotics) specifically. https://www.cambridge.org/core/books/asymptotic-statistics/A3C7DAD3F7E66A1FA60E9C8FE132EE1D"
+---
+
+import TheoremBlock from '../../components/ui/TheoremBlock.astro';
+import ProofBlock from '../../components/ui/ProofBlock.astro';
+import ExampleBlock from '../../components/ui/ExampleBlock.astro';
+import RemarkBlock from '../../components/ui/RemarkBlock.astro';
+import DefinitionBlock from '../../components/ui/DefinitionBlock.astro';
+
+import EmpiricalProcessExplorer from '../../components/viz/EmpiricalProcessExplorer.tsx';
+import VCShatteringDemo from '../../components/viz/VCShatteringDemo.tsx';
+import FunctionalDeltaExplorer from '../../components/viz/FunctionalDeltaExplorer.tsx';
+
+{/* SCAFFOLD NOTE — this file is in scaffold state. Section prose, example bodies,
+     and remark bodies are one-line placeholders in italics. The three full proofs
+     (§32.4 Thm 2, §32.5 Thm 3, §32.7 Thm 5), the §32.3 notation table, and
+     Appendix C are rendered verbatim. Component imports / embeds are deferred to
+     step 2.7 (embed after components exist). */}
+
+## Track 8 closes here
+
+Topics 29, 30, and 31 built the empirical distribution, smoothed it into densities, and resampled from it. Topic 32 closes the track by embedding all three into a single functional framework: the **empirical process** $\mathbb{G}_n = \sqrt n\,(P_n - P)$, indexed by a class of functions $\mathcal{F}$ rather than a single point $t$. Two theorems organise the topic — a functional Glivenko–Cantelli for VC classes (§32.4) and a functional CLT, Donsker's theorem, for the distribution-function class (§32.5) — and both discharge forward-promises stretching back through the entire curriculum. Topic 32 is also the curriculum closer: every forward-pointer in §32.10 leaves the site for formalML.
+
+Three theorems get full proofs in this chapter: Glivenko–Cantelli for VC classes (§32.4, the "fundamental theorem of statistical learning"), Donsker's theorem for $\mathcal{F}_{\mathrm{cdf}}$ (§32.5, the featured result and the discharge of Topic 29 §29.8's credited-but-unproven Kolmogorov limit), and the functional delta method (§32.7, the on-ramp to semiparametric efficiency). Six more are stated: Sauer–Shelah–Vapnik, the general bracketing-integral Donsker criterion, the extended continuous-mapping theorem, the Cramér–von-Mises limit, the bootstrap empirical-process CLT, and Talagrand's concentration inequality. Three interactive components give the visual vocabulary for each: `VCShatteringDemo` for §32.4's shatter coefficient, `EmpiricalProcessExplorer` for §32.5's Donsker convergence, and `FunctionalDeltaExplorer` for §32.7's influence-function limits. After §32.10 there is no Topic 33; every "what's next" points to formalML.
+
+<a id="section-32-1"></a>
+
+## 32.1 From pointwise to uniform: motivation
+
+{/* SCAFFOLD §32.1
+  - Opening: empirical-risk-minimisation (ERM) as the motivating ML problem.
+  - Contrast pointwise LLN (one $\theta$) vs uniform LLN (sup over $\theta$).
+  - Fig 1 (32-pointwise-vs-uniform) sits here.
+  - Ex 1: ERM — why uniform convergence is the right consistency statement.
+  - Ex 2: goodness-of-fit — sup-distance KS statistic.
+  - Rem 1: ML anchor — generalization-bound teaser to formalML.
+  - Rem 2: Track-8 bridge — how this chapter relates to Topics 29–31.
+*/}
+
+Every machine-learning paper that trains a model by empirical risk minimisation (ERM) — which is to say, most of them — is quietly asking an empirical-process question. Fix a loss $\ell$, a parameter space $\Theta$, and iid data $X_1, \dots, X_n$; the population risk $R(\theta) = \mathbb{E}[\ell(X; \theta)]$ is what we want to minimise, and the empirical risk $\hat R_n(\theta) = n^{-1} \sum_i \ell(X_i; \theta)$ is what we can compute. ERM picks the minimiser of $\hat R_n$ and hopes that choice tracks the minimiser of $R$. Whether it does depends on whether $\hat R_n \to R$ just *pointwise* (for each fixed $\theta$, the ordinary LLN suffices) or *uniformly* over $\Theta$ (the sup-gap shrinks). The distinction is not cosmetic: pointwise convergence alone can coexist with $\hat R_n$'s minimiser drifting arbitrarily far from $R$'s, and Topic 32 exists to work out when the uniform version holds — and what happens when we take the difference $\hat R_n - R$ seriously as a random function, not just a random number.
+
+![Two-panel contrast. Left: single trajectory of $\hat R_n(\theta)$ at a fixed $\theta$, converging to $R(\theta)$ by the LLN. Right: five trajectories at five different $\theta$ values; the sup-gap $\sup_\theta |\hat R_n - R|$ does not shrink nearly as fast as any single trajectory.](/images/topics/empirical-processes/32-pointwise-vs-uniform.png)
+
+*Figure 1. Pointwise vs uniform convergence. Left: a single $\theta$; the sample-risk trajectory settles to the true risk by the LLN. Right: five $\theta$ values simultaneously; at every $n$ the **sup**-gap over the five is larger than any individual trajectory's deviation, and the sup-gap decays more slowly. ERM selects whichever $\theta$ minimises $\hat R_n$, and without uniform convergence there is no guarantee that minimiser tracks the true-risk minimiser.*
+
+<ExampleBlock number={1} title="ERM and the need for uniform convergence">
+
+Take $X \sim \mathrm{Uniform}(0, 1)$ and squared loss $\ell(x; \theta) = (x - \theta)^2$, so $R(\theta) = \mathrm{Var}(X) + (\mathbb{E} X - \theta)^2$ is minimised at $\theta^\star = 1/2$. The LLN gives $\hat R_n(\theta) \to R(\theta)$ a.s. for every fixed $\theta$. But the minimiser $\hat\theta_n$ of $\hat R_n$ is just the sample mean $\bar X_n$, which by the CLT sits within $O(n^{-1/2})$ of $\theta^\star$ — the *same* $\sqrt n$-rate that controls $\sup_\theta |\hat R_n(\theta) - R(\theta)|$. This isn't a coincidence: the rate at which $\hat\theta_n \to \theta^\star$ is controlled by the uniform gap, not the pointwise one. Pointwise LLN on its own gives consistency-in-parameter; it does *not* give a rate on that consistency. §32.4 supplies the precise condition — finite VC dimension of the loss class — that makes the uniform-convergence rate quantitative.
+
+</ExampleBlock>
+
+<ExampleBlock number={2} title="Goodness-of-fit as a sup-statistic">
+
+Topic 29's Kolmogorov–Smirnov statistic $D_n = \sup_t |F_n(t) - F(t)|$ is the empirical-process object in disguise. Under the null $X_i \sim F$, Glivenko–Cantelli (Topic 10 §10.7) gives $D_n \to 0$ a.s. — the uniform LLN for the distribution-function class $\mathcal{F}_{\mathrm{cdf}} = \{\mathbf{1}_{(-\infty, t]} : t \in \mathbb{R}\}$. Donsker's theorem (§32.5) supplies the corresponding uniform CLT: $\sqrt n\,D_n$ converges in distribution to the sup of a Brownian bridge, the Kolmogorov distribution Topic 29 §29.8 used to build KS's distribution-free critical values. The step from "fix a $t$, apply the LLN or CLT" to "take a sup over all $t$, get a uniform analogue" is the leap Topic 32 formalises in generality, for *any* function class $\mathcal{F}$ not just $\mathcal{F}_{\mathrm{cdf}}$.
+
+</ExampleBlock>
+
+<RemarkBlock number={1} title="ML anchor — uniform convergence underwrites generalization">
+
+Generalisation in machine learning is the same question ERM asks, wearing a different hat: does the training loss on an IID training set track the test loss *uniformly* over the hypothesis class we're searching? When the class has finite VC dimension $V$, §32.4 Thm 2 delivers a positive answer with an explicit $O(\sqrt{V \log n / n})$ rate; when it doesn't — think of neural networks with more parameters than data points — Rademacher-complexity refinements and PAC-Bayes bounds take over, and both reuse §32.4's symmetrisation technique nearly verbatim. Those refinements live at formalML's [generalization-bounds](https://formalml.com/topics/generalization-bounds) and [pac-bayes-bounds](https://formalml.com/topics/pac-bayes-bounds); §32.4 is the version of the result this site proves in full.
+
+</RemarkBlock>
+
+<RemarkBlock number={2} title="Track 8 bridge">
+
+Track 8 has been building toward this topic. Topic 29 introduced the ECDF $F_n$ and studied its single-point and 1D-sup-norm behaviour. Topic 30 smoothed $F_n$ into a density estimate $\hat f_h$ and worked out its bias–variance trade-off. Topic 31 resampled from $F_n$ to bootstrap the sampling distribution of any statistic we care about. Each of the three treated $F_n$ as a fixed-point or scalar-statistic object. Topic 32 now treats $F_n$ as a *path* in the function space $\ell^\infty(\mathbb{R})$, the empirical process $\sqrt n(F_n - F)$ as a random function, and everything the earlier topics did as special cases of this functional viewpoint. The most load-bearing payoff: §32.5 Donsker supplies the limit distribution §29.8 Proof 3 credited without deriving — the single biggest forward-promise of the curriculum, discharged here.
+
+</RemarkBlock>
+
+<a id="section-32-2"></a>
+
+## 32.2 The empirical process $\mathbb{G}_n$ and function classes
+
+{/* SCAFFOLD §32.2
+  - Opening: generalize from $F_n(t)$ to $P_n f$; introduce the empirical measure $P_n$.
+  - Def 1: empirical measure $P_n := n^{-1} \sum \delta_{X_i}$.
+  - Def 2: empirical process $\mathbb{G}_n := \sqrt n (P_n - P)$; evaluated at a class $\mathcal{F}$.
+  - Thm (stated, 1) — pointwise CLT for $\mathbb{G}_n(f)$ when $Pf^2 < \infty$. Applies $\sqrt n (P_n f - P f) \to \mathcal{N}(0, \mathrm{Var}_P f)$.
+  - Fig 2 (32-gc-1d-warmup): 1D Glivenko–Cantelli preview at $n \in \{20, 100, 500, 2000\}$.
+  - Ex 3: distribution-function class $\mathcal{F}_{\mathrm{cdf}} = \{\mathbf{1}_{(-\infty, t]} : t \in \mathbb{R}\}$.
+  - Ex 4: parametric-family indicators $\{\mathbf{1}\{X \le \theta(\alpha)\} : \alpha \in A\}$.
+  - Rem 3: from LLN/CLT to uniform versions — the central move of the chapter.
+  - Rem 4: why $\ell^\infty(\mathcal{F})$ is the ambient space (next section).
+*/}
+
+The right way to generalise "the ECDF converges to the CDF" is to stop thinking about a single index point $t \in \mathbb{R}$ and start thinking about an entire *class of functions* $\mathcal{F}$. Topic 29's $F_n(t) = n^{-1}\sum_i \mathbf{1}\{X_i \le t\}$ is the empirical average of a single indicator function evaluated at one $t$; tilt your head and that's the same as $P_n f$ where $P_n$ is the empirical measure and $f = \mathbf{1}_{(-\infty, t]}$ is one function. Let $f$ range over a class $\mathcal{F}$ and $P_n f$ becomes a whole random function indexed by $\mathcal{F}$, not a random number. Its centred-and-rescaled version is the **empirical process** $\mathbb{G}_n(f) := \sqrt n(P_n f - P f)$, and the central question of Topic 32 is: what can we say about the stochastic-process-on-$\mathcal{F}$ behaviour of $\mathbb{G}_n$ as $n \to \infty$?
+
+<DefinitionBlock number={1} title="Empirical measure $P_n$">
+
+Given iid $X_1, \dots, X_n \sim P$ on a measurable space $(\mathcal{X}, \mathcal{A})$, the **empirical measure** is $P_n := n^{-1}\sum_{i=1}^n \delta_{X_i}$, the random probability measure that places mass $1/n$ at each sample point. For any measurable $f : \mathcal{X} \to \mathbb{R}$, define
+
+$$
+P_n f := \int f\,dP_n = \frac{1}{n} \sum_{i=1}^n f(X_i), \qquad P f := \int f\,dP = \mathbb{E}[f(X)].
+$$
+
+Topic 29's ECDF $F_n(t) = P_n(\mathbf{1}_{(-\infty, t]})$ is $P_n$ applied to a single half-line indicator; the sample mean $\bar X_n = P_n(\mathrm{id})$ is $P_n$ applied to the identity; Topic 31's bootstrap draws sample points from $P_n$ rather than from $P$. The empirical measure is the glue holding Track 8 together.
+
+</DefinitionBlock>
+
+<DefinitionBlock number={2} title="Empirical process $\mathbb{G}_n$ indexed by $\mathcal{F}$">
+
+Given a class $\mathcal{F}$ of measurable functions $\mathcal{X} \to \mathbb{R}$, the **empirical process** indexed by $\mathcal{F}$ is the random function
+
+$$
+\mathbb{G}_n : \mathcal{F} \to \mathbb{R}, \qquad \mathbb{G}_n f := \sqrt n\,(P_n f - P f) = \frac{1}{\sqrt n}\sum_{i=1}^n \bigl(f(X_i) - P f\bigr).
+$$
+
+Two specialisations recover familiar objects. If $\mathcal{F} = \{f\}$ is a singleton, $\mathbb{G}_n f$ is just $\sqrt n$ times the sample-mean deviation of $f(X)$ and the ordinary CLT applies. If $\mathcal{F} = \mathcal{F}_{\mathrm{cdf}} = \{\mathbf{1}_{(-\infty, t]} : t \in \mathbb{R}\}$, then $\mathbb{G}_n(\mathbf{1}_{(-\infty, t]}) = \sqrt n(F_n(t) - F(t))$ — the $\sqrt n$-rescaled CDF-deviation Topic 29 §29.8 worked with. The empirical process is the uniform-index generalisation of both.
+
+</DefinitionBlock>
+
+<TheoremBlock number={1} title="Pointwise CLT for $\mathbb{G}_n(f)$ (stated)">
+
+For any fixed $f \in \mathcal{F}$ with $P f^2 < \infty$,
+
+$$
+\mathbb{G}_n f \;\xrightarrow{d}\; \mathcal{N}\!\bigl(0,\,\mathrm{Var}_P f\bigr) \qquad \text{as } n \to \infty,
+$$
+
+by the ordinary CLT (Topic 11 §11.5 Thm 3). This tells us $\mathbb{G}_n$ evaluated at any *one* $f$ is asymptotically Gaussian; it tells us *nothing* about joint or uniform behaviour across $\mathcal{F}$. Topic 32's two organising theorems — uniform LLN (§32.4) and uniform CLT (§32.5) — fill that gap.
+
+</TheoremBlock>
+
+![Four-panel Glivenko–Cantelli warmup at $n \in \{20, 100, 500, 2000\}$. Each panel overlays $F_n(t)$ (step function) on $F(t)$ (smooth curve) for a Uniform(0, 1) sample; the pointwise gap visibly shrinks as $n$ grows.](/images/topics/empirical-processes/32-gc-1d-warmup.png)
+
+*Figure 2. One-dimensional Glivenko–Cantelli warmup. Four panels at increasing sample sizes; $F_n$ (blue step) tightens to $F$ (grey smooth) uniformly. The sup-norm $\|F_n - F\|_\infty$ visibly shrinks like $1/\sqrt n$, previewing Donsker's rate.*
+
+<ExampleBlock number={3} title="The distribution-function class $\mathcal{F}_{\mathrm{cdf}}$">
+
+The distribution-function class $\mathcal{F}_{\mathrm{cdf}} := \{\mathbf{1}_{(-\infty, t]} : t \in \mathbb{R}\}$ is parametrised by the real line, one function per threshold $t$. The empirical process indexed by this class is $\mathbb{G}_n(\mathbf{1}_{(-\infty, t]}) = \sqrt n(F_n(t) - F(t))$, which we'll just write $\mathbb{G}_n(t)$ when no confusion arises. This is the class Donsker's theorem (§32.5 Thm 3) handles in full, discharging the §29.8 IOU. $\mathcal{F}_{\mathrm{cdf}}$ has VC dimension $1$ (see §32.4 Def 6), so it's also the easiest case of §32.4's G-C-for-VC theorem.
+
+</ExampleBlock>
+
+<ExampleBlock number={4} title="Parametric-family indicators">
+
+Fix a parametric family $\{F_\alpha : \alpha \in A\}$ with $A \subseteq \mathbb{R}$ and an observable $q \in (0, 1)$. The class $\mathcal{F} = \{\mathbf{1}\{x \le F_\alpha^{-1}(q)\} : \alpha \in A\}$ contains one indicator per candidate $\alpha$, and $P_n f_\alpha = $ ECDF evaluated at the $q$-th quantile under $\alpha$. $\mathcal{F}$ has VC dimension 1 when $\alpha \mapsto F_\alpha^{-1}(q)$ is monotone (which is the normal case — bigger $\alpha$ shifts the quantile one way). §32.4 Thm 2 applies: $\sup_{\alpha \in A} |P_n f_\alpha - P f_\alpha| \to 0$ a.s., a uniform LLN over the whole family. This is the workhorse result that makes MLE consistent over a parametric family — the statistician's specialisation of the ML learning-theory bound.
+
+</ExampleBlock>
+
+<RemarkBlock number={3} title="From LLN / CLT to uniform versions">
+
+Pointwise LLN (for each $f$, $P_n f \to P f$ a.s.) does NOT imply uniform LLN ($\sup_f |P_n f - P f| \to 0$ a.s.) — the classical Vapnik–Chervonenkis counterexample takes $\mathcal{X} = [0, 1]$, $P$ = Lebesgue, and $\mathcal{F} = \{\mathbf{1}_A : A \text{ finite}\}$; every $f \in \mathcal{F}$ satisfies $P f = 0$, but $\sup_f |P_n f| = 1$ almost surely (pick $A = \{X_1, \dots, X_n\}$). The class is too rich: you can always find some $f$ that indicator-fits the sample perfectly. §32.4 makes precise the complexity condition — finite VC dimension — that excludes these pathological classes and rescues uniform LLN.
+
+</RemarkBlock>
+
+<RemarkBlock number={4} title="Why $\ell^\infty(\mathcal{F})$ is the ambient space">
+
+For each $\omega$, the path $f \mapsto \mathbb{G}_n(\omega)(f)$ is a bounded function on $\mathcal{F}$ as long as $\mathcal{F}$ has a finite envelope. It lives naturally in the Banach space $\ell^\infty(\mathcal{F})$ of bounded functions $\mathcal{F} \to \mathbb{R}$ with the sup-norm $\|z\|_\mathcal{F} := \sup_{f \in \mathcal{F}} |z(f)|$. The right limit-theorem statement for $\mathbb{G}_n$ is "weak convergence in $\ell^\infty(\mathcal{F})$" — a more delicate notion than ordinary weak convergence because the sup itself need not be measurable. §32.3 handles that machinery.
+
+</RemarkBlock>
+
+<a id="section-32-3"></a>
+
+## 32.3 Weak convergence in $\ell^\infty(\mathcal{F})$
+
+{/* SCAFFOLD §32.3 — the notation-density-peak section.
+  - Opening: what it means to have a random element of a function space converge weakly.
+  - Def 3: $\ell^\infty(\mathcal{F})$ = Banach space of bounded $\mathcal{F} \to \mathbb{R}$ functions with sup-norm.
+  - Def 4: outer probability (measurability housekeeping when $\sup_f \mathbb{G}_n f$ isn't measurable).
+  - Def 5: weak convergence of a tight random element in $\ell^\infty(\mathcal{F})$.
+  - Ex 5: non-measurability of $\sup_f \mathbb{G}_n f$ for uncountable $\mathcal{F}$.
+  - Rem 5: Hoffmann–Jørgensen outer-probability fix (cite VDW1996 §1.3).
+  - Rem 6: why we can ignore the measurability housekeeping in practice (weak convergence holds anyway, statements transfer).
+  - **The §32.3 notation table is rendered VERBATIM below — the single most notation-dense section of the curriculum.**
+*/}
+
+Topic 9 defined weak convergence for real-valued random variables: $X_n \xrightarrow{d} X$ means $\mathbb{E} h(X_n) \to \mathbb{E} h(X)$ for every bounded continuous $h$. Upgrading that to random elements of a function space — which is what $\mathbb{G}_n \in \ell^\infty(\mathcal{F})$ requires — runs into a technical snag: $\sup_{f \in \mathcal{F}} \mathbb{G}_n(f)$ is not, in general, a measurable function on the sample space. Hoffmann–Jørgensen's solution (1984, formalised in vdV–Wellner §1.5) is to work with outer expectation $\mathbb{E}^*$ and to demand that the limit process $\mathbb{G}$ be *tight*. The payoff is a weak-convergence notion strong enough to deliver continuous-mapping theorems and delta-method lifts, which is all §32.4–§32.8 need. The notation table at the end of this section is the chart worth bookmarking before reading on.
+
+<DefinitionBlock number={3} title="The space $\ell^\infty(\mathcal{F})$">
+
+For a set $\mathcal{F}$, the space $\ell^\infty(\mathcal{F})$ is the set of bounded functions $z : \mathcal{F} \to \mathbb{R}$, equipped with the sup-norm
+
+$$
+\|z\|_\mathcal{F} := \sup_{f \in \mathcal{F}} |z(f)|.
+$$
+
+$(\ell^\infty(\mathcal{F}), \|\cdot\|_\mathcal{F})$ is a Banach space. The empirical process $\mathbb{G}_n$ is an $\ell^\infty(\mathcal{F})$-valued random element whenever $\mathcal{F}$ has a square-integrable envelope: $\sup_{f \in \mathcal{F}} |f| \le F$ with $P F^2 < \infty$ (see §32.6 Def 11 for the formal envelope condition).
+
+</DefinitionBlock>
+
+<DefinitionBlock number={4} title="Outer probability $\mathbb{P}^*$">
+
+For any subset $A \subseteq \Omega$ of the sample space (measurable or not), define
+
+$$
+\mathbb{P}^*(A) := \inf\{\mathbb{P}(B) : B \supseteq A, B \text{ measurable}\}.
+$$
+
+For a function $T : \Omega \to \mathbb{R}$, the outer expectation is $\mathbb{E}^* T := \inf\{\mathbb{E} S : S \ge T, S \text{ measurable}\}$. When $T$ is measurable, $\mathbb{P}^*$ and $\mathbb{E}^*$ collapse to the ordinary $\mathbb{P}$ and $\mathbb{E}$. The construction is due to Hoffmann–Jørgensen (1984) and handles exactly the case of $\sup_f \mathbb{G}_n(f)$ where the supremum over an uncountable class need not be measurable.
+
+</DefinitionBlock>
+
+<DefinitionBlock number={5} title="Weak convergence in $\ell^\infty(\mathcal{F})$">
+
+A sequence of $\ell^\infty(\mathcal{F})$-valued random elements $\mathbb{G}_n$ **converges weakly** to a tight random element $\mathbb{G}$, written $\mathbb{G}_n \rightsquigarrow \mathbb{G}$, if
+
+$$
+\mathbb{E}^* h(\mathbb{G}_n) \;\to\; \mathbb{E}\, h(\mathbb{G}) \qquad \text{for every bounded Lipschitz } h : \ell^\infty(\mathcal{F}) \to \mathbb{R}.
+$$
+
+"Tight" means $\mathbb{G}$ concentrates its mass on compact subsets: for every $\varepsilon > 0$ there is a compact $K_\varepsilon \subseteq \ell^\infty(\mathcal{F})$ with $\Pr(\mathbb{G} \notin K_\varepsilon) < \varepsilon$. Tightness is essential because $\ell^\infty(\mathcal{F})$ is not separable for uncountable $\mathcal{F}$ — without it the limit law is ill-defined.
+
+</DefinitionBlock>
+
+<ExampleBlock number={5} title="Non-measurability of the sup">
+
+Take $\mathcal{F} = \mathcal{F}_{\mathrm{cdf}}$, sample $X_1 \sim \mathrm{Uniform}(0, 1)$, and consider the map $\omega \mapsto \sup_{t \in \mathbb{R}} \mathbb{G}_1(\omega)(t) = \sup_t \sqrt 1\,(\mathbf{1}\{X_1 \le t\} - t)$. Since $\mathcal{F}_{\mathrm{cdf}}$ is indexed by uncountably many $t$, the supremum is over an uncountable family of measurable functions and need not itself be measurable in a general measure-theoretic sense (any specific construction using the axiom of choice can produce a non-measurable sup). The fix: work with the *outer* probability $\mathbb{P}^*\bigl(\sup_t \mathbb{G}_n(t) > x\bigr)$ instead. For the classes we actually encounter — VC classes in §32.4, bracketing-finite classes in §32.6 — the supremum *is* measurable, because continuity of the sample paths a.s. allows reduction to a countable dense index set; outer probability collapses back to probability, and no harm is done.
+
+</ExampleBlock>
+
+<RemarkBlock number={5} title="Hoffmann–Jørgensen outer-probability fix">
+
+The outer-probability machinery (VDW1996 §1.3, KOS2008 §7) is the standard fix for non-measurable suprema. It's the analog of using the outer Lebesgue measure in real analysis: you give up working with ordinary $\sigma$-additivity on all subsets, but you gain the ability to make probabilistic statements about quantities that aren't technically measurable. Every theorem from §32.4 onwards is stated using $\mathbb{E}^*$ implicitly; we'll suppress the star except where it matters.
+
+</RemarkBlock>
+
+<RemarkBlock number={6} title="Why the measurability housekeeping doesn't bite in practice">
+
+For every Donsker class $\mathcal{F}$ we meet in §§32.4–32.8, the limit process $\mathbb{G}_P$ has a.s. uniformly continuous sample paths with respect to the $L^2(P)$ pseudo-metric on $\mathcal{F}$. Continuity lets you recover $\sup_{f \in \mathcal{F}} \mathbb{G}_P(f)$ from the sup over any countable dense subset, and *that* sup is measurable. So all our $\mathbb{P}^*$ statements coincide with ordinary $\mathbb{P}$ statements on the event "the limit process is continuous" — which is a full-probability event. The measurability housekeeping is real, but its contribution to the bottom line is zero.
+
+</RemarkBlock>
+
+**Notation reference (used throughout the chapter).**
+
+| Symbol | Meaning | Introduced | Related prior convention |
+|---|---|---|---|
+| $P$, $P_n$ | Probability measure (population); empirical measure $P_n := n^{-1}\sum_i \delta_{X_i}$ | §32.2 Def 1 | Topic 29 §29.5's $F_n$ is $P_n$ applied to half-line indicators |
+| $P f$, $P_n f$ | Integrals $\int f\,dP = \mathbb{E}[f(X)]$ and $\int f\,dP_n = n^{-1}\sum_i f(X_i)$ | §32.2 Def 1 | Topic 10's $\bar X_n = P_n(\mathrm{id})$ |
+| $\mathbb{G}_n$ | Empirical process $\mathbb{G}_n := \sqrt n\,(P_n - P)$ | §32.2 Def 2 | Lift of Topic 29 §29.8's $\sqrt n (F_n - F)$ to general $\mathcal{F}$ |
+| $\ell^\infty(\mathcal{F})$ | Banach space of bounded $\mathcal{F} \to \mathbb{R}$ functions with sup-norm | §32.3 Def 3 | Lift of Topic 10's $\mathbb{R}$-valued r.v. space to function space |
+| $\mathrm{VC}(\mathcal{F})$, $s_{\mathcal{F}}(n)$ | VC dimension of a class; shatter coefficient on $n$ points | §32.4 Def 6 | New — Topic 10 Rem 6 name-checked without defining |
+| $N(\varepsilon, \mathcal{F}, \|\cdot\|)$ | Covering number: minimum balls of radius $\varepsilon$ to cover $\mathcal{F}$ in $\|\cdot\|$ | §32.6 Def 9 | New |
+| $N_{[\,]}(\varepsilon, \mathcal{F}, \|\cdot\|)$ | Bracketing number: minimum $\varepsilon$-brackets $[\ell, u]$ with $\|u - \ell\| \le \varepsilon$ to cover $\mathcal{F}$ | §32.6 Def 10 | New |
+| $\mathbb{B}^\circ$, $\mathbb{B}_F = \mathbb{B}^\circ \circ F$ | Standard Brownian bridge on $[0, 1]$; $F$-Brownian bridge | §32.5 Def 8 | Topic 29 §29.8 used $\mathbb{B}^\circ$ without defining it; §32.5 Def 8 discharges |
+| $\rightsquigarrow$ | Weak convergence in $\ell^\infty(\mathcal{F})$ (Hoffmann–Jørgensen sense) | §32.3 Def 5 | Distinct from $\xrightarrow{d}$ (Topic 9 §9.3) which is finite-dim weak convergence |
+| $\phi'_\theta$ | Hadamard derivative of a functional $\phi$ at $\theta$, tangential to $\mathcal{D}_0$ | §32.7 Def 12 | Analog of the ordinary derivative on a Banach space |
+| $\mathrm{IC}(x)$ | Influence function $\mathrm{IC}(x) = \phi'_\theta(\delta_x - P)$ of a functional at $P$ | §32.7 Def 13 | Robust-statistics terminology (Hampel 1974); central to semiparametric efficiency |
+| $J_{[\,]}(\delta, \mathcal{F}, L^2(P))$ | Bracketing integral $\int_0^\delta \sqrt{\log N_{[\,]}(\varepsilon, \mathcal{F}, L^2(P))}\,d\varepsilon$ | §32.6 Def 11 | Dudley 1978 entropy integral; measures Donsker-ness of a class |
+| $\mathbb{P}^*$, $\mathbb{E}^*$ | Outer probability / expectation (for non-measurable suprema) | §32.3 Def 4 | Hoffmann–Jørgensen 1991; technical device |
+| $P_n^\xi f = n^{-1}\sum_i \xi_i f(X_i)$ | Rademacher process: $\xi_i$ iid $\pm 1$ symmetric | §32.4 Step 2 | Pollard 1984 Ch. II; heart of the symmetrisation argument |
+| $\perp\!\!\!\perp$ | Probabilistic independence | Topic 16 §16.9 lock | Used when comparing $\mathbb{G}_n$ and its independent ghost copy in §32.4 |
+| $\mathcal{F}_{\mathrm{cdf}}$ | Distribution-function class $\{\mathbf{1}_{(-\infty, t]} : t \in \mathbb{R}\}$ | §32.2 Ex 3 | Topic 29 §29.8's object of study, lifted to the $\mathcal{F}$-indexed framework |
+| $\mathcal{F}$-GC, $\mathcal{F}$-Donsker | Qualifiers: class is Glivenko–Cantelli / Donsker for $P$ | §32.4 Def 7; §32.6 Def 11 | vdV-Wellner terminology; indicates the analytic condition on $\mathcal{F}$ |
+| $\mathbb{D}, \mathbb{E}$ | Banach spaces; domain / codomain of the functional $\phi$ in §32.7 | §32.7 Thm 5 statement | Standard vdV2000 §20.6 notation |
+| $T_n \in \mathbb{D}_\phi \subseteq \mathbb{D}$ | Random element; $\mathbb{D}_\phi$ = domain of $\phi$ inside $\mathbb{D}$ | §32.7 Thm 5 | Keeps the Hadamard-diff theorem statement clean |
+| $r_n$ | Scaling rate (usually $\sqrt n$) in the functional delta-method statement | §32.7 Thm 5 | Generalises the $\sqrt n$ in the scalar delta method (Topic 13 §13.5) |
+
+<a id="section-32-4"></a>
+
+## 32.4 Glivenko–Cantelli for VC classes
+
+{/* SCAFFOLD §32.4 — first of two ★ full-proof sections.
+  - Opening: motivate VC dimension as the "right" complexity measure for function classes.
+  - Def 6: VC dimension of a class.
+  - Def 7: Glivenko–Cantelli class (uniform LLN).
+  - Thm 1 (Sauer–Shelah–Vapnik, stated with one-line proof sketch): shatter-coefficient bound $s_{\mathcal{F}}(n) \le \sum_{k=0}^V \binom{n}{k} \le (n+1)^V$.
+  - Thm 2 (G-C for VC) — ★ FULL PROOF verbatim below.
+  - Fig 3 (32-vc-shattering): VC dims for halflines, halfspaces, rectangles.
+  - VCShatteringDemo component embed here (placeholder).
+  - Ex 6: halfspaces in ℝ^d have VC = d+1.
+  - Ex 7: axis-aligned rectangles in ℝ² have VC = 4.
+  - Ex 8: ERM uniform-convergence bound → discharges LLN §10.7 Ex 8 IOU.
+  - Rem 7: proof-strategy overview (symmetrize, randomize, bound, integrate).
+  - Rem 8: VC dim extensions — Natarajan / pseudo-dim / fat-shattering → formalML.
+  - Rem 9: fundamental theorem of statistical learning (names the result explicitly; ML anchor).
+*/}
+
+The question §32.2 Rem 3 left hanging: *which* function classes admit a uniform LLN? Answer — classes with finite **VC dimension**, a combinatorial complexity measure due to Vapnik and Chervonenkis (1971) that captures how many $\{0, 1\}^n$-labellings of an $n$-point set the class can realise. Rich classes realise all $2^n$ labellings at every $n$ and fail uniform LLN; VC-finite classes realise only polynomially many, and the exponential tail of Hoeffding's inequality (Topic 12) wins against that polynomial with room to spare. The resulting theorem — Glivenko–Cantelli for VC classes — goes by a less formal name in the ML literature: the *fundamental theorem of statistical learning*. See Rem 9.
+
+<DefinitionBlock number={6} title="VC dimension">
+
+Let $\mathcal{F}$ be a class of $\{0, 1\}$-valued functions on $\mathcal{X}$. For any finite set $\{x_1, \dots, x_n\} \subseteq \mathcal{X}$, the **restriction** of $\mathcal{F}$ to this set is the finite set of labellings $\{(f(x_1), \dots, f(x_n)) : f \in \mathcal{F}\} \subseteq \{0, 1\}^n$. The **shatter coefficient** is
+
+$$
+s_{\mathcal{F}}(n) \;:=\; \sup_{x_1, \dots, x_n \in \mathcal{X}} \bigl|\{(f(x_1), \dots, f(x_n)) : f \in \mathcal{F}\}\bigr|.
+$$
+
+A set $\{x_1, \dots, x_n\}$ is **shattered** by $\mathcal{F}$ if its restriction has cardinality $2^n$ — every $\{0,1\}^n$-labelling is realised. The **VC dimension** of $\mathcal{F}$ is the largest $n$ such that some $n$-point set is shattered:
+
+$$
+\mathrm{VC}(\mathcal{F}) \;:=\; \sup\{n : s_{\mathcal{F}}(n) = 2^n\}.
+$$
+
+If $s_{\mathcal{F}}(n) = 2^n$ for every $n$, the class has infinite VC dimension (and is too rich to be Glivenko–Cantelli).
+
+</DefinitionBlock>
+
+<DefinitionBlock number={7} title="Glivenko–Cantelli class">
+
+A class $\mathcal{F}$ is a **Glivenko–Cantelli class for $P$** (or *$P$-GC*) if
+
+$$
+\|P_n - P\|_\mathcal{F} \;=\; \sup_{f \in \mathcal{F}} |P_n f - P f| \;\xrightarrow{\text{a.s.}}\; 0 \qquad \text{as } n \to \infty.
+$$
+
+Equivalently: the uniform LLN holds on $\mathcal{F}$ under $P$. Thm 2 below says that any VC-finite class is $P$-GC *for every* $P$ — uniformity is both over $f \in \mathcal{F}$ *and* over the distribution. That distribution-free property is what makes the result useful in ML, where we never know $P$.
+
+</DefinitionBlock>
+
+<TheoremBlock number={1} title="Sauer–Shelah–Vapnik (stated)">
+
+Let $\mathcal{F}$ have VC dimension $V < \infty$. Then for every $n \ge 1$,
+
+$$
+s_{\mathcal{F}}(n) \;\le\; \sum_{k=0}^{V} \binom{n}{k} \;\le\; (n + 1)^V.
+$$
+
+The shatter coefficient — which *a priori* could grow as fast as $2^n$ — is forced into polynomial growth in $n$ the moment the VC dimension is finite. This is the pigeonhole miracle that makes §32.4 Thm 2 work: the finite-class bound in Step 4 of the proof below only costs a factor of $s_{\mathcal{F}}(n) \le (n+1)^V$, not $2^n$.
+
+**Proof (sketch).** The classical argument is by induction on the size of the sample set, with the inductive step carefully tracking which subsets remain shattered under a one-point extension. Full proof in SAU1972 (3 pages, self-contained); independently in SHE1972 and VAP1971. We omit it here — the proof is elegant but the combinatorics don't carry over to Donsker or the delta method, so it doesn't earn its real estate in a topic whose mathematical through-line is fidi+tightness.
+
+</TheoremBlock>
+
+![Three-panel VC-shattering atlas. Panel (a): halflines $\{x \le t\}$ on $\mathbb{R}$ shatter 1 point but not 2. Panel (b): halfspaces in $\mathbb{R}^2$ shatter 3 non-collinear points; the 4-point Radon obstruction is pictured. Panel (c): axis-aligned rectangles in $\mathbb{R}^2$ shatter 4 points (diamond witness); 5 points obstruct.](/images/topics/empirical-processes/32-vc-shattering.png)
+
+*Figure 3. Three classes, three VC dimensions. (a) Halflines: $\mathrm{VC} = 1$. (b) Halfspaces in $\mathbb{R}^2$: $\mathrm{VC} = 3$; Radon's theorem (every 4 points in $\mathbb{R}^2$ split into two disjoint subsets whose convex hulls meet) produces the 4-point obstruction. (c) Axis-aligned rectangles: $\mathrm{VC} = 4$; the diamond witness is drawn. Interactive exploration in `VCShatteringDemo` below.*
+
+<VCShatteringDemo client:visible />
+
+<TheoremBlock number={2} title="Glivenko–Cantelli for VC classes (Vapnik–Chervonenkis 1971)">
+
+Let $\mathcal{F}$ be a class of $\{0, 1\}$-valued measurable functions on $(\mathcal{X}, \mathcal{A})$ with finite VC dimension $V := \mathrm{VC}(\mathcal{F})$. Then, for any probability measure $P$ on $(\mathcal{X}, \mathcal{A})$,
+
+$$
+\sup_{f \in \mathcal{F}} |P_n f - P f| \;\xrightarrow{\text{a.s.}}\; 0 \qquad \text{as } n \to \infty.
+$$
+
+</TheoremBlock>
+
+<ProofBlock number={1}>
+
+The argument is a five-step chain: **symmetrize** (replace $P$ by an independent ghost sample), **randomize** (multiply by Rademacher signs), **reduce to a finite class** (Sauer–Shelah–Vapnik), **bound the finite class** (Hoeffding + union bound), and **integrate the exponential tail** (Borel–Cantelli).
+
+Fix $\varepsilon > 0$ and let $\|\cdot\|_{\mathcal{F}}$ denote the sup-norm $\sup_{f \in \mathcal{F}} |\cdot|$ on $\mathcal{F}$.
+
+**Step 1 — symmetrization.** Introduce an independent ghost sample $X_1', \dots, X_n'$ with the same distribution $P$, and let $P_n' := n^{-1} \sum_{i=1}^n \delta_{X_i'}$. For any $\varepsilon > 0$ with $n \varepsilon^2 \geq 2$, the symmetrization lemma (vdV–Wellner Lem 2.3.7) gives
+
+$$
+\Pr\bigl(\|P_n - P\|_{\mathcal{F}} > \varepsilon\bigr) \;\leq\; 2\,\Pr\bigl(\|P_n - P_n'\|_{\mathcal{F}} > \varepsilon / 2\bigr).
+$$
+
+**Step 2 — Rademacher randomization.** Let $\xi_1, \dots, \xi_n$ be iid Rademacher ($\pm 1$ each with probability $1/2$), independent of all $X_i, X_i'$. By exchangeability of $(X_i, X_i')$ pairs under the sign flip:
+
+$$
+\Pr\bigl(\|P_n - P_n'\|_{\mathcal{F}} > \varepsilon / 2\bigr) \;\leq\; 2\,\Pr\Bigl(\Bigl\|\tfrac{1}{n}\sum_{i=1}^n \xi_i f(X_i)\Bigr\|_{\mathcal{F}} > \varepsilon / 4\Bigr).
+$$
+
+Call the random function $f \mapsto n^{-1} \sum_i \xi_i f(X_i)$ the **Rademacher process** $P_n^\xi$.
+
+**Step 3 — reduce to a finite class.** Condition on $X_1, \dots, X_n$. The restriction of $\mathcal{F}$ to $\{X_1, \dots, X_n\}$ — the set of distinct $\{0, 1\}^n$-valued vectors $(f(X_1), \dots, f(X_n))$ as $f$ ranges over $\mathcal{F}$ — has cardinality at most the shatter coefficient $s_{\mathcal{F}}(n)$. By Sauer–Shelah–Vapnik (Thm 1),
+
+$$
+s_{\mathcal{F}}(n) \;\leq\; \sum_{k=0}^{V} \binom{n}{k} \;\leq\; (n + 1)^V \qquad \text{for all } n \geq V.
+$$
+
+**Step 4 — bound the finite class.** For each fixed vector $(f(X_1), \dots, f(X_n)) \in \{0, 1\}^n$, $P_n^\xi f = n^{-1} \sum_i \xi_i f(X_i)$ is a bounded average of iid mean-zero $\pm 1$-valued random variables — specifically, each summand $\xi_i f(X_i) \in [-1, 1]$. Hoeffding's inequality (Topic 12 §12.3) gives, conditionally on $X_1, \dots, X_n$,
+
+$$
+\Pr_\xi\bigl(|P_n^\xi f| > \varepsilon / 4 \,\big|\, X_{1:n}\bigr) \;\leq\; 2\,\exp\!\bigl(-n\,\varepsilon^2 / 32\bigr).
+$$
+
+Union-bounding over the at-most-$s_{\mathcal{F}}(n)$ distinct $(f(X_i))_i$ vectors,
+
+$$
+\Pr_\xi\bigl(\|P_n^\xi\|_{\mathcal{F}} > \varepsilon / 4 \,\big|\, X_{1:n}\bigr) \;\leq\; 2\,s_{\mathcal{F}}(n)\,\exp\!\bigl(-n\,\varepsilon^2 / 32\bigr) \;\leq\; 2(n + 1)^V\,\exp\!\bigl(-n\,\varepsilon^2 / 32\bigr).
+$$
+
+Taking expectation over $X_{1:n}$ preserves the bound.
+
+**Step 5 — combine and apply Borel–Cantelli.** Chaining the three inequalities (Step 1 × Step 2 × Step 4):
+
+$$
+\Pr\bigl(\|P_n - P\|_{\mathcal{F}} > \varepsilon\bigr) \;\leq\; 8\,(n + 1)^V\,\exp\!\bigl(-n\,\varepsilon^2 / 32\bigr).
+$$
+
+The right-hand side is summable in $n$ for every $V \geq 0$ and every $\varepsilon > 0$ (polynomial times exponential, with exponential winning). Borel–Cantelli delivers $\|P_n - P\|_{\mathcal{F}} \leq \varepsilon$ eventually a.s.; since $\varepsilon > 0$ was arbitrary, $\|P_n - P\|_{\mathcal{F}} \to 0$ a.s.
+
+$\blacksquare$ — using VAP1971, SAU1972, vdV–Wellner 1996 Lem 2.3.7 (symmetrization), and the Hoeffding bound from Topic 12 §12.3.
+
+</ProofBlock>
+
+<ExampleBlock number={6} title="Halfspaces in $\mathbb{R}^d$ have VC dimension $d + 1$">
+
+Consider $\mathcal{F} = \{\mathbf{1}\{w \cdot x \le b\} : w \in \mathbb{R}^d,\, b \in \mathbb{R}\}$, the class of halfspace indicators in $\mathbb{R}^d$. Take any $d + 1$ points in general position (no $d + 1$ on a common affine hyperplane) — these *shatter*: for any target labelling, solve the linear system $\mathrm{sign}(w \cdot x_i - b) = \pm 1$ coordinate-wise, and a non-degenerate Radon separation always exists. So $\mathrm{VC}(\mathcal{F}) \ge d + 1$.
+
+The matching upper bound is Radon's theorem: any $d + 2$ points in $\mathbb{R}^d$ admit a partition into two subsets whose convex hulls intersect. Pick such a partition and target the labelling *+1 for one subset, −1 for the other*; a separating hyperplane would have to put both convex hulls on opposite sides, which is impossible because they share a point. No halfspace realises this labelling, so $d + 2$ points never shatter, and $\mathrm{VC}(\mathcal{F}) = d + 1$.
+
+</ExampleBlock>
+
+<ExampleBlock number={7} title="Axis-aligned rectangles in $\mathbb{R}^2$ have VC dimension 4">
+
+The class $\mathcal{F} = \{\mathbf{1}\{a_1 \le x_1 \le b_1, a_2 \le x_2 \le b_2\}\}$ of axis-aligned rectangles in $\mathbb{R}^2$ shatters the four-point diamond $\{(0, 1), (1, 0), (0, -1), (-1, 0)\}$: for any target labelling, put the tightest axis-aligned rectangle around the "+1"-labelled points — the four-point geometry guarantees no "−1" point lies inside. So $\mathrm{VC}(\mathcal{F}) \ge 4$.
+
+Now take any $5$ points. Form the tightest axis-aligned bounding box around them. Each of the four sides of this box is "supported" by at least one of the five points (the side coincides with the extremal $x$- or $y$-coordinate); by pigeonhole at least one point is *not* extremal on any side. Label the non-extremal point $-1$ and the four extremal points $+1$. Any rectangle containing the four $+1$-points must contain their axis-aligned bounding box, which contains the non-extremal point — so it labels the $-1$-point as $+1$. No rectangle realises this labelling, and $\mathrm{VC}(\mathcal{F}) = 4$.
+
+</ExampleBlock>
+
+<ExampleBlock number={8} title="ERM uniform-convergence bound (discharges LLN §10.7 Ex 8)">
+
+Topic 10 §10.7 Ex 8 asked: *is Glivenko–Cantelli what makes ERM work?* and left the answer as a forward-pointer to "empirical-process theory (coming in the Statistical Inference track)". Thm 2 discharges that IOU. Concretely: fix a loss $\ell$ and a hypothesis class $\Theta$ such that the induced loss class $\{\ell(\cdot; \theta) : \theta \in \Theta\}$ has VC dimension $V$. Let $\hat\theta_n = \arg\min_\theta \hat R_n(\theta)$ and $\theta^\star = \arg\min_\theta R(\theta)$. Feeding Thm 2's high-probability bound through the ERM triangle inequality gives
+
+$$
+R(\hat\theta_n) - R(\theta^\star) \;\le\; 2 \sup_{\theta \in \Theta} |\hat R_n(\theta) - R(\theta)| \;\le\; O\!\Bigl(\sqrt{V \log n / n}\,\Bigr)
+$$
+
+with probability $\ge 1 - n^{-c}$ for any $c > 0$. The $\sqrt{V/n}$ scaling is the cleanest statement of ERM consistency the topic produces, and the Topic 10 IOU is paid in full.
+
+</ExampleBlock>
+
+<RemarkBlock number={7} title="Proof-strategy overview">
+
+The five-step proof above is a template, not a one-off. Symmetrisation → Rademacher randomisation → Sauer reduction → Hoeffding + union bound → Borel–Cantelli. Every VC-flavoured, PAC-flavoured, and Rademacher-complexity result in statistical learning theory reuses *at least three* of these five moves, usually in the same order. Once you've digested the Thm 2 proof, the PAC-Bayes bound is a symmetrisation + change-of-measure; Rademacher-complexity bounds are a symmetrisation + contraction; uniform-convergence-of-risk is this proof with a generic loss class instead of $\{0,1\}$-indicators. The Hoeffding step is the only one that genuinely requires "$f$ is bounded"; everything else works for general $\mathcal{F}$, with Hoeffding replaced by Bernstein or Talagrand (§32.9).
+
+</RemarkBlock>
+
+<RemarkBlock number={8} title="VC extensions — out of scope but named">
+
+VC dimension is the binary-classification complexity measure; for multi-class problems the *Natarajan dimension* takes over, for real-valued regression classes it's the *pseudo-dimension* or *fat-shattering dimension*, and for kernel methods Rademacher complexity gives sharper data-dependent rates that VC cannot. Each refinement costs more machinery but delivers the uniform-convergence payoff for a broader hypothesis class. All three are deferred to formalML's [generalization-bounds](https://formalml.com/topics/generalization-bounds) topic, which carries the full menu. §32.4 stays at classical binary VC because it's the cleanest case and the one that carries the rest of the topic — the symmetrisation + Sauer combo is the reusable pattern.
+
+</RemarkBlock>
+
+<RemarkBlock number={9} title="The fundamental theorem of statistical learning">
+
+Thm 2 combined with Ex 8 is what Shalev-Shwartz and Ben-David (2014, Ch. 6) call *the fundamental theorem of statistical learning*: a binary hypothesis class $\Theta$ is *PAC-learnable* if and only if it has finite VC dimension, and the sample complexity of learning it is $\Theta(V / \varepsilon^2)$ up to log factors. The iff is striking — finite VC is both necessary and sufficient for uniform generalisation — and it's the cleanest structural result in statistical learning theory. Topic 32's most visible ML payoff is this theorem; everything else in the topic either builds toward it (§§32.1–32.3) or lifts it to richer settings (§§32.5–32.9). formalML picks up from here and develops neural-net-scale generalisation bounds where classical VC fails and Rademacher complexity takes over.
+
+</RemarkBlock>
+
+<a id="section-32-5"></a>
+
+## 32.5 Donsker's theorem for $\mathcal{F}_{\mathrm{cdf}}$ (★★ featured)
+
+{/* SCAFFOLD §32.5 — featured theorem.
+  - Opening: closes the Topic 29 §29.8 IOU. State the theorem up front, then prove.
+  - Def 8: standard Brownian bridge $\mathbb{B}^\circ$; $F$-Brownian bridge $\mathbb{B}_F = \mathbb{B}^\circ \circ F$.
+  - Lem 3 (stated): BB construction from standard Brownian motion as $B^\circ(t) = W(t) - t W(1)$; continuous sample paths; see BIL1999 §14.
+  - Thm 3 (Donsker) — ★★ FULL PROOF verbatim below.
+  - Corollary (explicit): the Kolmogorov limit — discharge of Topic 29 §29.8 IOU.
+  - Fig 4 (32-empirical-process-to-bb) — FEATURED 3-panel.
+  - EmpiricalProcessExplorer component embed (placeholder).
+  - Ex 9: KS limit via CMT — recapitulates §29.8.
+  - Ex 10: Cramér–von-Mises as a continuous functional of $\mathbb{G}_n$.
+  - Rem 10: fidi + tightness structure (why two ingredients suffice).
+  - Rem 11: names the Bahadur-linearization lift explicitly (Topic 31 §31.3 is the finite-dim shadow).
+  - Rem 12: why continuous $F$ (avoid Jordan-decomposition atoms).
+*/}
+
+Donsker's theorem is the featured result of Topic 32 and the curriculum's single biggest forward-promise payoff. It says that $\sqrt n (F_n - F)$, viewed as a random function on $\mathbb{R}$, converges weakly in $\ell^\infty(\mathbb{R})$ to an $F$-indexed Brownian bridge $\mathbb{B}_F$. Topic 29 §29.8 Proof 3 took this as given to derive the Kolmogorov limit; here we pay the proof in full. Read the statement, then take a moment with Figure 4 — watching ten $\mathbb{G}_n$ paths at $n = 2000$ overlay the Brownian-bridge reference paths is the best intuition for what "weak convergence in a function space" looks like before the rest of the proof lands. Then we prove it in four steps: reduce to the uniform case via the PIT, establish finite-dimensional convergence via the multivariate CLT, upgrade to tightness via a bracketing-number bound, and combine.
+
+<DefinitionBlock number={8} title="Standard Brownian bridge $\mathbb{B}^\circ$ and $F$-Brownian bridge $\mathbb{B}_F$">
+
+A **standard Brownian bridge** $\mathbb{B}^\circ$ is a centred Gaussian process on $[0, 1]$ with covariance function
+
+$$
+\mathrm{Cov}\bigl(\mathbb{B}^\circ(s), \mathbb{B}^\circ(t)\bigr) \;=\; s \wedge t - s t, \qquad s, t \in [0, 1],
+$$
+
+and boundary conditions $\mathbb{B}^\circ(0) = \mathbb{B}^\circ(1) = 0$ almost surely. (The name "bridge" captures the latter: it's a Brownian motion pinned at both endpoints.) Given a continuous CDF $F$ on $\mathbb{R}$, the **$F$-Brownian bridge** is the process $\mathbb{B}_F : \mathbb{R} \to \mathbb{R}$ defined by
+
+$$
+\mathbb{B}_F(t) \;:=\; \mathbb{B}^\circ(F(t)),
+$$
+
+a centred Gaussian process with covariance $\mathrm{Cov}(\mathbb{B}_F(s), \mathbb{B}_F(t)) = F(s \wedge t) - F(s)F(t)$. Both processes have continuous sample paths a.s. (Lem 3 below).
+
+</DefinitionBlock>
+
+<TheoremBlock type="lemma" number={3} title="Brownian-bridge construction (stated; BIL1999 §14)">
+
+Let $W$ be a standard Brownian motion on $[0, 1]$. The process $\mathbb{B}^\circ(t) := W(t) - t\,W(1)$ is a standard Brownian bridge: centred Gaussian, covariance $s \wedge t - st$, and $\mathbb{B}^\circ(0) = \mathbb{B}^\circ(1) = 0$. Continuous sample paths on $[0, 1]$ a.s. are inherited from $W$'s continuity. Full construction and verification in BIL1999 §14. The `brownianBridgePath` helper in `nonparametric.ts` §17 implements the discretised version used by `EmpiricalProcessExplorer`'s reference overlay.
+
+</TheoremBlock>
+
+<TheoremBlock number={3} title="Donsker's theorem (Donsker 1952; vdV2000 §19.1 Thm 19.5)">
+
+Let $X_1, X_2, \dots$ be iid with continuous CDF $F$, and let $F_n$ denote the empirical CDF. Then
+
+$$
+\mathbb{G}_n \;:=\; \sqrt n\,(F_n - F) \;\rightsquigarrow\; \mathbb{B}_F \qquad \text{in } \ell^\infty(\mathbb{R}),
+$$
+
+where $\mathbb{B}_F := \mathbb{B}^\circ \circ F$ and $\mathbb{B}^\circ$ is a standard Brownian bridge on $[0, 1]$.
+
+</TheoremBlock>
+
+<ProofBlock number={2}>
+
+The proof has four ingredients: **reduce to the uniform case** via the probability-integral transform, establish **finite-dimensional convergence** via the multivariate CLT, upgrade to weak convergence in $\ell^\infty$ via **tightness** — here, stochastic equicontinuity controlled by a bracketing-entropy bound on $\mathcal{F}_{\mathrm{cdf}}$ — and finally **combine**.
+
+**Step 1 — reduce to uniform.** Define $U_i := F(X_i)$ for $i = 1, 2, \dots$. Since $F$ is continuous, $U_i \sim \mathrm{Uniform}(0, 1)$, iid. Let $G_n$ denote the empirical CDF of $\{U_i\}_{i=1}^n$ on $[0, 1]$. For any $x \in \mathbb{R}$, $G_n(F(x)) = F_n(x)$, so the map $x \mapsto F(x)$ transports $(F_n - F)(x)$ to $(G_n - \mathrm{Id})(F(x))$. If we establish $\sqrt n\,(G_n - \mathrm{Id}) \rightsquigarrow \mathbb{B}^\circ$ in $\ell^\infty([0, 1])$, then composition with the continuous map $F$ gives $\mathbb{G}_n \rightsquigarrow \mathbb{B}^\circ \circ F$ in $\ell^\infty(\mathbb{R})$ by the continuous mapping theorem (Topic 9 §9.5). Henceforth assume $F = \mathrm{Uniform}(0, 1)$ and write $\mathbb{G}_n(t) := \sqrt n (G_n(t) - t)$ for $t \in [0, 1]$.
+
+**Step 2 — finite-dimensional convergence.** Fix $k \geq 1$ and $0 \leq t_1 < t_2 < \dots < t_k \leq 1$. For each $n$, the vector $(\mathbb{G}_n(t_1), \dots, \mathbb{G}_n(t_k))$ equals $n^{-1/2} \sum_{i=1}^n Y_i$, where $Y_i = (\mathbf{1}\{U_i \leq t_j\} - t_j)_{j=1}^k$. The $Y_i$ are iid, mean zero, with covariance $\Sigma_{jj'} = \mathrm{Cov}(\mathbf{1}\{U \leq t_j\}, \mathbf{1}\{U \leq t_{j'}\}) = t_{j \wedge j'} - t_j t_{j'}$. By the multivariate CLT (Topic 11 §11.5 Cor 2),
+
+$$
+\bigl(\mathbb{G}_n(t_1), \dots, \mathbb{G}_n(t_k)\bigr) \;\rightsquigarrow\; \mathcal{N}_k(0, \Sigma) \qquad \text{as } n \to \infty.
+$$
+
+The covariance matrix $\Sigma$ is the covariance of $(\mathbb{B}^\circ(t_1), \dots, \mathbb{B}^\circ(t_k))$. Hence, the finite-dimensional distributions of $\mathbb{G}_n$ converge to those of $\mathbb{B}^\circ$.
+
+**Step 3 — tightness via bracketing-integral control.** For weak convergence in $\ell^\infty([0, 1])$, finite-dim convergence combined with **asymptotic tightness** of $\{\mathbb{G}_n\}$ is necessary and sufficient (vdV–Wellner Thm 1.5.4). Asymptotic tightness for a random map in $\ell^\infty([0, 1])$ is equivalent, on a separable index set, to **stochastic equicontinuity**: for every $\eta, \varepsilon > 0$ there is $\delta > 0$ with
+
+$$
+\limsup_{n \to \infty} \Pr\!\Bigl(\sup_{|s - t| < \delta} |\mathbb{G}_n(s) - \mathbb{G}_n(t)| > \eta\Bigr) \;<\; \varepsilon.
+$$
+
+We establish stochastic equicontinuity by bounding the $L^2$-bracketing number of $\mathcal{F}_{\mathrm{cdf}}$ and invoking the bracketing-integral equicontinuity inequality (vdV–Wellner Thm 2.5.6).
+
+For the $\mathcal{F}_{\mathrm{cdf}}$ class $\{\mathbf{1}_{(-\infty, t]} : t \in [0, 1]\}$ under $P = \mathrm{Uniform}(0, 1)$: given $\varepsilon > 0$, choose a grid $0 = s_0 < s_1 < \dots < s_m = 1$ with $s_j - s_{j-1} \leq \varepsilon^2$ (so $m \leq \lceil \varepsilon^{-2} \rceil$). Define brackets $[\mathbf{1}_{(-\infty, s_{j-1}]}, \mathbf{1}_{(-\infty, s_j]}]$; every $\mathbf{1}_{(-\infty, t]}$ with $t \in [s_{j-1}, s_j]$ lies inside the $j$-th bracket. Each bracket has $L^2(P)$-width $\sqrt{s_j - s_{j-1}} \leq \varepsilon$. Hence
+
+$$
+N_{[\,]}\bigl(\varepsilon, \mathcal{F}_{\mathrm{cdf}}, L^2(P)\bigr) \;\leq\; \lceil \varepsilon^{-2} \rceil.
+$$
+
+The bracketing integral is therefore
+
+$$
+J_{[\,]}(1, \mathcal{F}_{\mathrm{cdf}}, L^2(P)) \;=\; \int_0^1 \sqrt{\log N_{[\,]}(\varepsilon, \mathcal{F}_{\mathrm{cdf}}, L^2(P))}\, d\varepsilon \;\leq\; \int_0^1 \sqrt{\log(\varepsilon^{-2} + 1)}\, d\varepsilon \;<\; \infty.
+$$
+
+Dudley's bracketing-integral equicontinuity inequality (vdV–Wellner Cor 2.5.2) yields, for every $\eta > 0$ and every $\delta > 0$,
+
+$$
+\Pr\!\Bigl(\sup_{|s - t| < \delta} |\mathbb{G}_n(s) - \mathbb{G}_n(t)| > \eta\Bigr) \;\leq\; \frac{C}{\eta}\,J_{[\,]}\!\bigl(\delta, \mathcal{F}_{\mathrm{cdf}}, L^2(P)\bigr)
+$$
+
+for a universal constant $C$ and all $n$ large enough. Since $J_{[\,]}(\delta, \mathcal{F}_{\mathrm{cdf}}, L^2(P)) \to 0$ as $\delta \to 0$, the equicontinuity condition holds. Hence $\{\mathbb{G}_n\}$ is asymptotically tight.
+
+**Step 4 — combine.** Finite-dim convergence (Step 2) + asymptotic tightness (Step 3) $\Rightarrow$ $\mathbb{G}_n \rightsquigarrow \mathbb{B}^\circ$ in $\ell^\infty([0, 1])$ (vdV–Wellner Thm 1.5.4). The limit $\mathbb{B}^\circ$ has continuous sample paths a.s. (Lem 3; BIL1999 §14), so convergence in $\ell^\infty([0, 1])$ coincides with convergence in $C([0, 1])$. Composition with the continuous $F$ (Step 1) transports to $\mathbb{G}_n \rightsquigarrow \mathbb{B}^\circ \circ F = \mathbb{B}_F$ in $\ell^\infty(\mathbb{R})$.
+
+$\blacksquare$ — using DON1952, vdV–Wellner 1996 Thm 1.5.4 (finite-dim + tight ⇒ weak), Thm 2.5.6 (bracketing-integral equicontinuity), BIL1999 §14 (Brownian-bridge continuity), and Topic 11 §11.5 Cor 2 (multivariate CLT).
+
+</ProofBlock>
+
+**Corollary (Kolmogorov limit — discharges Topic 29 §29.8 IOU).** Applying the continuous sup-norm functional to both sides of Donsker's theorem yields
+
+$$
+\sqrt n \,\|F_n - F\|_\infty \;\xrightarrow{d}\; \sup_{t \in [0, 1]} |\mathbb{B}^\circ(t)| \;\sim\; K,
+$$
+
+where $K$ is the classical Kolmogorov distribution $\Pr(K \le x) = 1 - 2 \sum_{k \ge 1} (-1)^{k-1} e^{-2 k^2 x^2}$. Topic 29 §29.8 stated this limit with the Donsker step deferred; §32.5 Thm 3 now supplies that step, and the corollary is a one-line continuous-mapping application.
+
+![Three-panel featured figure. (a) Ten empirical-process paths $\sqrt n(F_n - F)$ at $n = 2000$ (black, semi-transparent) overlaid on three Brownian-bridge reference paths (violet). (b) Sup-norm histogram from 10,000 Monte-Carlo replicates; Kolmogorov PDF overlaid. (c) QQ-plot of observed sup-norm quantiles against `scipy.stats.kstwobign.ppf` values; straight line indicates Donsker convergence.](/images/topics/empirical-processes/32-empirical-process-to-bb.png)
+
+*Figure 4 — ★ featured. Donsker's theorem in three views. (a) Sample paths of $\sqrt n(F_n - F)$ at $n = 2000$ visually tighten onto Brownian-bridge reference paths. (b) The sup-norm of $\mathbb{G}_n$ is asymptotically Kolmogorov-distributed; the histogram aligns with the Kolmogorov PDF. (c) Quantile-alignment confirmation. Interactive exploration in `EmpiricalProcessExplorer`.*
+
+<EmpiricalProcessExplorer client:visible />
+
+<ExampleBlock number={9} title="KS limit via CMT — recapitulates §29.8">
+
+Apply the continuous mapping theorem (Topic 9 §9.5) with the sup-norm functional $\phi : \ell^\infty(\mathbb{R}) \to \mathbb{R},\, \phi(z) = \|z\|_\infty = \sup_{t \in \mathbb{R}} |z(t)|$, which is continuous in the $\ell^\infty$-topology. Thm 3 gives $\mathbb{G}_n \rightsquigarrow \mathbb{B}_F$, so
+
+$$
+\sqrt n \,\|F_n - F\|_\infty \;=\; \phi(\mathbb{G}_n) \;\xrightarrow{d}\; \phi(\mathbb{B}_F) \;=\; \sup_{t \in \mathbb{R}} |\mathbb{B}_F(t)|.
+$$
+
+Since $\mathbb{B}_F(t) = \mathbb{B}^\circ(F(t))$ and $F$ is a continuous CDF onto $[0, 1]$, $\sup_t |\mathbb{B}_F(t)| = \sup_{u \in [0, 1]} |\mathbb{B}^\circ(u)|$, which by BIL1999 §12 has the Kolmogorov distribution $K$ with $\Pr(K \le x) = 1 - 2 \sum_{k \ge 1} (-1)^{k-1} e^{-2 k^2 x^2}$. This is the Kolmogorov limit Topic 29 §29.8 deferred — now paid via a one-line CMT application to the just-proven Donsker.
+
+</ExampleBlock>
+
+<ExampleBlock number={10} title="Cramér–von-Mises as a continuous functional of $\mathbb{G}_n$">
+
+Apply CMT with $\phi(z) = \int z(t)^2\, dF(t)$, a continuous $\ell^\infty(\mathbb{R}) \to \mathbb{R}$ functional. Donsker gives
+
+$$
+n \int (F_n - F)^2\, dF \;=\; \phi(\mathbb{G}_n) \;\xrightarrow{d}\; \phi(\mathbb{B}_F) \;=\; \int_\mathbb{R} \mathbb{B}_F(t)^2\, dF(t) \;\stackrel{d}{=}\; \int_0^1 \mathbb{B}^\circ(u)^2\, du
+$$
+
+(the second equality by the substitution $u = F(t)$). The right-hand side is the integrated squared Brownian-bridge, which by a Karhunen–Loève eigen-expansion equals $\sum_{k \ge 1} \chi^2_{1, k} / (k \pi)^2$ with iid $\chi^2_1$ components. A weighted-$\chi^2$ limit — not Gaussian — despite every finite evaluation of $\mathbb{G}_n$ being asymptotically Gaussian. §32.8 builds the Cramér–von-Mises test on exactly this limit.
+
+</ExampleBlock>
+
+<RemarkBlock number={10} title="Fidi + tightness: the two-ingredient structure">
+
+vdV–Wellner Thm 1.5.4 turns weak convergence in $\ell^\infty(\mathcal{F})$ into a pair of necessary-and-sufficient conditions: (i) finite-dimensional convergence of $(\mathbb{G}_n(f_1), \dots, \mathbb{G}_n(f_k))$ for every finite $\{f_1, \dots, f_k\} \subset \mathcal{F}$, and (ii) asymptotic tightness of the sequence in $\ell^\infty(\mathcal{F})$. Every empirical-process weak-convergence proof — ours, the bootstrap empirical process of §32.8 Thm 8, the local Donsker theorems of formalML's `semiparametric-inference` — factors the argument this way. The fidi piece is always "multivariate CLT"; the tight piece is always "some entropy bound + chaining". You'll see the pattern repeat.
+
+</RemarkBlock>
+
+<RemarkBlock number={11} title="The Bahadur-linearization lift (explicit connection to §31.3)">
+
+Topic 31 §31.3's bootstrap-consistency proof (Bickel–Freedman) had a three-step structure: scalar CLT ⇒ pointwise CDF convergence ⇒ Polya's theorem upgrades pointwise to uniform (Kolmogorov-distance). That is *exactly* the finite-dimensional shadow of the §32.5 Donsker proof you just read. Line up the three steps: §32.5 Step 2 (multivariate fidi CLT) is §31.3's scalar CLT lifted to $k$ dimensions; §32.5 Step 3 (bracketing-integral equicontinuity) is §31.3's Polya upgrade, lifted one level from "uniform in $x$" to "uniform over function-space neighbourhoods". The bootstrap is the Donsker-level resampling operation, restricted to a scalar functional. Naming this lift explicitly is the curriculum's most load-bearing structural retrospective — and §32.8 Thm 8 closes the loop by proving the bootstrap empirical process converges to the same Brownian-bridge limit as the original.
+
+</RemarkBlock>
+
+<RemarkBlock number={12} title="Why continuous $F$">
+
+Continuity of $F$ is load-bearing in Step 1: the probability-integral transform $U_i = F(X_i)$ is Uniform$(0, 1)$ only when $F$ has no atoms. When $F$ jumps at some point $t_0$ (e.g., a mixed discrete-continuous distribution), $F_n(t_0^-) \ne F_n(t_0)$ a.s. and the path $t \mapsto \mathbb{G}_n(t)$ has a non-vanishing jump at $t_0$ — it can't converge uniformly to a continuous-path limit. The fix is to replace $\ell^\infty(\mathbb{R})$ with the Skorokhod space $D[0, 1]$ of càdlàg functions and use its $J_1$-topology, which allows "small time perturbations" that absorb the jump. All of Topic 32 stays inside the continuous-$F$ case; the Skorokhod-topology generalisation is standard (BIL1999 §12–13) and deferred to formalML's `stochastic-processes` topics.
+
+</RemarkBlock>
+
+<a id="section-32-6"></a>
+
+## 32.6 Metric entropy and bracketing numbers
+
+{/* SCAFFOLD §32.6
+  - Opening: how big can $\mathcal{F}$ be and still be Donsker? The entropy-integral criterion.
+  - Def 9: covering number $N(\varepsilon, \mathcal{F}, \|\cdot\|)$.
+  - Def 10: bracketing number $N_{[\,]}(\varepsilon, \mathcal{F}, \|\cdot\|)$.
+  - Def 11: bracketing integral $J_{[\,]}$, $P$-Donsker class.
+  - Thm 4 (stated): Dudley 1978 — $J_{[\,]}(\infty, \mathcal{F}, L^2(P)) < \infty$ ⇒ $\mathcal{F}$ Donsker.
+  - Fig 5 (32-bracketing-vs-covering): bracketing-number geometry + loglog-slope-2 verification.
+  - Ex 11: bracketing number for Lipschitz functions.
+  - Ex 12: Dudley's entropy integral worked for $\mathcal{F}_{\mathrm{cdf}}$.
+  - Rem 13: covering vs bracketing — when they differ.
+  - Rem 14: Bickel–Rosenblatt — simultaneous CIs for KDE (discharges Topic 30 §30.5 Rem 15).
+  - Rem 15: entropy-rate sharpness — exact rates deferred to formalML.
+*/}
+
+§32.5 proved Donsker for one specific function class, $\mathcal{F}_{\mathrm{cdf}}$, by counting "brackets" — pairs of functions that sandwich every element of the class to within $\varepsilon$ in $L^2(P)$. That trick works for far more classes than $\mathcal{F}_{\mathrm{cdf}}$ alone. Dudley's 1978 theorem says: if the bracketing numbers $N_{[\,]}(\varepsilon, \mathcal{F}, L^2(P))$ grow slowly enough that $\int_0^1 \sqrt{\log N_{[\,]}(\varepsilon, \mathcal{F}, L^2(P))}\,d\varepsilon < \infty$, then $\mathcal{F}$ is Donsker. The integral is the *bracketing integral* $J_{[\,]}$, and it's the general Donsker criterion — §32.5 Step 3 was this condition, specialised to $\mathcal{F}_{\mathrm{cdf}}$, evaluated in closed form. This section names the abstract version and works two more worked examples.
+
+<DefinitionBlock number={9} title="Covering number $N(\varepsilon, \mathcal{F}, \|\cdot\|)$">
+
+Given $\mathcal{F}$ and a norm $\|\cdot\|$ on functions $\mathcal{X} \to \mathbb{R}$, the **$\varepsilon$-covering number** $N(\varepsilon, \mathcal{F}, \|\cdot\|)$ is the smallest number of $\|\cdot\|$-balls of radius $\varepsilon$ needed to cover $\mathcal{F}$. Equivalently, it's the smallest $N$ such that $\mathcal{F}$ admits an $\varepsilon$-net $\{g_1, \dots, g_N\} \subseteq \mathcal{F}$ with $\min_k \|f - g_k\| \le \varepsilon$ for every $f \in \mathcal{F}$. The **metric entropy** is $\log N(\varepsilon, \mathcal{F}, \|\cdot\|)$. For VC classes the $L^2(P)$-covering number satisfies $\log N(\varepsilon, \mathcal{F}, L^2(P)) = O(V \log(1/\varepsilon))$ (vdV–Wellner Thm 2.6.7).
+
+</DefinitionBlock>
+
+<DefinitionBlock number={10} title="Bracketing number $N_{[\,]}(\varepsilon, \mathcal{F}, \|\cdot\|)$">
+
+A **bracket** $[\ell, u]$ is a pair of functions $\ell, u : \mathcal{X} \to \mathbb{R}$ with $\ell(x) \le u(x)$ pointwise for every $x$. It *contains* $f \in \mathcal{F}$ if $\ell(x) \le f(x) \le u(x)$ pointwise. The bracket's **size** under $\|\cdot\|$ is $\|u - \ell\|$. The **$\varepsilon$-bracketing number** is
+
+$$
+N_{[\,]}(\varepsilon, \mathcal{F}, \|\cdot\|) \;:=\; \min\bigl\{N : \exists \text{ brackets } [\ell_1, u_1], \dots, [\ell_N, u_N] \text{ with size} \le \varepsilon \text{ covering } \mathcal{F}\bigr\}.
+$$
+
+Bracketing is strictly stronger than covering: a cover uses any $\varepsilon$-close functions, but a bracket enforces the *pointwise order* $\ell \le f \le u$. The result is that $N \le N_{[\,]}$ always, and $N_{[\,]}$ can be infinite for classes whose $N$ is finite — the extra rigidity matters. The bracketing number is what the Donsker criterion (Thm 4 below) actually needs.
+
+</DefinitionBlock>
+
+<DefinitionBlock number={11} title="Bracketing integral and $P$-Donsker class">
+
+The **bracketing integral** of $\mathcal{F}$ at scale $\delta$ under $\|\cdot\|$ is
+
+$$
+J_{[\,]}(\delta, \mathcal{F}, \|\cdot\|) \;:=\; \int_0^\delta \sqrt{\log N_{[\,]}(\varepsilon, \mathcal{F}, \|\cdot\|)}\,d\varepsilon.
+$$
+
+A class $\mathcal{F}$ with a square-integrable envelope is **$P$-Donsker** if $\mathbb{G}_n \rightsquigarrow \mathbb{G}_P$ in $\ell^\infty(\mathcal{F})$, where $\mathbb{G}_P$ is a tight Gaussian process on $\mathcal{F}$ with covariance $\mathrm{Cov}(\mathbb{G}_P(f), \mathbb{G}_P(g)) = P(fg) - (Pf)(Pg)$ — the *$P$-Brownian bridge indexed by $\mathcal{F}$*, generalising §32.5's $\mathbb{B}_F$ from $\mathcal{F}_{\mathrm{cdf}}$ to arbitrary $\mathcal{F}$. Thm 4 gives the sufficient condition for Donsker-ness in terms of $J_{[\,]}$.
+
+</DefinitionBlock>
+
+<TheoremBlock number={4} title="Dudley 1978 — bracketing-integral sufficient condition (stated)">
+
+Suppose $\mathcal{F}$ has a square-integrable envelope under $P$ and
+
+$$
+J_{[\,]}\bigl(\infty, \mathcal{F}, L^2(P)\bigr) \;=\; \int_0^\infty \sqrt{\log N_{[\,]}(\varepsilon, \mathcal{F}, L^2(P))}\,d\varepsilon \;<\; \infty.
+$$
+
+Then $\mathcal{F}$ is $P$-Donsker: $\mathbb{G}_n \rightsquigarrow \mathbb{G}_P$ in $\ell^\infty(\mathcal{F})$.
+
+**Proof (deferred).** The argument is the general version of §32.5 Step 3 — symmetrisation + chaining against the bracketing-integral bound. Full proof in vdV–Wellner Thm 2.5.6 (~10 pages of careful measurability housekeeping plus three lemmas). We omit it because the §32.5 specialisation for $\mathcal{F}_{\mathrm{cdf}}$ conveyed the essential structure; the general proof adds machinery but no new ideas.
+
+</TheoremBlock>
+
+![Two-panel bracketing-number visualisation. Left: $\mathcal{F}_{\mathrm{cdf}}$ under Uniform(0, 1) covered by $\lceil \varepsilon^{-2} \rceil$ brackets at $\varepsilon \in \{0.1, 0.05, 0.02\}$, shown as horizontal stacked bars. Right: log-log plot of $\log N_{[\,]}(\varepsilon)$ vs $\log(1/\varepsilon)$ with slope-2 reference line overlaid, verifying $N_{[\,]} \sim \varepsilon^{-2}$.](/images/topics/empirical-processes/32-bracketing-vs-covering.png)
+
+*Figure 5. Bracketing geometry for $\mathcal{F}_{\mathrm{cdf}}$. Left: brackets at three resolutions; the number grows like $\varepsilon^{-2}$ (each refinement halves $\varepsilon$ and quadruples the count). Right: log-log confirmation of the slope-2 scaling. The bracketing integral $\int_0^1 \sqrt{\log(\varepsilon^{-2})}\,d\varepsilon$ is finite, so $\mathcal{F}_{\mathrm{cdf}}$ is Donsker — the calculation §32.5 Step 3 used inline.*
+
+<ExampleBlock number={11} title="Bracketing number for Lipschitz functions on $[0, 1]$">
+
+Let $\mathcal{F}$ be the class of $L$-Lipschitz functions on $[0, 1]$ bounded by $M$. Cover $[0, 1]$ with an $\varepsilon / L$-grid and bound each function on each grid-cell by a piecewise-constant upper/lower pair: the resulting brackets have $L^2(\mathrm{Leb})$ size $\le \varepsilon$, and there are at most $(M / \varepsilon)^{L/\varepsilon}$ of them, giving
+
+$$
+\log N_{[\,]}\bigl(\varepsilon, \mathcal{F}, L^2(\mathrm{Leb})\bigr) \;\lesssim\; (L / \varepsilon) \log(M / \varepsilon).
+$$
+
+Then $\sqrt{\log N_{[\,]}(\varepsilon)} \lesssim \varepsilon^{-1/2} \sqrt{\log(1/\varepsilon)}$, and $\int_0^1 \varepsilon^{-1/2} \sqrt{\log(1/\varepsilon)}\,d\varepsilon < \infty$ (gamma-function calculation). Thm 4 applies: Lipschitz-$[0, 1]$ classes are Donsker under Lebesgue. This is the nonparametric-regression analogue of §32.5 — replace "ECDF in $\mathbb{R}$" with "smoothed estimator of a Lipschitz regression function", same empirical-process machinery.
+
+</ExampleBlock>
+
+<ExampleBlock number={12} title="Dudley's entropy integral worked for $\mathcal{F}_{\mathrm{cdf}}$">
+
+§32.5 Step 3 computed $N_{[\,]}(\varepsilon, \mathcal{F}_{\mathrm{cdf}}, L^2(P)) \le \lceil \varepsilon^{-2} \rceil$ for $P = \mathrm{Uniform}(0, 1)$. Plugging into the bracketing integral:
+
+$$
+J_{[\,]}(1, \mathcal{F}_{\mathrm{cdf}}, L^2(P)) \;=\; \int_0^1 \sqrt{\log \lceil \varepsilon^{-2} \rceil}\,d\varepsilon \;\approx\; \int_0^1 \sqrt{2 \log(1/\varepsilon)}\,d\varepsilon \;=\; \frac{\sqrt{2\pi}}{2} \;<\; \infty,
+$$
+
+using the standard Gaussian-tail integral $\int_0^1 \sqrt{\log(1/\varepsilon)}\,d\varepsilon = \sqrt{\pi}/2$. Finiteness confirmed — Thm 4 delivers §32.5 Thm 3 as a specialisation, which is exactly what we proved in full. The $\mathcal{F}_{\mathrm{cdf}}$ calculation is the cleanest worked example of Dudley's criterion.
+
+</ExampleBlock>
+
+<RemarkBlock number={13} title="Covering vs bracketing — when they differ">
+
+Covering and bracketing numbers agree up to polynomial factors for VC classes (vdV–Wellner Thm 2.6.7 + Thm 2.7.11), but for general classes they can diverge dramatically — the bracketing number enforces a pointwise sandwich that covering does not. Why does Donsker need the stronger version? Because the chaining argument in Thm 4's proof bounds the modulus of continuity of $\mathbb{G}_n$ using $\sup$ of differences, and sup-differences respect the bracketing structure (within a bracket, $|f - g| \le u - \ell$) but not the covering one (two close functions in $L^2$ can differ a lot pointwise). DUD1978 settled this — bracketing is the correct complexity measure for Donsker, covering for Glivenko–Cantelli.
+
+</RemarkBlock>
+
+<RemarkBlock number={14} title="Bickel–Rosenblatt 1973 (discharges Topic 30 §30.5 Rem 15)">
+
+Topic 30 §30.5 Rem 15 forward-promised simultaneous confidence bands for the kernel density estimator $\hat f_h$ as "Bickel–Rosenblatt-type functional-CLT machinery". The promised result is this: under regularity, an appropriately rescaled $\hat f_h - f$ satisfies a functional CLT in $\ell^\infty$-topology on a compact interval, with a Gaussian limit process whose covariance depends on the kernel and the bandwidth. The proof uses Thm 4 applied to the kernel-smoothed function class $\{K_h(\cdot - x) : x \in [a, b]\}$, whose bracketing integral is finite for Lipschitz kernels. Full statement and proof in formalML's `density-estimation` topic; naming it here discharges Topic 30's IOU and connects §32.6's abstract framework to a concrete ML-adjacent application.
+
+</RemarkBlock>
+
+<RemarkBlock number={15} title="Entropy-rate sharpness deferred">
+
+Thm 4 delivers Donsker but not the *rate* at which $\|\mathbb{G}_n\|_\mathcal{F}$ concentrates around its expectation — and the rate depends on the bracketing-entropy growth past the $J_{[\,]} < \infty$ threshold. Talagrand's sharp upper-lower-bound theory (TAL1996, GIN2016 Ch. 3) characterises exact rates in terms of metric-entropy integrals and generic-chaining functionals. For ML applications, the sharpness often matters: the gap between $\sqrt{V/n}$ and $\sqrt{V \log n / n}$ in generalisation bounds, for instance, is exactly this question. We defer the sharp-rate theory to formalML's `empirical-process-rates` topic; Topic 32 stays at the Donsker-or-not level, which is the cleanest structural story.
+
+</RemarkBlock>
+
+<a id="section-32-7"></a>
+
+## 32.7 The functional delta method (★ full proof)
+
+{/* SCAFFOLD §32.7
+  - Opening: how to lift $\mathbb{G}_n$-level convergence to convergence of functionals $\phi(\mathbb{G}_n)$.
+  - Def 12: Hadamard differentiability tangential to $\mathbb{D}_0$.
+  - Def 13: influence function IC(x) = $\phi'_\theta(\delta_x - P)$.
+  - Thm 5 (functional delta) — ★ FULL PROOF verbatim below.
+  - Thm 6 (extended CMT, stated): for continuous functionals at the limit, not everywhere.
+  - Fig 6 (32-functional-delta): sample-median IC + sampling-distribution histogram.
+  - FunctionalDeltaExplorer component embed (placeholder).
+  - Ex 13: quantile functional $\phi(F) = F^{-1}(p)$ — recovers Topic 29 §29.6's Bahadur rep.
+  - Ex 14: KS-distance functional $\phi(F) = \sup_t |F(t) - F_0(t)|$.
+  - Rem 16: Fréchet vs Hadamard — why Hadamard is the right tangent-space notion.
+  - Rem 17: influence function vs efficiency → formalML `semiparametric-inference`.
+  - Rem 18: Topic 19 pivotal-CI connection (delta method underwrites Wald CIs).
+*/}
+
+So far we have $\mathbb{G}_n \rightsquigarrow \mathbb{B}_F$ (§32.5) and, more generally, $\mathbb{G}_n \rightsquigarrow \mathbb{G}_P$ for Donsker classes (§32.6). The natural follow-up question: if $\phi$ is a functional of the CDF — the median, the variance, a quantile, a Cramér–von-Mises distance — does $\sqrt n (\phi(F_n) - \phi(F))$ have a limit distribution, and is there a clean way to read it off? The answer, for "smooth" $\phi$, is the **functional delta method**: $\sqrt n (\phi(F_n) - \phi(F)) \rightsquigarrow \phi'_F(\mathbb{B}_F)$, where $\phi'_F$ is the Hadamard derivative of $\phi$ at $F$. This is the function-space generalisation of Topic 13's scalar delta method ($\sqrt n(g(\bar X_n) - g(\mu)) \to g'(\mu)\,\mathcal{N}(0, \sigma^2)$), with Hadamard-differentiability standing in for ordinary derivative — a looser notion that applies to far more statistical functionals than Fréchet differentiability.
+
+<DefinitionBlock number={12} title="Hadamard differentiability tangential to $\mathbb{D}_0$">
+
+Let $\mathbb{D}, \mathbb{E}$ be Banach spaces and $\mathbb{D}_0 \subseteq \mathbb{D}$ a subset (the "tangent set"). A map $\phi : \mathbb{D}_\phi \subseteq \mathbb{D} \to \mathbb{E}$ is **Hadamard-differentiable at $\theta \in \mathbb{D}_\phi$ tangentially to $\mathbb{D}_0$** if there exists a continuous linear map $\phi'_\theta : \mathbb{D}_0 \to \mathbb{E}$ (the **Hadamard derivative**) such that
+
+$$
+\frac{\phi(\theta + t_n h_n) - \phi(\theta)}{t_n} \;\to\; \phi'_\theta(h) \qquad \text{in } \mathbb{E}
+$$
+
+for every sequence $t_n \to 0$ in $\mathbb{R}$ and every $h_n \to h$ in $\mathbb{D}_0$ with $\theta + t_n h_n \in \mathbb{D}_\phi$ eventually. The "tangential" qualifier is the key relaxation: we only need the limit along sequences that stay in $\mathbb{D}_0$, which in practice is the subspace of *continuous* sample paths where $\mathbb{B}_F$ lives. Fréchet differentiability would require the limit along *all* sequences, which is too strong for most statistical functionals.
+
+</DefinitionBlock>
+
+<DefinitionBlock number={13} title="Influence function">
+
+For a statistical functional $\phi : \mathbb{D}_\phi \to \mathbb{R}$ with $P \in \mathbb{D}_\phi$, the **influence function** at $P$ is
+
+$$
+\mathrm{IC}_P(x) \;:=\; \phi'_P(\delta_x - P), \qquad x \in \mathcal{X},
+$$
+
+i.e., the Hadamard derivative evaluated at the "point-mass perturbation" $\delta_x - P$. The influence function measures how $\phi$ reacts to a tiny bit of probability mass added at $x$ (and a tiny bit subtracted, uniformly, to preserve normalisation). By linearity of $\phi'_P$, $\sqrt n (\phi(P_n) - \phi(P))$ is approximately $n^{-1/2} \sum_i \mathrm{IC}_P(X_i)$, and its asymptotic variance is $P(\mathrm{IC}_P^2) = \mathrm{Var}_P(\mathrm{IC}_P)$. The influence function is the primitive notion behind efficient-influence-function estimators in semiparametric theory — see Rem 17.
+
+</DefinitionBlock>
+
+<TheoremBlock number={5} title="Functional delta method (vdV–Wellner §3.9; vdV2000 Thm 20.8)">
+
+Let $\mathbb{D}, \mathbb{E}$ be Banach spaces and $\phi : \mathbb{D}_\phi \subseteq \mathbb{D} \to \mathbb{E}$ a map. Suppose $\phi$ is Hadamard-differentiable at $\theta \in \mathbb{D}_\phi$ tangentially to a subset $\mathbb{D}_0 \subseteq \mathbb{D}$, with derivative $\phi'_\theta : \mathbb{D}_0 \to \mathbb{E}$. Let $r_n \to \infty$ and $T_n : \Omega \to \mathbb{D}_\phi$ be random elements with $r_n(T_n - \theta) \rightsquigarrow T$ in $\mathbb{D}$, where $T$ is supported on $\mathbb{D}_0$. Then
+
+$$
+r_n\bigl(\phi(T_n) - \phi(\theta)\bigr) \;\rightsquigarrow\; \phi'_\theta(T) \qquad \text{in } \mathbb{E}.
+$$
+
+</TheoremBlock>
+
+<ProofBlock number={3}>
+
+The argument is Skorokhod representation + Hadamard differentiability in one line, wrapped in measurability housekeeping.
+
+**Step 1 — transfer to almost-sure convergence.** By the Skorokhod representation theorem (vdV2000 Thm 18.9; applicable because $T$ is tight in $\mathbb{D}$), there exists a probability space $(\tilde \Omega, \tilde {\mathcal{F}}, \tilde \Pr)$ and random elements $\tilde T_n, \tilde T$ on it with $\tilde T_n \stackrel{d}{=} r_n(T_n - \theta)$ and $\tilde T \stackrel{d}{=} T$, such that $\tilde T_n \to \tilde T$ a.s. in $\mathbb{D}$. Since $\tilde T$ is supported on $\mathbb{D}_0$, outside a $\tilde \Pr$-null set we have $\tilde T_n \to \tilde T$ with $\tilde T \in \mathbb{D}_0$.
+
+**Step 2 — apply Hadamard differentiability pointwise.** Define $\tilde T_n' := \theta + r_n^{-1} \tilde T_n$; by construction $\tilde T_n' \stackrel{d}{=} T_n$ and $\tilde T_n' \in \mathbb{D}_\phi$ eventually a.s. Applying the Hadamard-differentiability definition with $t_n = r_n^{-1} \to 0$ and $h_n = \tilde T_n \to \tilde T \in \mathbb{D}_0$:
+
+$$
+r_n\bigl(\phi(\tilde T_n') - \phi(\theta)\bigr) \;=\; \frac{\phi(\theta + r_n^{-1} \tilde T_n) - \phi(\theta)}{r_n^{-1}} \;\xrightarrow{\text{a.s.}}\; \phi'_\theta(\tilde T).
+$$
+
+**Step 3 — translate back.** Since $\tilde T_n' \stackrel{d}{=} T_n$ and $\tilde T \stackrel{d}{=} T$, and since a.s. convergence implies weak convergence (vdV2000 §2.1), we have
+
+$$
+r_n\bigl(\phi(T_n) - \phi(\theta)\bigr) \;\rightsquigarrow\; \phi'_\theta(T) \qquad \text{in } \mathbb{E}.
+$$
+
+$\blacksquare$ — using vdV–Wellner 1996 Thm 3.9.4 and the Skorokhod representation theorem (vdV2000 Thm 18.9).
+
+</ProofBlock>
+
+<TheoremBlock number={6} title="Extended continuous mapping theorem (stated)">
+
+Let $g_n, g : \mathbb{D} \to \mathbb{E}$ be maps with $g_n \to g$ uniformly on every compact subset of $\mathbb{D}$. Suppose $X_n \rightsquigarrow X$ in $\mathbb{D}$ with $X \in C_g$ a.s., where $C_g$ is the set of continuity points of $g$. Then $g_n(X_n) \rightsquigarrow g(X)$ in $\mathbb{E}$.
+
+This strengthens Topic 9 §9.5's CMT in two ways: $g$ is replaced by a sequence $g_n$ (useful when the functional depends on $n$, e.g., studentisation), and the continuity requirement is only at the support of the limit. §32.8 Ex 15's two-sample-KS argument uses Thm 6 in its full strength. Proof in vdV–Wellner Thm 1.11.1; we take it as given.
+
+</TheoremBlock>
+
+![Two-panel functional-delta demonstration. Left: histogram of $\sqrt n(\hat\xi_{0.5} - 0)$ across 5000 $n=500$ Normal replicates, overlaid with theoretical $\mathcal{N}(0, \pi/2)$ density. Right: ten $\mathbb{G}_n$ paths with the dashed influence function $\mathrm{IC}(x) = -\mathrm{sign}(x)/(2\phi(0))$ overlaid as a visual cue.](/images/topics/empirical-processes/32-functional-delta.png)
+
+*Figure 6. Functional delta method for the sample median. Left: the empirical sampling distribution of $\sqrt n$ times the sample-median deviation lines up with the theoretical Gaussian — asymptotic variance $\pi / 2 \approx 1.571$ from the influence-function formula $1/(4 f(0)^2)$. Right: the influence function plotted alongside $\mathbb{G}_n$ paths shows visually how the delta method extracts the limit — it integrates against IC.*
+
+<FunctionalDeltaExplorer client:visible />
+
+<ExampleBlock number={13} title="Quantile functional $\phi(F) = F^{-1}(p)$">
+
+Take $\phi(F) = F^{-1}(p)$ for fixed $p \in (0, 1)$. At a continuous $F$ with positive density $f(\xi_p) > 0$ at its $p$-quantile $\xi_p = F^{-1}(p)$, $\phi$ is Hadamard-differentiable tangentially to $C(\mathbb{R})$ with derivative $\phi'_F(h) = -h(\xi_p) / f(\xi_p)$ (vdV–Wellner Lem 3.9.23). The influence function is
+
+$$
+\mathrm{IC}_F(x) \;=\; \phi'_F(\delta_x - F) \;=\; -\frac{\mathbf{1}\{x \le \xi_p\} - p}{f(\xi_p)} \;=\; \frac{p - \mathbf{1}\{x \le \xi_p\}}{f(\xi_p)}.
+$$
+
+Thm 5 gives $\sqrt n (\hat\xi_p - \xi_p) \rightsquigarrow \mathcal{N}(0, p(1-p) / f(\xi_p)^2)$ — Bahadur's representation theorem from Topic 29 §29.6, derived here in three lines by the functional delta method. The delta method is the right tool for this result; the Bahadur-representation proof of Topic 29 was the direct route for the median-specific case.
+
+</ExampleBlock>
+
+<ExampleBlock number={14} title="KS-distance functional $\phi(F) = \|F - F_0\|_\infty$">
+
+Take $\phi(F) = \sup_t |F(t) - F_0(t)|$ for a fixed reference $F_0$. At $F \ne F_0$, $\phi$ is Hadamard-differentiable (the sup is attained at an isolated set of points), and Thm 5 delivers a Gaussian limit with an explicit influence function. At $F = F_0$, $\phi(F_0) = 0$ is the global minimum, and $\phi$ fails Hadamard differentiability — the sup-of-absolute-value kink at zero is an obstruction. Applying Thm 5 naively gives the wrong answer. The right answer comes from CMT directly: $\sqrt n (\phi(F_n) - \phi(F_0)) = \|\mathbb{G}_n\|_\infty \rightsquigarrow \|\mathbb{B}_{F_0}\|_\infty$, the Kolmogorov distribution. This is §32.5's corollary wearing a §32.7 hat — and illustrates the boundary of the delta method: at differentiability points you get Gaussian limits and efficient-influence-function machinery; at non-differentiability points, CMT on the underlying Donsker limit takes over and the limits are non-Gaussian.
+
+</ExampleBlock>
+
+<RemarkBlock number={16} title="Fréchet vs Hadamard — tangential is the right notion">
+
+Fréchet differentiability — uniform convergence of $(\phi(\theta + h) - \phi(\theta) - \phi'_\theta(h)) / \|h\|$ to 0 as $\|h\| \to 0$ over the whole ball — is too strong for most statistical functionals. The quantile, median, and KS-distance functionals are Hadamard-differentiable but NOT Fréchet-differentiable: the non-uniform dependence on the direction $h / \|h\|$ breaks Fréchet's uniformity. Hadamard's tangential version relaxes "all directions" to "tangent directions in $\mathbb{D}_0$", which for us is the subspace of uniformly continuous perturbations — exactly where $\mathbb{B}_F$ places its mass. This is why vdV–Wellner builds the functional delta method on Hadamard differentiability: it's the weakest smoothness notion that lets Thm 5 go through, and almost every statistical functional satisfies it.
+
+</RemarkBlock>
+
+<RemarkBlock number={17} title="Influence function → semiparametric efficiency (formalML)">
+
+The influence function of a functional $\phi$ is not just a technical object — it's the statistical primitive that modern efficient estimators are built from. An estimator $\hat\phi_n$ is **regular** if it's asymptotically Gaussian with asymptotic bias 0 along all one-parameter submodels through $P$, and the **Cramér–Rao bound** on its asymptotic variance equals $\inf_{\mathrm{IC}} P(\mathrm{IC}^2)$ over influence functions of $\phi$ in the semiparametric model. Efficient-influence-function estimators — targeted maximum likelihood (TMLE), augmented inverse-propensity weighting (AIPW) — explicitly estimate $\mathrm{IC}_P$ and plug it into a one-step correction to achieve the Cramér–Rao bound. formalML's [semiparametric-inference](https://formalml.com/topics/semiparametric-inference) and [causal-inference-methods](https://formalml.com/topics/causal-inference-methods) topics develop both in detail, both grounded in the Hadamard-differentiability framework established here.
+
+</RemarkBlock>
+
+<RemarkBlock number={18} title="Topic 19 Wald-CI reconnection">
+
+Topic 19 §19.2 constructed Wald confidence intervals $\hat\theta \pm z_{\alpha/2}\,\widehat{\mathrm{SE}}(\hat\theta)$ for parametric $\theta$, relying on the scalar delta method (Topic 13 §13.5) to pass a smooth transformation through the asymptotic normality of $\hat\theta$. Thm 5 is the function-space generalisation: sup-norm confidence *bands* for a nonparametric functional (e.g., $\|F_n - F\|_\infty$-based uniform bands, or $\phi(F_n) \pm$ a band derived from $\mathbb{B}_F$'s quantiles). Pivotal-CI constructions for functionals — the sup-norm Bayesian-credible-band analog on the frequentist side — use exactly this machinery, and §32.8 Ex 15 shows one worked example. The through-line from Topic 13 → Topic 19 → Topic 32 is: scalar delta ⇒ scalar Wald ⇒ functional delta ⇒ function-space confidence band.
+
+</RemarkBlock>
+
+<a id="section-32-8"></a>
+
+## 32.8 Applications: Cramér–von-Mises, two-sample KS, bootstrap empirical process
+
+{/* SCAFFOLD §32.8
+  - Opening: three canonical applications of Donsker + CMT + functional delta.
+  - Def 14: two-sample empirical process $\mathbb{G}_{n,m} = \sqrt{nm/(n+m)} (F_n - G_m)$.
+  - Thm 7 (stated): Cramér–von-Mises limit $n W^2_n \rightsquigarrow \int_0^1 \mathbb{B}^\circ(t)^2\,dt \sim \sum_k \chi^2_1 / (k\pi)^2$.
+  - Thm 8 (stated): bootstrap empirical process CLT (Giné–Zinn 1990) — conditionally on the data, $\sqrt n (F^\ast_n - F_n) \rightsquigarrow \mathbb{B}_F$ in probability.
+  - Fig 7 (32-cvm-test): CvM histogram + one-sample vs two-sample KS.
+  - Fig 8 (32-bootstrap-empirical-process): bootstrap empirical process paths.
+  - Ex 15: two-sample KS power via Anderson–Darling weighting.
+  - Rem 19: bootstrap as finite-dim shadow of Donsker — finally named (§31.3 anticipated this).
+  - Rem 20: U-processes / V-statistics — pointer to formalML.
+*/}
+
+§§32.5–32.7 built the machinery. §32.8 turns it on three concrete statistical objects: the Cramér–von-Mises goodness-of-fit statistic (a continuous functional of $\mathbb{G}_n$ with a non-Gaussian limit, via CMT), the two-sample Kolmogorov–Smirnov test (where two empirical processes collide and their difference inherits a Brownian-bridge limit after rescaling), and the bootstrap empirical process (Giné–Zinn 1990's functional upgrade of Topic 31's bootstrap consistency). Each is a direct consequence of Thms 3, 5, 6, or 7 applied to specific functionals or classes. If §§32.5–32.7 were the grammar, §32.8 is the vocabulary test.
+
+<DefinitionBlock number={14} title="Two-sample empirical process">
+
+Given independent samples $X_1, \dots, X_n \sim F$ and $Y_1, \dots, Y_m \sim G$, with empirical CDFs $F_n$ and $G_m$, the **two-sample empirical process** is
+
+$$
+\mathbb{G}_{n, m}(t) \;:=\; \sqrt{\frac{nm}{n + m}}\,(F_n(t) - G_m(t)).
+$$
+
+Under the null $H_0 : F = G = H$, as $n, m \to \infty$ with $n / (n + m) \to \lambda \in (0, 1)$, $\mathbb{G}_{n, m} \rightsquigarrow \mathbb{B}_H$ in $\ell^\infty(\mathbb{R})$. The two-sample rescaling factor $\sqrt{nm/(n+m)}$ is the effective-sample-size version of the ordinary $\sqrt n$: for balanced samples ($n = m$) it simplifies to $\sqrt{n/2}$, and as $n \to \infty$ with $m$ fixed, it asymptotes to $\sqrt m$ — the bottleneck sample. The limit is the same Brownian bridge as in §32.5, so two-sample KS inherits Kolmogorov critical values verbatim.
+
+</DefinitionBlock>
+
+<TheoremBlock number={7} title="Cramér–von-Mises limit (stated)">
+
+Under iid sampling from continuous $F$, the Cramér–von-Mises statistic $W^2_n := n \int (F_n - F)^2\,dF$ converges in distribution:
+
+$$
+W^2_n \;\xrightarrow{d}\; W^2 \;:=\; \int_0^1 \mathbb{B}^\circ(u)^2\,du \;\stackrel{d}{=}\; \sum_{k \ge 1} \frac{\chi^2_{1, k}}{(k \pi)^2},
+$$
+
+a weighted-$\chi^2$ distribution where $\chi^2_{1, k}$ are iid chi-squared-1 random variables. Proof: apply CMT to the continuous functional $\phi(z) = \int z^2\,dF$ on $\ell^\infty(\mathbb{R})$; Donsker gives $\mathbb{G}_n \rightsquigarrow \mathbb{B}_F$, so $\phi(\mathbb{G}_n) = W^2_n \rightsquigarrow \phi(\mathbb{B}_F) = \int \mathbb{B}_F(t)^2 dF(t) = \int_0^1 \mathbb{B}^\circ(u)^2 du$ by substitution. The $\chi^2$ decomposition comes from a Karhunen–Loève expansion of $\mathbb{B}^\circ$. Critical values are tabulated; CvM is more sensitive than KS to tail discrepancies (the integrated-squared statistic emphasises bulk over extremes).
+
+</TheoremBlock>
+
+<TheoremBlock number={8} title="Bootstrap empirical process CLT (Giné–Zinn 1990, stated)">
+
+Let $X^\ast_1, \dots, X^\ast_n$ be a bootstrap resample drawn iid from $F_n$ (Topic 31 §31.2), and let $F^\ast_n$ be its empirical CDF. Conditionally on the data $X_1, \dots, X_n$, the bootstrap empirical process is $\mathbb{G}^\ast_n := \sqrt n(F^\ast_n - F_n)$. Giné and Zinn (1990) prove:
+
+$$
+\mathbb{G}^\ast_n \;\rightsquigarrow\; \mathbb{B}_F \qquad \text{in } \ell^\infty(\mathbb{R}), \text{ conditionally on the data, in probability},
+$$
+
+meaning that for every bounded Lipschitz $h : \ell^\infty(\mathbb{R}) \to \mathbb{R}$, $\mathbb{E}^*[h(\mathbb{G}^\ast_n) \mid X_{1:n}] \to \mathbb{E} h(\mathbb{B}_F)$ in probability over the data. This is the functional analog of Topic 31 §31.3's scalar Bickel–Freedman consistency: whatever limit distribution the data-world $\mathbb{G}_n$ converges to, the bootstrap-world $\mathbb{G}^\ast_n$ converges to the same thing. Full proof in GIN2016 Ch. 3; we state it without deriving since the argument parallels §32.5 Thm 3 with an extra layer of conditional tightness.
+
+</TheoremBlock>
+
+![Two-panel. Left: histogram of $W^2_n$ across 10,000 Monte-Carlo Normal replicates, overlaid with theoretical CvM CDF (1000-term truncation). Right: sup-norm histogram comparing one-sample vs two-sample KS, each at $n = 500$.](/images/topics/empirical-processes/32-cvm-test.png)
+
+*Figure 7. Cramér–von-Mises and two-sample KS in action. Left: the $W^2_n$ statistic's null distribution matches the weighted-$\chi^2$ limit. Right: one-sample and two-sample KS sup-norms share the same Kolmogorov limit after the $\sqrt{nm/(n+m)}$ scaling, illustrating Thm 8's distributional stability.*
+
+![Two-panel Topic-31 link-back. Left: observed $\mathbb{G}_n$ path from one dataset (black), overlaid with 100 bootstrap $\mathbb{G}^\ast_n$ paths (grey). Right: bootstrap sup-norm distribution against the Kolmogorov distribution — Giné–Zinn consistency visual.](/images/topics/empirical-processes/32-bootstrap-empirical-process.png)
+
+*Figure 8. Bootstrap empirical process. Left: 100 bootstrap $\mathbb{G}^\ast_n$ paths around a single observed $\mathbb{G}_n$ path; the bootstrap-world paths mimic the shape of the data-world path. Right: the bootstrap sup-norm distribution overlays the Kolmogorov distribution — numerical confirmation of Thm 8 (Giné–Zinn 1990).*
+
+<ExampleBlock number={15} title="Two-sample KS power via Anderson–Darling weighting">
+
+The ordinary two-sample KS statistic $D_{n, m} = \sup_t |F_n(t) - G_m(t)|$ has balanced power across $t$, but alternatives that differ only in the tails — e.g., same mean and variance but different kurtosis — are hard to detect because the tail probability $F(t)(1 - F(t))$ is small precisely where the discrepancy lives. Anderson and Darling (1954) proposed the rescaled statistic
+
+$$
+A^2_{n, m} \;:=\; \sqrt{\frac{nm}{n + m}}\,\sup_t \frac{|F_n(t) - G_m(t)|}{\sqrt{\bar F(t)(1 - \bar F(t))}}
+$$
+
+($\bar F$ = pooled ECDF), which overweights the tails where the denominator shrinks. The limit distribution — via CMT on Donsker plus a rescaling — is $\sup_{u \in (0, 1)} |\mathbb{B}^\circ(u)| / \sqrt{u(1-u)}$, whose critical values are tabulated. For tail-discrepancy alternatives, $A^2_{n,m}$ has substantially higher power than $D_{n,m}$. The integrated version — the Anderson–Darling statistic $\int (F_n - \bar F)^2 / (\bar F(1 - \bar F))\,d\bar F$ — applies the same weighting to the CvM integral.
+
+</ExampleBlock>
+
+<RemarkBlock number={19} title="Bootstrap as finite-dim shadow of Donsker">
+
+Topic 31 §31.3's bootstrap-consistency proof (CLT + Polya) was the scalar shadow of §32.5's Donsker (multivariate CLT + bracketing-based tightness). Thm 8 now makes the upgrade official: the bootstrap is not just a resampling heuristic that happens to work for the sample mean, it's a *functional* resampling operation on $F_n$ whose limit distribution is the same Brownian-bridge process Donsker delivers for the data. Every scalar functional $\phi$ you apply to $\mathbb{G}_n$ — mean, median, quantile, KS, CvM — has a bootstrap version you apply to $\mathbb{G}^\ast_n$, and the two asymptotically agree. This is the retrospective statement: the bootstrap, viewed from the empirical-process altitude, is just Donsker with data replaced by $F_n$. The §31.3 → §32.8 bridge is the curriculum's most important structural connection, and Thm 8 is its formal statement.
+
+</RemarkBlock>
+
+<RemarkBlock number={20} title="U-processes and V-statistics — pointer to formalML">
+
+A $U$-statistic of order $m$ averages a symmetric kernel $h$ over all $\binom{n}{m}$ subsets of the data; Topic 13 §13.3 introduced the scalar version. A *$U$-process* lets the kernel range over a class $\mathcal{H}$ of symmetric kernels and studies the resulting stochastic process $U_n : \mathcal{H} \to \mathbb{R}$. The limit theory — multi-level Donsker — involves Gaussian chaoses rather than a single Brownian bridge, and the technical machinery (Hoeffding decomposition + functional Donsker at each order) is nontrivial. $V$-statistics (plug-in vs. unbiased variants) follow the same theory with a different normalisation. Both are standard tools in kernel-method statistics and specific nonparametric tests; deferred to formalML's `u-processes` topic.
+
+</RemarkBlock>
+
+<a id="section-32-9"></a>
+
+## 32.9 Concentration: Talagrand's inequality and symmetrisation
+
+{/* SCAFFOLD §32.9
+  - Opening: Donsker is about limits; concentration is about finite-sample tails.
+  - Thm 9 (stated): Talagrand 1996 concentration inequality for empirical-process suprema.
+  - Rem 21: the Talagrand proof is book-length (Ledoux–Talagrand 1991 Ch. 6–7).
+  - Rem 22: M-estimator asymptotics / local empirical-process theory — forward-pointer to formalML `semiparametric-inference`.
+*/}
+
+Donsker's theorem gives the *limiting* distribution of $\mathbb{G}_n$; in finite samples, we often need tail bounds on $\|\mathbb{G}_n\|_\mathcal{F}$ that are explicit at every $n$, not just asymptotic. Classical Bernstein and Bennett inequalities handle bounded sums of iid random variables, but the supremum over $\mathcal{F}$ introduces a dependence structure Bernstein doesn't capture. Talagrand's 1996 concentration inequality fills the gap: it's the correct Bernstein-analog for empirical-process suprema, providing sub-Gaussian concentration around $\mathbb{E}\|\mathbb{G}_n\|_\mathcal{F}$ with explicit constants. It's the workhorse behind sharp generalisation bounds in ML and the sharp-rate theory §32.6 Rem 15 deferred.
+
+<TheoremBlock number={9} title="Talagrand 1996 concentration inequality (stated)">
+
+Let $\mathcal{F}$ be a countable class of measurable functions on $(\mathcal{X}, \mathcal{A})$ with envelope $F : \mathcal{X} \to \mathbb{R}_{\ge 0}$ satisfying $\|F\|_\infty \le M$ and $\sigma^2 := \sup_{f \in \mathcal{F}} P f^2 < \infty$. Then for every $t \ge 0$,
+
+$$
+\Pr\!\Bigl(\|\mathbb{G}_n\|_\mathcal{F} \;\ge\; \mathbb{E}\|\mathbb{G}_n\|_\mathcal{F} + t\Bigr) \;\le\; K \exp\!\Bigl(-\frac{t^2}{C \sigma^2 + D\,t\,M / \sqrt n}\Bigr)
+$$
+
+for universal constants $K, C, D > 0$ independent of $n$ and $\mathcal{F}$. The inequality has two regimes: for small $t$ (the "sub-Gaussian" regime) the $\sigma^2$ term dominates and the bound is $\exp(-t^2 / (C\sigma^2))$; for large $t$ (the "sub-exponential" regime) the $tM/\sqrt n$ term takes over. Bousquet (2002) refined Talagrand's original constants to near-optimal values.
+
+</TheoremBlock>
+
+<RemarkBlock number={21} title="The Talagrand proof is book-length">
+
+Honest warning: the Talagrand 1996 proof uses *isoperimetry in product spaces* — the most technically demanding machinery in modern probability theory — and runs to several chapters of Ledoux–Talagrand 1991 (Ch. 6–7 specifically; the preparatory material on entropy and Gaussian processes adds two more chapters). Reproducing the argument at Topic 32's pedagogical level would expand the chapter by 50% without adding conceptual payoff that the statement itself doesn't carry. We state the inequality, cite the sources, and use it; the full derivation is the kind of reference-book material formalStatistics deliberately doesn't reproduce.
+
+</RemarkBlock>
+
+<RemarkBlock number={22} title="Local empirical-process theory — formalML pointer">
+
+M-estimators (MLE, robust estimators, quantile regression, Z-estimators) have asymptotic-normality theory that specialises Donsker to neighbourhoods of the parameter value — "local empirical-process theory". The main result (vdV2000 §25 Thm 25.57): under local asymptotic equicontinuity of the score process and a non-singular information matrix, $\sqrt n (\hat\theta_n - \theta_0) \rightsquigarrow$ Gaussian with the semiparametric-efficient variance. The proof uses Talagrand-type concentration on local empirical processes to control the remainder in the Taylor-expansion argument — exactly what Thm 9 gives. Semiparametric efficiency theory, targeted maximum likelihood, and all modern causal-inference estimators live on this foundation; the full development is deferred to formalML's [semiparametric-inference](https://formalml.com/topics/semiparametric-inference) topic.
+
+</RemarkBlock>
+
+<a id="section-32-10"></a>
+
+## 32.10 Track 8 retrospective, curriculum close, and the road to formalML
+
+{/* SCAFFOLD §32.10 — curriculum closer.
+  - Opening: Topic 32 closes Track 8 AND the curriculum. Names what this means operationally.
+  - Fig 9 (32-track-8-final-spine): 4-of-4 Track 8 spine + 6 formalML bridge arrows.
+  - Rem 23: Banach-space CLT beyond $\ell^\infty$ deferred (Giné–Nickl Ch. 3) → formalML.
+  - Rem 24: the curriculum-closer / formalML handoff — the final paragraph of the main MDX body.
+  - Then horizontal rule + Appendix C as distinct epilogue.
+*/}
+
+Topic 32 closes Track 8 and the curriculum. Track 8 is a four-pillar nonparametric toolkit — order statistics + kernel density estimation + bootstrap + empirical processes — anchored in the empirical distribution and the functional CLT that governs its fluctuations. The curriculum is the 32-topic formal-probability-and-statistics pipeline formalStatistics was built to ship. Both are complete with this merge. Figure 9 shows the final iteration of the Track 8 spine; the six dashed arrows on the right are the six formalML target topics where Topic 32's forward-pointers land. Every forward-promise the 32 MDX files accumulated over ~50,000 words of exposition has now been either discharged inside formalStatistics or handed off to a named formalML slug. The remaining two remarks of §32.10 name the last two deferred topics — the Banach-space generalisation of Donsker, and the formalML handoff itself — before the curriculum-retrospective epilogue.
+
+![Track 8 spine — the final iteration. Four filled (published) topic nodes: 29, 30, 31, 32. Arrows show the chain 29 → 30 → 31 → 32 plus the long-range 29 → 32 edge via Donsker for $\mathcal{F}_{\mathrm{cdf}}$. On the right, six dashed-outline formalML target nodes: generalization-bounds, pac-bayes-bounds, conformal-prediction, semiparametric-inference, causal-inference-methods, extreme-value-theory — each connected to Topic 32 via a dashed forward-pointer.](/images/topics/empirical-processes/32-track-8-final-spine.png)
+
+*Figure 9. Track 8 spine, final iteration — 4 of 4 published, track complete. The six dashed arrows on the right mark the formalStatistics-to-formalML handoff surface: every forward pointer from Track 8 leaves the site for formalML's topic slugs named in the figure.*
+
+<RemarkBlock number={23} title="Beyond $\ell^\infty$: Banach-space CLT">
+
+$\ell^\infty(\mathcal{F})$ is the simplest Banach space in which Donsker's theorem makes sense, because sup-norm convergence plays well with the bounded-function indexing and because chaining arguments reduce neatly to bracketing-integral bounds. General Banach-space CLTs — Donsker-like statements in Hilbert-valued or Banach-valued settings with abstract covariance operators — require Gaussianity assumptions on the limit and *type-2* geometric conditions on the space (Ledoux–Talagrand Ch. 10; Giné–Nickl Ch. 3). These generalise Topic 32's machinery to the high-dimensional-statistics setting where observations themselves live in Hilbert space (e.g., functional data analysis, kernel mean embeddings). All of this lives in formalML's `high-dimensional-statistics` and related topics; Topic 32 stays at $\ell^\infty(\mathcal{F})$ because it's the cleanest case and the one that carries the functional-delta machinery of §32.7 without additional geometric scaffolding.
+
+</RemarkBlock>
+
+<RemarkBlock number={24} title="The curriculum-closer / formalML handoff">
+
+The reader who has made it here — through Carathéodory and conditional probability, through LLN and CLT, through MLE and sufficient statistics, through hypothesis tests and confidence intervals, through OLS and GLMs and regularisation, through priors and MCMC and hierarchical models, and now through order statistics and KDE and bootstrap and empirical processes — has the rigorous probability-and-statistics vocabulary formalML's ML-math topics assume without apology. Every forward-promise the formalStatistics curriculum accumulated has been discharged either inside the site (Donsker here, Lehmann–Scheffé at Topic 16, posterior consistency at Topic 25) or to a named formalML slug. The next step is formalML itself, where generalization bounds build directly on §32.4, where semiparametric inference and causal inference build on §32.7's functional delta method, where conformal prediction builds on Topic 29 §29.5's DKW inequality. The curriculum retrospective that follows names the handoff, the capstone theorems, and the track-by-track throughline — an epilogue, not a §32.11.
+
+</RemarkBlock>
+
+---
+
+## Curriculum retrospective
+
+*A short retrospective on what shipping Topic 32 means. Renders as a distinct epilogue section at the end of the MDX, after the §32.10 horizontal rule — a coda, not a §32.11.*
+
+**What does shipping Topic 32 mean?** The site is now feature-complete at 32 of 32 topics. Every curriculum-graph node has `status: "published"`. Every forward-promise harvested from the 32-topic MDX chain has been discharged, either within formalStatistics or to a named formalML target. The formalStatistics-to-formalML handoff has six named targets: [`generalization-bounds`](https://formalml.com/topics/generalization-bounds), [`pac-bayes-bounds`](https://formalml.com/topics/pac-bayes-bounds), [`conformal-prediction`](https://formalml.com/topics/conformal-prediction), [`semiparametric-inference`](https://formalml.com/topics/semiparametric-inference), [`causal-inference-methods`](https://formalml.com/topics/causal-inference-methods), [`extreme-value-theory`](https://formalml.com/topics/extreme-value-theory).
+
+**The five load-bearing theorems of formalStatistics.**
+
+1. **Carathéodory's extension theorem** (Track 1, Topic 1 §1.6). The measure-theoretic bedrock: every countably-additive set function on a semialgebra extends uniquely to a measure. Everything downstream is a consequence.
+2. **The Central Limit Theorem** (Track 3, Topic 11 §11.5, via Lindeberg–Feller). $\sqrt n (\bar X_n - \mu) \rightsquigarrow \mathcal{N}(0, \sigma^2)$. The finite-dimensional template Donsker lifts one level.
+3. **Rao–Blackwell + Lehmann–Scheffé** (Track 4, Topic 16 §16.7 + §16.10). Completeness + sufficiency + unbiasedness = UMVUE. The cleanest frequentist-optimality result in the curriculum.
+4. **Posterior consistency** (Track 7, Topic 25 §25.8, via Schwartz's theorem). Bayes with a prior giving positive mass to every neighborhood of the truth recovers the truth in the limit. The Bayesian analog of consistency.
+5. **Donsker's theorem** (Track 8, Topic 32 §32.5). $\sqrt n (F_n - F) \rightsquigarrow \mathbb{B}_F$ in $\ell^\infty(\mathbb{R})$. The curriculum closer: lifts LLN + CLT from pointwise/finite-dimensional to uniform/functional statements.
+
+**Track-by-track recap.**
+
+- **Track 1 (Foundations of Probability, Topics 1–4):** Kolmogorov axioms, conditional probability, random variables, expectation. The measure-theoretic primitives.
+- **Track 2 (Core Distributions & Families, Topics 5–8):** discrete + continuous families, exponential families, multivariate distributions. The vocabulary for building models.
+- **Track 3 (Convergence & Limit Theorems, Topics 9–12):** modes of convergence, LLN, CLT, large deviations. The asymptotic toolkit.
+- **Track 4 (Statistical Estimation, Topics 13–16):** point estimation, MLE, MoM, sufficient statistics. The estimation framework.
+- **Track 5 (Hypothesis Testing & Confidence, Topics 17–20):** NP paradigm, LR tests, CIs, multiple testing. The inference framework.
+- **Track 6 (Regression & Linear Models, Topics 21–24):** OLS, GLMs, regularization, model selection. The regression framework.
+- **Track 7 (Bayesian Statistics, Topics 25–28):** priors, MCMC, model comparison / BMA, hierarchical models. The Bayesian framework.
+- **Track 8 (High-Dimensional & Nonparametric, Topics 29–32):** order statistics, KDE, bootstrap, empirical processes. The nonparametric framework and the track that closes the curriculum.
+
+**The formalStatistics-to-formalML handoff, named explicitly.** The reader who has reached the end of Topic 32 is now equipped for:
+
+- **Generalization bounds** — uniform convergence of training risk to test risk via function-class complexity, direct lift of §32.4.
+- **PAC-Bayes bounds** — posterior-over-hypotheses generalization bounds, uses the symmetrisation technique of §32.4.
+- **Conformal prediction** — distribution-free predictive intervals via exchangeability, uses the DKW inequality of Topic 29 §29.5 and the empirical-process framework of §32.
+- **Semiparametric inference** — efficient estimation in models with a finite-dimensional parameter of interest and an infinite-dimensional nuisance; built on local empirical-process theory (local Donsker, local bracketing) deferred from §32.9 Rem 22.
+- **Causal inference methods** — TMLE, AIPW, efficient-influence-function methods; built on the functional delta method of §32.7.
+- **Extreme value theory** — Fisher–Tippett–Gnedenko asymptotics for $X_{(n)}$ and the generalized Pareto; forward-pointed from Topic 29 §29.10 Rem 18, orthogonal to §32 but listed here for completeness.
+
+The site is complete. Thank you, reader — and on to formalML.
+
+---
+
+### References
+
+1. van der Vaart, Aad W., and Jon A. Wellner. (1996). *[Weak Convergence and Empirical Processes: With Applications to Statistics](https://link.springer.com/book/10.1007/978-1-4757-2545-2)*. Springer Series in Statistics.
+2. Kosorok, Michael R. (2008). *[Introduction to Empirical Processes and Semiparametric Inference](https://link.springer.com/book/10.1007/978-0-387-74978-5)*. Springer Series in Statistics.
+3. Pollard, David. (1984). *[Convergence of Stochastic Processes](https://link.springer.com/book/10.1007/978-1-4612-5254-2)*. Springer Series in Statistics.
+4. Pollard, David. (1990). *[Empirical Processes: Theory and Applications](https://projecteuclid.org/ebooks/nsf-cbms-regional-conference-series-in-probability-and-statistics/Empirical-Processes--Theory-and-Applications/toc/10.1214/cbms/1462061091)*. *NSF-CBMS Regional Conference Series in Probability and Statistics*, Vol. 2.
+5. Dudley, R. M. (1978). *[Central Limit Theorems for Empirical Measures](https://projecteuclid.org/journals/annals-of-probability/volume-6/issue-6/Central-Limit-Theorems-for-Empirical-Measures/10.1214/aop/1176995384.full)*. *Annals of Probability*, 6(6), 899–929.
+6. Dudley, R. M. (1999). *[Uniform Central Limit Theorems](https://www.cambridge.org/core/books/uniform-central-limit-theorems/AE550D3CDFD1F2A23D4089CCA92C7518)*. Cambridge University Press.
+7. Giné, Evarist, and Richard Nickl. (2016). *[Mathematical Foundations of Infinite-Dimensional Statistical Models](https://www.cambridge.org/core/books/mathematical-foundations-of-infinitedimensional-statistical-models/C9D2A07B20A0F37F89EF78998E44A1B1)*. Cambridge Series in Statistical and Probabilistic Mathematics.
+8. Talagrand, Michel. (1996). *[New Concentration Inequalities in Product Spaces](https://link.springer.com/article/10.1007/s002220050108)*. *Inventiones Mathematicae*, 126(3), 505–563.
+9. Ledoux, Michel, and Michel Talagrand. (1991). *[Probability in Banach Spaces: Isoperimetry and Processes](https://link.springer.com/book/10.1007/978-3-642-20212-4)*. Springer Ergebnisse der Mathematik.
+10. Vapnik, V. N., and A. Ya. Chervonenkis. (1971). *[On the Uniform Convergence of Relative Frequencies of Events to Their Probabilities](https://doi.org/10.1137/1116025)*. *Theory of Probability and Its Applications*, 16(2), 264–280.
+11. Sauer, Norbert. (1972). *[On the Density of Families of Sets](https://doi.org/10.1016/0097-3165(72)90019-2)*. *Journal of Combinatorial Theory, Series A*, 13(1), 145–147.
+12. Donsker, Monroe D. (1952). *[Justification and Extension of Doob's Heuristic Approach to the Kolmogorov–Smirnov Theorems](https://projecteuclid.org/journals/annals-of-mathematical-statistics/volume-23/issue-2/Justification-and-Extension-of-Doobs-Heuristic-Approach-to-the-Kolmogorov/10.1214/aoms/1177729445.full)*. *Annals of Mathematical Statistics*, 23(2), 277–281.
+13. Billingsley, Patrick. (1999). *[Convergence of Probability Measures](https://onlinelibrary.wiley.com/doi/book/10.1002/9780470316962)* (2nd ed.). Wiley Series in Probability and Statistics.
+14. van der Vaart, Aad W. (2000). *[Asymptotic Statistics](https://www.cambridge.org/core/books/asymptotic-statistics/A3C7DAD3F7E66A1FA60E9C8FE132EE1D)*. Cambridge Series in Statistical and Probabilistic Mathematics.

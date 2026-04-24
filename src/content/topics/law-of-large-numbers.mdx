@@ -1102,7 +1102,7 @@ $$
 \sup_\theta |\hat{R}_n(\theta) - R(\theta)| \xrightarrow{\text{a.s.}} 0
 $$
 
-This is exactly the type of result that the Glivenko--Cantelli theorem provides for indicator functions $\mathbf{1}(X \leq x)$, and its generalization to richer function classes (via Vapnik--Chervonenkis theory) is what makes ERM work. The function class $\{(x, y) \mapsto \ell(y, f_\theta(x)) : \theta \in \Theta\}$ must be "small enough" — specifically, its VC dimension must be finite — for uniform convergence to hold.
+This is exactly the type of result that the Glivenko--Cantelli theorem provides for indicator functions $\mathbf{1}(X \leq x)$, and its generalization to richer function classes (via Vapnik--Chervonenkis theory — proved at [Topic 32 §32.4](/topics/empirical-processes#section-32-4)) is what makes ERM work. The function class $\{(x, y) \mapsto \ell(y, f_\theta(x)) : \theta \in \Theta\}$ must be "small enough" — specifically, its VC dimension must be finite — for uniform convergence to hold.
 
 The logical chain from the results in this topic to statistical learning theory is:
 
@@ -1119,7 +1119,7 @@ See <ExternalLink href="https://formalml.com/topics/empirical-risk-minimization"
 <RemarkBlock number={6} title="Glivenko-Cantelli as the Starting Point for Empirical Process Theory">
 The Glivenko--Cantelli theorem is the simplest case of a *uniform law of large numbers*. It says that the empirical measure $P_n$ (which assigns mass $1/n$ to each observation) converges to the population measure $P$ uniformly over the class of half-lines $\{(-\infty, x] : x \in \mathbb{R}\}$.
 
-Empirical process theory (coming in the Statistical Inference track) generalizes from half-lines to arbitrary function classes $\mathcal{F}$, asking: when does $\sup_{f \in \mathcal{F}} |P_n f - Pf| \to 0$? The answer involves the *complexity* of $\mathcal{F}$ — measured by the VC dimension, covering numbers, or metric entropy. The Glivenko--Cantelli class of half-lines has VC dimension 1, which is why the theorem holds without any distributional assumptions.
+[Empirical process theory (Topic 32)](/topics/empirical-processes) generalizes from half-lines to arbitrary function classes $\mathcal{F}$, asking: when does $\sup_{f \in \mathcal{F}} |P_n f - Pf| \to 0$? The answer involves the *complexity* of $\mathcal{F}$ — measured by the VC dimension, covering numbers, or metric entropy. The Glivenko--Cantelli class of half-lines has VC dimension 1, which is why the theorem holds without any distributional assumptions.
 
 This is the bridge between the LLN (convergence for a single statistic) and statistical learning theory (uniform convergence over a class of statistics). The function class must be "learnable" (finite VC dimension or, more generally, finite metric entropy) for the uniform LLN to hold, and learnability is *equivalent* to the uniform LLN. This equivalence — the fundamental theorem of statistical learning — is one of the deepest results in the field.
 
