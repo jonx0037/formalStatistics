@@ -1496,24 +1496,34 @@ export function supNorm(vals: readonly number[]): number {
  * Check whether a binary function class shatters a finite point set.
  *
  * For the three locked classes from Figure 3 / VCShatteringDemo we use
- * analytic certificates instead of brute-force parameter search:
+ * analytic certificates rather than a generic 2ⁿ parameter search:
  *
- *   • `'halfline'`      — halflines {x ≤ t} on ℝ. Shatterable iff |points| ≤ 1.
- *   • `'halfspace-2d'`  — halfspaces {w·x ≤ b} on ℝ². A point set is shattered
- *                         iff it has size ≤ 3 AND the points are in general
- *                         position (no three collinear). Radon's theorem gives
- *                         the n = 4 obstruction; we test for n ≤ 4 by brute
- *                         force over the 2ⁿ labelings, using LP-feasibility via
- *                         the n ≤ 3 collinearity test.
- *   • `'rectangle-2d'`  — axis-aligned rectangles [a₁,b₁]×[a₂,b₂] on ℝ². VC=4.
- *                         Shatterable iff |points| ≤ 4 AND no point lies in the
- *                         convex hull of the other four (for n=5). For n ≤ 4 we
- *                         verify by constructing the 2ⁿ witness rectangles.
+ *   • `'halfline'`      — halflines {x ≤ t} on ℝ. VC = 1. Shatterable iff
+ *                         |points| ≤ 1. (Two points always admit the labelling
+ *                         "smaller point positive, larger point negative",
+ *                         which no halfline realises.)
  *
- * The `classFn` parameter is accepted for symmetry with the interactive
- * component's API but is unused when `classKind` is provided (the analytic
- * shortcut is faster and exact). Passing neither falls back to a 2ⁿ brute-force
- * search over a coarse parameter grid — only safe for n ≤ 6.
+ *   • `'halfspace-2d'`  — halfspaces {w·x ≤ b} on ℝ². VC = 3. We recognise
+ *                         shatterability only when |points| ≤ 3: any set of
+ *                         size 0, 1, or 2 is treated as trivially shatterable,
+ *                         and a 3-point set is shatterable iff the three points
+ *                         are in general position (not collinear), tested via
+ *                         the triangle-area determinant. For n ≥ 4 we return
+ *                         false by Radon's theorem — any 4 points in ℝ² admit
+ *                         a Radon partition that no halfspace can separate.
+ *
+ *   • `'rectangle-2d'`  — axis-aligned rectangles [a₁,b₁]×[a₂,b₂] on ℝ². VC = 4.
+ *                         For |points| ≤ 4 we perform an exact enumeration of
+ *                         all 2ⁿ labellings: a subset S is realisable iff the
+ *                         axis-aligned bounding box of S contains no non-S
+ *                         point (including boundary). Shatterable iff every
+ *                         subset is realisable. For n ≥ 5 we return false.
+ *                         (The "no strictly-interior point" heuristic fails for
+ *                         configurations like the 4 square corners, where the
+ *                         diagonal labelling is obstructed by boundary-on-bbox
+ *                         non-subset points.)
+ *
+ * Passing an unknown `classKind` returns false.
  */
 export type VCClassKind = 'halfline' | 'halfspace-2d' | 'rectangle-2d';
 
@@ -1538,29 +1548,34 @@ export function vcShatterCheck(
     return Math.abs(area2) > 1e-10;
   }
   if (classKind === 'rectangle-2d') {
-    // VC(axis-aligned rectangles) = 4. Shatterable iff no point is
-    // componentwise "dominated" by another in both coordinates (i.e., no
-    // point lies strictly in the interior of the bounding rectangle of
-    // some subset of the others).
+    // VC(axis-aligned rectangles) = 4. For n > 4 we're past the VC
+    // dimension, so the set cannot be shattered.
     if (n > 4) return false;
-    // For n ≤ 4 we just check that no point is strictly inside the axis-
-    // aligned bounding box of any pair of others (strict containment by a
-    // 2-point subset is the only n ≤ 4 obstruction).
     const pts = points as readonly (readonly number[])[];
-    for (let i = 0; i < n; i++) {
-      for (let j = 0; j < n; j++) {
-        if (j === i) continue;
-        for (let k = 0; k < n; k++) {
-          if (k === i || k === j) continue;
-          const [xi, yi] = [pts[i][0], pts[i][1]];
-          const [xj, yj] = [pts[j][0], pts[j][1]];
-          const [xk, yk] = [pts[k][0], pts[k][1]];
-          const xMin = Math.min(xj, xk);
-          const xMax = Math.max(xj, xk);
-          const yMin = Math.min(yj, yk);
-          const yMax = Math.max(yj, yk);
-          if (xi > xMin && xi < xMax && yi > yMin && yi < yMax) return false;
-        }
+    // Exact enumeration: for every non-empty subset S (mask), form its
+    // axis-aligned bounding box and verify that no non-S point lies
+    // inside (inclusive-boundary). The full-set mask (all bits on)
+    // is vacuously realisable (no non-S points to exclude), so the
+    // loop body short-circuits correctly for it too.
+    for (let mask = 1; mask < 1 << n; mask++) {
+      let xMin = Infinity;
+      let xMax = -Infinity;
+      let yMin = Infinity;
+      let yMax = -Infinity;
+      for (let i = 0; i < n; i++) {
+        if ((mask & (1 << i)) === 0) continue;
+        const [x, y] = [pts[i][0], pts[i][1]];
+        if (x < xMin) xMin = x;
+        if (x > xMax) xMax = x;
+        if (y < yMin) yMin = y;
+        if (y > yMax) yMax = y;
+      }
+      for (let i = 0; i < n; i++) {
+        if ((mask & (1 << i)) !== 0) continue;
+        const [x, y] = [pts[i][0], pts[i][1]];
+        // Non-strict boundary: a point on the edge of the bbox is still
+        // inside any rectangle that contains the bbox.
+        if (x >= xMin && x <= xMax && y >= yMin && y <= yMax) return false;
       }
     }
     return true;

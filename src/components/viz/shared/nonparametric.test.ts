@@ -851,6 +851,37 @@ console.log('========================================\n');
   check('T32.8  vcShatterCheck(halfspace-2d, 3 non-collinear)', v === true, v, true, 'exact');
 }
 
+// ── T32.8a — rectangle-2d shatters the 4-point diamond ────────────────────
+// Classical shatter witness: 4 points arranged so each pair has a tight
+// bounding box that excludes the other two. Each of the 2⁴ subsets is
+// realisable by an axis-aligned rectangle.
+{
+  const v = vcShatterCheck('rectangle-2d', [[0.5, 0], [1, 0.5], [0.5, 1], [0, 0.5]]);
+  check('T32.8a rectangle-2d(4-point diamond)', v === true, v, true, 'exact');
+}
+
+// ── T32.8b — rectangle-2d FAILS on the 4 square corners ───────────────────
+// Counterexample per Copilot review (PR #36): the 4 corners of the unit
+// square are NOT shatterable — the diagonal labelling {(0,0), (1,1)} can't
+// be realised because any rectangle containing them contains the full
+// [0,1]² bounding box, which includes the off-diagonal (0,1) and (1,0) on
+// its boundary. Regression test — the previous strict-interior heuristic
+// incorrectly reported this as shatterable.
+{
+  const v = vcShatterCheck('rectangle-2d', [[0, 0], [0, 1], [1, 0], [1, 1]]);
+  check('T32.8b rectangle-2d(4 square corners)', v === false, v, false, 'exact — diagonal labelling blocked by boundary points');
+}
+
+// ── T32.8c — rectangle-2d always false for n ≥ 5 ──────────────────────────
+// VC(axis-aligned rectangles) = 4; any 5-point configuration is past the
+// VC dimension and cannot be shattered.
+{
+  const v = vcShatterCheck('rectangle-2d', [
+    [0.5, 0], [1, 0.5], [0.5, 1], [0, 0.5], [0.5, 0.5],
+  ]);
+  check('T32.8c rectangle-2d(n = 5 past VC dim)', v === false, v, false, 'exact — always false past VC dim');
+}
+
 // ── T32.9 — Brownian-bridge variance at t=0.5, MC over 2000 paths ≈ 0.25 ──
 // Theoretical Var B°(t) = t(1 − t) = 0.25 at t = 0.5. Seeded LCG; tolerance
 // absorbs MC variance at 2000 paths.

@@ -1,10 +1,15 @@
 /**
  * FunctionalDeltaExplorer — Topic 32 §32.7 component.
  *
- * Demonstrates the functional delta method (Thm 5) by drawing 2000 bootstrap
+ * Demonstrates the functional delta method (Thm 5) by drawing 2000 Monte-Carlo
  * replicates of $\sqrt n (\phi(F_n) - \phi(F))$ for a user-selected
  * functional $\phi$ and underlying distribution $F$, and overlaying the
  * theoretical influence-function-Gaussian density.
+ *
+ * (The replicates are fresh iid draws from $F$, not bootstrap resamples from
+ * an observed sample — this is the Monte-Carlo simulation of the sampling
+ * distribution under repeated sampling from $F$, which is what the functional
+ * CLT of Thm 5 characterises.)
  *
  * Three functionals (mean / median / CvM) × three distributions (Uniform /
  * Normal / Exponential). For mean and median, the influence-function
@@ -149,6 +154,18 @@ export default function FunctionalDeltaExplorer() {
   );
   const n = N_SNAPS[nIdx];
 
+  // CvM φ(F) = ∫(F − F₀)² dF₀ is defined w.r.t. the fixed reference F₀ =
+  // Normal(0, 1). For non-normal F, φ(F) ≠ 0 and depends on F in a way the
+  // preset doesn't encode — leaving the histogram centre drifting away from
+  // zero, contradicting the UI's "asymptotic mean = 0" label. We therefore
+  // gate CvM to Normal-only until a proper numerical φ(F) is wired in
+  // (tracked as follow-up). When the user picks CvM, snap distKey to
+  // 'normal' and disable the other dist buttons (see render).
+  useEffect(() => {
+    if (funcKey === 'cvm' && distKey !== 'normal') setDistKey('normal');
+  }, [funcKey, distKey]);
+  const cvmLockedToNormal = funcKey === 'cvm';
+
   // MC replicates — recompute only when inputs change.
   const replicates = useMemo(
     () => runReplicates(preset, func, n, REPLICATES, runSeed * 7919),
@@ -276,22 +293,35 @@ export default function FunctionalDeltaExplorer() {
           Underlying F:
         </label>
         <div className="inline-flex rounded-md shadow-sm" role="group">
-          {baseDistributions.map((d) => (
-            <button
-              key={d.key}
-              type="button"
-              aria-pressed={distKey === d.key}
-              onClick={() => setDistKey(d.key)}
-              className={`border px-3 py-1.5 text-sm first:rounded-l-md last:rounded-r-md ${
-                distKey === d.key
-                  ? 'bg-blue-600 text-white border-blue-600'
-                  : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-600'
-              }`}
-            >
-              {d.label}
-            </button>
-          ))}
+          {baseDistributions.map((d) => {
+            const disabled = cvmLockedToNormal && d.key !== 'normal';
+            return (
+              <button
+                key={d.key}
+                type="button"
+                aria-pressed={distKey === d.key}
+                aria-disabled={disabled}
+                disabled={disabled}
+                onClick={() => setDistKey(d.key)}
+                title={disabled ? 'CvM is defined against F₀ = Normal(0, 1); pick a different functional to explore other F.' : undefined}
+                className={`border px-3 py-1.5 text-sm first:rounded-l-md last:rounded-r-md ${
+                  distKey === d.key
+                    ? 'bg-blue-600 text-white border-blue-600'
+                    : disabled
+                      ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed dark:bg-slate-800/50 dark:text-slate-500 dark:border-slate-700'
+                      : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-600'
+                }`}
+              >
+                {d.label}
+              </button>
+            );
+          })}
         </div>
+        {cvmLockedToNormal && (
+          <span className="text-xs italic text-slate-600 dark:text-slate-400">
+            locked to Normal — CvM compares F against the fixed reference F₀ = Normal(0, 1)
+          </span>
+        )}
       </div>
 
       <div className="mb-3 flex flex-wrap items-center gap-4">

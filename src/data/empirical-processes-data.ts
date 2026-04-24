@@ -80,9 +80,9 @@ export const normalBase: BaseDistributionSpec = {
 
 export const exponentialBase: BaseDistributionSpec = {
   key: 'exponential',
-  // Inverse-CDF: rate 1 → X = −log(1 − U). Use (1 − U) directly so we never
-  // log(0) when U = 0 — the LCG returns zero only on a single state (period
-  // 2³¹−1), but belt-and-braces costs nothing.
+  // Inverse-CDF: rate 1 → X = −log(1 − U). This only risks log(0) if U = 1;
+  // U = 0 is safe. The sampler uses `rng.random()`, which returns values in
+  // [0, 1), so 1 − U stays strictly positive and the log is always finite.
   label: 'Exponential(1)',
   sampler: (rng) => -Math.log(1 - rng.random()),
   Fcdf: (t) => (t <= 0 ? 0 : 1 - Math.exp(-t)),
