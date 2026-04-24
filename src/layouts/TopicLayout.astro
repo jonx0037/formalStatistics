@@ -1,6 +1,7 @@
 ---
 import BaseLayout from './BaseLayout.astro';
 import ExternalLink from '../components/ui/ExternalLink.astro';
+import graphData from '../data/curriculum-graph.json';
 
 interface Props {
   title: string;
@@ -35,6 +36,21 @@ const difficultyColors = {
 const formattedDate = datePublished
   ? datePublished.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
   : null;
+
+// Index by both node.id and URL slug so author-side slugs in frontmatter
+// resolve regardless of which form they use (curriculum-graph.json uses short
+// ids for some domains but full URL slugs for others).
+const topicMeta = new Map<string, { label: string; url: string; status: 'published' | 'planned' }>();
+for (const node of graphData.nodes) {
+  const meta = {
+    label: node.label,
+    url: node.url,
+    status: node.status as 'published' | 'planned',
+  };
+  topicMeta.set(node.id, meta);
+  const urlSlug = node.url.replace(/^\/topics\//, '');
+  if (urlSlug !== node.id) topicMeta.set(urlSlug, meta);
+}
 ---
 
 <BaseLayout title={title} description={subtitle}>
@@ -104,22 +120,40 @@ const formattedDate = datePublished
           Where This Leads
         </h2>
         <div class="grid gap-3">
-          {connections.map((conn) => (
-            <div
-              class="p-4 rounded-lg border"
-              style="background: var(--color-surface-alt); border-color: var(--color-border);"
-            >
-              <span class="font-semibold" style="color: var(--color-text-heading);">
-                {conn.topic.replace(/-/g, ' ')}
-              </span>
-              <span class="text-xs ml-2 px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 border border-gray-200">
-                coming soon
-              </span>
-              <p class="text-sm mt-1" style="color: var(--color-text-muted);">
-                {conn.relationship}
-              </p>
-            </div>
-          ))}
+          {connections.map((conn) => {
+            const meta = topicMeta.get(conn.topic);
+            const label = meta?.label ?? conn.topic.replace(/-/g, ' ');
+            const url = meta?.url ?? `/topics/${conn.topic}`;
+            const isPlanned = meta?.status === 'planned';
+            return (
+              <div
+                class="p-4 rounded-lg border"
+                style="background: var(--color-surface-alt); border-color: var(--color-border);"
+              >
+                {isPlanned ? (
+                  <span class="font-semibold" style="color: var(--color-text-heading);">
+                    {label}
+                  </span>
+                ) : (
+                  <a
+                    href={url}
+                    class="font-semibold hover:underline"
+                    style="color: var(--color-primary);"
+                  >
+                    {label}
+                  </a>
+                )}
+                {isPlanned && (
+                  <span class="text-xs ml-2 px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 border border-gray-200">
+                    coming soon
+                  </span>
+                )}
+                <p class="text-sm mt-1" style="color: var(--color-text-muted);">
+                  {conn.relationship}
+                </p>
+              </div>
+            );
+          })}
         </div>
       </footer>
     )}
