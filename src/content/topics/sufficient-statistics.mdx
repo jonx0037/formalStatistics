@@ -747,6 +747,8 @@ The scalar Theorem 8 generalizes to $\theta \in \Theta \subseteq \mathbb{R}^k$ w
 Topic 7 introduced exponential families as a "convenient class with closed-form sufficient statistics, MLEs, and conjugate priors." PKD reverses the direction: under regularity, exponential families are the *only* such class. This is what makes the exp-family chapter foundational rather than ornamental — every regular family with bounded-dimensional sufficient statistics is, structurally, an exponential family. The catalog in Topic 7 (Bernoulli, Binomial, Poisson, Normal, Gamma, Beta, Multinomial, Dirichlet, etc.) is not a curated list of nice examples but an enumeration of all the families satisfying PKD's regularity. This is why exponential families appear everywhere in machine learning — variational inference, generalized linear models, conjugate Bayesian computation, energy-based models — they are the structural attractor for "tractable + parametric + regular."
 </RemarkBlock>
 
+<a id="section-16-11" />
+
 ## 16.11 UMVUE vs MLE vs MoM: The Estimator Landscape Closes
 
 Track 4 began with the evaluation framework (Topic 13: bias, variance, MSE, consistency, asymptotic normality, efficiency, CRLB) and applied it to two estimation methods: maximum likelihood (Topic 14) and method of moments (Topic 15). Topic 16 has now added the third — UMVUE via Lehmann–Scheffé. §16.11 brings all three into a single comparison: where they agree, where they diverge, and what their differences tell us about bias, efficiency, and the geometry of the likelihood.
@@ -803,6 +805,8 @@ The three principles agree in exp families in their natural parameter (Theorem 9
 Track 4 is now closed. Track 5 picks up the inferential toolkit — hypothesis testing, confidence intervals, Bayesian inference — built on top of the estimators we now have.
 </RemarkBlock>
 
+<a id="section-16-12" />
+
 ## 16.12 Where Sufficiency Falls Short
 
 Sufficiency is foundational but not the whole story of inference. Three short remarks flag where its reach ends.
@@ -848,7 +852,7 @@ The three operative principles (UMVUE, MLE, MoM) coincide in exp families in the
 Topic 16's machinery is foundational for almost every downstream topic on this site and on formalml.com.
 
 - **[Hypothesis Testing](/topics/hypothesis-testing)** (Topic 17) — score tests, Wald tests, and likelihood-ratio tests are all functions of the sufficient statistic. The one-sample t-test derivation (§17.7 Thm 5) uses Basu's $\bar X \perp\!\!\!\perp S^2$ independence directly, fulfilling the forward promise in Example 21 of this section. The Neyman–Pearson lemma is stated in Topic 17 §17.9 and proved in Topic 18.
-- **Confidence Intervals** (coming soon) — pivotal quantities are constructed from ancillary statistics (Basu's theorem gives the required independence); Wilks-type intervals use asymptotic sufficiency of the MLE.
+- **[Confidence Intervals](/topics/confidence-intervals-and-duality)** — pivotal quantities are constructed from ancillary statistics (Basu's theorem gives the required independence); Wilks-type intervals use asymptotic sufficiency of the MLE.
 - [**Bayesian Foundations**](/topics/bayesian-foundations-and-prior-selection) (Topic 25) — the posterior depends on the data only through the sufficient statistic. Conjugate priors (Topic 7 §7.7) become especially natural when $T$ is complete sufficient — the posterior collapses to a finite-dimensional family.
 - **[Linear Regression](/topics/linear-regression)** (Track 6) — OLS estimators are functions of $(\mathbf{X}^\top\mathbf{X}, \mathbf{X}^\top\mathbf{y})$ — sufficient statistics for the Normal linear model. Gauss–Markov gives UMVUE among linear unbiased estimators; under Normal errors, this is *the* UMVUE.
 - [**Generalized Linear Models**](/topics/generalized-linear-models) — GLMs leverage exp-family sufficient statistics directly; iteratively reweighted least squares is a score-based algorithm that descends along the sufficient statistic's geometry.

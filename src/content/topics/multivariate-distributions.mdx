@@ -448,6 +448,8 @@ The log-partition function $A(\boldsymbol{\eta}) = \frac{1}{2}\boldsymbol{\mu}^T
 
 ---
 
+<a id="section-8-4"></a>
+
 ## 8.4 Conditional Multivariate Normal
 
 This section contains the single most consequential formula in this topic. The conditional MVN result is the *exact same formula* used to make predictions in Gaussian processes, to update states in Kalman filters, and to perform Bayesian linear regression. Learn this formula once, and you have the engine behind three of the most important tools in applied ML.
@@ -928,7 +930,7 @@ When the covariance matrix $\boldsymbol{\Sigma}$ itself is unknown and we want t
 
 The **Inverse-Wishart distribution** $\mathcal{W}_p^{-1}(\boldsymbol{\Psi}, \nu)$ is the distribution of the inverse of a Wishart-distributed matrix, and it serves as the **conjugate prior for the covariance matrix** of a multivariate Normal. If we observe data from $\mathcal{N}_p(\boldsymbol{\mu}, \boldsymbol{\Sigma})$ with an Inverse-Wishart prior on $\boldsymbol{\Sigma}$, the posterior on $\boldsymbol{\Sigma}$ is also Inverse-Wishart with updated parameters.
 
-The full development of Wishart-based inference, including the Normal-Inverse-Wishart conjugate family for joint inference on $(\boldsymbol{\mu}, \boldsymbol{\Sigma})$, belongs to Bayesian Computation (coming soon).
+The full development of Wishart-based inference, including the Normal-Inverse-Wishart conjugate family for joint inference on $(\boldsymbol{\mu}, \boldsymbol{\Sigma})$, belongs to [Bayesian Computation](/topics/bayesian-computation-and-mcmc).
 </RemarkBlock>
 
 <img src="/images/topics/multivariate-distributions/covariance-geometry.png"
