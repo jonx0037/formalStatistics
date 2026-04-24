@@ -319,7 +319,7 @@ When $X_i \sim \mathcal{N}(0, 1)$ and $T_n = \bar X_n$, the sampling distributio
 </ExampleBlock>
 
 <RemarkBlock number={5} title="Bahadur-linearization: the Track 8 template">
-The three-step structure of the proof — (i) write the bootstrap statistic as an empirical average of iid-conditional-on-data terms, (ii) apply a triangular-array CLT to the linear part, (iii) upgrade pointwise convergence to uniform via Polya — is exactly the same template as Topic 29's Bahadur representation of the sample quantile and Topic 30's AMISE derivation for KDE. Every major Track 8 result reduces to this linearization pattern. Topic 29 §29.6 Rem 13 called this out as the unifying thread; Theorem 3's proof makes it literally visible. Topic 32's empirical-process generalization will lift the same structure one level: the "empirical average" becomes a stochastic integral against a sample-path-continuous limit process, the triangular-array CLT becomes Donsker's theorem, and Polya's upgrade becomes the uniform continuity of the limit Gaussian process.
+The three-step structure of the proof — (i) write the bootstrap statistic as an empirical average of iid-conditional-on-data terms, (ii) apply a triangular-array CLT to the linear part, (iii) upgrade pointwise convergence to uniform via Polya — is exactly the same template as Topic 29's Bahadur representation of the sample quantile and Topic 30's AMISE derivation for KDE. Every major Track 8 result reduces to this linearization pattern. Topic 29 §29.6 Rem 13 called this out as the unifying thread; Theorem 3's proof makes it literally visible. [Topic 32's empirical-process generalization](/topics/empirical-processes) lifts the same structure one level: the "empirical average" becomes a stochastic integral against a sample-path-continuous limit process, the triangular-array CLT becomes Donsker's theorem, and Polya's upgrade becomes the uniform continuity of the limit Gaussian process.
 </RemarkBlock>
 
 <RemarkBlock number={6} title="Bootstrapped model uncertainty">
@@ -629,12 +629,12 @@ Residual bootstrap is the regression-specific variant: fit the regression, compu
 </RemarkBlock>
 
 <RemarkBlock number={21} title="Track 8 spine — 3 of 4">
-Topic 29 built the empirical CDF machinery. Topic 30 smoothed it into densities. Topic 31 — this topic — resampled from it. Topic 32 will close the track by embedding all three into the empirical-process framework: $F_n$ becomes a sample-path-continuous limit process (the Brownian bridge), $\hat f_h$ becomes a smoothed version of that process, and the bootstrap becomes a resampling operation inside a function space. Donsker's theorem is the functional CLT that unifies the three; the bootstrap-consistency proof of §31.3 is a finite-dimensional shadow of Donsker. The empirical-process chapters of Topic 32 are the on-ramp to the uniform convergence and stochastic equicontinuity that underwrite modern high-dimensional statistics.
+Topic 29 built the empirical CDF machinery. Topic 30 smoothed it into densities. Topic 31 — this topic — resampled from it. [Topic 32](/topics/empirical-processes) closes the track by embedding all three into the empirical-process framework: $F_n$ becomes a sample-path-continuous limit process (the Brownian bridge), $\hat f_h$ becomes a smoothed version of that process, and the bootstrap becomes a resampling operation inside a function space. Donsker's theorem is the functional CLT that unifies the three; the bootstrap-consistency proof of §31.3 is a finite-dimensional shadow of Donsker. The empirical-process chapters of Topic 32 are the on-ramp to the uniform convergence and stochastic equicontinuity that underwrite modern high-dimensional statistics.
 </RemarkBlock>
 
 ![Horizontal spine figure with four topic markers labelled 29, 30, 31, 32. Topics 29 and 30 marked with checkmarks; topic 31 highlighted as the current topic with a filled marker; topic 32 shown as forthcoming.](/images/topics/bootstrap/31-track-8-spine.png)
 
-*Figure 9. Track 8 spine, updated. Topics 29 (ECDF & order statistics) and 30 (kernel density estimation) are published; Topic 31 (the bootstrap — this topic) is newly published; Topic 32 (empirical processes) is forthcoming. Together the four topics build a complete nonparametric-inference toolkit anchored in the empirical distribution.*
+*Figure 9. Track 8 spine, updated. Topics 29 (ECDF & order statistics) and 30 (kernel density estimation) are published; Topic 31 (the bootstrap — this topic) is newly published; [Topic 32 (empirical processes)](/topics/empirical-processes) is now published, closing the curriculum. Together the four topics build a complete nonparametric-inference toolkit anchored in the empirical distribution.*
 
 ---
 
