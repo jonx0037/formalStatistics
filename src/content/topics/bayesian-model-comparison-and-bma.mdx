@@ -439,7 +439,7 @@ so
 
 $$\log |\mathbf{H}(\hat\theta)| \;=\; k \log n \,+\, \log |\mathbf{I}(\hat\theta)| \,+\, O_p(1/\sqrt n).$$
 
-**Step 3 — MAP vs MLE.** $\hat\theta \to \hat\theta_{\mathrm{MLE}}$ in probability (consistency of MAP under bounded prior, [Topic 14 §14.4](/topics/maximum-likelihood#section-14-4)), so $\log L(\hat\theta) = \log L(\hat\theta_{\mathrm{MLE}}) + O_p(1/n)$.
+**Step 3 — MAP vs MLE.** $\hat\theta \to \hat\theta_{\mathrm{MLE}}$ in probability (the prior's score and Hessian are $O(1)$ while the likelihood's are $O(n)$, so the MAP's perturbation from the MLE is $O_p(1/n)$ — the MAP-side of the Bernstein–von Mises argument, [Topic 25 §25.8](/topics/bayesian-foundations-and-prior-selection#section-25-8)), so $\log L(\hat\theta) = \log L(\hat\theta_{\mathrm{MLE}}) + O_p(1/n)$.
 
 **Step 4 — substitute.**
 

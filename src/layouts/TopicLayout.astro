@@ -48,7 +48,7 @@ for (const node of graphData.nodes) {
     status: node.status as 'published' | 'planned',
   };
   topicMeta.set(node.id, meta);
-  const urlSlug = node.url.replace(/^\/topics\//, '');
+  const urlSlug = node.url.replace(/^\/topics\//, '').replace(/\/$/, '');
   if (urlSlug !== node.id) topicMeta.set(urlSlug, meta);
 }
 ---
