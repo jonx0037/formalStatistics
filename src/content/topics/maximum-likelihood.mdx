@@ -381,6 +381,8 @@ $$
 So the asymptotic variance scales by $[g'(\theta_0)]^2$. A consequence: the Fisher information transforms tensorially, and efficient estimators in one parameterization remain efficient under smooth reparameterization. Invariance is about the point; the delta method is about the spread.
 </RemarkBlock>
 
+<a id="section-14-4"></a>
+
 ## 14.4 Consistency
 
 The first asymptotic property is the most basic. As the sample size grows, does the MLE settle on the true parameter?
@@ -465,6 +467,8 @@ The three conditions in Theorem 3 — compact $\Theta$, KL-identifiability, cont
 
 When the conditions *hold*, they buy you consistency for free — no explicit convergence rate, no finite-sample guarantees, but the estimator does eventually home in on the truth. Rates and finite-sample behavior are the job of asymptotic normality (§14.5) and large-deviations-type bounds ([Topic 12](/topics/large-deviations)).
 </RemarkBlock>
+
+<a id="section-14-5"></a>
 
 ## 14.5 Asymptotic Normality
 
@@ -585,6 +589,8 @@ The component-wise Wald CI for the $j$-th parameter is $\hat\theta_{n,j} \pm z_{
 
 The full multivariate machinery, including the role of the Cramér–Rao matrix inequality and the block structure of information matrices for multi-parameter GLMs, is developed in [Topic 21 (Linear Regression)](/topics/linear-regression) and [Topic 22 (Generalized Linear Models)](/topics/generalized-linear-models).
 
+<a id="section-14-6"></a>
+
 ## 14.6 Asymptotic Efficiency
 
 Consistency and asymptotic normality locate the MLE within the space of well-behaved estimators. Efficiency ranks it.
@@ -627,6 +633,8 @@ This does not violate Theorem 5 because the Hodges estimator is irregular at $\t
 
 For practical purposes, the lesson is that superefficiency is a local, fragile phenomenon. The MLE is the default for good reason, and the escape routes — shrinkage, empirical Bayes, Stein-type estimators — deliver their gains through bias, regularization, or prior information, not through asymptotic efficiency.
 </RemarkBlock>
+
+<a id="section-14-7"></a>
 
 ## 14.7 Computing the MLE: Newton-Raphson
 

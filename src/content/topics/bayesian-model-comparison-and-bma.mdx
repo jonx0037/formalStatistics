@@ -268,7 +268,7 @@ Topic 27 inherits [Topic 25 §25.3](/topics/bayesian-foundations-and-prior-selec
 | Bayesian p-value | $p_B$ | $P(T(\mathbf{y}^{\text{rep}}, \theta) \geq T(\mathbf{y}, \theta) \mid \mathbf{y})$. |
 
 <RemarkBlock number={6} title="Independence conventions">
-Independence and conditional independence continue to be written with the [Topic 16 §16.9](/topics/conditional-probability#section-16-9) convention $\perp\!\!\!\perp$. The M-open / M-closed / M-complete trichotomy is used narratively (§27.2 Rem 3) without a dedicated symbol. When $\mathcal{M}_k$ and $\mathcal{M}_{k'}$ share parameters (nested models), we'll say so explicitly — the shared parameter is integrated against the joint prior, not multiplied.
+Independence and conditional independence continue to be written with the [Topic 16 §16.9](/topics/sufficient-statistics#section-16-9) convention $\perp\!\!\!\perp$. The M-open / M-closed / M-complete trichotomy is used narratively (§27.2 Rem 3) without a dedicated symbol. When $\mathcal{M}_k$ and $\mathcal{M}_{k'}$ share parameters (nested models), we'll say so explicitly — the shared parameter is integrated against the joint prior, not multiplied.
 </RemarkBlock>
 
 <a id="section-27-4"></a>
@@ -439,7 +439,7 @@ so
 
 $$\log |\mathbf{H}(\hat\theta)| \;=\; k \log n \,+\, \log |\mathbf{I}(\hat\theta)| \,+\, O_p(1/\sqrt n).$$
 
-**Step 3 — MAP vs MLE.** $\hat\theta \to \hat\theta_{\mathrm{MLE}}$ in probability (consistency of MAP under bounded prior, [Topic 14 §14.11 Rem 9](/topics/maximum-likelihood#section-14-11)), so $\log L(\hat\theta) = \log L(\hat\theta_{\mathrm{MLE}}) + O_p(1/n)$.
+**Step 3 — MAP vs MLE.** $\hat\theta \to \hat\theta_{\mathrm{MLE}}$ in probability (the prior's score and Hessian are $O(1)$ while the likelihood's are $O(n)$, so the MAP's perturbation from the MLE is $O_p(1/n)$ — the MAP-side of the Bernstein–von Mises argument, [Topic 25 §25.8](/topics/bayesian-foundations-and-prior-selection#section-25-8)), so $\log L(\hat\theta) = \log L(\hat\theta_{\mathrm{MLE}}) + O_p(1/n)$.
 
 **Step 4 — substitute.**
 

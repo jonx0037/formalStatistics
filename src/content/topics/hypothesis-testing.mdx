@@ -267,6 +267,8 @@ A clinical trial compares a new treatment (mean response $\mu_T$) to standard ca
 Choice among the three is a substantive decision driven by the clinical, regulatory, and ethical context — not a statistical one.
 </ExampleBlock>
 
+<a id="section-17-3"></a>
+
 ## 17.3 Test Statistics, Rejection Regions, and Size
 
 With the hypotheses fixed, we need a summary of the data that concentrates the evidence for / against $H_0$, and a rule that uses that summary to make a decision.
@@ -306,6 +308,8 @@ The exact size is $0.0207 < 0.05$, so the test is conservative at the nominal $\
 ![Two panels. Left: continuous null distribution with shaded two-sided rejection region, critical values ±c_α marked, Type I area shaded. Right: discrete null — Binomial(20, 0.5) PMF bars with rejection region X ≥ 15 colored, annotated "exact size ≈ 0.021 < α = 0.05".](/images/topics/hypothesis-testing/test-statistic-size.png)
 
 <NullAlternativeSimulator client:visible />
+
+<a id="section-17-4"></a>
 
 ## 17.4 Type I, Type II, and Power
 
@@ -408,6 +412,8 @@ A string of papers from the 2005–2016 period argued that naive p-value interpr
 These are genuine warnings; [Topic 20](/topics/multiple-testing-and-false-discovery) addresses the multiple-testing piece formally (Bonferroni, Holm, Benjamini-Hochberg FDR, Šidák — see especially §20.7 for the featured BH proof and §20.8 for the Ioannidis / Gelman-Loken framing). For Topic 17, the takeaway is: a p-value is a single number reporting a tail probability under a stated null; it is not a posterior probability, not an effect size, and not a replacement for thinking about the experimental design, power, and prior plausibility.
 </RemarkBlock>
 
+<a id="section-17-6"></a>
+
 ## 17.6 The z-test
 
 The z-test is the simplest test in the parametric toolkit: standardize the sample mean, compare to a standard Normal quantile. It is the direct consumer of the Central Limit Theorem (Topic 11 Thm 11.1) and the prototype for every asymptotic test in §17.9.
@@ -499,6 +505,8 @@ For small-$n$ discrete tests, the Normal approximation can miss the actual size 
 </RemarkBlock>
 
 ![Three panels. Left: one-sample z-test null N(0, 1) with two-sided rejection region at |z| > 1.96; observed Z = 1.51 marked, p-value ≈ 0.131 annotated. Center: Binomial(20, 0.5) PMF bars with rejection X ≥ 15 highlighted (exact size 0.021), superimposed Normal approximation density. Right: size comparison as n varies from 10 to 200 — exact discrete steps below α; Normal approximation oscillates above and below α, converging to α as n grows.](/images/topics/hypothesis-testing/z-test-and-exact.png)
+
+<a id="section-17-7"></a>
 
 ## 17.7 The t-test via Basu
 
@@ -598,6 +606,8 @@ Proof 3 Step 4 is the load-bearing step. Without Basu's $\bar X \perp\!\!\!\perp
 
 <TTestBasuFoundation client:visible />
 
+<a id="section-17-8"></a>
+
 ## 17.8 The χ²-test
 
 Variance inference and goodness-of-fit are the two classical uses of the chi-squared test. The first tests $H_0: \sigma^2 = \sigma_0^2$ directly; the second tests whether observed category counts match expected counts under a hypothesized multinomial model (Pearson's original formulation, 1900).
@@ -673,6 +683,8 @@ For two independent iid Normal samples with possibly different variances, the ra
 </RemarkBlock>
 
 ![Two panels. Left: null distribution of W = (n−1)S²/σ₀² — MC histogram for n = 15, σ = σ₀ = 1, overlaid with exact χ²_14 density, two-sided rejection region shaded at 2.5% / 97.5% quantiles (note the asymmetry — χ² is not symmetric). Right: goodness-of-fit Pearson χ² preview — 4-category observed-vs-expected bar chart, computed statistic, χ²_3 null density.](/images/topics/hypothesis-testing/chisquared-test.png)
+
+<a id="section-17-9"></a>
 
 ## 17.9 Asymptotic Tests: Wald, Score, LRT
 

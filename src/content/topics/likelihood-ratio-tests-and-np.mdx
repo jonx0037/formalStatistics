@@ -200,6 +200,8 @@ The residual sections then extend the theory in specific directions. §18.4 cata
 Every proof in Topic 18 is written for scalar $\theta \in \mathbb{R}$. Vector-$\theta$ extensions — $k$-df Wilks, UMP unbiased, Hunt-Stein invariance, Chernoff 1954 boundary cases — are stated with pointers to Lehmann-Romano (LEH2005) and nothing more. This is not pedagogical convenience; it is a deliberate scope decision. The scalar case captures every main idea (the pointwise LR comparison of Proof 1, the MLR-yields-UMP argument of Proof 2, the quadratic-approximation of Proof 3). The vector generalizations are mostly bookkeeping — matrix inverses in place of scalar divisions, quadratic forms $\mathbf{q}^\top \mathbf{I}(\theta_0) \mathbf{q}$ in place of $q^2 I(\theta_0)$, and a $\chi^2_k$ limit in place of $\chi^2_1$. Readers who need the vector results in production should consult LEH2005 Ch. 3 (vector UMP), Ch. 6 (invariance), and Ch. 12 (large-sample theory). [Topic 19](/topics/confidence-intervals-and-duality) and [Topic 20](/topics/multiple-testing-and-false-discovery) extend Track 5 with CI duality and multiple testing; vector-$\theta$ extensions to Wilks reappear organically in GLM inference on [formalml.com/generalized-linear-models](https://formalml.com/generalized-linear-models).
 </RemarkBlock>
 
+<a id="section-18-2"></a>
+
 ## 18.2 The Neyman-Pearson Lemma
 
 Start with the cleanest case: both $H_0$ and $H_1$ are single points in parameter space. Is there a level-$\alpha$ test whose power at $\theta_1$ exceeds the power of every other level-$\alpha$ test? Yes, and the answer is the likelihood-ratio test.
@@ -307,6 +309,8 @@ The NP test's "randomize on the boundary" clause looks strange but is needed onl
 Theorem 1 is a template — given the two parameter values and a chosen $\alpha$, it tells you what the MP test looks like. It does not by itself produce a *usable* test of a practical hypothesis like "is this drug better than placebo?" because practical hypotheses are rarely simple-vs-simple. The real $H_1$ is usually composite ("some positive effect of unspecified size"), and the MP test depends on which specific alternative you face. §18.3 asks: when is the NP rejection region *the same* for every alternative in a composite $H_1$? That is the MLR / Karlin-Rubin story.
 </RemarkBlock>
 
+<a id="section-18-3"></a>
+
 ## 18.3 Monotone Likelihood Ratio & Karlin-Rubin
 
 The NP test at Example 2 had a remarkable property: the rejection region $\{\bar x > c\}$ did not depend on $\mu_1$ — only on $\mu_0$, $\alpha$, $n$, $\sigma$. The same test was NP against every $\mu_1 > \mu_0$. That property has a name: **uniformly most powerful (UMP)**. Which families give it?
@@ -393,6 +397,8 @@ Karlin-Rubin gives UMP for *one-sided* composite alternatives. For two-sided alt
 The structural property was isolated by Karlin and Rubin (KAR1956) in their 1956 paper on MLR decision procedures, but the term "monotone likelihood ratio" itself was coined the next year in Karlin's solo paper on Pólya-type distributions (KAR1957). The MLR families are exactly the **totally positive of order 2** ($\mathrm{TP}_2$) families in Karlin's terminology — a classification that generalizes to kernels and sequences in a way that powers modern results in statistical order (Shaked & Shanthikumar 2007) and in asymptotic efficiency bounds for monotone regression (Groeneboom & Jongbloed 2014).
 </RemarkBlock>
 
+<a id="section-18-4"></a>
+
 ## 18.4 UMP in Action — Three Worked Families
 
 <ExampleBlock number={6} title="Binomial exact test is UMP one-sided">
@@ -426,6 +432,8 @@ The $\sigma$-unknown case is the historical reason Wilks pursued a different asy
 <RemarkBlock number={9} title="Why two-sided z-tests aren't UMP — and why it barely matters in practice">
 The two-sided Normal mean test $H_0: \mu = \mu_0$ vs $H_1: \mu \ne \mu_0$ has no UMP test (Remark 7). The equal-tail z-test is UMPU (LEH2005 Thm 4.4.1): MP within the class of unbiased tests, i.e., those with power $\ge \alpha$ at every alternative. The practical consequence is minor — in concrete applications the UMPU test and the only serious competitors differ by at most a few percent in power. But conceptually it is important: UMP is the exception, UMPU / invariance / LRT are the rule. The composite LRT of §18.5 is the price we pay for general-purpose applicability, and Wilks' theorem is the justification for believing that price is low.
 </RemarkBlock>
+
+<a id="section-18-5"></a>
 
 ## 18.5 The Likelihood-Ratio Principle for Composite H₀
 
@@ -488,6 +496,8 @@ a marginal likelihood in $\theta$ alone. Profile likelihood is a CI-construction
 <RemarkBlock number={11} title="LRT as the general-purpose optimality substitute">
 Wilks' generalized LRT plays the role of the Swiss-Army-knife testing procedure: applicable to every composite-vs-composite setting (subject to regularity), with a known asymptotic null distribution. It gives up finite-sample optimality (no Karlin-Rubin-style UMP guarantee) but retains asymptotic efficiency in a precise sense. The pragmatic algorithm is the following. If your family has MLR (exponential families, Uniform-scale family), prefer Karlin-Rubin UMP. If not, default to the LRT. If the LRT is analytically intractable, approximate with Wald or Score — noting that the three differ in finite samples (§18.7–§18.8) and that LRT is usually the safest choice when the three disagree. FER1967 develops this decision-theoretic calculus in full; LEH2005 Ch. 12 gives the modern view.
 </RemarkBlock>
+
+<a id="section-18-6"></a>
 
 ## 18.6 Wilks' Theorem
 
@@ -596,6 +606,8 @@ The vector-$\theta$ extension replaces the scalar quadratic $n I(\theta_0) (\hat
 Wilks' $\chi^2$ limit fails in three kinds of non-regular settings. (1) **Boundary nulls**, where $\theta_0$ lies on the boundary of $\Theta$ (e.g., testing a variance component in a mixed model with $H_0: \sigma_b^2 = 0$); Chernoff (1954) shows $-2 \log \Lambda_n$ converges to a $\tfrac{1}{2} \chi^2_0 + \tfrac{1}{2} \chi^2_1$ mixture. (2) **Non-identifiable parameters under $H_0$** (e.g., testing "there is one mixture component" vs "there are two" in a Gaussian mixture), where the limiting distribution is supremum-of-Gaussian-process and requires empirical-process techniques (Liu & Shao 2003; Drton 2009). (3) **Non-smooth families** (e.g., $U[0, \theta]$ shift models), where the MLE has a non-Normal limit and the Taylor expansion of Step 2 does not apply. In all three cases, Monte Carlo calibration of critical values is the safe practical default.
 </RemarkBlock>
 
+<a id="section-18-7"></a>
+
 ## 18.7 Wald, Score, LRT: First-Order Equivalence
 
 Wilks' theorem hands us the χ²₁ limit for the LRT. Topic 17 Theorem 7 hands us the same limit for Wald and Score. Do the three tests agree at finite $n$? Asymptotically yes, but with a precise rate — and their pairwise differences matter in practice.
@@ -656,6 +668,8 @@ A deeper lesson: the **Exponential family with scale parameter** gives the clean
 BUS1982 is the canonical pedagogical reference for choosing among the three; the summary is short. **Wald** is the easiest to compute — it uses only the unrestricted MLE and its observed information. It is the natural choice when the MLE is easy and the constrained optimization under $H_0$ is hard. **Score** uses only the null-restricted MLE and is the natural choice when the unconstrained MLE is hard (e.g., stepwise forward selection in regression: score tests evaluate adding a variable without refitting). **LRT** is parameterization-invariant (§18.8 Thm 6) and agrees with Wald and Score asymptotically but often dominates in finite samples, especially at boundary-rare events. The practical default for hypothesis testing in regular parametric families is LRT; switch to Wald or Score only when computational cost or the specific form of the null forces the decision. This practical ranking is the econometrics-textbook consensus (Greene 2018 Ch. 14; Wooldridge 2010 Ch. 12).
 </RemarkBlock>
 
+<a id="section-18-8"></a>
+
 ## 18.8 Finite-Sample Divergence & Reparameterization Invariance
 
 The three tests agree asymptotically but diverge at finite $n$. Two questions: how much, and does it matter? For regular families at large $n$, divergence is cosmetic. For small $n$ or boundary-rare events, divergence can flip the rejection decision. The reparameterization-invariance property of the LRT is the structural reason to prefer it in ambiguous cases.
@@ -712,6 +726,8 @@ The Wald statistic $W_n = n(\hat\theta_n - \theta_0)^2 I(\hat\theta_n)$ breaks d
 <RemarkBlock number={17} title="GLM link choice is a reparameterization invariance question">
 In generalized linear models, the question "should I fit with a logit link, a probit link, or a log link?" is, for inference purposes, a parameterization question. The coefficient $\beta_k$ under a logit link carries log-odds-ratio meaning; under a probit link, it carries z-score-of-normal-latent meaning. The LRT for $H_0: \beta_k = 0$ is invariant across link choices (Theorem 6(i)): the same $-2\log\Lambda_n$ and the same p-value regardless of link. The Wald test is not — Wald-logit, Wald-probit, and Wald-log-binomial yield three different numerical p-values for the same underlying hypothesis. This is why GLM software (R's `glm`, Python's `statsmodels.GLM`) typically reports LRT-based deviance-difference tests as the canonical nested-model comparison, reserving Wald for single-coefficient $z$-statistics. See [§22.8](/topics/generalized-linear-models#section-22-8) for the formal treatment and [§22.7 Thm 6](/topics/generalized-linear-models#section-22-7) for the deviance-LRT derivation.
 </RemarkBlock>
+
+<a id="section-18-9"></a>
 
 ## 18.9 Power Envelope and Local Power
 

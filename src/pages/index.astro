@@ -1,6 +1,7 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { tracks } from '../data/curriculum';
+import CurriculumGraph from '../components/viz/CurriculumGraph.tsx';
 ---
 
 <BaseLayout title="formalStatistics">
@@ -117,5 +118,19 @@ import { tracks } from '../data/curriculum';
         </div>
       ))}
     </div>
+  </section>
+
+  <!-- Curriculum graph -->
+  <section class="max-w-5xl mx-auto px-4 sm:px-6 pb-16">
+    <h2
+      class="text-2xl font-bold mb-1 text-center"
+      style="font-family: var(--font-serif); color: var(--color-text-heading);"
+    >
+      Prerequisite Graph
+    </h2>
+    <p class="text-sm mb-4 text-center" style="color: var(--color-text-muted);">
+      The full dependency graph &mdash; arrows show prerequisites. Click any node to open the topic.
+    </p>
+    <CurriculumGraph client:visible />
   </section>
 </BaseLayout>

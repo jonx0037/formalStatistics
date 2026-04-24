@@ -779,7 +779,7 @@ $$
 \psi(x, y; \beta) \;=\; x \cdot (y - x^\top \beta).
 $$
 
-The moment condition $\mathbb{E}[X(Y - X^\top \beta_0)] = \mathbb{E}[X \varepsilon] = 0$ holds by the regression assumption. The loss is $\rho(x, y; \beta) = \tfrac{1}{2}(y - x^\top \beta)^2$. We develop OLS in detail in Linear Regression (coming soon); here it suffices to note that OLS, MLE for a Normal-error linear model, falls into the M-estimation framework.
+The moment condition $\mathbb{E}[X(Y - X^\top \beta_0)] = \mathbb{E}[X \varepsilon] = 0$ holds by the regression assumption. The loss is $\rho(x, y; \beta) = \tfrac{1}{2}(y - x^\top \beta)^2$. We develop OLS in detail in [Linear Regression](/topics/linear-regression); here it suffices to note that OLS, MLE for a Normal-error linear model, falls into the M-estimation framework.
 </RemarkBlock>
 
 The list extends. Quantile regression: $\psi(x, y; \theta) = \bigl(\tau - \mathbb{1}\{y \le x^\top\theta\}\bigr) \cdot x$. Generalized linear models: $\psi$ is the score of the GLM likelihood. Robust regression: $\psi$ is a Huber or Tukey choice. The unifying observation is that *the estimator is determined by the choice of $\psi$*, and the asymptotic theory is the same in every case — the sandwich variance of §15.10.
@@ -928,7 +928,7 @@ A demonstration of the **misspecified** case is more striking. Suppose we genera
 <RemarkBlock number={11} title="Misspecification signature: A ≠ B">
 The information equality $A = B = I$ is a *theorem* under correct specification — and *only* under correct specification. When the model is wrong, $A$ and $B$ generally differ, and the sandwich variance gives the asymptotic variance of the M-estimator under the *true* (mis-specified) data-generating distribution rather than under the *postulated* (mis-specified) model.
 
-This has a name in econometrics: **robust standard errors**, or White's heteroskedasticity-consistent standard errors for OLS — exactly the sandwich formula applied to OLS under heteroskedasticity. The model-based standard errors assume homoskedasticity (and hence $A = B$); the sandwich corrects for the violation. Linear Regression (coming soon) develops this fully. The M-estimation framework makes the correction transparent: it is not a separate "robust" trick; it is what happens when you take the asymptotic theory seriously.
+This has a name in econometrics: **robust standard errors**, or White's heteroskedasticity-consistent standard errors for OLS — exactly the sandwich formula applied to OLS under heteroskedasticity. The model-based standard errors assume homoskedasticity (and hence $A = B$); the sandwich corrects for the violation. [Linear Regression](/topics/linear-regression) develops this fully. The M-estimation framework makes the correction transparent: it is not a separate "robust" trick; it is what happens when you take the asymptotic theory seriously.
 </RemarkBlock>
 
 ## 15.11 Robust M-Estimation: Huber and Tukey
