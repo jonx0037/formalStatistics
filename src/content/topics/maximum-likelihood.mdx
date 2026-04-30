@@ -51,6 +51,9 @@ formalmlConnections:
   - topic: "expectation-maximization"
     site: "formalml"
     relationship: "EM iteratively maximizes a lower bound on the log-likelihood for latent-variable models (mixtures, HMMs). Each M-step is an MLE of the complete-data log-likelihood."
+  - topic: "mixed-effects"
+    site: "formalml"
+    relationship: "Topic 14's general MLE small-sample bias theory — concretely the $(n-p)/n$ downward bias of the Normal-model variance MLE relative to the unbiased $S^2$ that divides by $n-p$ — is the prototype mixed-effects §4.1 invokes for variance components. The §4.2 REML correction generalizes the same degrees-of-freedom adjustment from a single residual $\\sigma^2$ to the full random-effects covariance $\\boldsymbol\\Sigma$, recovering Topic 14's correction as the fixed-design special case."
 connections:
   - topic: "point-estimation"
     relationship: "Topic 13 defined the estimator-evaluation framework — bias, MSE, consistency, asymptotic normality, score, Fisher information, CRLB, efficiency. Topic 14 applies this entire framework to the MLE, proving that it is consistent, asymptotically normal, and asymptotically efficient."
