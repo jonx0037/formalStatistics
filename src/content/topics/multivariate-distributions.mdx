@@ -50,6 +50,9 @@ formalmlConnections:
   - topic: "bayesian-neural-networks"
     site: "formalml"
     relationship: "Weight priors w ~ N_p(0, σ²I) are multivariate Normal. The posterior p(w|D) is approximately MVN for well-specified models. The Laplace approximation uses the Hessian as the inverse covariance."
+  - topic: "mixed-effects"
+    site: "formalml"
+    relationship: "§4 Thm 3's conditional-MVN formula $\\boldsymbol\\mu_{1|2} = \\boldsymbol\\mu_1 + \\boldsymbol\\Sigma_{12}\\boldsymbol\\Sigma_{22}^{-1}(\\mathbf{x}_2 - \\boldsymbol\\mu_2)$ (the Schur-complement reading) is the pure-probability identity mixed-effects §3 specializes to derive BLUP as the posterior mean $\\mathrm{Cov}(\\mathbf{u}, \\mathbf{y})\\,\\mathrm{Cov}(\\mathbf{y})^{-1}(\\mathbf{y} - \\mathbb{E}[\\mathbf{y}])$. Mixed-effects §2's marginal-distribution theorem reduces to the §3 affine-transform result here — linear maps preserve MVN."
 connections:
   - topic: "random-variables"
     relationship: "Topic 3 introduced joint/marginal/conditional distributions for the bivariate case (Definitions 8–14). This topic generalizes to p dimensions. The JointDistributionExplorer in Topic 3 visualized bivariate distributions; this topic's components visualize p-dimensional structure."
