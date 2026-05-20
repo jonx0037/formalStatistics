@@ -27,9 +27,6 @@ datePublished: 2026-04-12
 estimatedReadTime: 55
 abstract: "Eight continuous distributions arise from eight distinct probabilistic mechanisms. The Uniform(a,b) assigns equal density across an interval — the continuous version of maximum ignorance. The Normal(μ,σ²) is the fixed point of addition: sums of many small independent effects converge to it via the CLT. The Exponential(λ) models memoryless waiting times in a Poisson process. The Gamma(α,β) generalizes the Exponential to waiting for α events, subsuming both the Exponential (α=1) and the Chi-squared (α=k/2, β=1/2). The Beta(α,β) lives on [0,1] — precisely where probabilities live — making it the natural conjugate prior for Bernoulli and Binomial likelihoods. The Chi-squared, Student's t, and F distributions are derived from the Normal and Chi-squared distributions, forming the test statistic distributions for hypothesis testing. Each core distribution receives the same systematic treatment: PDF derivation, proofs of E[X] and Var(X), MGF, key properties, and ML connections. The relationship web organizes these distributions around two hubs: the Gamma hub (Exponential, Chi-squared as special cases) and the Normal hub (Chi-squared via Z², Student's t via Z/√(V/ν), F via ratio of Chi-squareds). Four of the five core distributions belong to the exponential family, which Topic 7 will unify."
 formalcalculusPrereqs:
-  - topic: "integration-by-parts"
-    site: "formalcalculus"
-    relationship: "Computing E[X] for the Exponential and Gamma distributions requires integration by parts. The Gamma function recursion Γ(α+1) = αΓ(α) is proved by integration by parts."
   - topic: "power-taylor-series"
     site: "formalcalculus"
     relationship: "The Normal MGF derivation uses 'completing the square' in the exponent, and the Gamma function's properties connect to power-series representations. The exponential series $e^x = \\sum x^k/k!$ underwrites the MGF identity $M_X(t) = \\sum \\mathbb E[X^k]\\,t^k/k!$ for distributions with finite moments."
@@ -156,7 +153,7 @@ import BetaPriorPosteriorExplorer from '../../components/viz/BetaPriorPosteriorE
 
 [Topic 5 — Discrete Distributions](/topics/discrete-distributions) cataloged seven discrete PMFs. We now turn to the continuous side: eight distributions, each arising from a distinct probabilistic mechanism, each receiving the same systematic treatment — PDF, moments, MGF, key property, ML connection.
 
-The difference is calculus, not philosophy. Where the discrete catalog summed PMFs, this one integrates PDFs. The tools we built in [Expectation, Variance & Moments](/topics/expectation-moments) — $E[X] = \int x \, f(x) \, dx$, $\text{Var}(X) = E[X^2] - (E[X])^2$, MGFs — carry over directly. What changes is the palette: these distributions live on continuous supports, their densities are smooth curves, and their moments require the integration techniques from <ExternalLink href="https://formalcalculus.com/topics/integration-by-parts" site="formalcalculus">Integration by Parts</ExternalLink> and <ExternalLink href="https://formalcalculus.com/topics/improper-integrals" site="formalcalculus">Improper Integrals</ExternalLink>.
+The difference is calculus, not philosophy. Where the discrete catalog summed PMFs, this one integrates PDFs. The tools we built in [Expectation, Variance & Moments](/topics/expectation-moments) — $E[X] = \int x \, f(x) \, dx$, $\text{Var}(X) = E[X^2] - (E[X])^2$, MGFs — carry over directly. What changes is the palette: these distributions live on continuous supports, their densities are smooth curves, and their moments require the integration techniques from <ExternalLink href="https://formalcalculus.com/topics/improper-integrals" site="formalcalculus">Improper Integrals & Special Functions</ExternalLink>.
 
 <RemarkBlock number={1} title="A Parallel Catalog">
 This topic mirrors [Discrete Distributions](/topics/discrete-distributions) by design. Five core distributions (Uniform, Normal, Exponential, Gamma, Beta) are independently motivated with full derivations. Three derived distributions (Chi-squared, Student's t, F) are defined by construction from the Normal and Chi-squared. The core five receive the same template as Topic 5: definition, then $E[X]$ and $\text{Var}(X)$ proofs, then MGF, then key properties, then an ML connection. The derived three share a single section — they are building blocks for hypothesis testing rather than independent modeling choices.
@@ -413,7 +410,7 @@ If $X \sim \text{Exponential}(\lambda)$, then $E[X] = \frac{1}{\lambda}$ and $\t
 </TheoremBlock>
 
 <ProofBlock>
-**Expectation.** Using <ExternalLink href="https://formalcalculus.com/topics/integration-by-parts" site="formalcalculus">integration by parts</ExternalLink> with $u = x$ and $dv = \lambda e^{-\lambda x} dx$:
+**Expectation.** Using <ExternalLink href="https://formalcalculus.com/topics/improper-integrals" site="formalcalculus">integration by parts</ExternalLink> with $u = x$ and $dv = \lambda e^{-\lambda x} dx$:
 
 $$
 E[X] = \int_0^{\infty} x \lambda e^{-\lambda x} \, dx = \left[-x e^{-\lambda x}\right]_0^{\infty} + \int_0^{\infty} e^{-\lambda x} \, dx
@@ -511,7 +508,7 @@ This is a convergent <ExternalLink href="https://formalcalculus.com/topics/impro
 
 **Key properties:**
 
-- **Recursion:** $\Gamma(\alpha + 1) = \alpha \, \Gamma(\alpha)$. This follows from <ExternalLink href="https://formalcalculus.com/topics/integration-by-parts" site="formalcalculus">integration by parts</ExternalLink>: with $u = t^{\alpha}$ and $dv = e^{-t} dt$, the boundary terms vanish and we get $\Gamma(\alpha + 1) = \alpha \int_0^{\infty} t^{\alpha-1} e^{-t} \, dt = \alpha \, \Gamma(\alpha)$.
+- **Recursion:** $\Gamma(\alpha + 1) = \alpha \, \Gamma(\alpha)$. This follows from <ExternalLink href="https://formalcalculus.com/topics/improper-integrals" site="formalcalculus">integration by parts</ExternalLink>: with $u = t^{\alpha}$ and $dv = e^{-t} dt$, the boundary terms vanish and we get $\Gamma(\alpha + 1) = \alpha \int_0^{\infty} t^{\alpha-1} e^{-t} \, dt = \alpha \, \Gamma(\alpha)$.
 
 - **Factorial connection:** Since $\Gamma(1) = \int_0^{\infty} e^{-t} \, dt = 1$, the recursion gives $\Gamma(n) = (n-1)!$ for every positive integer $n$. The Gamma function extends the factorial to non-integer arguments.
 

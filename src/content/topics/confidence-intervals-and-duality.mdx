@@ -35,13 +35,13 @@ datePublished: 2026-04-18
 estimatedReadTime: 55
 abstract: "Topic 17 built the testing framework and previewed the CI duality; Topic 18 delivered the optimality theory and named its forward debts. This topic collects: every family of level-α tests indexed by the null value θ₀ is a (1−α) confidence procedure, and every confidence procedure is a family of tests. The **test–CI duality theorem** (§19.2 Thm 1) is the organizing principle — inverting a test gives a CI, inverting a CI gives a test, and coverage equals one minus the test's size. From there the exposition constructs **pivotal CIs** (z/t/χ²/F in §19.3), the **asymptotic Wald/Score/LRT trio** (§19.4) as direct inversions of Topic 18's three tests, the **Wilson interval** (§19.5 Thm 3 + Proof 2) as the score-test inversion for binomial p that fixes Wald's boundary pathology, the **Clopper–Pearson exact interval** (§19.6 Thm 4 + Proof 3) via the beta–binomial duality, and the **profile-likelihood CI** (§19.7 Thm 5 + Proof 4) citing Wilks' theorem for its asymptotic coverage. §19.8 calibrates actual versus nominal coverage — the BRO2001 picture — and §19.9 extends the framework to one-sided CIs and the TOST equivalence-testing procedure that FDA bioequivalence trials use. Scope is scalar θ throughout; a worked Normal-mean-unknown-variance profile in §19.7 previews the vector case. The #1 pedagogical anchor is §19.1 Remark 2: coverage is a frequentist property of the procedure, not a posterior probability of any one interval."
 formalcalculusPrereqs:
-  - topic: "integration"
+  - topic: "riemann-integral"
     site: "formalcalculus"
     relationship: "Coverage probability P_θ(θ ∈ C(X)) is an integral of the sampling density over the event {θ ∈ C(X)}. The coverage diagnostic in §19.8 computes this integral numerically for binomial p."
   - topic: "sequences-limits"
     site: "formalcalculus"
     relationship: "Asymptotic coverage — the statement lim_{n→∞} P_θ(θ ∈ C_n(X)) = 1 − α — is a sequences-limits statement. The Wald-under-coverage-in-small-samples result in §19.5 is its finite-sample companion."
-  - topic: "differentiation"
+  - topic: "derivative"
     site: "formalcalculus"
     relationship: "The profile likelihood ℓ_P(θ) = sup_ψ ℓ(θ, ψ) is a composition of an implicit function (ψ̂(θ) solves the nuisance score equation) and the joint likelihood. Differentiation under the sup is the Danskin envelope theorem — cited in §19.7 Rem 15."
   - topic: "inverse-implicit"

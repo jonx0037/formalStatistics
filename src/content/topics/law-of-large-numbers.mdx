@@ -31,7 +31,7 @@ formalcalculusPrereqs:
   - topic: "series-convergence"
     site: "formalcalculus"
     relationship: "The Borel–Cantelli lemma — used in both the truncation step of Etemadi's proof and the Glivenko–Cantelli theorem — requires that Σ P(Aₙ) < ∞, a series convergence condition. The variance series Σ Var(Yᵢ)/i² < ∞ requires comparison tests."
-  - topic: "integration"
+  - topic: "riemann-integral"
     site: "formalcalculus"
     relationship: "The dominated convergence theorem is the key tool in the truncation argument: E[X₁ 1(|X₁| ≤ n)] → E[X₁] as n → ∞, and E[X₁² 1(|X₁| ≤ n)]/n → 0. Both limits are justified by DCT."
   - topic: "lebesgue-integral"
@@ -341,7 +341,7 @@ $$
 n \cdot P(|X_1| > n) \leq E[|X_1| \cdot \mathbf{1}(|X_1| > n)]
 $$
 
-Since $|X_1| \cdot \mathbf{1}(|X_1| > n) \to 0$ pointwise as $n \to \infty$ (for every outcome where $|X_1(\omega)| < \infty$, which is almost every outcome since $E[|X_1|] < \infty$), and $|X_1| \cdot \mathbf{1}(|X_1| > n) \leq |X_1|$ with $E[|X_1|] < \infty$, the dominated convergence theorem (<ExternalLink href="https://formalcalculus.com/topics/integration" site="formalcalculus" topic="Integration" />) gives:
+Since $|X_1| \cdot \mathbf{1}(|X_1| > n) \to 0$ pointwise as $n \to \infty$ (for every outcome where $|X_1(\omega)| < \infty$, which is almost every outcome since $E[|X_1|] < \infty$), and $|X_1| \cdot \mathbf{1}(|X_1| > n) \leq |X_1|$ with $E[|X_1|] < \infty$, the dominated convergence theorem (<ExternalLink href="https://formalcalculus.com/topics/riemann-integral" site="formalcalculus" topic="The Riemann Integral & FTC" />) gives:
 
 $$
 E[|X_1| \cdot \mathbf{1}(|X_1| > n)] \to 0
@@ -405,7 +405,7 @@ Let us also highlight where the dominated convergence theorem entered, because i
 2. **Step 3:** To show $E[X_1 \cdot \mathbf{1}(|X_1| \leq n)] \to E[X_1]$ — the truncated mean converges to the true mean.
 3. **Step 4:** To show $E[X_1^2 \cdot \mathbf{1}(|X_1| \leq n)]/n \to 0$ — the key variance bound. Here the dominating function is $|X_1|$, and the pointwise convergence $X_1^2 \cdot \mathbf{1}(|X_1| \leq n)/n \to 0$ uses the fact that the numerator is a fixed number $X_1(\omega)^2$ while the denominator grows.
 
-Each application follows the same pattern: the integrand converges pointwise and is dominated by an integrable function, so the integral converges. The DCT is the workhorse of truncation arguments throughout probability theory. See <ExternalLink href="https://formalcalculus.com/topics/integration" site="formalcalculus" topic="Integration" /> for the full statement and proof.
+Each application follows the same pattern: the integrand converges pointwise and is dominated by an integrable function, so the integral converges. The DCT is the workhorse of truncation arguments throughout probability theory. See <ExternalLink href="https://formalcalculus.com/topics/riemann-integral" site="formalcalculus" topic="The Riemann Integral & FTC" /> for the full statement and proof.
 
 <ExampleBlock number={2} title="Student's t(1.5): Finite Mean, Infinite Variance">
 The Student's $t$ distribution with $\nu = 1.5$ degrees of freedom has $E[|X|] < \infty$ (the mean exists when $\nu > 1$) but $\text{Var}(X) = \infty$ (the variance is infinite when $\nu \leq 2$). The Chebyshev-based WLLN (Theorem 10.1) does not apply — we cannot even compute the bound $\sigma^2/(n\varepsilon^2)$ because $\sigma^2 = \infty$.
@@ -569,7 +569,7 @@ We are now ready for the main event. The Strong Law of Large Numbers says that t
 
 This distinction is not academic. When you run a Monte Carlo simulation to estimate an integral, you run *one* simulation and observe *one* trajectory of running averages. You need that trajectory to converge — not just that most trajectories converge, but that yours does. The SLLN says: with probability 1, yours does. When you train a neural network with SGD, you run *one* training trajectory. The SLLN (and its martingale generalizations) says that trajectory converges. When you evaluate a model on a test set, you compute *one* empirical risk. The SLLN says it converges to the true risk. Almost sure convergence is what makes single-run inference valid.
 
-We follow the proof of Etemadi (1981), which is remarkable in two respects. First, it requires only *pairwise* independence — not the full mutual independence that most proofs assume. Second, it is genuinely elementary: the only tools are the Kolmogorov maximal inequality (Theorem 10.4), the first Borel--Cantelli lemma (from [Modes of Convergence](/topics/modes-of-convergence)), and the dominated convergence theorem (<ExternalLink href="https://formalcalculus.com/topics/integration" site="formalcalculus" topic="Integration" />). No characteristic functions, no martingale theory, no measure-theoretic heavy machinery. Etemadi's original paper (1981) is three pages long — one of the shortest proofs of a fundamental theorem in all of probability. Before Etemadi, the standard proof (due to Kolmogorov) required full mutual independence and used the Kolmogorov three-series theorem, which itself requires significant machinery. Etemadi's contribution was to show that pairwise independence suffices, using only the tools we have developed here.
+We follow the proof of Etemadi (1981), which is remarkable in two respects. First, it requires only *pairwise* independence — not the full mutual independence that most proofs assume. Second, it is genuinely elementary: the only tools are the Kolmogorov maximal inequality (Theorem 10.4), the first Borel--Cantelli lemma (from [Modes of Convergence](/topics/modes-of-convergence)), and the dominated convergence theorem (<ExternalLink href="https://formalcalculus.com/topics/riemann-integral" site="formalcalculus" topic="The Riemann Integral & FTC" />). No characteristic functions, no martingale theory, no measure-theoretic heavy machinery. Etemadi's original paper (1981) is three pages long — one of the shortest proofs of a fundamental theorem in all of probability. Before Etemadi, the standard proof (due to Kolmogorov) required full mutual independence and used the Kolmogorov three-series theorem, which itself requires significant machinery. Etemadi's contribution was to show that pairwise independence suffices, using only the tools we have developed here.
 
 <TheoremBlock number={5} title="Theorem 10.5 (Strong Law of Large Numbers — Kolmogorov/Etemadi)">
 Let $X_1, X_2, \ldots$ be pairwise independent, identically distributed random variables with $E[|X_1|] < \infty$. Then
@@ -682,7 +682,7 @@ $$
 \frac{1}{n_k}\sum_{i=1}^{n_k} Z_i \to 0 \quad \text{almost surely}
 $$
 
-**Step 2e: The means of the truncated variables converge.** Since $E[Y_i] = E[X_1 \cdot \mathbf{1}(X_1 \leq i)] \to E[X_1] = \mu$ by DCT (<ExternalLink href="https://formalcalculus.com/topics/integration" site="formalcalculus" topic="Integration" />):
+**Step 2e: The means of the truncated variables converge.** Since $E[Y_i] = E[X_1 \cdot \mathbf{1}(X_1 \leq i)] \to E[X_1] = \mu$ by DCT (<ExternalLink href="https://formalcalculus.com/topics/riemann-integral" site="formalcalculus" topic="The Riemann Integral & FTC" />):
 
 $$
 \frac{1}{n_k}\sum_{i=1}^{n_k} E[Y_i] \to \mu
@@ -1172,7 +1172,7 @@ This topic drew on three specific results from earlier in the curriculum:
 
 - **Chebyshev's inequality** ([Expectation & Moments](/topics/expectation-moments), Theorem 12): the proof engine for all three WLLN variants and the starting point for the maximal inequality.
 - **Borel--Cantelli lemma** ([Modes of Convergence](/topics/modes-of-convergence)): used in the SLLN proof (truncation error vanishes a.s.) and the Glivenko--Cantelli proof (finite intersection of probability-1 sets). The *first* Borel--Cantelli requires only $\sum P(A_n) < \infty$; the *second* (used in Proposition 10.1) requires independence.
-- **Dominated convergence theorem** (<ExternalLink href="https://formalcalculus.com/topics/integration" site="formalcalculus" topic="Integration" />): the key tool in every truncation argument — it justifies $E[X \cdot \mathbf{1}(|X| \leq n)] \to E[X]$ and $E[X^2 \cdot \mathbf{1}(|X| \leq n)]/n \to 0$. The DCT appeared in three steps of the Khintchine proof and two steps of the Etemadi proof.
+- **Dominated convergence theorem** (<ExternalLink href="https://formalcalculus.com/topics/riemann-integral" site="formalcalculus" topic="The Riemann Integral & FTC" />): the key tool in every truncation argument — it justifies $E[X \cdot \mathbf{1}(|X| \leq n)] \to E[X]$ and $E[X^2 \cdot \mathbf{1}(|X| \leq n)]/n \to 0$. The DCT appeared in three steps of the Khintchine proof and two steps of the Etemadi proof.
 
 The four modes of convergence from [Topic 9](/topics/modes-of-convergence) provided the conceptual framework: the WLLN is a convergence-in-probability statement, the SLLN is an almost-sure convergence statement, and the hierarchy theorem (a.s. implies in probability, Topic 9 Theorem 9.5) means the SLLN is strictly stronger. The Glivenko--Cantelli theorem adds a new dimension: not just convergence of a single statistic, but *uniform* convergence of an entire function.
 

@@ -29,18 +29,12 @@ datePublished: 2026-04-14
 estimatedReadTime: 45
 abstract: "The maximum likelihood estimator finds the parameter value that makes the observed data most probable — the peak of the likelihood function. Equivalently, it is the root of the score equation. Under regularity conditions, the MLE is consistent (it converges to the true parameter by a law of large numbers on the log-likelihood), asymptotically normal (by a Taylor expansion of the score together with the CLT, √n(θ̂ − θ₀) converges in distribution to N(0, 1/I(θ₀))), and asymptotically efficient (it achieves the Cramér-Rao lower bound). The MLE is functionally invariant: if θ̂ is the MLE of θ, then g(θ̂) is the MLE of g(θ). When no closed form exists, Newton-Raphson takes quadratically convergent steps using the observed Fisher information. The MLE bridges statistics and machine learning: maximizing the likelihood is equivalent to minimizing cross-entropy, and adding a prior penalty gives MAP estimation — the Bayesian bridge to regularization."
 formalcalculusPrereqs:
-  - topic: "differentiation"
-    site: "formalcalculus"
-    relationship: "The score function is ∂/∂θ log L(θ), and the asymptotic-normality proof Taylor-expands the score around θ₀. Newton-Raphson requires the second derivative ∂²/∂θ² log L(θ) = −observed Fisher information."
-  - topic: "integration"
-    site: "formalcalculus"
-    relationship: "Regularity conditions for the MLE require interchange of derivative and integral — the same conditions as the CRLB in Topic 13."
   - topic: "sequences-limits"
     site: "formalcalculus"
     relationship: "Consistency is convergence in probability; the asymptotic-normality proof uses Slutsky's theorem and convergence of the observed information to the expected information."
   - topic: "derivative"
     site: "formalcalculus"
-    relationship: "The score function $U(\\theta) = \\partial_\\theta \\log L(\\theta)$ is literally the derivative of the log-likelihood; Fisher information $I(\\theta) = -\\mathbb{E}[\\partial^2_\\theta \\log L]$ is the second derivative. The MLE $\\hat\\theta$ solves $U(\\hat\\theta) = 0$ — a derivative-equals-zero condition."
+    relationship: "The score function $U(\\theta) = \\partial_\\theta \\log L(\\theta)$ is literally the derivative of the log-likelihood; observed Fisher information $J(\\hat\\theta) = -\\partial^2_\\theta \\log L(\\hat\\theta)$ is the second derivative. The MLE $\\hat\\theta$ solves $U(\\hat\\theta) = 0$ — a derivative-equals-zero condition — and Newton–Raphson iterations use $J(\\hat\\theta)$ as the curvature scaling. The asymptotic-normality proof Taylor-expands the score around $\\theta_0$."
   - topic: "gradient"
     site: "formalcalculus"
     relationship: "The score vector $U(\\theta) = \\nabla_\\theta \\log L$ is the gradient of the log-likelihood. Gradient ascent on the log-likelihood, the geometry of the likelihood surface, and the steepest-ascent interpretation all apply directly to MLE."
@@ -58,7 +52,7 @@ formalcalculusPrereqs:
     relationship: "Asymptotic normality of the MLE $\\sqrt n(\\hat\\theta - \\theta_0) \\Rightarrow N(0, I^{-1})$ follows from a Taylor expansion of the score: $0 = U_n(\\hat\\theta) \\approx U_n(\\theta_0) + H_n(\\theta_0)(\\hat\\theta - \\theta_0)$, solved for $(\\hat\\theta - \\theta_0)$ and rescaled."
   - topic: "riemann-integral"
     site: "formalcalculus"
-    relationship: "The expected log-likelihood $\\mathbb{E}[\\log f(X | \\theta)] = \\int \\log f(x | \\theta)\\,f(x | \\theta_0)\\,dx$ is an integral; the score and Fisher information involve integrals over the parameter-indexed density. Integration by parts and differentiation under the integral sign drive the asymptotic theory."
+    relationship: "The expected log-likelihood $\\mathbb{E}[\\log f(X | \\theta)] = \\int \\log f(x | \\theta)\\,f(x | \\theta_0)\\,dx$ is an integral; the score and Fisher information involve integrals over the parameter-indexed density. Integration by parts and differentiation under the integral sign drive the asymptotic theory, with the MLE regularity conditions requiring interchange of derivative and integral — the same conditions as the CRLB in Topic 13."
 formalmlConnections:
   - topic: "mixed-effects"
     site: "formalml"

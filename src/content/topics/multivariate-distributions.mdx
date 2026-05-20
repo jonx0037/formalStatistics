@@ -25,9 +25,6 @@ datePublished: 2026-04-13
 estimatedReadTime: 50
 abstract: "Nearly every ML model operates on vectors of random variables — feature vectors, weight vectors, latent representations. This topic generalizes the bivariate framework from Topic 3 to p dimensions: joint densities f_X(x) on R^p, marginals via integration over subsets, and conditional densities f_{X_1|X_2} via the ratio f_X / f_{X_2}. The multivariate Normal N_p(μ, Σ) is the centerpiece — its marginals are Normal, linear transforms preserve normality, and uncorrelated components are independent. The conditional MVN formula μ_{1|2} = μ_1 + Σ_12 Σ_22^{-1}(x_2 - μ_2) with Σ_{1|2} = Σ_11 - Σ_12 Σ_22^{-1} Σ_21 (the Schur complement) is the workhorse result that powers Gaussian processes and Kalman filters. The Multinomial Mult(n, p) counts outcomes across k categories — the natural generalization of the Binomial whose negative covariance Cov(X_i, X_j) = -np_i p_j reflects the fixed-total constraint. The Dirichlet Dir(α) is a distribution over probability vectors on the simplex — the conjugate prior for the Multinomial, powering LDA topic models. Covariance matrices encode the geometry of multivariate distributions: their eigendecomposition is PCA, and the Mahalanobis distance d_M^2 ~ χ^2_p provides a scale-invariant notion of distance. Copulas (Sklar's theorem) decompose the joint CDF into marginals + dependence structure, enabling the same marginals with different dependence patterns."
 formalcalculusPrereqs:
-  - topic: "multivariable-integration"
-    site: "formalcalculus"
-    relationship: "Marginalizing a p-dimensional joint density requires iterated integrals over R^{p-q}. The general framework in §2 assumes Fubini's theorem for exchanging the order of integration."
   - topic: "change-of-variables"
     site: "formalcalculus"
     relationship: "The multivariate change of variables formula (§8) uses the Jacobian determinant. The whitening transform and Cholesky decomposition are special cases of affine changes of variables."
@@ -44,7 +41,7 @@ formalmlConnections:
   - topic: "gaussian-processes"
     site: "formalml"
     relationship: "A GP defines a joint MVN over function values at any finite set of inputs. The conditional MVN formula from §4 IS the GP prediction formula — conditional mean = posterior mean, conditional covariance = posterior uncertainty."
-  - topic: "principal-component-analysis"
+  - topic: "pca-low-rank"
     site: "formalml"
     relationship: "PCA is the eigendecomposition of the sample covariance matrix. The eigenvectors are the principal directions, and the eigenvalues are the explained variances. The MVN geometry from §7 makes this concrete."
   - topic: "variational-inference"
@@ -168,7 +165,7 @@ This topic generalizes everything from the bivariate case to $p$ dimensions. The
 
 ## 8.2 The General *p*-Dimensional Framework
 
-We begin with the general definitions. These are direct extensions of the bivariate definitions from [Topic 3](/topics/random-variables), but stated for an arbitrary dimension $p$. The key prerequisite is comfort with iterated integrals over $\mathbb{R}^p$ — see <ExternalLink href="https://formalcalculus.com/topics/multivariable-integration" site="formalcalculus">Multivariable Integration</ExternalLink> for Fubini's theorem and the mechanics of integrating over subsets of $\mathbb{R}^p$.
+We begin with the general definitions. These are direct extensions of the bivariate definitions from [Topic 3](/topics/random-variables), but stated for an arbitrary dimension $p$. The key prerequisite is comfort with iterated integrals over $\mathbb{R}^p$ — see <ExternalLink href="https://formalcalculus.com/topics/multiple-integrals" site="formalcalculus">Multiple Integrals & Fubini's Theorem</ExternalLink> for Fubini's theorem and the mechanics of integrating over subsets of $\mathbb{R}^p$.
 
 <DefinitionBlock number={1} title="Joint PDF in p Dimensions">
 A continuous random vector $\mathbf{X} = (X_1, X_2, \ldots, X_p)^T$ has a **joint probability density function** $f_{\mathbf{X}} : \mathbb{R}^p \to [0, \infty)$ if, for every (measurable) region $A \subseteq \mathbb{R}^p$,
@@ -953,7 +950,7 @@ The full development of Wishart-based inference, including the Normal-Inverse-Wi
      class="w-full rounded-lg border my-6"
      style="border-color: var(--color-border);" />
 
-The spectral decomposition $\boldsymbol{\Sigma} = \mathbf{Q}\boldsymbol{\Lambda}\mathbf{Q}^T$ is the mathematical core of **Principal Component Analysis**. The eigenvectors $\mathbf{q}_j$ are the principal directions, and the eigenvalues $\lambda_j$ are the explained variances. PCA projects data onto the top eigenvectors — the directions of maximum variance — to reduce dimensionality while preserving as much information as possible. See <ExternalLink href="https://formalml.com/topics/principal-component-analysis" site="formalml">Principal Component Analysis</ExternalLink> for the full treatment, including the connection between the population covariance eigendecomposition (developed here) and the sample covariance eigendecomposition (used in practice).
+The spectral decomposition $\boldsymbol{\Sigma} = \mathbf{Q}\boldsymbol{\Lambda}\mathbf{Q}^T$ is the mathematical core of **Principal Component Analysis**. The eigenvectors $\mathbf{q}_j$ are the principal directions, and the eigenvalues $\lambda_j$ are the explained variances. PCA projects data onto the top eigenvectors — the directions of maximum variance — to reduce dimensionality while preserving as much information as possible. See <ExternalLink href="https://formalml.com/topics/pca-low-rank" site="formalml">Principal Component Analysis</ExternalLink> for the full treatment, including the connection between the population covariance eigendecomposition (developed here) and the sample covariance eigendecomposition (used in practice).
 
 ---
 
@@ -1143,7 +1140,7 @@ These are *exactly* the standard GP prediction equations. The posterior mean $\b
 The GP prediction formula is not an approximation — it is the *exact* conditional MVN formula, applied to the specific joint MVN defined by the kernel. See <ExternalLink href="https://formalml.com/topics/gaussian-processes" site="formalml">Gaussian Processes</ExternalLink> for the full development.
 </ExampleBlock>
 
-**PCA as eigendecomposition of the sample covariance matrix.** Given data $\mathbf{x}_1, \ldots, \mathbf{x}_n \in \mathbb{R}^p$, the sample covariance matrix is $\hat{\boldsymbol{\Sigma}} = \frac{1}{n-1}\sum_{i=1}^n (\mathbf{x}_i - \bar{\mathbf{x}})(\mathbf{x}_i - \bar{\mathbf{x}})^T$. PCA computes the spectral decomposition $\hat{\boldsymbol{\Sigma}} = \mathbf{Q}\boldsymbol{\Lambda}\mathbf{Q}^T$ and projects onto the top eigenvectors. The eigenvalues $\lambda_1 \geq \cdots \geq \lambda_p$ are the variances explained by each principal component, and the cumulative proportion $\sum_{j=1}^k \lambda_j / \sum_{j=1}^p \lambda_j$ determines how many components to retain. When the data are MVN, PCA gives the unique directions that maximize variance of the projections — the connection between Theorem 7 and the PCA algorithm. See <ExternalLink href="https://formalml.com/topics/principal-component-analysis" site="formalml">Principal Component Analysis</ExternalLink>.
+**PCA as eigendecomposition of the sample covariance matrix.** Given data $\mathbf{x}_1, \ldots, \mathbf{x}_n \in \mathbb{R}^p$, the sample covariance matrix is $\hat{\boldsymbol{\Sigma}} = \frac{1}{n-1}\sum_{i=1}^n (\mathbf{x}_i - \bar{\mathbf{x}})(\mathbf{x}_i - \bar{\mathbf{x}})^T$. PCA computes the spectral decomposition $\hat{\boldsymbol{\Sigma}} = \mathbf{Q}\boldsymbol{\Lambda}\mathbf{Q}^T$ and projects onto the top eigenvectors. The eigenvalues $\lambda_1 \geq \cdots \geq \lambda_p$ are the variances explained by each principal component, and the cumulative proportion $\sum_{j=1}^k \lambda_j / \sum_{j=1}^p \lambda_j$ determines how many components to retain. When the data are MVN, PCA gives the unique directions that maximize variance of the projections — the connection between Theorem 7 and the PCA algorithm. See <ExternalLink href="https://formalml.com/topics/pca-low-rank" site="formalml">Principal Component Analysis</ExternalLink>.
 
 **Variational inference with MVN variational families.** In variational inference, we approximate a complex posterior $p(\mathbf{z} \mid \mathbf{x})$ with a tractable distribution $q(\mathbf{z})$, chosen to minimize the KL divergence $\text{KL}(q \| p)$. The most common choice for $q$ is the multivariate Normal. A **full-covariance** variational family $q(\mathbf{z}) = \mathcal{N}_p(\boldsymbol{\mu}, \boldsymbol{\Sigma})$ has $p + p(p+1)/2$ parameters (the mean vector and the full covariance matrix). A **diagonal** (mean-field) variational family $q(\mathbf{z}) = \mathcal{N}_p(\boldsymbol{\mu}, \text{diag}(\boldsymbol{\sigma}^2))$ has only $2p$ parameters but assumes independence — it misses all correlations. The reparameterization trick from Section 8.8 ($\mathbf{z} = \boldsymbol{\mu} + \mathbf{L}\boldsymbol{\varepsilon}$) enables gradient-based optimization of the ELBO with respect to $\boldsymbol{\mu}$ and $\mathbf{L}$.
 
