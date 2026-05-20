@@ -47,7 +47,7 @@ formalcalculusPrereqs:
     relationship: "The projection of $\\mathbf{y}$ onto $\\mathrm{col}(\\mathbf{X})$ — the OLS fit — is a bounded linear operator on $\\mathbb{R}^n$ (a finite-dimensional Banach/Hilbert space). The operator-theoretic view generalizes to infinite-dimensional regression problems in nonparametric and functional-data contexts."
   - topic: "hilbert-spaces"
     site: "formalcalculus"
-    relationship: "OLS is the orthogonal projection of $\\mathbf{y}$ onto $\\mathrm{col}(\\mathbf{X})$ in $\\mathbb{R}^n$ as Hilbert space. The Pythagorean decomposition $\\|\\mathbf{y}\\|^2 = \\|\\hat{\\mathbf{y}}\\|^2 + \\|\\mathbf{y} - \\hat{\\mathbf{y}}\\|^2$ underlies the ANOVA identity $\\mathrm{SST} = \\mathrm{SSR} + \\mathrm{SSE}$. The normal equations $\\mathbf{X}^\\top \\mathbf{X}\\hat{\\boldsymbol\\beta} = \\mathbf{X}^\\top \\mathbf{y}$ express orthogonality of residuals to the column space."
+    relationship: "§21 Theorem 1 (OLS-as-orthogonal-projection) applies the projection theorem in finite-dimensional Hilbert space: OLS projects $\\mathbf{y}$ onto $\\mathrm{col}(\\mathbf{X}) \\subseteq \\mathbb{R}^n$, a $(p+1)$-dimensional subspace under full column rank. The Pythagorean decomposition $\\|\\mathbf{y}\\|^2 = \\|\\hat{\\mathbf{y}}\\|^2 + \\|\\mathbf{y} - \\hat{\\mathbf{y}}\\|^2$ underlies the ANOVA identity $\\mathrm{SST} = \\mathrm{SSR} + \\mathrm{SSE}$. The §21.4 matrix-form pivot rests on the normal equations $\\mathbf{X}^\\top \\mathbf{X}\\hat{\\boldsymbol\\beta} = \\mathbf{X}^\\top \\mathbf{y}$ expressing orthogonality of residuals to the column space."
 formalmlConnections:
   - topic: "causal-inference-methods"
     site: "formalml"

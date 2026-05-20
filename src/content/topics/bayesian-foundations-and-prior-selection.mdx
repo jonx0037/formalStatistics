@@ -54,7 +54,7 @@ formalcalculusPrereqs:
     relationship: "Conjugate priors (Beta–Binomial, Gamma–Poisson, Normal–Normal) are constructed so the posterior normalizer reduces to a ratio of Gamma or Beta functions. Improper priors (Jeffreys, flat) require the improper-integral machinery to verify posterior propriety."
   - topic: "multiple-integrals"
     site: "formalcalculus"
-    relationship: "The posterior $p(\\theta \\mid x) = p(x \\mid \\theta)\\pi(\\theta)/\\int p(x \\mid \\theta)\\pi(\\theta)\\,d\\theta$ has a normalizing integral over the full parameter space. In $d$ dimensions this is a $d$-dimensional integral; Fubini justifies iterated computation when possible."
+    relationship: "The marginal likelihood $m(\\mathbf{y}) = \\int L(\\theta)\\pi(\\theta)\\,d\\theta$ and posterior predictive $p(\\tilde y \\mid \\mathbf{y}) = \\int p(\\tilde y \\mid \\theta)p(\\theta \\mid \\mathbf{y})\\,d\\theta$ are integrals against the prior / posterior density over the full parameter space. In $d$ dimensions Fubini justifies iterated computation; §25.4 Proof 1 closes the conjugate-family case by identifying the integrand's kernel with a known density family."
   - topic: "radon-nikodym"
     site: "formalcalculus"
     relationship: "Posterior densities $p(\\theta \\mid x)$ are Radon–Nikodym derivatives of the posterior measure w.r.t. a dominating measure (Lebesgue on $\\mathbb R^d$, counting on a countable set). Likelihoods $L(\\theta; x)$ are RN derivatives of the data measure across different $\\theta$; Bayes' rule is a change-of-measure identity."
