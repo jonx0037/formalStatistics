@@ -24,9 +24,12 @@ datePublished: 2026-04-12
 estimatedReadTime: 40
 abstract: "The exponential family is the single most important structural concept in parametric statistics. Nine of the sixteen distributions cataloged in Topics 5–6 — Bernoulli, Binomial, Geometric, Negative Binomial, Poisson, Normal, Exponential, Gamma, and Beta — share a common algebraic form: f(x|θ) = h(x) exp(η(θ)·T(x) − A(θ)). This canonical factorization, in which data and parameters interact only through the product η·T, is the structural reason why sufficient statistics are finite-dimensional, why MLE reduces to a moment-matching equation, why conjugate priors exist, and why generalized linear models are tractable. The log-partition function A(η) is the central object: its first derivative gives E[T(X)], its second derivative gives Var(T(X)), and its convexity guarantees the concavity of the log-likelihood. This topic converts all nine members to canonical form, derives the general conjugate prior theorem, establishes the universal MLE recipe A'(η̂) = T̄, and connects the framework to GLMs — setting up four downstream topics across Tracks 4, 6, and 7."
 formalcalculusPrereqs:
-  - topic: "taylor-series"
+  - topic: "power-taylor-series"
     site: "formalcalculus"
-    relationship: "The log-partition function's moment-generating properties use Taylor expansion arguments. The relationship between A(η) and the moment-generating function connects to power series."
+    relationship: "The log-partition function's moment-generating properties use Taylor-expansion arguments. The relationship between $A(\\eta)$ and the moment-generating function connects to power series — $A'(\\eta) = \\mathbb E[T(X)]$ and $A''(\\eta) = \\mathrm{Var}(T(X))$ are the first two Taylor coefficients."
+  - topic: "mean-value-taylor"
+    site: "formalcalculus"
+    relationship: "The cumulant generating function $K(t) = \\log M_X(t)$ has Taylor coefficients equal to the cumulants $\\kappa_n$: $K(t) = \\sum \\kappa_n t^n/n!$. The exponential-family structure makes these derivatives tractable in closed form, and the mean-value-theorem remainder bound governs higher-order corrections."
 formalmlConnections:
   - topic: "information-geometry"
     site: "formalml"
