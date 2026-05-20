@@ -25,9 +25,6 @@ datePublished: 2026-04-13
 estimatedReadTime: 50
 abstract: "Nearly every ML model operates on vectors of random variables — feature vectors, weight vectors, latent representations. This topic generalizes the bivariate framework from Topic 3 to p dimensions: joint densities f_X(x) on R^p, marginals via integration over subsets, and conditional densities f_{X_1|X_2} via the ratio f_X / f_{X_2}. The multivariate Normal N_p(μ, Σ) is the centerpiece — its marginals are Normal, linear transforms preserve normality, and uncorrelated components are independent. The conditional MVN formula μ_{1|2} = μ_1 + Σ_12 Σ_22^{-1}(x_2 - μ_2) with Σ_{1|2} = Σ_11 - Σ_12 Σ_22^{-1} Σ_21 (the Schur complement) is the workhorse result that powers Gaussian processes and Kalman filters. The Multinomial Mult(n, p) counts outcomes across k categories — the natural generalization of the Binomial whose negative covariance Cov(X_i, X_j) = -np_i p_j reflects the fixed-total constraint. The Dirichlet Dir(α) is a distribution over probability vectors on the simplex — the conjugate prior for the Multinomial, powering LDA topic models. Covariance matrices encode the geometry of multivariate distributions: their eigendecomposition is PCA, and the Mahalanobis distance d_M^2 ~ χ^2_p provides a scale-invariant notion of distance. Copulas (Sklar's theorem) decompose the joint CDF into marginals + dependence structure, enabling the same marginals with different dependence patterns."
 formalcalculusPrereqs:
-  - topic: "multivariable-integration"
-    site: "formalcalculus"
-    relationship: "Marginalizing a p-dimensional joint density requires iterated integrals over R^{p-q}. The general framework in §2 assumes Fubini's theorem for exchanging the order of integration."
   - topic: "change-of-variables"
     site: "formalcalculus"
     relationship: "The multivariate change of variables formula (§8) uses the Jacobian determinant. The whitening transform and Cholesky decomposition are special cases of affine changes of variables."
@@ -44,7 +41,7 @@ formalmlConnections:
   - topic: "gaussian-processes"
     site: "formalml"
     relationship: "A GP defines a joint MVN over function values at any finite set of inputs. The conditional MVN formula from §4 IS the GP prediction formula — conditional mean = posterior mean, conditional covariance = posterior uncertainty."
-  - topic: "principal-component-analysis"
+  - topic: "pca-low-rank"
     site: "formalml"
     relationship: "PCA is the eigendecomposition of the sample covariance matrix. The eigenvectors are the principal directions, and the eigenvalues are the explained variances. The MVN geometry from §7 makes this concrete."
   - topic: "variational-inference"

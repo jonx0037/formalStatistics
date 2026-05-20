@@ -37,13 +37,13 @@ datePublished: 2026-05-08
 estimatedReadTime: 55
 abstract: "A hypothesis test is a decision procedure. The data analyst specifies a null hypothesis $H_0$ (the status quo, the skeptical baseline), an alternative $H_1$ (the claim we might act on), a test statistic $T(X)$, and a rejection region $R$; the procedure rejects $H_0$ when $T(X) \\in R$. Two errors are possible — Type I (rejecting a true $H_0$) and Type II (failing to reject a false $H_0$) — and their probabilities define size $\\alpha$ and power $\\beta(\\theta) = P_\\theta(T \\in R)$. The p-value is the tail probability of the test statistic under $H_0$; under the continuous null it is uniform on $[0, 1]$, a proof given in full in §17.5. The z-test applies the CLT to a standardized sample mean and is the simplest asymptotic test. The one-sample t-test for Normal data with unknown variance has a clean finite-sample distribution only because of Basu's theorem (§16.9): $\\bar X \\perp\\!\\!\\!\\perp S^2$ is what makes $t = \\sqrt n(\\bar X - \\mu_0)/S$ follow $t_{n-1}$ exactly. The $\\chi^2$ test handles variance inference and goodness-of-fit. Three asymptotic tests — Wald, score (Rao), and likelihood-ratio — are stated here as the general-purpose machinery of parametric inference, with their null distributions ($\\chi^2_k$ under regularity) cited from Topic 14's asymptotic-normality theorem; Wilks' full proof of the LRT null distribution is deferred to Topic 18. A short preview in §17.10 flags the duality between hypothesis tests and confidence intervals, with the full theory belonging to Topic 19. The framework's limitations are acknowledged honestly: p-values are not posterior probabilities; multiple testing inflates error rates; model comparison is not the same as hypothesis testing. Topic 17 opens Track 5's decision-theoretic arc with the scaffolding on which Topics 18–20 build."
 formalcalculusPrereqs:
-  - topic: "integration"
+  - topic: "riemann-integral"
     site: "formalcalculus"
     relationship: "Rejection-region probabilities under both $H_0$ and $H_\\theta$ are integrals of the sampling density over $R$. Power $\\beta(\\theta) = \\int_R f(x; \\theta)\\,dx$ is a calculus-of-variations object in $\\theta$."
   - topic: "sequences-limits"
     site: "formalcalculus"
     relationship: "Convergence in distribution is the language of asymptotic null distributions (§17.9). Consistency of tests — power $\\to 1$ as $n \\to \\infty$ under any fixed alternative — is a sequences-limits statement."
-  - topic: "differentiation"
+  - topic: "derivative"
     site: "formalcalculus"
     relationship: "The power function $\\beta(\\theta)$ is differentiated to characterize most-powerful tests (previewed in §17.4, full treatment in Topic 18). The score test uses $\\partial_\\theta \\ell(\\theta)$ directly."
   - topic: "lp-spaces"

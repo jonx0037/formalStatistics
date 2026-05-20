@@ -29,12 +29,6 @@ datePublished: 2026-04-14
 estimatedReadTime: 45
 abstract: "The maximum likelihood estimator finds the parameter value that makes the observed data most probable — the peak of the likelihood function. Equivalently, it is the root of the score equation. Under regularity conditions, the MLE is consistent (it converges to the true parameter by a law of large numbers on the log-likelihood), asymptotically normal (by a Taylor expansion of the score together with the CLT, √n(θ̂ − θ₀) converges in distribution to N(0, 1/I(θ₀))), and asymptotically efficient (it achieves the Cramér-Rao lower bound). The MLE is functionally invariant: if θ̂ is the MLE of θ, then g(θ̂) is the MLE of g(θ). When no closed form exists, Newton-Raphson takes quadratically convergent steps using the observed Fisher information. The MLE bridges statistics and machine learning: maximizing the likelihood is equivalent to minimizing cross-entropy, and adding a prior penalty gives MAP estimation — the Bayesian bridge to regularization."
 formalcalculusPrereqs:
-  - topic: "differentiation"
-    site: "formalcalculus"
-    relationship: "The score function is ∂/∂θ log L(θ), and the asymptotic-normality proof Taylor-expands the score around θ₀. Newton-Raphson requires the second derivative ∂²/∂θ² log L(θ) = −observed Fisher information."
-  - topic: "integration"
-    site: "formalcalculus"
-    relationship: "Regularity conditions for the MLE require interchange of derivative and integral — the same conditions as the CRLB in Topic 13."
   - topic: "sequences-limits"
     site: "formalcalculus"
     relationship: "Consistency is convergence in probability; the asymptotic-normality proof uses Slutsky's theorem and convergence of the observed information to the expected information."

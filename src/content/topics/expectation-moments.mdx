@@ -27,9 +27,6 @@ datePublished: 2026-04-11
 estimatedReadTime: 55
 abstract: "Expectation E[X] is the center of mass of a distribution — the balance point of the PMF or PDF on a number line. Variance Var(X) = E[(X−μ)²] = E[X²] − (E[X])² measures spread around that center. Covariance Cov(X,Y) = E[XY] − E[X]E[Y] captures linear association, and the correlation coefficient ρ(X,Y) normalizes it to [−1,1]. Linearity of expectation — E[aX + bY] = aE[X] + bE[Y] — holds without any independence assumption and is the single most useful property in probability. Markov's, Chebyshev's, and Jensen's inequalities convert moment information into probability bounds. The conditional expectation E[X|Y] is a random variable: it updates our best guess of X based on what Y reveals. The law of total expectation E[X] = E[E[X|Y]] (tower property) and Eve's law Var(X) = E[Var(X|Y)] + Var(E[X|Y]) decompose unconditional moments into within-group and between-group components. Moment-generating functions M_X(t) = E[e^{tX}] package all moments into one function — M^{(n)}(0) = E[X^n] — and uniquely determine the distribution, making them the engine behind the Central Limit Theorem."
 formalcalculusPrereqs:
-  - topic: "integration-by-parts"
-    site: "formalcalculus"
-    relationship: "Computing E[X] for the Exponential and Gamma distributions requires integration by parts. The formula ∫x·λe^{−λx}dx = 1/λ is a standard application."
   - topic: "sequences-limits"
     site: "formalcalculus"
     relationship: "The absolute convergence condition E[|X|] < ∞ ensures the expectation sum/integral is well-defined. Interchange of limit and expectation (dominated convergence) is used in MGF proofs."
