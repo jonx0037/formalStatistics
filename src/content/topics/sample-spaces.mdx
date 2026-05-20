@@ -24,7 +24,13 @@ formalcalculusPrereqs:
   - topic: "sequences-limits"
     site: "formalcalculus"
     relationship: "Continuity of probability (Theorem 6) uses convergence of partial sums. The proof relies on the same telescoping-sum argument and epsilon-N convergence framework developed in formalCalculus."
+  - topic: "sigma-algebras"
+    site: "formalcalculus"
+    relationship: "A probability space $(\\Omega, \\mathcal F, P)$ has $\\mathcal F$ a $\\sigma$-algebra and $P$ a probability measure on $\\mathcal F$. Kolmogorov's axioms are measure-theoretic at base; the Carathéodory extension theorem from the formalcalculus $\\sigma$-algebras topic is the bedrock that makes every construction here rigorous."
 formalmlConnections:
+  - topic: "vc-dimension"
+    site: "formalml"
+    relationship: "VC-dimension theory's $(\\varepsilon, \\delta)$-PAC framework is built on the same $\\sigma$-algebra-and-probability-measure substrate as classical probability. The §1 sample-space rigor here is what makes PAC's 'with probability at least $1 - \\delta$' statements well-defined as events on a product probability space."
   - topic: "measure-theoretic-probability"
     site: "formalml"
     relationship: "The sigma-algebra and probability measure defined here generalize to abstract measure spaces. The Kolmogorov axioms are the probability specialization of the Lebesgue measure axioms."
