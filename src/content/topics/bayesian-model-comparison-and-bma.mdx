@@ -47,11 +47,10 @@ formalcalculusPrereqs:
   - topic: "mean-value-taylor"
     site: "formalcalculus"
     relationship: "The Laplace approximation $\\int \\exp(\\ell(\\theta))\\,d\\theta \\approx \\exp(\\ell(\\hat\\theta)) \\cdot (2\\pi)^{d/2}/\\sqrt{\\det(-\\nabla^2\\ell(\\hat\\theta))}$ is a second-order Taylor expansion of the log-posterior around the MAP. The BIC penalty falls out of this expansion, and the mean-value-theorem remainder bound controls the asymptotic accuracy."
-formalmlPrereqs:
+formalmlConnections:
   - topic: "sequential-monte-carlo"
     site: "formalml"
-    relationship: "SMC samplers yield an unbiased estimator of the log marginal likelihood $\\log m(\\mathbf{y}) = \\log \\int L(\\theta)\\pi(\\theta)\\,d\\theta$ as a side product (Del Moral–Doucet–Jasra 2006 Proposition 1) — the canonical alternative to bridge sampling and harmonic-mean estimators in §27's model-evidence catalogue. formalml/sequential-monte-carlo §8.2's Theorem 4 is the formal statement; §8.4's GMM benchmark is the empirical comparison."
-formalmlConnections:
+    relationship: "SMC samplers yield an unbiased estimator of the marginal likelihood $m(\\mathbf{y}) = \\int L(\\theta)\\pi(\\theta)\\,d\\theta$ as a side product (Del Moral–Doucet–Jasra 2006 Proposition 1) — the canonical alternative to bridge sampling and harmonic-mean estimators in §27's model-evidence catalogue. formalml/sequential-monte-carlo §8.2's Theorem 4 is the formal statement; §8.4's GMM benchmark is the empirical comparison. (Note: the estimator of $\\log m(\\mathbf{y})$ obtained by taking the logarithm is generally biased by Jensen's inequality; Proposition 1's unbiasedness is for the normalizing-constant estimate, not its log.)"
   - topic: "stacking-and-predictive-ensembles"
     site: "formalml"
     relationship: "Stacking is the M-open alternative to BMA: optimize predictive weights directly rather than derive them from marginal likelihoods. Critical when no candidate model is true. §27.10 Rem 26 sets up the contrast."
