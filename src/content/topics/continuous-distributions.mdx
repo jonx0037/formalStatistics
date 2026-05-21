@@ -43,9 +43,9 @@ formalcalculusPrereqs:
     site: "formalcalculus"
     relationship: "The Gamma function Γ(α) = ∫₀^∞ t^{α-1}e^{-t}dt and all continuous PDFs on unbounded support are improper integrals."
 formalmlConnections:
-  - topic: "generalized-linear-models"
+  - topic: "mixed-effects"
     site: "formalml"
-    relationship: "Normal response → linear regression (identity link). Gamma response → Gamma GLM (log link) for positive-valued outcomes like insurance claims and time durations."
+    relationship: "Normal-response linear regression (identity link) is the §2 substrate of Mixed-Effects Models — the linear mixed model develops the Normal-response random-effects case in full via the V = ZGZᵀ + R marginal covariance. Gamma-response GLMs (log link, for positive-valued outcomes like insurance claims and time durations) appear in §6.2 as part of the GLMM extension to non-Gaussian likelihoods."
   - topic: "gaussian-processes"
     site: "formalml"
     relationship: "The Normal distribution is the marginal of every finite collection of GP outputs. The GP prior is an infinite-dimensional Gaussian."
