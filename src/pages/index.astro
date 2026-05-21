@@ -2,6 +2,16 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { tracks } from '../data/curriculum';
 import CurriculumGraph from '../components/viz/CurriculumGraph.tsx';
+
+const publishedTotal = tracks.reduce((acc, t) => acc + t.published.length, 0);
+const plannedTotal = tracks.reduce((acc, t) => acc + t.planned.length, 0);
+
+function trackCountLabel(published: number, planned: number): string {
+  const pubText = `${published} ${published === 1 ? 'topic' : 'topics'}`;
+  if (planned === 0) return pubText;
+  if (published === 0) return `${planned} planned`;
+  return `${pubText} · ${planned} planned`;
+}
 ---
 
 <BaseLayout title="formalStatistics">
@@ -95,7 +105,7 @@ import CurriculumGraph from '../components/viz/CurriculumGraph.tsx';
       class="text-2xl font-bold mb-8 text-center"
       style="font-family: var(--font-serif); color: var(--color-text-heading);"
     >
-      8 Tracks &middot; 32 Topics
+      {tracks.length} Tracks &middot; {publishedTotal} Topics{plannedTotal > 0 ? ` · ${plannedTotal} planned` : ''}
     </h2>
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       {tracks.map((track) => (
@@ -113,7 +123,7 @@ import CurriculumGraph from '../components/viz/CurriculumGraph.tsx';
             {track.description}
           </p>
           <div class="text-xs" style="color: var(--color-text-muted);">
-            {track.topicCount} topics
+            {trackCountLabel(track.published.length, track.planned.length)}
           </div>
         </div>
       ))}

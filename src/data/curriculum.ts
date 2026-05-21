@@ -4,7 +4,8 @@ export interface Track {
   title: string;
   description: string;
   domain: string;
-  topicCount: number;
+  published: string[];
+  planned: string[];
 }
 
 export const tracks: Track[] = [
@@ -14,7 +15,13 @@ export const tracks: Track[] = [
     title: 'Foundations of Probability',
     description: 'Kolmogorov axioms, conditional probability, random variables, expectation',
     domain: 'foundations-of-probability',
-    topicCount: 4,
+    published: [
+      'Sample Spaces, Events & Axioms',
+      'Conditional Probability & Independence',
+      'Random Variables & Distribution Functions',
+      'Expectation, Variance & Moments',
+    ],
+    planned: [],
   },
   {
     id: 'core-distributions',
@@ -22,7 +29,13 @@ export const tracks: Track[] = [
     title: 'Core Distributions & Families',
     description: 'Discrete and continuous distributions, exponential families, multivariate distributions',
     domain: 'core-distributions',
-    topicCount: 4,
+    published: [
+      'Discrete Distributions',
+      'Continuous Distributions',
+      'Exponential Families',
+      'Multivariate Distributions',
+    ],
+    planned: [],
   },
   {
     id: 'convergence-limit-theorems',
@@ -30,7 +43,13 @@ export const tracks: Track[] = [
     title: 'Convergence & Limit Theorems',
     description: 'Modes of convergence, law of large numbers, central limit theorem, tail bounds',
     domain: 'convergence-limit-theorems',
-    topicCount: 4,
+    published: [
+      'Modes of Convergence',
+      'Law of Large Numbers',
+      'Central Limit Theorem',
+      'Large Deviations & Tail Bounds',
+    ],
+    planned: [],
   },
   {
     id: 'statistical-estimation',
@@ -38,7 +57,13 @@ export const tracks: Track[] = [
     title: 'Statistical Estimation',
     description: 'Bias-variance, maximum likelihood, method of moments, sufficiency',
     domain: 'statistical-estimation',
-    topicCount: 4,
+    published: [
+      'Point Estimation & Bias-Variance',
+      'Maximum Likelihood Estimation',
+      'Method of Moments & M-Estimation',
+      'Sufficient Statistics & Rao-Blackwell',
+    ],
+    planned: [],
   },
   {
     id: 'hypothesis-testing',
@@ -46,7 +71,13 @@ export const tracks: Track[] = [
     title: 'Hypothesis Testing & Confidence',
     description: 'Neyman-Pearson paradigm, likelihood ratio tests, confidence intervals, multiple testing',
     domain: 'hypothesis-testing-confidence',
-    topicCount: 4,
+    published: [
+      'Hypothesis Testing Framework',
+      'Likelihood-Ratio Tests & Neyman-Pearson',
+      'Confidence Intervals & Duality',
+      'Multiple Testing & False Discovery',
+    ],
+    planned: [],
   },
   {
     id: 'regression-linear-models',
@@ -54,7 +85,13 @@ export const tracks: Track[] = [
     title: 'Regression & Linear Models',
     description: 'Least squares, generalized linear models, regularization, model selection',
     domain: 'regression-linear-models',
-    topicCount: 4,
+    published: [
+      'Simple & Multiple Linear Regression',
+      'Generalized Linear Models',
+      'Regularization & Penalized Estimation',
+      'Model Selection & Information Criteria',
+    ],
+    planned: [],
   },
   {
     id: 'bayesian-statistics',
@@ -62,7 +99,13 @@ export const tracks: Track[] = [
     title: 'Bayesian Statistics',
     description: 'Prior selection, MCMC computation, model comparison, hierarchical models',
     domain: 'bayesian-statistics',
-    topicCount: 4,
+    published: [
+      'Bayesian Foundations & Prior Selection',
+      'Bayesian Computation & MCMC',
+      'Bayesian Model Comparison & BMA',
+      'Hierarchical & Empirical Bayes',
+    ],
+    planned: ['Empirical Bayes'],
   },
   {
     id: 'high-dimensional-nonparametric',
@@ -70,6 +113,21 @@ export const tracks: Track[] = [
     title: 'High-Dimensional & Nonparametric',
     description: 'Order statistics, kernel density estimation, bootstrap, empirical processes',
     domain: 'high-dimensional-nonparametric',
-    topicCount: 4,
+    published: [
+      'Order Statistics & Quantiles',
+      'Kernel Density Estimation',
+      'The Bootstrap',
+      'Empirical Processes & Uniform Convergence',
+    ],
+    planned: ['Parametric vs Nonparametric Models'],
+  },
+  {
+    id: 'time-series-state-space',
+    number: 9,
+    title: 'Time-Series & State-Space Methods',
+    description: 'Hidden Markov models, state-space inference, and the foundations of time-series statistics',
+    domain: 'time-series-state-space',
+    published: [],
+    planned: ['Hidden Markov Models'],
   },
 ];

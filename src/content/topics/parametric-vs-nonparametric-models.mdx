@@ -1,0 +1,29 @@
+---
+title: "Parametric vs Nonparametric Models"
+subtitle: "The model-class distinction that determines identifiability, consistency, and the bias-variance trade-off"
+status: "draft"
+difficulty: "intermediate"
+domain: "high-dimensional-nonparametric"
+prerequisites:
+  - "maximum-likelihood"
+  - "kernel-density-estimation"
+  - "bootstrap"
+tags:
+  - "parametric"
+  - "nonparametric"
+  - "semi-parametric"
+  - "model-class"
+  - "identifiability"
+  - "consistency"
+  - "bias-variance"
+notebookPath: "notebooks/parametric-vs-nonparametric-models/35_parametric_vs_nonparametric.ipynb"
+datePublished: 2026-05-20
+estimatedReadTime: 0
+abstract: >-
+  The parametric/nonparametric distinction governs nearly every modeling decision in statistics: parametric models have a finite-dimensional parameter space (fixed regardless of sample size); nonparametric models have an infinite-dimensional parameter space or one that grows with the data. This topic formalizes the distinction (with semi-parametric as the bridge), surveys identifiability and consistency considerations, and develops the bias-variance trade-off as the operational consequence. Examples span Gaussian (parametric), kernel-density estimation (nonparametric), and Dirichlet processes (nonparametric Bayes). Disposition note: per the Tier 1A expansion roadmap, this topic may eventually merge as a section of bayesian-foundations-and-prior-selection or kernel-density-estimation rather than ship standalone. The draft stub exists to discharge the reciprocal back-pointer from formalML/meta-learning; final placement is deferred to a future planning round.
+formalmlConnections:
+  - topic: "meta-learning"
+    site: "formalml"
+    relationship: "Meta-learning's choice between fixed-architecture (parametric) and growing-with-data (nonparametric — e.g. Gaussian-process meta-learning) models makes the parametric/nonparametric distinction operational. Neural Processes explicitly sit at this boundary, combining a parametric encoder with a nonparametric latent-function distribution."
+references: []
+---
