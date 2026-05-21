@@ -127,9 +127,11 @@ Statistics visualizations have unique requirements:
 ### Curriculum graph
 
 - Topic metadata and prerequisite DAG defined in `src/data/curriculum-graph.json`
-- Track definitions in `src/data/curriculum.ts`
+- Track definitions in `src/data/curriculum.ts` — each Track has `published: string[]` and `planned: string[]` arrays of topic titles (NOT slugs).
 - When adding a new topic, update both files and add cross-links in related topics
 - Prerequisite links may reference formalcalculus.com topics (external prerequisites, marked distinctly in the DAG)
+- **Draft topics:** `status: "draft"` in MDX frontmatter — excluded from routes by `src/pages/topics/[...slug].astro`'s `status === 'published'` filter. Stubs can sit on `main` without affecting production. `src/pages/paths.astro` reads from `curriculum-graph.json` (not the topic collection), so drafts are also absent from the curriculum page as long as they're not added to the graph.
+- **Topic ship sequence:** (1) flip `status: "draft"` → `"published"` and fill MDX body, (2) add node + prerequisite edges to `curriculum-graph.json`, (3) move the topic title from `track.planned[]` to `track.published[]` in `curriculum.ts`, (4) add the slug to `src/pages/paths.astro`'s `difficultyMap` and `topicDescriptions`, (5) run the connections audit (`node scripts/check-internal-links.mjs`, or add a `pnpm check:connections` alias).
 
 ### Relationship to sister sites
 
@@ -168,6 +170,7 @@ formalCalculus → formalStatistics → formalML
 - Use npm or generate package-lock.json
 - Commit .vscode/, .DS_Store, or firebase-debug.log
 - Create draft files outside src/content/topics/ — drafts live as unpublished MDX
+- Hardcode track or topic counts in display copy — derive from `tracks.length`, `tracks.reduce((acc, t) => acc + t.published.length, 0)`, and the equivalent for `planned`. Hand-maintained literals drift when topics ship or planned drafts land.
 - Skip intuitive probability before measure-theoretic formalism
 - Write one-line proof sketches — expand or omit
 - Assume the reader already knows statistics rigorously — that's what this site teaches

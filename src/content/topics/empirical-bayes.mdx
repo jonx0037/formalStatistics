@@ -1,0 +1,36 @@
+---
+title: "Empirical Bayes"
+subtitle: "Estimating the prior from data — James-Stein shrinkage, Type II MLE, and the Robbins compound-decision framework"
+status: "draft"
+difficulty: "intermediate"
+domain: "bayesian-statistics"
+prerequisites:
+  - "hierarchical-bayes-and-partial-pooling"
+  - "point-estimation"
+  - "maximum-likelihood"
+tags:
+  - "empirical-bayes"
+  - "james-stein"
+  - "shrinkage"
+  - "type-ii-mle"
+  - "compound-decision"
+  - "robbins"
+  - "marginal-likelihood"
+notebookPath: "notebooks/empirical-bayes/33_empirical_bayes.ipynb"
+datePublished: 2026-05-20
+estimatedReadTime: 0
+abstract: >-
+  Empirical Bayes (EB) sits at the boundary between full Bayesian inference and frequentist shrinkage estimation. Type I EB plugs in a point estimate of the prior obtained from marginal-likelihood MLE; Type II EB estimates the mixing distribution itself. The James-Stein estimator is the canonical EB shrinkage rule. Robbins' compound-decision framework unifies the approach. Modern applications include variance-component estimation, mixed-effects models, and large-scale FDR (Efron & Tibshirani). This topic sits between Topic 28 (Hierarchical & Empirical Bayes) — which introduces EB as a boundary case — and the modern shrinkage literature that this topic develops in full.
+formalcalculusPrereqs:
+  - topic: "multiple-integrals"
+    site: "formalcalculus"
+    relationship: "Type II MLE optimizes the marginal likelihood, which is the integral of the joint distribution over the latent parameter: m(x | phi) = integral of p(x | theta) p(theta | phi) d theta. Computing or approximating this integral is the central numerical challenge of EB."
+  - topic: "gradient"
+    site: "formalcalculus"
+    relationship: "EB hyperparameter estimation by Type II MLE uses gradient-based optimization of the marginal log-likelihood. The score function gradient with respect to the prior hyperparameters phi appears throughout — see also Stein's identity for the closed-form James-Stein case."
+formalmlConnections:
+  - topic: "meta-learning"
+    site: "formalml"
+    relationship: "Meta-learning generalizes the EB inner-loop/outer-loop structure to neural-network parameter distributions. The Type II MLE on the marginal likelihood that EB performs at the prior level is the conceptual prototype for meta-optimization's gradient-based hyperparameter estimation across a task distribution. MAML, in particular, is an empirical-Bayes procedure on the meta-parameter."
+references: []
+---
