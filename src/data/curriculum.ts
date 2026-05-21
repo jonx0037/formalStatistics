@@ -131,3 +131,6 @@ export const tracks: Track[] = [
     planned: ['Hidden Markov Models'],
   },
 ];
+
+export const publishedTotal = tracks.reduce((acc, t) => acc + t.published.length, 0);
+export const plannedTotal = tracks.reduce((acc, t) => acc + t.planned.length, 0);

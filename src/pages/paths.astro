@@ -1,12 +1,12 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
-import { tracks } from '../data/curriculum';
+import { tracks, publishedTotal, plannedTotal } from '../data/curriculum';
 import TopicCard from '../components/ui/TopicCard.astro';
 import CurriculumGraph from '../components/viz/CurriculumGraph.tsx';
 import graphData from '../data/curriculum-graph.json';
 
-const publishedTotal = tracks.reduce((acc, t) => acc + t.published.length, 0);
-const plannedTotal = tracks.reduce((acc, t) => acc + t.planned.length, 0);
+const topicNoun = publishedTotal === 1 ? 'topic' : 'topics';
+const trackNoun = tracks.length === 1 ? 'track' : 'tracks';
 const plannedSuffix = plannedTotal > 0 ? `, with ${plannedTotal} planned` : '';
 
 // Difficulty assignment based on topic characteristics
@@ -90,7 +90,7 @@ for (const node of graphData.nodes) {
 }
 ---
 
-<BaseLayout title="Curriculum" description={`The full formalStatistics curriculum — ${publishedTotal} topics across ${tracks.length} tracks${plannedSuffix}.`}>
+<BaseLayout title="Curriculum" description={`The full formalStatistics curriculum — ${publishedTotal} ${topicNoun} across ${tracks.length} ${trackNoun}${plannedSuffix}.`}>
   <div class="max-w-5xl mx-auto px-4 sm:px-6 py-12">
     <header class="mb-12 text-center">
       <h1
@@ -100,7 +100,7 @@ for (const node of graphData.nodes) {
         Curriculum
       </h1>
       <p class="text-lg" style="color: var(--color-text-muted);">
-        {publishedTotal} topics across {tracks.length} tracks{plannedTotal > 0 ? ` (${plannedTotal} planned)` : ''} &mdash; from probability foundations to high-dimensional statistics.
+        {publishedTotal} {topicNoun} across {tracks.length} {trackNoun}{plannedTotal > 0 ? ` (${plannedTotal} planned)` : ''} &mdash; from probability foundations to high-dimensional statistics.
       </p>
       <p class="text-sm mt-2" style="color: var(--color-text-muted);">
         Every topic connects backward to

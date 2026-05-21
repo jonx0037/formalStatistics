@@ -1,10 +1,7 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
-import { tracks } from '../data/curriculum';
+import { tracks, publishedTotal, plannedTotal } from '../data/curriculum';
 import CurriculumGraph from '../components/viz/CurriculumGraph.tsx';
-
-const publishedTotal = tracks.reduce((acc, t) => acc + t.published.length, 0);
-const plannedTotal = tracks.reduce((acc, t) => acc + t.planned.length, 0);
 
 function trackCountLabel(published: number, planned: number): string {
   const pubText = `${published} ${published === 1 ? 'topic' : 'topics'}`;
@@ -105,7 +102,7 @@ function trackCountLabel(published: number, planned: number): string {
       class="text-2xl font-bold mb-8 text-center"
       style="font-family: var(--font-serif); color: var(--color-text-heading);"
     >
-      {tracks.length} Tracks &middot; {publishedTotal} Topics{plannedTotal > 0 ? ` · ${plannedTotal} planned` : ''}
+      {tracks.length} {tracks.length === 1 ? 'Track' : 'Tracks'} · {publishedTotal} {publishedTotal === 1 ? 'Topic' : 'Topics'}{plannedTotal > 0 ? ` · ${plannedTotal} planned` : ''}
     </h2>
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       {tracks.map((track) => (
