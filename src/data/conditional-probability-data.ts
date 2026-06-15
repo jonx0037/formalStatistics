@@ -69,7 +69,12 @@ export const conditionalIndependencePresets = [
     name: 'Explaining Away (Marg. Indep., Cond. Dep.)',
     description:
       'A and B are independent causes of C — marginally independent but conditionally dependent given C',
-    jointProbs: [0.36, 0.09, 0.09, 0.01, 0.09, 0.16, 0.01, 0.19],
+    // Canonical fire/smoke/alarm collider. Independent priors P(A=fire=1)=0.05,
+    // P(B=smoke=1)=0.30; noisy-OR alarm CPT P(C=1|A,B)={00:0.01,01:0.40,10:0.95,11:0.99}.
+    // Joint built as jointProbs[4a+2b+c] = P(A=a)·P(B=b)·P(C=c|a,b), so A⊥B holds exactly
+    // (P(A,B)=0.015=P(A)P(B)) while conditioning on the alarm couples them:
+    // P(smoke|alarm)=0.7636 rises to P(smoke|alarm,¬fire)=0.9449 (explaining away).
+    jointProbs: [0.65835, 0.00665, 0.171, 0.114, 0.00175, 0.03325, 0.00015, 0.01485],
   },
   {
     name: 'Both Independent',
