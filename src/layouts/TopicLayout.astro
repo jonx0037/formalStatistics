@@ -13,6 +13,7 @@ interface Props {
   abstract?: string;
   formalcalculusPrereqs?: { topic: string; site: string; relationship: string }[];
   formalmlConnections?: { topic: string; site: string; relationship: string }[];
+  formalragConnections?: { topic: string; site: string; relationship: string }[];
   connections?: { topic: string; relationship: string }[];
 }
 
@@ -24,6 +25,7 @@ const {
   datePublished,
   formalcalculusPrereqs = [],
   formalmlConnections = [],
+  formalragConnections = [],
   connections = [],
 } = Astro.props;
 
@@ -85,7 +87,7 @@ for (const node of graphData.nodes) {
       </p>
 
       <!-- Cross-site links -->
-      {(formalcalculusPrereqs.length > 0 || formalmlConnections.length > 0) && (
+      {(formalcalculusPrereqs.length > 0 || formalmlConnections.length > 0 || formalragConnections.length > 0) && (
         <div class="flex flex-wrap gap-2 mt-4">
           {formalcalculusPrereqs.map((prereq) => (
             <ExternalLink
@@ -98,6 +100,13 @@ for (const node of graphData.nodes) {
             <ExternalLink
               href={`https://formalml.com/topics/${conn.topic}`}
               site="formalml"
+              topic={conn.topic.replace(/-/g, ' ')}
+            />
+          ))}
+          {formalragConnections.map((conn) => (
+            <ExternalLink
+              href={`https://formalrag.com/topics/${conn.topic}`}
+              site="formalrag"
               topic={conn.topic.replace(/-/g, ' ')}
             />
           ))}

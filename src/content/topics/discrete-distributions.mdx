@@ -22,6 +22,10 @@ domain: "core-distributions"
 videoId: null
 notebookPath: "notebooks/discrete-distributions/05_discrete_distributions.ipynb"
 githubUrl: "https://github.com/jonx0037/formalStatistics/blob/main/src/content/topics/discrete-distributions.mdx"
+formalragConnections:
+  - topic: "bm25-binary-independence-model"
+    site: "formalrag"
+    relationship: "The 2-Poisson eliteness model that motivates BM25's term-frequency saturation is a mixture of two Poisson distributions over within-document term counts — the Poisson PMF derived here generates that retrieval model."
 datePublished: 2026-04-12
 estimatedReadTime: 50
 abstract: "Seven discrete distributions arise from seven distinct probabilistic mechanisms. The Bernoulli(p) models a single binary trial; the Binomial(n,p) counts successes in n independent trials; the Geometric(p) waits for the first success; the Negative Binomial(r,p) waits for the r-th; the Poisson(λ) counts rare events at a constant rate; the Hypergeometric(N,K,n) counts successes when sampling without replacement; and the Discrete Uniform assigns equal probability to every outcome. Each distribution receives the same systematic treatment: PMF derivation, proofs of E[X] and Var(X), MGF, key properties, and ML connections. The Poisson limit theorem shows Binomial(n, λ/n) → Poisson(λ) as n → ∞. The Geometric distribution is the only discrete distribution with the memoryless property. Probability-generating functions G(s) = E[s^X] provide a tool tailored to discrete variables, with the compound distribution formula G_S(s) = G_N(G_X(s)) as its signature application. Five of the seven distributions — Bernoulli, Binomial, Geometric, Negative Binomial, and Poisson — belong to the exponential family, which Topic 7 will unify."
