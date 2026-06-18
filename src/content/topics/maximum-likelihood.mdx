@@ -25,6 +25,10 @@ domain: "statistical-estimation"
 videoId: null
 notebookPath: "notebooks/maximum-likelihood/14_maximum_likelihood.ipynb"
 githubUrl: "https://github.com/jonx0037/formalStatistics/blob/main/src/content/topics/maximum-likelihood.mdx"
+formalragConnections:
+  - topic: "bm25-binary-independence-model"
+    site: "formalrag"
+    relationship: "BM25's inverse-document-frequency weight is the maximum-likelihood estimate of the Robertson–Spärck-Jones relevance weight under a Jeffreys prior — the MLE machinery here becomes the lexical-retrieval scoring function there."
 datePublished: 2026-04-14
 estimatedReadTime: 45
 abstract: "The maximum likelihood estimator finds the parameter value that makes the observed data most probable — the peak of the likelihood function. Equivalently, it is the root of the score equation. Under regularity conditions, the MLE is consistent (it converges to the true parameter by a law of large numbers on the log-likelihood), asymptotically normal (by a Taylor expansion of the score together with the CLT, √n(θ̂ − θ₀) converges in distribution to N(0, 1/I(θ₀))), and asymptotically efficient (it achieves the Cramér-Rao lower bound). The MLE is functionally invariant: if θ̂ is the MLE of θ, then g(θ̂) is the MLE of g(θ). When no closed form exists, Newton-Raphson takes quadratically convergent steps using the observed Fisher information. The MLE bridges statistics and machine learning: maximizing the likelihood is equivalent to minimizing cross-entropy, and adding a prior penalty gives MAP estimation — the Bayesian bridge to regularization."

@@ -36,6 +36,15 @@ const topics = defineCollection({
         }),
       )
       .default([]),
+    formalragConnections: z
+      .array(
+        z.object({
+          topic: z.string(),
+          site: z.string(),
+          relationship: z.string(),
+        }),
+      )
+      .default([]),
     connections: z
       .array(
         z.object({
