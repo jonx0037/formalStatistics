@@ -10,9 +10,9 @@
  *                             inlined here rather than added to `nonparametric.ts`
  *                             (brief Appendix B.9 locked decision).
  *
- * The pedagogical payoff is the bimodal preset: Silverman over-smooths into a
- * single mode; SHJ recovers both modes cleanly; UCV is approximately right
- * but noisy across resamples.
+ * The pedagogical payoff is the bimodal preset: Silverman over-smooths
+ * (flattened peaks, filled-in valley); SHJ tracks the oracle; UCV is
+ * approximately right but noisy across resamples.
  *
  * Performance: UCV is O(n² G) per call. The "Run 200 resamples" MC mode is
  * capped at n ≤ 500; per-sample rendering is fine up to n = 2000.
@@ -343,7 +343,7 @@ export default function PluginBandwidthComparator() {
         <span className="mx-2 text-slate-400">·</span>
         <span>
           Silverman's rule is the textbook default, but watch what it does on the bimodal preset —
-          the two modes merge. Sheather–Jones and UCV work harder but recover the structure.
+          both peaks flatten and the valley fills in. Sheather–Jones and UCV work harder and track the structure.
         </span>
       </div>
 

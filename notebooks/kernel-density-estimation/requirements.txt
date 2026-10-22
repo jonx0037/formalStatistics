@@ -1,0 +1,5 @@
+numpy>=2.4
+scipy>=1.17
+matplotlib>=3.10
+jupyter>=1.1
+ipykernel>=6.29

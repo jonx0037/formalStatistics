@@ -746,12 +746,12 @@ $$
 \hat h_{\mathrm{Silverman}} \;=\; 1.06 \cdot 1.80 \cdot 200^{-1/5} \;\approx\; 0.66.
 $$
 
-But the oracle bandwidth $h^\ast$ (Theorem 4, using the closed-form $R(f'') \approx 0.092$ for this mixture) is $\approx 0.43$. Silverman is about $1.5\times$ too large; the resulting KDE merges the two modes into a single plateau. UCV and Sheather–Jones both estimate $R(f'')$ from the data rather than assuming a Normal reference, and both recover the bimodality cleanly. Figure 8 shows the three side by side.
+But the oracle bandwidth $h^\ast$ (Theorem 4, using the closed-form $R(f'') \approx 0.092$ for this mixture) is $\approx 0.43$. Silverman is about $1.5\times$ too large; the resulting KDE flattens both peaks and fills in the valley between them, so the bimodality survives but is understated. (It never disappears outright at this bandwidth: in expectation the KDE is the mixture convolved with the kernel, $0.5\,N(-1.5,\, 1 + h^2) + 0.5\,N(1.5,\, 1 + h^2)$, which stays bimodal for every $h < \sqrt{1.25} \approx 1.12$.) UCV and Sheather–Jones both estimate $R(f'')$ from the data rather than assuming a Normal reference; on this sample they land at $0.47$ and $0.42$, within 10% of the oracle, and both track the true peaks and valley. Figure 8 shows the three side by side.
 </ExampleBlock>
 
-![Three KDE curves on a bimodal 0.5 N(-1.5,1) + 0.5 N(1.5,1) sample at n = 200. Silverman's rule (indigo) over-smooths into a single-mode curve. UCV (amber) under-smooths with visible noise. Sheather-Jones (violet) recovers both modes cleanly. True density overlaid in black.](/images/topics/kernel-density-estimation/30-bandwidth-selectors-bimodal.png)
+![Three KDE curves on a bimodal 0.5 N(-1.5,1) + 0.5 N(1.5,1) sample at n = 200. Silverman's rule (indigo, h = 0.661) keeps both modes but flattens the peaks and fills in the valley. UCV (amber, h = 0.470) and Sheather-Jones (violet, h = 0.421) sit close to the oracle h* = 0.434 and track both peaks and the valley. True density overlaid as a dashed black curve.](/images/topics/kernel-density-estimation/30-bandwidth-selectors-bimodal.png)
 
-*Figure 8. Three bandwidth selectors on a bimodal mixture at $n = 200$. Silverman over-smooths; UCV is noisy; Sheather–Jones cleanly recovers the bimodality. The pedagogical payoff: rule-of-thumb selectors are conservative by design, and their conservatism bites at densities whose curvature is not well-approximated by a Normal reference.*
+*Figure 8. Three bandwidth selectors on a bimodal mixture at $n = 200$. Silverman ($\hat h = 0.66$, $1.52\times$ the oracle) over-smooths: the two modes survive but are flattened. UCV ($0.47$) and Sheather–Jones ($0.42$) both land within 10% of the oracle $h^\ast = 0.43$; UCV's known weakness, its high variability across resamples, doesn't show in a single draw. The pedagogical payoff: rule-of-thumb selectors are conservative by design, and their conservatism bites at densities whose curvature is not well-approximated by a Normal reference.*
 
 <PluginBandwidthComparator client:visible />
 
