@@ -503,7 +503,7 @@ export default function PluginBandwidthComparator() {
       </div>
 
       <p className="mt-3 text-xs text-slate-500 leading-relaxed">
-        At the Bimodal preset, Silverman's bandwidth is roughly <span className="italic">twice</span>{' '}
+        At the Bimodal preset, Silverman's bandwidth is roughly <span className="italic">1.5×</span>{' '}
         the oracle h*, which is why it over-smooths across the modes. SHJ's plug-in gets much closer
         by estimating the curvature R(f"). UCV has the largest variance across resamples — try "Run 200
         resamples" on a smaller n to see the IQR column widen.
