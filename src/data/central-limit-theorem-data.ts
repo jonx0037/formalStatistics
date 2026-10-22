@@ -99,7 +99,7 @@ export const cltDistributions: CLTDistribution[] = [
     // ρ_Bern(p) = [p² + (1−p)²] / √(p(1−p)) ; for p = 0.3 → ≈ 1.266
     thirdMomentRatio: (0.3 * 0.3 + 0.7 * 0.7) / Math.sqrt(0.21),
     description:
-      'Discrete and asymmetric. The de Moivre–Laplace theorem is this CLT applied to sums of Bernoullis.',
+      'Discrete and asymmetric. The de Moivre–Laplace theorem is this CLT applied to sums of Bernoullis. Slowest of these presets in KS distance: the lattice jumps, not skewness, set the floor.',
   },
   {
     id: 'poisson',
@@ -129,7 +129,7 @@ export const cltDistributions: CLTDistribution[] = [
     skewness: Math.sqrt(8 / 3),
     thirdMomentRatio: 2.16, // MC estimate
     description:
-      'Highly skewed right. Slow convergence — needs n ≈ 100 for good Normal approximation.',
+      'Skewed right (skewness ≈ 1.63, a little below Exponential at 2). Converges at about the same rate as Exponential.',
   },
   {
     id: 't5',
