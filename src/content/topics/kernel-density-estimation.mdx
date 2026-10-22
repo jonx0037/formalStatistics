@@ -746,7 +746,7 @@ $$
 \hat h_{\mathrm{Silverman}} \;=\; 1.06 \cdot 1.80 \cdot 200^{-1/5} \;\approx\; 0.66.
 $$
 
-But the oracle bandwidth $h^\ast$ (Theorem 4, using the closed-form $R(f'') \approx 0.092$ for this mixture) is $\approx 0.38$. Silverman is nearly $2\times$ too large; the resulting KDE merges the two modes into a single plateau. UCV and Sheather–Jones both estimate $R(f'')$ from the data rather than assuming a Normal reference, and both recover the bimodality cleanly. Figure 8 shows the three side by side.
+But the oracle bandwidth $h^\ast$ (Theorem 4, using the closed-form $R(f'') \approx 0.092$ for this mixture) is $\approx 0.43$. Silverman is about $1.5\times$ too large; the resulting KDE merges the two modes into a single plateau. UCV and Sheather–Jones both estimate $R(f'')$ from the data rather than assuming a Normal reference, and both recover the bimodality cleanly. Figure 8 shows the three side by side.
 </ExampleBlock>
 
 ![Three KDE curves on a bimodal 0.5 N(-1.5,1) + 0.5 N(1.5,1) sample at n = 200. Silverman's rule (indigo) over-smooths into a single-mode curve. UCV (amber) under-smooths with visible noise. Sheather-Jones (violet) recovers both modes cleanly. True density overlaid in black.](/images/topics/kernel-density-estimation/30-bandwidth-selectors-bimodal.png)
