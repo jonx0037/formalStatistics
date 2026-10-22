@@ -598,7 +598,7 @@ The best known bound is $C \le 0.4748$ (Shevtsova, 2011).
 Two reads:
 
 - **Rate.** The $1/\sqrt{n}$ factor is the headline: double your sample size, cut the worst-case deviation from the Normal approximation by a factor of $\sqrt{2} \approx 1.41$.
-- **Constant.** $\rho$ is the absolute third moment normalized by $\sigma^3$. For symmetric distributions $\rho = \mathbb{E}[|X|^3]/\sigma^3$ is modest; for right-skewed distributions like Exponential ($\rho = 6$) or Chi²(1) ($\rho = 8$), $\rho$ is large and the approximation is correspondingly slower. Skewness is the main enemy of normality.
+- **Constant.** $\rho$ is the absolute third moment normalized by $\sigma^3$. For symmetric distributions $\rho$ is modest (Uniform(0, 1): $\rho = 3\sqrt{3}/4 \approx 1.30$); for right-skewed distributions like Exponential ($\rho = 12/e - 2 \approx 2.41$) or Chi²(1) ($\rho \approx 3.07$), $\rho$ is larger and the guaranteed rate is correspondingly weaker. Skewness is the main enemy of normality.
 
 <img src="/images/topics/central-limit-theorem/berry-esseen.png"
      alt="Three-panel Berry–Esseen: sup|Fₙ − Φ| for Uniform vs Exponential; convergence rate 1/√n with Berry–Esseen envelope; skewness ρ as the driver of the constant"
@@ -609,10 +609,10 @@ Two reads:
 
 At $n = 50$ with $C = 0.4748$:
 
-- Uniform(0, 1): $\rho = 1.8$, bound $= 0.4748 \cdot 1.8 / \sqrt{50} \approx 0.121$. Empirical sup deviation: $\approx 0.02$.
-- Exponential(1): $\rho = 6$, bound $= 0.4748 \cdot 6 / \sqrt{50} \approx 0.403$. Empirical sup deviation: $\approx 0.05$.
+- Uniform(0, 1): $\rho = 3\sqrt{3}/4 \approx 1.30$, bound $= 0.4748 \cdot 1.30 / \sqrt{50} \approx 0.087$. Exact sup deviation (Irwin–Hall CDF vs $\Phi$): $\approx 0.0006$.
+- Exponential(1): $\rho = 12/e - 2 \approx 2.41$, bound $= 0.4748 \cdot 2.41 / \sqrt{50} \approx 0.162$. Exact sup deviation (Gamma(50, 1) CDF vs $\Phi$): $\approx 0.019$.
 
-The bound is an upper envelope — the empirical deviation is typically 5–10× smaller than the bound. But the relative ordering is preserved: the ratio of Uniform to Exponential sup deviations tracks the ratio of their $\rho$ values. The bound is *not tight in general* (it overstates the deviation), but it is *tight in the worst case* — there exist distributions (the Bernoulli family) for which the constant $C$ cannot be improved.
+The bound is an upper envelope, and how loose it is depends on symmetry: the Exponential's true deviation is about 9× smaller than its bound, the Uniform's roughly 150× smaller. The bound does get the *ordering* right — the larger-$\rho$ distribution converges more slowly — but the ratio of sup deviations (over 30×) is far larger than the ratio of $\rho$ values (under 2×). Berry–Esseen is a worst-case statement over every distribution with a given $\rho$; the error any particular distribution actually incurs is governed by its signed skewness $\gamma$. The leading correction to $F_n$ is the skewness term $\gamma(1 - x^2)\varphi(x)/(6\sqrt{n})$ of the Edgeworth expansion — the CDF-level image of the cubic $t^3/(3\sqrt{n})$ term in the Exponential MGF expansion above, whose coefficient is $\gamma/6$ — which peaks at $|\gamma|/(6\sqrt{2\pi n})$. For the Exponential, $\gamma = 2$ gives $\approx 0.019$, matching the exact value. For a symmetric distribution $\gamma = 0$, the $1/\sqrt{n}$ term vanishes, and the deviation drops to order $1/n$. (Simulation cannot resolve the Uniform's deviation at all: a Kolmogorov–Smirnov estimate from $M = 5000$ replications has a noise floor near $0.012$, twenty times the true value.) The bound is *not tight in general* (it overstates the deviation), but it is *nearly tight in the worst case* — the Bernoulli family shows that $C$ cannot be pushed below $\approx 0.41$ (Remark 6).
 
 </ExampleBlock>
 
