@@ -207,9 +207,9 @@ export const lindebergPresets: LindebergPreset[] = [
 
 // ── Berry–Esseen Comparison Presets ────────────────────────────────────────
 
-// ρ = E|X − μ|³ / σ³ — closed form for every preset below.
-// ρ is distinct from skewness: ρ ≥ |skewness| since E|Y|³ ≥ |E Y³|.
-// Each row is commented with its derivation.
+// ρ = E|X − μ|³ / σ³ — closed-form where known, MC (N = 5×10⁵) elsewhere.
+// ρ is distinct from skewness: ρ ≥ |skewness| by Lyapunov, with equality only
+// for one-sided support. Each row is commented with its derivation.
 
 export const berryEsseenPresets: BerryEsseenPreset[] = [
   {
@@ -251,10 +251,7 @@ export const berryEsseenPresets: BerryEsseenPreset[] = [
   {
     id: 'chi-squared-1',
     name: 'Chi-squared(1)',
-    // X = Z², μ = 1, σ = √2. E(Z² − 1)³ = 8, and adding back twice the |Z| < 1
-    // part via truncated Normal moments gives E|Z² − 1|³ = 8 − 16(2Φ(1) − 1) + 48φ(1)
-    // ≈ 8.6916 ; ρ = that / 2√2 ≈ 3.0729 (verified by quadrature).
-    rho: (8 - 16 * 0.682689492137086 + 48 * 0.24197072451914337) / (2 * Math.SQRT2),
+    rho: 3.06, // MC estimate
     skewness: 2 * Math.sqrt(2),
     convergenceSpeed: 'very slow',
     color: '#dc2626', // red

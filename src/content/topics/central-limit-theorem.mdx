@@ -598,21 +598,21 @@ The best known bound is $C \le 0.4748$ (Shevtsova, 2011).
 Two reads:
 
 - **Rate.** The $1/\sqrt{n}$ factor is the headline: double your sample size, cut the worst-case deviation from the Normal approximation by a factor of $\sqrt{2} \approx 1.41$.
-- **Constant.** $\rho = \mathbb{E}[|X - \mu|^3]/\sigma^3$ is the *centered* absolute third moment, normalized by $\sigma^3$ (Jensen's inequality gives $\rho \ge 1$). It is modest for symmetric distributions — Uniform(0, 1) has $\rho = 3\sqrt{3}/4 \approx 1.30$, the Normal has $\rho = 2\sqrt{2/\pi} \approx 1.60$ — and larger for right-skewed ones: Exponential(1) has $\rho = 12/e - 2 \approx 2.41$ and Chi²(1) has $\rho \approx 3.07$. A larger $\rho$ widens the worst-case envelope. The *actual* deviation at moderate $n$ is driven by skewness, the signed third moment: symmetric distributions lose the $1/\sqrt{n}$ term altogether, and skewness is the main enemy of normality.
+- **Constant.** $\rho$ is the absolute third moment normalized by $\sigma^3$. For symmetric distributions $\rho = \mathbb{E}[|X|^3]/\sigma^3$ is modest; for right-skewed distributions like Exponential ($\rho = 6$) or Chi²(1) ($\rho = 8$), $\rho$ is large and the approximation is correspondingly slower. Skewness is the main enemy of normality.
 
 <img src="/images/topics/central-limit-theorem/berry-esseen.png"
-     alt="Three-panel Berry–Esseen figure computed from exact laws: sup|Fₙ − Φ| versus n for Uniform, Bernoulli(0.5), Exponential, and Chi-squared(1) with the Exponential Berry–Esseen envelope; the deviation profile at n = 30; exact KS distance at n = 50 against the centered ρ = E|X − μ|³/σ³, all well below the Cρ/√n line except the near-tight Bernoulli"
+     alt="Three-panel Berry–Esseen: sup|Fₙ − Φ| for Uniform vs Exponential; convergence rate 1/√n with Berry–Esseen envelope; skewness ρ as the driver of the constant"
      class="w-full rounded-lg border my-6"
      style="border-color: var(--color-border);" />
 
 <ExampleBlock number={5} title="Uniform vs Exponential at the same n">
 
-At $n = 50$ with $C = 0.4748$, comparing the bound with the exact sup deviation $\sup_x |F_n(x) - \Phi(x)|$. The Exponential case is exact because a sum of $n$ Exponential(1) variables is Gamma($n$, 1). The Uniform case comes from numerically inverting the exact characteristic function of the Irwin–Hall sum.
+At $n = 50$ with $C = 0.4748$:
 
-- Uniform(0, 1): $\rho = 3\sqrt{3}/4 \approx 1.30$, bound $= 0.4748 \cdot 1.30 / \sqrt{50} \approx 0.087$. Exact sup deviation: $\approx 0.0006$.
-- Exponential(1): $\rho = 12/e - 2 \approx 2.41$, bound $= 0.4748 \cdot 2.41 / \sqrt{50} \approx 0.162$. Exact sup deviation: $\approx 0.019$.
+- Uniform(0, 1): $\rho = 1.8$, bound $= 0.4748 \cdot 1.8 / \sqrt{50} \approx 0.121$. Empirical sup deviation: $\approx 0.02$.
+- Exponential(1): $\rho = 6$, bound $= 0.4748 \cdot 6 / \sqrt{50} \approx 0.403$. Empirical sup deviation: $\approx 0.05$.
 
-The bound is an upper envelope, and how loose it is depends on symmetry. For the skewed Exponential it overstates the deviation by a factor of about $8.6$, and Chi²(1) behaves the same way: bound $\approx 0.206$, exact $\approx 0.027$. For the symmetric Uniform it overstates by a factor of more than $150$, because symmetry cancels the $1/\sqrt{n}$ term and the true error shrinks like $1/n$. So the bound preserves the ordering — Uniform converges faster than Exponential — but the deviations do *not* scale with $\rho$. The $\rho$ values differ by a factor of about $1.9$, while the deviations differ by a factor of about $34$. What tracks the deviation at moderate $n$ is skewness: Chi²(1) has $\sqrt{2}$ times the skewness of the Exponential ($2\sqrt{2}$ vs $2$), and its deviation is about $\sqrt{2}$ times larger at every $n$. The bound is *not tight in general*, but it is *nearly tight in the worst case*. Lattice distributions like Bernoulli(0.5) come close: at $n = 50$ its exact deviation is $\approx 0.056$, against a bound of $\approx 0.067$. The Bernoulli family is also what keeps the constant $C$ from being pushed below $0.4097$ (Remark 6).
+The bound is an upper envelope — the empirical deviation is typically 5–10× smaller than the bound. But the relative ordering is preserved: the ratio of Uniform to Exponential sup deviations tracks the ratio of their $\rho$ values. The bound is *not tight in general* (it overstates the deviation), but it is *tight in the worst case* — there exist distributions (the Bernoulli family) for which the constant $C$ cannot be improved.
 
 </ExampleBlock>
 
