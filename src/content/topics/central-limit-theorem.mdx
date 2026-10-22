@@ -292,15 +292,17 @@ We simulate $M = 5000$ replications of the standardized mean $Z_n$ at several va
 
 | Distribution | $n = 5$ | $n = 10$ | $n = 30$ | $n = 100$ |
 |---|---|---|---|---|
-| Uniform(0,1) | KS ≈ 0.02 | KS ≈ 0.01 | KS ≈ 0.01 | KS < 0.01 |
-| Exponential(1) | KS ≈ 0.13 | KS ≈ 0.08 | KS ≈ 0.04 | KS ≈ 0.02 |
-| Bernoulli(0.3) | KS ≈ 0.09 | KS ≈ 0.05 | KS ≈ 0.03 | KS ≈ 0.02 |
-| Poisson(5) | KS ≈ 0.06 | KS ≈ 0.04 | KS ≈ 0.02 | KS ≈ 0.01 |
-| Chi²(3) | KS ≈ 0.18 | KS ≈ 0.11 | KS ≈ 0.06 | KS ≈ 0.03 |
+| Uniform(0,1) | KS < 0.01 | KS < 0.01 | KS < 0.01 | KS < 0.01 |
+| Exponential(1) | KS ≈ 0.06 | KS ≈ 0.04 | KS ≈ 0.02 | KS ≈ 0.01 |
+| Bernoulli(0.3) | KS ≈ 0.22 | KS ≈ 0.15 | KS ≈ 0.09 | KS ≈ 0.05 |
+| Poisson(5) | KS ≈ 0.05 | KS ≈ 0.04 | KS ≈ 0.02 | KS ≈ 0.01 |
+| Chi²(3) | KS ≈ 0.05 | KS ≈ 0.04 | KS ≈ 0.02 | KS ≈ 0.01 |
 
-(KS = Kolmogorov–Smirnov distance from $\mathcal{N}(0,1)$; smaller is better.)
+(KS = Kolmogorov–Smirnov distance from $\mathcal{N}(0,1)$; smaller is better. The entries are the true distance $\sup_x |F_{Z_n}(x) - \Phi(x)|$, confirmed with $M = 400{,}000$ replications. A single run at $M = 5000$, like the explorer below, has a sampling noise floor of about $0.012$: a perfectly Normal sample of that size already scores $\approx 0.01$. That is why the Uniform row reads "< 0.01" and why the smallest entries can come out a little higher in the explorer.)
 
-Symmetric, bounded distributions (Uniform) hit target accuracy almost immediately. Skewed distributions (Chi², Exponential) take longer. The rate is $O(1/\sqrt{n})$ uniformly — §7 will pin it down.
+The Uniform row is below the noise floor from the start. A symmetric summand has no skewness, so the leading $1/\sqrt{n}$ error term vanishes. The skewed continuous summands (Exponential, Chi²) start at $0.05$–$0.06$ and shrink by about $\sqrt{20} \approx 4.5$ between $n = 5$ and $n = 100$. That is the $O(1/\sqrt{n})$ rate, and §7 will pin it down.
+
+Bernoulli(0.3) lags far behind, and skewness is not the reason: its skewness ($0.87$) is less than half of Exponential's ($2$). The cause is the lattice. $Z_n$ takes values spaced $1/\sqrt{npq}$ apart, so its CDF jumps at every atom, and no continuous $\Phi$ can come closer than half the largest jump. That floor is $0.18$ at $n = 5$ and still $0.04$ at $n = 100$, and it is the gap the continuity correction of §2 is designed to work around. Poisson(5) is also lattice-valued, but $S_n \sim \text{Poisson}(5n)$ has variance $5n$ rather than $0.21n$. Its jumps are about five times smaller, so it tracks the continuous rows.
 
 </ExampleBlock>
 
