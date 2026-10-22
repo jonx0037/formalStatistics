@@ -461,7 +461,7 @@ function Summary({ preset }: { preset: BerryEsseenPreset }) {
         {preset.name}
       </div>
       <div className="grid grid-cols-3 gap-2 text-xs">
-        <StatCell label="ρ = E[|X|³]/σ³" value={preset.rho.toFixed(2)} />
+        <StatCell label="ρ = E|X − μ|³/σ³" value={preset.rho.toFixed(2)} />
         <StatCell label="skewness" value={preset.skewness.toFixed(2)} />
         <StatCell label="speed" value={preset.convergenceSpeed} />
       </div>
