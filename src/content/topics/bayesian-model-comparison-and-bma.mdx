@@ -701,7 +701,7 @@ averaged over the posterior of $\theta$. For $\theta$-independent statistics (sa
 </ExampleBlock>
 
 <RemarkBlock number={24} title="Empirical null vs theoretical null">
-Efron's two-groups model assumes $f_0 = \mathcal{N}(0, 1)$ (the theoretical null) — what you'd expect under standard z-test assumptions. In practice, real-world z-score distributions often have a *wider* null due to miscalibration, unmodeled correlations, or dependence structure — Efron calls this the empirical null. Fitting $(\mu_0, \sigma_0)$ from the central 50% of the z-distribution (central-matching) recovers the empirical null; substituting it for $\mathcal{N}(0, 1)$ often changes rejection sets dramatically. The `localFdr` function accepts a `theoreticalNull: false` flag to switch on empirical-null estimation.
+Efron's two-groups model assumes $f_0 = \mathcal{N}(0, 1)$ (the theoretical null) — what you'd expect under standard z-test assumptions. In practice, real-world z-score distributions often have a *wider* null due to miscalibration, unmodeled correlations, or dependence structure — Efron calls this the empirical null. Fitting $(\mu_0, \sigma_0)$ from the central 50% of the z-distribution (central-matching) recovers the empirical null; substituting it for $\mathcal{N}(0, 1)$ often changes rejection sets dramatically. The `localFdr` function accepts a `theoreticalNull: false` flag to switch on empirical-null estimation. [Topic 33 §33.8](/topics/empirical-bayes#section-33-8) estimates the empirical null on the prostate data by central matching.
 </RemarkBlock>
 
 <RemarkBlock number={25} title="PPCs are not hypothesis tests">

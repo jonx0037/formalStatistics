@@ -34,6 +34,7 @@
     { "id": "bayesian-computation", "label": "Bayesian Computation & MCMC", "domain": "bayesian-statistics", "status": "published", "url": "/topics/bayesian-computation-and-mcmc" },
     { "id": "bayesian-model-comparison", "label": "Bayesian Model Comparison & BMA", "domain": "bayesian-statistics", "status": "published", "url": "/topics/bayesian-model-comparison-and-bma" },
     { "id": "hierarchical-bayes", "label": "Hierarchical & Empirical Bayes", "domain": "bayesian-statistics", "status": "published", "url": "/topics/hierarchical-bayes-and-partial-pooling" },
+    { "id": "empirical-bayes", "label": "Empirical Bayes", "domain": "bayesian-statistics", "status": "published", "url": "/topics/empirical-bayes" },
 
     { "id": "order-statistics-and-quantiles", "label": "Order Statistics & Quantiles", "domain": "high-dimensional-nonparametric", "status": "published", "url": "/topics/order-statistics-and-quantiles" },
     { "id": "kernel-density-estimation", "label": "Kernel Density Estimation", "domain": "high-dimensional-nonparametric", "status": "published", "url": "/topics/kernel-density-estimation" },
@@ -168,6 +169,13 @@
     { "source": "modes-of-convergence", "target": "empirical-processes" },
     { "source": "law-of-large-numbers", "target": "empirical-processes" },
     { "source": "order-statistics-and-quantiles", "target": "empirical-processes" },
-    { "source": "central-limit-theorem", "target": "empirical-processes" }
+    { "source": "central-limit-theorem", "target": "empirical-processes" },
+    { "source": "hierarchical-bayes", "target": "empirical-bayes" },
+    { "source": "bayesian-model-comparison", "target": "empirical-bayes" },
+    { "source": "kernel-density-estimation", "target": "empirical-bayes" },
+    { "source": "multiple-testing-and-false-discovery", "target": "empirical-bayes" },
+    { "source": "exponential-families", "target": "empirical-bayes" },
+    { "source": "point-estimation", "target": "empirical-bayes" },
+    { "source": "maximum-likelihood", "target": "empirical-bayes" }
   ]
 }

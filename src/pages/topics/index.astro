@@ -1,7 +1,7 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import TopicCard from '../../components/ui/TopicCard.astro';
-import { tracks } from '../../data/curriculum';
+import { tracks, publishedTotal } from '../../data/curriculum';
 import graphData from '../../data/curriculum-graph.json';
 
 const difficultyMap: Record<string, 'foundational' | 'intermediate' | 'advanced'> = {
@@ -33,6 +33,7 @@ const difficultyMap: Record<string, 'foundational' | 'intermediate' | 'advanced'
   'bayesian-computation': 'intermediate',
   'bayesian-model-comparison': 'advanced',
   'hierarchical-bayes': 'advanced',
+  'empirical-bayes': 'advanced',
   'order-statistics': 'intermediate',
   'kernel-density-estimation': 'intermediate',
   'bootstrap': 'intermediate',
@@ -68,6 +69,7 @@ const topicDescriptions: Record<string, string> = {
   'bayesian-computation': 'MCMC, Metropolis-Hastings, Gibbs sampling',
   'bayesian-model-comparison': 'Bayes factors, marginal likelihood',
   'hierarchical-bayes': 'Multilevel models, shrinkage estimators',
+  'empirical-bayes': 'Robbins, Tweedie, NPMLE, EB intervals',
   'order-statistics': 'Quantile asymptotics, distribution-free inference',
   'kernel-density-estimation': 'Bandwidth selection, bias-variance',
   'bootstrap': 'Efron\'s bootstrap, bootstrap confidence intervals',
@@ -92,7 +94,7 @@ for (const node of graphData.nodes) {
         Topics
       </h1>
       <p class="text-lg" style="color: var(--color-text-muted);">
-        32 topics across 8 tracks &mdash; published topics are linked, the rest are coming soon.
+        {publishedTotal} {publishedTotal === 1 ? 'topic' : 'topics'} across {tracks.length} {tracks.length === 1 ? 'track' : 'tracks'} &mdash; published topics are linked, the rest are coming soon.
       </p>
     </header>
 

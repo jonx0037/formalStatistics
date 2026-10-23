@@ -2,9 +2,10 @@
  * Topic 25 — Bayesian Foundations & Prior Selection (Track 7 leaf module).
  *
  * New Track-7-wide shared module. Topics 26–28 (MCMC, BMA, Hierarchical)
- * extend this file rather than adding sibling modules — the extend-don't-
- * create convention that Tracks 4–6 established within `estimation.ts`,
- * `testing.ts`, and `regression.ts`.
+ * and Topic 33 (Empirical Bayes — Robbins/Tweedie f-modeling, NPMLE
+ * g-modeling, EB confidence intervals) extend this file rather than adding
+ * sibling modules — the extend-don't-create convention that Tracks 4–6
+ * established within `estimation.ts`, `testing.ts`, and `regression.ts`.
  *
  * Scope (see `docs/formalstatistics-bayesian-foundations-and-prior-selection-handoff-brief.md`
  * §6.1 for the full manifest):
@@ -43,7 +44,10 @@ import {
   quantileNormal,
   sampleGammaShape,
   sampleDirichlet,
+  cdfStdNormal,        // NEW — Topic 33 EBCI coverage
+  quantileStdNormal,   // NEW — Topic 33 EBCI critical values
 } from './distributions';
+import { glmFit, FAMILIES } from './regression';   // NEW — Topic 33 Lindsey's method
 
 // Re-export densities for callers who only import from `bayes.ts`
 // (brief §6.1 "reuse over duplication" — don't redefine, just re-export).
@@ -2828,4 +2832,460 @@ export function funnelLogDensity(theta: number, logTau: number): number {
 
 // ==========================================================================
 // END TOPIC 28 ADDITIONS
+// ==========================================================================
+
+// ==========================================================================
+// TOPIC 33 — Empirical Bayes (Track 7 coda)
+// ==========================================================================
+//
+// Additions: Robbins' Poisson formula and Gamma–Poisson parametric EB;
+// Tweedie's formula with two f-modeling backends (Gaussian-KDE score and
+// Lindsey's Poisson-regression density); Normal-mixture and discrete-prior
+// oracle Bayes rules; the NPMLE of the prior by fixed-grid EM with its
+// gradient-function certificate; parametric and robust EB confidence
+// intervals. See handoff brief §6.1 for full signatures + §6.2 for T33
+// test pins.
+
+const SQRT_2PI = Math.sqrt(2 * Math.PI);
+
+/** One component of a Normal-mixture prior; variance 0 is a point mass. */
+export interface NormalMixtureComponent {
+  weight: number;
+  mean: number;
+  variance: number;
+}
+
+/**
+ * Auto-insurance claim counts, CASI Table 6.1 (EFR2016 §6.1): one year of
+ * claims for 9,461 policy holders of a European insurer. counts[x] is the
+ * number of holders with exactly x claims, x = 0, …, 7.
+ */
+export function insuranceClaimsData(): { claims: number[]; counts: number[] } {
+  return {
+    claims: [0, 1, 2, 3, 4, 5, 6, 7],
+    counts: [7840, 1317, 239, 42, 14, 4, 4, 1],
+  };
+}
+
+/**
+ * Robbins' formula (ROB1956; §33.3 Thm 2) with f replaced by empirical
+ * frequencies: Ê[θ | x] = (x + 1) · y_{x+1} / y_x for x = 0, …, K − 2.
+ * Returns K − 1 values; NaN where y_x = 0.
+ */
+export function robbinsEstimate(counts: number[]): number[] {
+  const out: number[] = [];
+  for (let x = 0; x < counts.length - 1; x++) {
+    out.push(counts[x] > 0 ? ((x + 1) * counts[x + 1]) / counts[x] : NaN);
+  }
+  return out;
+}
+
+/** Golden-section maximization of a unimodal f on [a, b]. */
+function goldenSectionMax(f: (t: number) => number, a: number, b: number, tol = 1e-10): number {
+  const r = (Math.sqrt(5) - 1) / 2;
+  let lo = a;
+  let hi = b;
+  let c = hi - r * (hi - lo);
+  let d = lo + r * (hi - lo);
+  let fc = f(c);
+  let fd = f(d);
+  while (hi - lo > tol) {
+    if (fc > fd) {
+      hi = d; d = c; fd = fc;
+      c = hi - r * (hi - lo); fc = f(c);
+    } else {
+      lo = c; c = d; fc = fd;
+      d = lo + r * (hi - lo); fd = f(d);
+    }
+  }
+  return (lo + hi) / 2;
+}
+
+/**
+ * Gamma–Poisson parametric empirical Bayes (§33.3 Ex 4). θ ~ Gamma(shape ν,
+ * scale s) makes x negative-binomial; the marginal MLE preserves the mean
+ * (ν s = x̄), so we profile over log ν ∈ [−5, 5] with s = x̄ / ν.
+ * Posterior mean (x + ν) s / (1 + s) for x = 0, …, K − 1.
+ */
+export function gammaPoissonEB(counts: number[]): {
+  shape: number;
+  scale: number;
+  posteriorMean: number[];
+  logLik: number;
+} {
+  const total = counts.reduce((a, c) => a + c, 0);
+  const xbar = counts.reduce((a, c, x) => a + x * c, 0) / total;
+  const logLik = (logNu: number): number => {
+    const nu = Math.exp(logNu);
+    const s = xbar / nu;
+    let ll = 0;
+    for (let x = 0; x < counts.length; x++) {
+      if (counts[x] === 0) continue;
+      ll += counts[x] * (lnGamma(x + nu) - lnGamma(nu) - lnGamma(x + 1)
+        + x * Math.log(s / (1 + s)) - nu * Math.log1p(s));
+    }
+    return ll;
+  };
+  const logNu = goldenSectionMax(logLik, -5, 5, 1e-12);
+  const shape = Math.exp(logNu);
+  const scale = xbar / shape;
+  return {
+    shape,
+    scale,
+    posteriorMean: counts.map((_, x) => ((x + shape) * scale) / (1 + scale)),
+    logLik: logLik(logNu),
+  };
+}
+
+/**
+ * Score of a Gaussian KDE, d/dx log f̂_h(x) = Σ w_j (X_j − x) / h² with
+ * w_j ∝ φ((x − X_j)/h) — a softmax-weighted pull toward nearby data
+ * (§33.4 Ex 6). Weights are stabilized so the largest equals 1.
+ */
+export function kdeScore(sample: number[], x: number, h: number): number {
+  if (h <= 0) throw new Error(`kdeScore: bandwidth h=${h} must be positive`);
+  if (sample.length === 0) return 0;
+  let minU2 = Infinity;
+  for (const s of sample) {
+    const u = (x - s) / h;
+    if (u * u < minU2) minU2 = u * u;
+  }
+  let num = 0;
+  let den = 0;
+  for (const s of sample) {
+    const u = (x - s) / h;
+    const w = Math.exp(-0.5 * (u * u - minU2));
+    num += w * (s - x);
+    den += w;
+  }
+  return num / (den * h * h);
+}
+
+/**
+ * Tweedie's formula with a Gaussian-KDE marginal (§33.4 Thm 3, f-modeling):
+ * Ê[θ | x] = x + σ² · (log f̂_h)'(x). Default h = Silverman (SD rule, the
+ * private silvermanBandwidth above).
+ */
+export function tweedieKDE(sample: number[], xs: number[], sigmaSq = 1, h?: number): number[] {
+  const bw = h ?? silvermanBandwidth(sample);
+  return xs.map((x) => x + sigmaSq * kdeScore(sample, x, bw));
+}
+
+/** Result of Lindsey's method (§33.5 Def 4). */
+export interface LindseyFit {
+  beta: number[];
+  centers: number[];
+  counts: number[];
+  width: number;
+  expected: number[];
+  centerMean: number;
+  centerSd: number;
+  n: number;
+  iterations: number;
+  converged: boolean;
+  logF: (x: number) => number;
+  score: (x: number) => number;
+  curvature: (x: number) => number;
+}
+
+/**
+ * Lindsey's method (EFR1996; §33.5 Def 4): Poisson regression of histogram
+ * counts on a degree-J polynomial in the standardized bin center
+ * u = (c − mean c)/sd c (population sd). Binning matches numpy.histogram:
+ * equal-width bins on [lo, hi], left-closed, last bin closed. Reuses
+ * Topic 22's glmFit (Poisson family, canonical log link).
+ */
+export function lindseyFit(
+  z: number[],
+  options: { nBins?: number; degree?: number; lo?: number; hi?: number } = {},
+): LindseyFit {
+  const nBins = options.nBins ?? 90;
+  const J = options.degree ?? 6;
+  let zmin = Infinity;
+  let zmax = -Infinity;
+  for (const v of z) {
+    if (v < zmin) zmin = v;
+    if (v > zmax) zmax = v;
+  }
+  const lo = options.lo ?? zmin;
+  const hi = options.hi ?? zmax;
+  const width = (hi - lo) / nBins;
+  const edges = Array.from({ length: nBins + 1 }, (_, k) => (k === nBins ? hi : lo + k * width));
+  const counts = new Array<number>(nBins).fill(0);
+  for (const v of z) {
+    if (v < lo || v > hi) continue;
+    let k = Math.floor(((v - lo) * nBins) / (hi - lo));
+    if (k >= nBins) k = nBins - 1;
+    if (v < edges[k]) k -= 1;
+    else if (k < nBins - 1 && v >= edges[k + 1]) k += 1;
+    counts[k] += 1;
+  }
+  const centers = counts.map((_, k) => 0.5 * (edges[k] + edges[k + 1]));
+  const centerMean = centers.reduce((a, c) => a + c, 0) / nBins;
+  const centerSd = Math.sqrt(centers.reduce((a, c) => a + (c - centerMean) ** 2, 0) / nBins);
+  const basis = (x: number): number[] => {
+    const u = (x - centerMean) / centerSd;
+    const row = [1];
+    for (let j = 1; j <= J; j++) row.push(row[j - 1] * u);
+    return row;
+  };
+  const X = centers.map(basis);
+  const fit = glmFit(X, counts, FAMILIES.poisson, undefined, {
+    maxIter: 100,
+    tol: 1e-10,
+    skipNullDeviance: true,
+  });
+  const beta = fit.beta;
+  const n = z.length;
+  const logF = (x: number): number =>
+    basis(x).reduce((a, b, j) => a + beta[j] * b, 0) - Math.log(n * width);
+  const score = (x: number): number => {
+    const u = (x - centerMean) / centerSd;
+    let s = 0;
+    for (let j = 1; j <= J; j++) s += j * beta[j] * u ** (j - 1);
+    return s / centerSd;
+  };
+  const curvature = (x: number): number => {
+    const u = (x - centerMean) / centerSd;
+    let s = 0;
+    for (let j = 2; j <= J; j++) s += j * (j - 1) * beta[j] * u ** (j - 2);
+    return s / (centerSd * centerSd);
+  };
+  return {
+    beta,
+    centers,
+    counts,
+    width,
+    expected: fit.mu,
+    centerMean,
+    centerSd,
+    n,
+    iterations: fit.nIter,
+    converged: fit.converged,
+    logF,
+    score,
+    curvature,
+  };
+}
+
+/** Tweedie's formula with Lindsey's f̂ (§33.5 Ex 8): x + σ² · (log f̂)'(x). */
+export function tweedieLindsey(
+  z: number[],
+  xs: number[],
+  sigmaSq = 1,
+  options: { nBins?: number; degree?: number; lo?: number; hi?: number } = {},
+): number[] {
+  const fit = lindseyFit(z, options);
+  return xs.map((x) => x + sigmaSq * fit.score(x));
+}
+
+/** Marginal density f(x) = Σ_k w_k N(x; m_k, v_k + σ²) of a Normal-mixture prior. */
+export function normalMixtureMarginal(
+  x: number,
+  comps: NormalMixtureComponent[],
+  sigmaSq = 1,
+): number {
+  let f = 0;
+  for (const { weight, mean, variance } of comps) {
+    const s2 = variance + sigmaSq;
+    f += (weight * Math.exp((-0.5 * (x - mean) ** 2) / s2)) / Math.sqrt(2 * Math.PI * s2);
+  }
+  return f;
+}
+
+/**
+ * Exact posterior mean under a Normal-mixture prior (the oracle Bayes rule
+ * t_G for presets; §33.4 Ex 5–6). Within component k the posterior mean is
+ * m_k + v_k/(v_k + σ²)(x − m_k); components are weighted by their marginal
+ * responsibilities, computed in log space.
+ */
+export function posteriorMeanNormalMixturePrior(
+  x: number,
+  comps: NormalMixtureComponent[],
+  sigmaSq = 1,
+): number {
+  const logw = comps.map(({ weight, mean, variance }) => {
+    const s2 = variance + sigmaSq;
+    return Math.log(weight) - 0.5 * Math.log(2 * Math.PI * s2) - (0.5 * (x - mean) ** 2) / s2;
+  });
+  const maxLog = Math.max(...logw);
+  let num = 0;
+  let den = 0;
+  comps.forEach(({ mean, variance }, k) => {
+    const r = Math.exp(logw[k] - maxLog);
+    num += r * (mean + (variance / (variance + sigmaSq)) * (x - mean));
+    den += r;
+  });
+  return num / den;
+}
+
+/** Draw n parameters θ from a Normal-mixture prior with a seeded RNG. */
+export function sampleNormalMixture(
+  comps: NormalMixtureComponent[],
+  n: number,
+  rng: SeededRng,
+): number[] {
+  const total = comps.reduce((a, c) => a + c.weight, 0);
+  const out: number[] = [];
+  for (let i = 0; i < n; i++) {
+    let u = rng.random() * total;
+    let k = 0;
+    while (k < comps.length - 1 && u >= comps[k].weight) {
+      u -= comps[k].weight;
+      k++;
+    }
+    const { mean, variance } = comps[k];
+    out.push(variance > 0 ? mean + Math.sqrt(variance) * rng.normal() : mean);
+  }
+  return out;
+}
+
+/** Posterior mean under a discrete prior Σ_k w_k δ_{a_k} (NPMLE rule, §33.6). */
+export function posteriorMeanDiscretePrior(
+  x: number,
+  atoms: number[],
+  weights: number[],
+  sigmaSq = 1,
+): number {
+  let maxLog = -Infinity;
+  const logw = atoms.map((a, k) => {
+    const lw = weights[k] > 0 ? Math.log(weights[k]) - ((x - a) ** 2) / (2 * sigmaSq) : -Infinity;
+    if (lw > maxLog) maxLog = lw;
+    return lw;
+  });
+  let num = 0;
+  let den = 0;
+  atoms.forEach((a, k) => {
+    const r = Math.exp(logw[k] - maxLog);
+    num += r * a;
+    den += r;
+  });
+  return num / den;
+}
+
+/**
+ * NPMLE of the prior by fixed-grid EM (KIE1956; LAI1978; §33.6):
+ * w_k ← w_k · (1/N) Σ_i φ_σ(x_i − ϑ_k) / f̂(x_i). Stops when the change in
+ * mean log-likelihood falls below `tol` (tol = 0 runs exactly maxIter steps).
+ * `initialWeights` lets a component resume from its current state.
+ */
+export function npmleGridEM(
+  x: number[],
+  grid: number[],
+  sigmaSq = 1,
+  options: { maxIter?: number; tol?: number; initialWeights?: number[] } = {},
+): { weights: number[]; logLik: number; iterations: number; converged: boolean } {
+  const maxIter = options.maxIter ?? 5000;
+  const tol = options.tol ?? 1e-10;
+  const N = x.length;
+  const K = grid.length;
+  const sd = Math.sqrt(sigmaSq);
+  const L = x.map((xi) => grid.map((g) => Math.exp((-0.5 * (xi - g) ** 2) / sigmaSq) / (SQRT_2PI * sd)));
+  let w = options.initialWeights ? [...options.initialWeights] : new Array<number>(K).fill(1 / K);
+  const mixture = (wt: number[]): number[] => L.map((row) => row.reduce((a, l, k) => a + l * wt[k], 0));
+  let f = mixture(w);
+  let llOld = f.reduce((a, v) => a + Math.log(v), 0) / N;
+  let converged = false;
+  let it = 0;
+  for (it = 1; it <= maxIter; it++) {
+    const next = new Array<number>(K).fill(0);
+    for (let i = 0; i < N; i++) {
+      const inv = 1 / f[i];
+      for (let k = 0; k < K; k++) next[k] += L[i][k] * inv;
+    }
+    w = w.map((wk, k) => (wk * next[k]) / N);
+    f = mixture(w);
+    const ll = f.reduce((a, v) => a + Math.log(v), 0) / N;
+    if (Math.abs(ll - llOld) < tol) {
+      converged = true;
+      break;
+    }
+    llOld = ll;
+  }
+  return {
+    weights: w,
+    logLik: f.reduce((a, v) => a + Math.log(v), 0),
+    iterations: Math.min(it, maxIter),
+    converged,
+  };
+}
+
+/**
+ * Lindsay's gradient function D(θ) = (1/N) Σ_i φ_σ(x_i − θ) / f̂(x_i)
+ * (LIN1983; §33.6 Thm 6c). The fit is an NPMLE iff D ≤ 1 everywhere with
+ * equality on the support of the weights.
+ */
+export function npmleGradientFunction(
+  x: number[],
+  grid: number[],
+  weights: number[],
+  sigmaSq: number,
+  theta: number,
+): number {
+  const sd = Math.sqrt(sigmaSq);
+  const phi = (u: number): number => Math.exp((-0.5 * u * u) / sigmaSq) / (SQRT_2PI * sd);
+  let D = 0;
+  for (const xi of x) {
+    let f = 0;
+    for (let k = 0; k < grid.length; k++) f += weights[k] * phi(xi - grid[k]);
+    D += phi(xi - theta) / f;
+  }
+  return D / x.length;
+}
+
+/** Non-coverage r(b, χ) = P(|Z + b| > χ), Z ~ N(0, 1). */
+function ebciNonCoverage(b: number, chi: number): number {
+  return cdfStdNormal(-chi - b) + cdfStdNormal(-chi + b);
+}
+
+/**
+ * Conditional coverage of the parametric EBCI (1 − B)X + Bμ ± z√((1 − B)σ²)
+ * at θ = μ + δ (§33.9 Thm 8ii): Φ(z/√(1−B) − b) − Φ(−z/√(1−B) − b),
+ * b = Bδ/((1 − B)σ).
+ */
+export function ebciConditionalCoverage(delta: number, sigmaSq = 1, tauSq = 1, alpha = 0.05): number {
+  const B = sigmaSq / (sigmaSq + tauSq);
+  const z = quantileStdNormal(1 - alpha / 2);
+  const b = (B * delta) / ((1 - B) * Math.sqrt(sigmaSq));
+  return 1 - ebciNonCoverage(b, z / Math.sqrt(1 - B));
+}
+
+/**
+ * Maximal average non-coverage over all normalized-bias distributions with
+ * E[b²] = m2 (ARM2022 Prop. B.1; §33.9 Thm 9b): r0(0) + m2 · max_{t ≥ m2}
+ * (r0(t) − r0(0))/t, with r0(t) = r(√t, χ). The tangent point t0 is found by
+ * golden section on log t ∈ [log 1e-8, log 1e4].
+ */
+export function robustEbciMaxNonCoverage(m2: number, chi: number): number {
+  const r0 = ebciNonCoverage(0, chi);
+  if (m2 <= 0) return r0;
+  const slope = (logT: number): number => {
+    const t = Math.exp(logT);
+    return (ebciNonCoverage(Math.sqrt(t), chi) - r0) / t;
+  };
+  const t0 = Math.exp(goldenSectionMax(slope, Math.log(1e-8), Math.log(1e4), 1e-12));
+  const t = Math.max(m2, t0);
+  return r0 + (m2 * (ebciNonCoverage(Math.sqrt(t), chi) - r0)) / t;
+}
+
+/**
+ * Robust EBCI critical value cva_α(m2) (ARM2022; §33.9 Thm 9): the χ solving
+ * robustEbciMaxNonCoverage(m2, χ) = α, by bisection on [z_{1−α/2},
+ * z_{1−α/2} + 10√m2 + 10]. Returns z_{1−α/2} when m2 ≤ 0.
+ */
+export function robustEbciCriticalValue(m2: number, alpha = 0.05): number {
+  const z = quantileStdNormal(1 - alpha / 2);
+  if (m2 <= 0) return z;
+  let lo = z;
+  let hi = z + 10 * Math.sqrt(m2) + 10;
+  for (let iter = 0; iter < 200 && hi - lo > 1e-12; iter++) {
+    const mid = 0.5 * (lo + hi);
+    if (robustEbciMaxNonCoverage(m2, mid) > alpha) lo = mid;
+    else hi = mid;
+  }
+  return 0.5 * (lo + hi);
+}
+
+// ==========================================================================
+// END TOPIC 33 ADDITIONS
 // ==========================================================================

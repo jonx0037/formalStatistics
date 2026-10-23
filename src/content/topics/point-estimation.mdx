@@ -915,7 +915,7 @@ Ridge, lasso, elastic net, early stopping, dropout — every ML regularizer is a
 </ExampleBlock>
 
 <RemarkBlock number={8} title="Stein's paradox and what it means for ML">
-Stein's paradox is usually dismissed as a curiosity about Normal means in high dimensions. It is not. It is a deep fact about multi-parameter estimation: when the number of parameters is large and the data per parameter is limited, *pooling information across parameters* — even when they are a priori independent — improves estimation. The James–Stein estimator pools information between the components of $\theta$ implicitly via the $\|X\|^2$ denominator; an empirical Bayes estimator does the same thing explicitly via a common prior; a hierarchical Bayesian model does it via a shared hyperparameter.
+Stein's paradox is usually dismissed as a curiosity about Normal means in high dimensions. It is not. It is a deep fact about multi-parameter estimation: when the number of parameters is large and the data per parameter is limited, *pooling information across parameters* — even when they are a priori independent — improves estimation. The James–Stein estimator pools information between the components of $\theta$ implicitly via the $\|X\|^2$ denominator; an [empirical Bayes estimator](/topics/empirical-bayes#section-33-2) does the same thing explicitly via a common prior; a hierarchical Bayesian model does it via a shared hyperparameter.
 
 Every modern ML method that works well in high dimensions is exploiting some version of this phenomenon:
 

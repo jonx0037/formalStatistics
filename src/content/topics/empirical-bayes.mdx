@@ -1,36 +1,1045 @@
 ---
 title: "Empirical Bayes"
-subtitle: "Estimating the prior from data — James-Stein shrinkage, Type II MLE, and the Robbins compound-decision framework"
-status: "draft"
+subtitle: "Learning the prior from the ensemble. Topic 28 fit a Normal prior's two hyperparameters; Topic 33 leaves the prior unrestricted and either bypasses it — Robbins' formula and Tweedie's formula — or estimates it outright with the Kiefer–Wolfowitz NPMLE. Six full proofs: Tweedie's formula (featured), the compound-decision theorem, Robbins' formula, exponential-family Tweedie, the selection invariance of the Bayes rule, and the average coverage of empirical-Bayes intervals. Auto-insurance claims and 6,033 prostate-cancer z-scores as the spine datasets; the winner's curse, local false discovery rates, and the score-matching identity behind diffusion models as the ML payoff. The nonparametric coda to Track 7."
+status: "published"
 difficulty: "intermediate"
-domain: "bayesian-statistics"
 prerequisites:
   - "hierarchical-bayes-and-partial-pooling"
+  - "bayesian-model-comparison-and-bma"
+  - "kernel-density-estimation"
+  - "multiple-testing-and-false-discovery"
+  - "exponential-families"
   - "point-estimation"
   - "maximum-likelihood"
 tags:
+  - "statistics"
+  - "bayesian-inference"
   - "empirical-bayes"
-  - "james-stein"
-  - "shrinkage"
-  - "type-ii-mle"
+  - "nonparametric-empirical-bayes"
   - "compound-decision"
-  - "robbins"
-  - "marginal-likelihood"
+  - "robbins-formula"
+  - "tweedie-formula"
+  - "npmle"
+  - "f-modeling"
+  - "g-modeling"
+  - "selection-bias"
+  - "winners-curse"
+  - "local-fdr"
+  - "empirical-null"
+  - "eb-confidence-intervals"
+  - "score-matching"
+domain: "bayesian-statistics"
+videoId: null
 notebookPath: "notebooks/empirical-bayes/33_empirical_bayes.ipynb"
-datePublished: 2026-05-20
-estimatedReadTime: 0
+githubUrl: "https://github.com/jonx0037/formalStatistics/blob/main/src/content/topics/empirical-bayes.mdx"
+datePublished: 2026-10-22
+estimatedReadTime: 60
 abstract: >-
-  Empirical Bayes (EB) sits at the boundary between full Bayesian inference and frequentist shrinkage estimation. Type I EB plugs in a point estimate of the prior obtained from marginal-likelihood MLE; Type II EB estimates the mixing distribution itself. The James-Stein estimator is the canonical EB shrinkage rule. Robbins' compound-decision framework unifies the approach. Modern applications include variance-component estimation, mixed-effects models, and large-scale FDR (Efron & Tibshirani). This topic sits between Topic 28 (Hierarchical & Empirical Bayes) — which introduces EB as a boundary case — and the modern shrinkage literature that this topic develops in full.
+  Empirical Bayes learns the prior from the ensemble of problems it governs. With many parallel estimation problems x_i | theta_i ~ p(x | theta_i), theta_i ~ g, the collection of x_i carries information about g that no single x_i does. Topic 28 handled the parametric case — a Normal prior whose two hyperparameters are fit by Type-II maximum likelihood. This topic handles the nonparametric case, where g is unrestricted. The compound-decision theorem (Robbins 1951) shows why the problem has a Bayesian answer even though the theta_i are fixed: the best separable rule is the Bayes rule against their empirical distribution. f-modeling estimates that rule from the marginal density alone — Robbins' Poisson formula and Tweedie's formula, E[theta | x] = x + sigma^2 (log f)'(x), the featured result. g-modeling estimates the prior itself by nonparametric maximum likelihood (Kiefer–Wolfowitz 1956; Laird 1978). Because the Bayes rule is immune to selection, Tweedie's correction deflates the winner's curse on leaderboards and in genomics; the same identity is the denoising score-matching objective behind diffusion models. Local false discovery rates become an empirical-Bayes computation once the null and the mixing proportion are estimated by central matching. A final section treats empirical-Bayes confidence intervals: exact average coverage under the parametric model, tail undercoverage for individual units, and the robust intervals of Armstrong, Kolesár and Plagborg-Møller (2022).
 formalcalculusPrereqs:
+  - topic: "lebesgue-integral"
+    site: "formalcalculus"
+    relationship: "Tweedie's formula (§33.4 Thm 3) is proved by differentiating the marginal density f(x) = ∫ φ_σ(x − θ) dg(θ) twice under the integral sign. The interchange is justified by dominated convergence against an arbitrary prior g — exactly formalCalculus Lebesgue Integral Example 10, 'DCT justifies differentiation under the integral sign.' The exponential-family version (§33.5 Thm 4) uses the same argument."
   - topic: "multiple-integrals"
     site: "formalcalculus"
-    relationship: "Type II MLE optimizes the marginal likelihood, which is the integral of the joint distribution over the latent parameter: m(x | phi) = integral of p(x | theta) p(theta | phi) d theta. Computing or approximating this integral is the central numerical challenge of EB."
-  - topic: "gradient"
-    site: "formalcalculus"
-    relationship: "EB hyperparameter estimation by Type II MLE uses gradient-based optimization of the marginal log-likelihood. The score function gradient with respect to the prior hyperparameters phi appears throughout — see also Stein's identity for the closed-form James-Stein case."
+    relationship: "The marginal density is an integral of the likelihood against the prior, and the compound-decision theorem (§33.2 Thm 1) rewrites an average risk over N fixed parameters as an iterated integral over the empirical prior and the sampling distribution, swapping the order by Fubini–Tonelli."
 formalmlConnections:
   - topic: "meta-learning"
     site: "formalml"
-    relationship: "Meta-learning generalizes the EB inner-loop/outer-loop structure to neural-network parameter distributions. The Type II MLE on the marginal likelihood that EB performs at the prior level is the conceptual prototype for meta-optimization's gradient-based hyperparameter estimation across a task distribution. MAML, in particular, is an empirical-Bayes procedure on the meta-parameter."
-references: []
+    relationship: "Meta-learning is empirical Bayes over a task distribution: the across-task prior is learned from many related tasks, then used to shrink each task's estimate. formalML's meta-learning §6.3 develops the parametric (Type-II) version; this topic supplies the nonparametric toolkit and the compound-decision justification. §33.10 Rem 23 pointer."
+  - topic: "representation-learning"
+    site: "formalml"
+    relationship: "Denoising autoencoders and diffusion-model denoisers estimate E[x_0 | x_t] = x_t + σ_t² ∇ log p_t(x_t) — Tweedie's formula (§33.4 Thm 3) with the noisy marginal p_t in the role of f. formalML representation-learning §3.4 Thm 3.2 states this identity and its score-matching consequence. §33.4 Rem 9 pointer."
+  - topic: "selective-inference"
+    site: "formalml"
+    relationship: "Selective inference is the frequentist response to the winner's curse: valid confidence intervals conditional on the selection event. §33.5 Thm 5 gives the Bayesian response — the posterior mean is immune to selection — and §33.5 Rem 12 contrasts the two."
+  - topic: "bayesian-nonparametrics"
+    site: "formalml"
+    relationship: "The NPMLE estimates an unrestricted prior by maximum likelihood; Dirichlet-process mixtures put a prior on it instead and integrate. §33.10 Rem 22 frames DP mixtures as the fully Bayesian counterpart of g-modeling."
+references:
+  - type: "article"
+    author: "Herbert Robbins"
+    year: 1956
+    title: "An Empirical Bayes Approach to Statistics"
+    publisher: "Proceedings of the Third Berkeley Symposium on Mathematical Statistics and Probability, Vol. 1 (University of California Press): 157–163"
+    note: "ROB1956. Coins 'empirical Bayes' and derives the Poisson formula (§33.3 Thm 2); credits Tweedie with the Normal-noise formula (§33.4). https://doi.org/10.1525/9780520313880-015"
+  - type: "article"
+    author: "Herbert Robbins"
+    year: 1951
+    title: "Asymptotically Subminimax Solutions of Compound Statistical Decision Problems"
+    publisher: "Proceedings of the Second Berkeley Symposium on Mathematical Statistics and Probability (University of California Press): 131–148"
+    note: "ROB1951. The compound decision problem and the separable-rule frame (§33.2 Thm 1). https://doi.org/10.1525/9780520411586-011"
+  - type: "article"
+    author: "Cun-Hui Zhang"
+    year: 2003
+    title: "Compound Decision Theory and Empirical Bayes Methods"
+    publisher: "Annals of Statistics 31(2): 379–390"
+    note: "ZHA2003. Modern statement of the compound-decision / EB correspondence behind §33.2 Thm 1. https://projecteuclid.org/journals/annals-of-statistics/volume-31/issue-2/Compound-decision-theory-and-empirical-Bayes-methods-invited-paper/10.1214/aos/1051027872.full"
+  - type: "article"
+    author: "Bradley Efron and Carl Morris"
+    year: 1973
+    title: "Stein's Estimation Rule and Its Competitors — An Empirical Bayes Approach"
+    publisher: "Journal of the American Statistical Association 68(341): 117–130"
+    note: "EFR1973. James–Stein as an empirical-Bayes rule; §33.2 Ex 2 re-reads it as the estimated best linear separable rule. Reused from Topic 28. https://www.jstor.org/stable/2284155"
+  - type: "article"
+    author: "Willard James and Charles Stein"
+    year: 1961
+    title: "Estimation with Quadratic Loss"
+    publisher: "Proceedings of the Fourth Berkeley Symposium on Mathematical Statistics and Probability, Vol. 1 (University of California Press): 361–379"
+    note: "JAM1961. The James–Stein estimator (§33.2 Ex 2, §33.7 benchmark). Reused from Topic 28. https://projecteuclid.org/ebooks/berkeley-symposium-on-mathematical-statistics-and-probability/Proceedings-of-the-Fourth-Berkeley-Symposium-on-Mathematical-Statistics-and/chapter/Estimation-with-Quadratic-Loss/bsmsp/1200512173"
+  - type: "book"
+    author: "Bradley Efron and Trevor Hastie"
+    year: 2016
+    title: "Computer Age Statistical Inference: Algorithms, Evidence, and Data Science"
+    publisher: "Cambridge University Press"
+    note: "EFR2016. Chapter 6 (Robbins' formula, Table 6.1 insurance data, Gamma MLE row) and Chapters 15 and 21; source of the prostate z-score file. Free PDF on the authors' site. https://hastie.su.domains/CASI/"
+  - type: "article"
+    author: "Bradley Efron"
+    year: 2011
+    title: "Tweedie's Formula and Selection Bias"
+    publisher: "Journal of the American Statistical Association 106(496): 1602–1614"
+    note: "EFR2011. Modern treatment of Tweedie's formula, its exponential-family form, and its use as a selection-bias correction (§33.4–§33.5). https://doi.org/10.1198/jasa.2011.tm11181"
+  - type: "article"
+    author: "Pascal Vincent"
+    year: 2011
+    title: "A Connection Between Score Matching and Denoising Autoencoders"
+    publisher: "Neural Computation 23(7): 1661–1674"
+    note: "VIN2011. Denoising score matching — Tweedie's formula as a training objective (§33.4 Rem 9). https://doi.org/10.1162/NECO_a_00142"
+  - type: "article"
+    author: "A. Philip Dawid"
+    year: 1994
+    title: "Selection Paradoxes of Bayesian Inference"
+    publisher: "Multivariate Analysis and Its Applications, IMS Lecture Notes–Monograph Series 24: 211–220"
+    note: "DAW1994. Bayesian inference is unaffected by selection on the data (§33.5 Thm 5, Rem 12). https://doi.org/10.1214/lnms/1215463797"
+  - type: "article"
+    author: "Bradley Efron and Robert Tibshirani"
+    year: 1996
+    title: "Using Specially Designed Exponential Families for Density Estimation"
+    publisher: "Annals of Statistics 24(6): 2431–2461"
+    note: "EFR1996. Lindsey's method — density estimation by Poisson regression on histogram counts (§33.5 Def 4). https://projecteuclid.org/journals/annals-of-statistics/volume-24/issue-6/Using-specially-designed-exponential-families-for-density-estimation/10.1214/aos/1032181161.full"
+  - type: "article"
+    author: "Dinesh Singh, Phillip G. Febbo, Kenneth Ross, Donald G. Jackson, Judith Manola, Christine Ladd, et al."
+    year: 2002
+    title: "Gene Expression Correlates of Clinical Prostate Cancer Behavior"
+    publisher: "Cancer Cell 1(2): 203–209"
+    note: "SIN2002. Provenance of the prostate microarray study (102 arrays, 6,033 genes) behind the spine z-scores. https://doi.org/10.1016/S1535-6108%2802%2900030-2"
+  - type: "article"
+    author: "J. Kiefer and J. Wolfowitz"
+    year: 1956
+    title: "Consistency of the Maximum Likelihood Estimator in the Presence of Infinitely Many Incidental Parameters"
+    publisher: "Annals of Mathematical Statistics 27(4): 887–906"
+    note: "KIE1956. The NPMLE of a mixing distribution and its consistency (§33.6 Def 5, Thm 7a). https://doi.org/10.1214/aoms/1177728066"
+  - type: "article"
+    author: "Nan Laird"
+    year: 1978
+    title: "Nonparametric Maximum Likelihood Estimation of a Mixing Distribution"
+    publisher: "Journal of the American Statistical Association 73(364): 805–811"
+    note: "LAI1978. EM for the NPMLE — the fixed-grid algorithm used by the notebook and NPMLEFitter (§33.6). https://doi.org/10.1080/01621459.1978.10480103"
+  - type: "article"
+    author: "Bruce G. Lindsay"
+    year: 1983
+    title: "The Geometry of Mixture Likelihoods: A General Theory"
+    publisher: "Annals of Statistics 11(1): 86–94"
+    note: "LIN1983. Existence, discreteness, and the gradient-function characterization of the NPMLE (§33.6 Thm 6). https://projecteuclid.org/journals/annals-of-statistics/volume-11/issue-1/The-Geometry-of-Mixture-Likelihoods-A-General-Theory/10.1214/aos/1176346059.full"
+  - type: "article"
+    author: "Wenhua Jiang and Cun-Hui Zhang"
+    year: 2009
+    title: "General Maximum Likelihood Empirical Bayes Estimation of Normal Means"
+    publisher: "Annals of Statistics 37(4): 1647–1684"
+    note: "JIA2009. Regret guarantee for the NPMLE-based (GMLEB) rule (§33.6 Thm 7b). https://projecteuclid.org/journals/annals-of-statistics/volume-37/issue-4/General-maximum-likelihood-empirical-Bayes-estimation-of-normal-means/10.1214/08-AOS638.full"
+  - type: "article"
+    author: "Roger Koenker and Ivan Mizera"
+    year: 2014
+    title: "Convex Optimization, Shape Constraints, Compound Decisions, and Empirical Bayes Rules"
+    publisher: "Journal of the American Statistical Association 109(506): 674–685"
+    note: "KOE2014. Interior-point NPMLE and monotone-rule shape constraints (§33.6 Rem 13, §33.7 Rem 17). https://doi.org/10.1080/01621459.2013.869224"
+  - type: "article"
+    author: "Lawrence D. Brown and Eitan Greenshtein"
+    year: 2009
+    title: "Nonparametric Empirical Bayes and Compound Decision Approaches to Estimation of a High-Dimensional Vector of Normal Means"
+    publisher: "Annals of Statistics 37(4): 1685–1704"
+    note: "BRO2009. Kernel f-modeling with a vanishing-regret guarantee (§33.7 Rem 17). https://projecteuclid.org/journals/annals-of-statistics/volume-37/issue-4/Nonparametric-empirical-Bayes-and-compound-decision-approaches-to-estimation-of/10.1214/08-AOS630.full"
+  - type: "article"
+    author: "Bradley Efron"
+    year: 2014
+    title: "Two Modeling Strategies for Empirical Bayes Estimation"
+    publisher: "Statistical Science 29(2): 285–301"
+    note: "EFR2014. The f-modeling / g-modeling taxonomy that organizes §33.2–§33.7. https://projecteuclid.org/journals/statistical-science/volume-29/issue-2/Two-Modeling-Strategies-for-Empirical-Bayes-Estimation/10.1214/13-STS455.full"
+  - type: "article"
+    author: "Bradley Efron"
+    year: 2019
+    title: "Bayes, Oracle Bayes and Empirical Bayes"
+    publisher: "Statistical Science 34(2): 177–201"
+    note: "EFR2019. Oracle Bayes as the benchmark for regret (§33.2 Def 2, §33.7 Rem 16). https://projecteuclid.org/journals/statistical-science/volume-34/issue-2/Bayes-Oracle-Bayes-and-Empirical-Bayes/10.1214/18-STS674.full"
+  - type: "article"
+    author: "Bradley Efron"
+    year: 2004
+    title: "Large-Scale Simultaneous Hypothesis Testing: The Choice of a Null Hypothesis"
+    publisher: "Journal of the American Statistical Association 99(465): 96–104"
+    note: "EFR2004. The empirical null and central matching (§33.8 Def 6). https://doi.org/10.1198/016214504000000089"
+  - type: "article"
+    author: "Bradley Efron"
+    year: 2008
+    title: "Microarrays, Empirical Bayes and the Two-Groups Model"
+    publisher: "Statistical Science 23(1): 1–22"
+    note: "EFR2008. Prostate-data local fdr (51 genes at fdr ≤ 0.2; empirical null (0.00, 1.06)) — the cross-checks for §33.5 and §33.8. https://projecteuclid.org/journals/statistical-science/volume-23/issue-1/Microarrays-Empirical-Bayes-and-the-Two-Groups-Model/10.1214/07-STS236.full"
+  - type: "book"
+    author: "Bradley Efron"
+    year: 2010
+    title: "Large-Scale Inference: Empirical Bayes Methods for Estimation, Testing, and Prediction"
+    publisher: "Cambridge University Press"
+    note: "EFR2010. The two-groups model, local fdr, and the empirical null as an EB program (§33.8). Reused from Topic 27. https://www.cambridge.org/core/books/largescale-inference/A0B183B0080A92966497F12CE5D12589"
+  - type: "article"
+    author: "Carl N. Morris"
+    year: 1983
+    title: "Parametric Empirical Bayes Inference: Theory and Applications"
+    publisher: "Journal of the American Statistical Association 78(381): 47–55"
+    note: "MOR1983. Parametric EB intervals with hyperparameter-uncertainty corrections (§33.9 Rem 20). https://doi.org/10.1080/01621459.1983.10477920"
+  - type: "article"
+    author: "Nan M. Laird and Thomas A. Louis"
+    year: 1987
+    title: "Empirical Bayes Confidence Intervals Based on Bootstrap Samples"
+    publisher: "Journal of the American Statistical Association 82(399): 739–750"
+    note: "LAI1987. Bootstrap correction for EB interval undercoverage (§33.9 Rem 20; the work Topic 28 Rem 16 names). https://doi.org/10.1080/01621459.1987.10478490"
+  - type: "article"
+    author: "Timothy B. Armstrong, Michal Kolesár, and Mikkel Plagborg-Møller"
+    year: 2022
+    title: "Robust Empirical Bayes Confidence Intervals"
+    publisher: "Econometrica 90(6): 2567–2602"
+    note: "ARM2022. Robust EBCIs with an average-coverage guarantee under moment constraints (§33.9 Thm 9, Rem 21). https://doi.org/10.3982/ECTA18597"
+  - type: "article"
+    author: "Bradley Efron and Carl Morris"
+    year: 1975
+    title: "Data Analysis Using Stein's Estimator and Its Generalizations"
+    publisher: "Journal of the American Statistical Association 70(350): 311–319"
+    note: "EFR1975. The baseball batting-average example and unequal-variance extensions (§33.10 Rem 24). https://doi.org/10.1080/01621459.1975.10479864"
+  - type: "article"
+    author: "Xianchao Xie, S. C. Kou, and Lawrence D. Brown"
+    year: 2012
+    title: "SURE Estimates for a Heteroscedastic Hierarchical Model"
+    publisher: "Journal of the American Statistical Association 107(500): 1465–1479"
+    note: "XIE2012. Heteroskedastic shrinkage by SURE minimization (§33.10 Rem 24). https://doi.org/10.1080/01621459.2012.728154"
 ---
+
+import TheoremBlock from '../../components/ui/TheoremBlock.astro';
+import ProofBlock from '../../components/ui/ProofBlock.astro';
+import ExampleBlock from '../../components/ui/ExampleBlock.astro';
+import RemarkBlock from '../../components/ui/RemarkBlock.astro';
+import DefinitionBlock from '../../components/ui/DefinitionBlock.astro';
+import ExternalLink from '../../components/ui/ExternalLink.astro';
+
+import TweedieShrinkageField from '../../components/viz/TweedieShrinkageField.tsx';
+import RobbinsPoissonExplorer from '../../components/viz/RobbinsPoissonExplorer.tsx';
+import WinnersCurseCorrector from '../../components/viz/WinnersCurseCorrector.tsx';
+import NPMLEFitter from '../../components/viz/NPMLEFitter.tsx';
+
+## 33.1 Motivation: the winner's curse
+
+Suppose we tune a model by trying 1,000 hyperparameter configurations and scoring each one once on a held-out validation set. The configuration at the top of the leaderboard looks excellent. Score it again on fresh data and it almost always looks worse. Nothing is wrong with that configuration; what went wrong is the *ranking*. Every validation score is a true quality plus noise, and the top of a ranked list is exactly where the noise has piled up in the flattering direction. This is the **winner's curse**, and it is the oldest problem empirical Bayes solves.
+
+Here is the notation we'll use for the rest of the topic. Write $\theta_i$ for the true score of configuration $i$ — what we would see with an infinitely large validation set — and $x_i$ for the score we actually observed. The simplest honest model of the noise is
+
+$$
+x_i = \theta_i + \varepsilon_i, \qquad \varepsilon_i \sim \mathcal{N}(0, \sigma^2),
+$$
+
+independently across $i$. Read $\varepsilon_i \sim \mathcal{N}(0, \sigma^2)$ as "the error $\varepsilon_i$ is drawn from a Normal distribution with mean 0 and variance $\sigma^2$." We treat the noise level $\sigma$ as known; for a validation accuracy $\hat p$ computed on $n_{\text{val}}$ examples it is about $\sqrt{\hat p(1 - \hat p)/n_{\text{val}}}$. Equivalently, $x_i \mid \theta_i \sim \mathcal{N}(\theta_i, \sigma^2)$: given the true score, the observation scatters symmetrically around it. Throughout, $E[\cdot]$ is an expectation (a probability-weighted average) and $\mathrm{Var}(\cdot)$ is a variance (the average squared distance from the mean). The true scores themselves vary across configurations according to some distribution $g$ — most configurations are mediocre, a few are good — and $g$ is exactly what we will not know.
+
+<ExampleBlock number={1} title="Leaderboard winner's curse">
+Take $N = 1000$ configurations whose true scores follow $g = 0.9\,\mathcal{N}(0, 0.3^2) + 0.1\,\mathcal{N}(2.5, 0.5^2)$ — 90% baseline configurations clustered near 0 and 10% genuinely better ones near 2.5 — with validation noise $\sigma = 1$. Rank by observed score and keep the top 20. On average, their observed scores overstate their true scores by **+1.41**.
+
+Two corrections, previewed here and justified in §33.4–§33.5:
+
+- The **oracle Bayes rule** $E[\theta \mid x]$, which knows $g$, overstates the top 20 by only **+0.08**.
+- **Tweedie's formula with an estimated marginal** — a Gaussian kernel density estimate (bandwidth $h = 0.35$) fit to the 1,000 observed scores, with $g$ *unknown* — overstates them by **+0.21**.
+
+The leaderboard also hides an impostor: the configuration at rank 13 has true score 0.47. It is a baseline configuration that got lucky on the validation draw.
+</ExampleBlock>
+
+![Two panels. Left: a scatter of observed score against true score for 1,000 simulated configurations; the top 20 by observed score are highlighted in amber and sit below the dashed diagonal theta equals x; the oracle Bayes curve, E of theta given x, bends below the diagonal. Right: the top 20 configurations by rank, showing observed scores (amber circles, mean gap plus 1.41), Tweedie with a KDE marginal (sky triangles, plus 0.21), the oracle Bayes rule (gray diamonds, plus 0.08), and the true scores (emerald squares).](/images/topics/empirical-bayes/33-winners-curse.png)
+
+*Figure 1. The winner's curse on a simulated leaderboard. Selected winners sit below the diagonal; the oracle Bayes rule and Tweedie's formula with an estimated marginal both deflate them.*
+
+The second spine dataset is genomic. Singh et al. (SIN2002) measured the expression of 6,033 genes on 102 men — 50 healthy controls and 52 prostate-cancer patients. For each gene, a two-sample $t$-statistic converted to a $z$-score $z_i$ measures how differently that gene behaves in the two groups (the file ships with EFR2016). A gene with no effect has $z_i \sim \mathcal{N}(0, 1)$; a gene with effect $\mu_i$ has, to a good approximation, $z_i \sim \mathcal{N}(\mu_i, 1)$. The largest of the 6,033 $z$-scores is $z = 5.29$. How big is that gene's effect, really? It was selected *because* it is the largest, so, like the leaderboard winner, it is almost certainly overestimated. We answer the question in §33.5 Example 8.
+
+When we face many parallel estimation problems at once — thousands of genes, hundreds of model configurations, every policy holder in an insurance book — the ensemble of observations carries information about the prior that no single observation does, and empirical Bayes is the discipline of learning that prior from the data it governs. Topic 28 did the parametric half, fitting a Normal prior's two hyperparameters by Type-II maximum likelihood; Topic 33 takes the nonparametric half, where the prior $g$ is left unrestricted and is either bypassed (f-modeling: Robbins' formula and Tweedie's formula) or estimated outright (g-modeling: the Kiefer–Wolfowitz NPMLE). The organizing picture is geometric: under Normal noise the Bayes rule is the identity plus a shrinkage vector field equal to the score of the marginal density, $x + \sigma^2 (\log f)'(x)$, so every correction points uphill on $f$ and can be estimated without ever naming $g$. That one identity explains why the best-looking model on a leaderboard is overestimated and how to deflate it, why James–Stein is a special case rather than a paradox, why local false-discovery rates are an empirical-Bayes computation, and why a diffusion model's denoiser is trained by score matching.
+
+The spine of the topic runs Robbins (§33.3) → Tweedie (§33.4–§33.5) → the nonparametric MLE of the prior (§33.6), then compares the two strategies (§33.7), re-reads large-scale testing as empirical Bayes (§33.8), and ends with what empirical-Bayes confidence intervals do and do not promise (§33.9).
+
+<RemarkBlock number={1} title="What Topic 28 did and what this topic does">
+Topic 28 learned the two hyperparameters $(\mu, \tau^2)$ of a Normal prior $\theta_k \sim \mathcal{N}(\mu, \tau^2)$ by maximizing the marginal likelihood — Type-II maximum likelihood, [§28.7](/topics/hierarchical-bayes-and-partial-pooling#section-28-7). James–Stein ([§28.5](/topics/hierarchical-bayes-and-partial-pooling#section-28-5)) was the striking special case: shrinking $d \geq 3$ Normal means toward a common point beats the MLE for every configuration of the means. Nothing here re-proves any of that. What changes is that $g$ is no longer forced to be Normal — it can be spiky, skewed, or multimodal, which is what real ensembles of effects look like. One notational change: Topic 28's $K$ groups become this topic's $N$ parallel problems, because $N$ will grow large and asymptotics in $N$ are the point.
+</RemarkBlock>
+
+<RemarkBlock number={2} title="Why 'empirical Bayes' is not an oxymoron">
+Robbins (ROB1956) coined the phrase. A single problem's Bayes rule needs a prior $g$, and with one observation there is no way to check it. But a large ensemble of parallel problems, each drawing its parameter from the same $g$, carries its own information about $g$: the histogram of the $x_i$ is a blurred picture of $g$. The prior stops being a statement of belief and becomes an estimable population distribution — the distribution of true effects across genes, of true quality across configurations, of true accident rates across drivers.
+</RemarkBlock>
+
+<a id="section-33-2"></a>
+
+## 33.2 The compound decision problem
+
+Before estimating anything we need to say what "good" means when we estimate $N$ parameters at once. The frame is Robbins' **compound decision problem** (ROB1951): many parameters, one estimation rule applied to all of them, judged by average error. That is the situation of a hyperparameter sweep, an experimentation platform running thousands of A/B tests, or a recommender estimating a click-through rate for every item in the catalog.
+
+<DefinitionBlock number={1} title="Compound decision problem; separable rule; compound risk">
+Fix real numbers $\theta = (\theta_1, \dots, \theta_N)$ — no prior, just $N$ unknown constants — and observe independent $X_i \sim p(\cdot \mid \theta_i)$, $i = 1, \dots, N$. A **separable rule** applies one function $t$ to every coordinate: $\hat\theta_i = t(X_i)$. Its **compound risk** is the average mean squared error
+
+$$
+R_N(t; \theta) = \frac{1}{N}\sum_{i=1}^N E_{\theta_i}\big[(t(X_i) - \theta_i)^2\big],
+$$
+
+where $E_{\theta_i}$ averages over $X_i \sim p(\cdot \mid \theta_i)$ with $\theta_i$ held fixed.
+</DefinitionBlock>
+
+<DefinitionBlock number={2} title="Oracle Bayes rule; empirical-Bayes rule; regret">
+For a prior $G$ on the parameter, the **Bayes rule** is the posterior mean $t_G(x) = E_G[\vartheta \mid X = x]$, computed with $\vartheta \sim G$ and $X \mid \vartheta \sim p(\cdot \mid \vartheta)$. With $G_N = \frac1N\sum_i \delta_{\theta_i}$ — the empirical distribution that puts mass $1/N$ on each true parameter — $t_{G_N}$ is the **oracle Bayes rule** (EFR2019's "oracle Bayes"): it would be available only to someone who knew the histogram of the $\theta_i$. An **empirical-Bayes rule** $\hat t$ is any rule built from the data $X_1, \dots, X_N$ to estimate $t_{G_N}$, and its **regret** is $R_N(\hat t; \theta) - R_N(t_{G_N}; \theta)$.
+</DefinitionBlock>
+
+This is where most readers lose the thread, so let's slow down. Nothing in Definition 1 is random except the noise. The $\theta_i$ are fixed, and the compound risk is a purely frequentist quantity: an average over hypothetical re-draws of the noise. Yet the theorem below says the best separable rule is a *posterior mean* — a Bayesian object — under a particular prior, $G_N$. The prior was never assumed; it falls out of the averaging over $i$. Part (ii) of the proof treats that average as an iterated integral, first over $X$ given the parameter and then over the parameter drawn from $G_N$, which is the order-of-integration bookkeeping of <ExternalLink site="formalcalculus" topic="Multiple Integrals & Fubini's Theorem" href="https://formalcalculus.com/topics/multiple-integrals" />.
+
+<TheoremBlock number={1} title="Fundamental theorem of compound decisions (ROB1951, ZHA2003)">
+Let $\theta_1, \dots, \theta_N$ be fixed real numbers and let $X_1, \dots, X_N$ be independent with $X_i \sim p(\cdot \mid \theta_i)$. For a separable rule $\hat\theta_i = t(X_i)$ with finite compound risk, and with $G_N = \frac1N\sum_{i=1}^N \delta_{\theta_i}$ the empirical distribution of the parameters:
+
+(i) the compound risk equals the Bayes risk of $t$ under the prior $G_N$,
+
+$$
+R_N(t; \theta) \;=\; \int E_\vartheta\big[(t(X) - \vartheta)^2\big]\, dG_N(\vartheta);
+$$
+
+(ii) $R_N(t; \theta) \ge R_N(t_{G_N}; \theta)$ for every separable $t$, where
+
+$$
+t_{G_N}(x) \;=\; \frac{\sum_{i=1}^N \theta_i\, p(x \mid \theta_i)}{\sum_{i=1}^N p(x \mid \theta_i)},
+$$
+
+with equality if and only if $t = t_{G_N}$ almost everywhere under the marginal $m_{G_N}(x) = \frac1N\sum_i p(x \mid \theta_i)$.
+</TheoremBlock>
+
+<ProofBlock number={1} title="Proof of Thm 1 (fundamental theorem of compound decisions)">
+
+(i) For any function $h$, the average $\frac1N\sum_i h(\theta_i)$ is the integral of $h$ against $G_N$, because $G_N$ puts mass $1/N$ on each $\theta_i$. Apply this to $h(\vartheta) = E_\vartheta[(t(X) - \vartheta)^2]$.
+
+(ii) Introduce a random pair $(\vartheta, X)$ with $\vartheta \sim G_N$ and $X \mid \vartheta \sim p(\cdot \mid \vartheta)$. By (i), the compound risk is the joint expectation
+
+$$
+R_N(t; \theta) \;=\; E\big[(t(X) - \vartheta)^2\big].
+$$
+
+Condition on $X$ and write $m(x) = E[\vartheta \mid X = x]$. For fixed $x$, expanding $(t(x) - \vartheta)^2 = (t(x) - m(x))^2 + 2(t(x) - m(x))(m(x) - \vartheta) + (m(x) - \vartheta)^2$ and taking the conditional expectation — the cross term has conditional mean zero — gives
+
+$$
+E\big[(t(X) - \vartheta)^2 \mid X = x\big] \;=\; \big(t(x) - m(x)\big)^2 + \mathrm{Var}(\vartheta \mid X = x).
+$$
+
+Averaging over $X$ with the tower property,
+
+$$
+R_N(t; \theta) \;=\; E\big[(t(X) - m(X))^2\big] + E\big[\mathrm{Var}(\vartheta \mid X)\big].
+$$
+
+The second term does not depend on $t$; the first is nonnegative and vanishes exactly when $t = m$ almost everywhere under the law of $X$, which is $m_{G_N}$. Finally, Bayes' theorem with the discrete prior $G_N$ (mass $1/N$ at each $\theta_i$; the $1/N$ cancels) gives $m(x) = \sum_i \theta_i p(x \mid \theta_i)/\sum_i p(x \mid \theta_i) = t_{G_N}(x)$. $\blacksquare$ — using the tower property of conditional expectation and Bayes' theorem for a discrete prior (ROB1951; ZHA2003).
+
+</ProofBlock>
+
+Theorem 1 turns estimation into a target. The best we can do with a separable rule is $t_{G_N}$; we can't compute it, because it depends on the unknown $\theta_i$, but every empirical-Bayes method is an attempt to estimate it from the $X_i$. The two families of attempts differ in *what* they estimate.
+
+<DefinitionBlock number={3} title="f-modeling and g-modeling (EFR2014)">
+**f-modeling** estimates the marginal density $f$ of the observations (or a functional of it, such as its log-derivative) and plugs the estimate into a formula for the Bayes rule $t_G$ that depends on $G$ only through $f$. **g-modeling** estimates the prior $G$ itself and computes the Bayes rule $t_{\hat G}$ of the estimate.
+</DefinitionBlock>
+
+<ExampleBlock number={2} title="The best linear separable rule is James–Stein">
+Restrict attention to linear rules $t(x) = a + bx$ with Normal noise, $X_i \sim \mathcal{N}(\theta_i, \sigma^2)$. For each coordinate, $t(X_i) - \theta_i = b(X_i - \theta_i) + (a + (b - 1)\theta_i)$ is a mean-zero noise term plus a constant, so its mean square is $b^2\sigma^2 + (a + (b-1)\theta_i)^2$. Averaging over $i$,
+
+$$
+R_N(a + bx; \theta) = b^2\sigma^2 + \frac1N\sum_{i=1}^N \big(a + (b-1)\theta_i\big)^2.
+$$
+
+For fixed $b$, the second term is the average squared distance between $a$ and the points $(1-b)\theta_i$, minimized at their mean: $a = (1-b)\bar\theta$, where $\bar\theta = \frac1N\sum_i\theta_i$. Substituting, with $s^2 = \frac1N\sum_i(\theta_i - \bar\theta)^2$ the spread of the true parameters,
+
+$$
+R_N = b^2\sigma^2 + (1-b)^2 s^2.
+$$
+
+Setting the derivative in $b$ to zero, $2b\sigma^2 - 2(1-b)s^2 = 0$, gives $b^* = s^2/(s^2 + \sigma^2)$. The best linear rule is therefore $\bar\theta + b^*(x - \bar\theta) = x - (1 - b^*)(x - \bar\theta)$, with shrinkage fraction $1 - b^* = \sigma^2/(s^2 + \sigma^2)$.
+
+Now estimate the two unknowns. Replace $\bar\theta$ by $\bar X$, and estimate $1 - b^*$ by $(N-3)\sigma^2/\sum_i (X_i - \bar X)^2$. Under Normal-prior sampling, $\theta_i \sim \mathcal{N}(\mu, \tau^2)$, the observations are marginally $\mathcal{N}(\mu, \sigma^2 + \tau^2)$, so $\sum_i (X_i - \bar X)^2 \sim (\sigma^2 + \tau^2)\chi^2_{N-1}$; since $E[1/\chi^2_{N-1}] = 1/(N-3)$, the estimator has expectation exactly $\sigma^2/(\sigma^2 + \tau^2)$. The result is the Efron–Morris rule (EFR1973),
+
+$$
+\hat\theta_i = \bar X + \left(1 - \frac{(N-3)\sigma^2}{\sum_j (X_j - \bar X)^2}\right)(X_i - \bar X).
+$$
+
+James–Stein is not a paradox: it is the empirical-Bayes estimate of the best *linear* separable rule. Nonparametric empirical Bayes drops the word "linear."
+</ExampleBlock>
+
+<RemarkBlock number={3} title="A frequentist question with a Bayesian answer">
+No prior was assumed anywhere in Theorem 1 — the $\theta_i$ are fixed — and yet the optimal separable rule is a posterior mean under $G_N$. Robbins called procedures that approach this optimum without knowing $G_N$ "asymptotically subminimax" (ROB1951): for large $N$ they do nearly as well as if the histogram of the true parameters had been revealed. Separable rules are the natural class because the problems are exchangeable before we see the data — nothing distinguishes problem 7 from problem 700. A non-separable rule can beat $t_{G_N}$ only by exploiting the ordering of the indices, which carries no information when the labels are arbitrary.
+</RemarkBlock>
+
+<RemarkBlock number={4} title="The f/g taxonomy">
+Figure 2 shows why the two strategies are genuinely different. A prior $g$ can be spiky — here, three point masses — but the data never see it directly. They see the marginal $f = g \ast \varphi_\sigma$: the prior convolved with (smeared by) the Normal noise, which is always smooth. f-modeling works with that smooth object; g-modeling tries to undo the smearing. f-modeling is Robbins' formula (§33.3) and Tweedie's formula (§33.4–§33.5); g-modeling is the nonparametric MLE of the prior (§33.6); §33.7 compares them head to head.
+</RemarkBlock>
+
+![Two panels. Left: a three-atom prior g drawn as teal stems, the three Normal components each atom produces drawn dotted, and the smooth marginal density f, their sum, drawn in sky blue. Right: a flow diagram from data to two routes, estimate f and apply Robbins or Tweedie, or deconvolve to estimate g and apply the Bayes rule under the estimate, both ending in theta-hat i equals t-hat of x i.](/images/topics/empirical-bayes/33-f-vs-g-modeling.png)
+
+*Figure 2. The data see the marginal f, never the prior g. f-modeling estimates f and plugs it into a formula; g-modeling deconvolves an estimate of g and computes its Bayes rule.*
+
+<a id="section-33-3"></a>
+
+## 33.3 Robbins' formula
+
+Robbins' first example was insurance. Each policy holder has an unknown accident rate $\theta > 0$ — expected claims per year — and the number of claims $X$ in a year is $\mathrm{Poisson}(\theta)$, the standard model for counts of rare, independent events. Rates vary across the book according to an unknown distribution $g$ on $(0, \infty)$. The marginal probability $f(x) = P(X = x)$ is the fraction of all holders with exactly $x$ claims, and it is directly visible in the data. The same structure governs per-user event counts in a product — clicks, purchases, sessions — and the question Robbins answered is the cold-start question: what should we predict next period for a user we observed $x$ times this period?
+
+<TheoremBlock number={2} title="Robbins' formula (ROB1956)">
+Let $\theta \sim g$, any probability measure on $(0, \infty)$, and $X \mid \theta \sim \mathrm{Poisson}(\theta)$, with marginal
+
+$$
+f(x) \;=\; \int_0^\infty \frac{e^{-\theta}\theta^x}{x!}\, dg(\theta), \qquad x = 0, 1, 2, \dots
+$$
+
+Then for every $x$ with $f(x) > 0$,
+
+$$
+E[\theta \mid X = x] \;=\; (x + 1)\,\frac{f(x+1)}{f(x)}.
+$$
+</TheoremBlock>
+
+<ProofBlock number={2} title="Proof of Thm 2 (Robbins' formula)">
+
+By Bayes' theorem the posterior is $dg(\theta \mid x) = e^{-\theta}\theta^x/x!\; dg(\theta)/f(x)$, so
+
+$$
+E[\theta \mid X = x] \;=\; \frac{1}{f(x)} \int_0^\infty \theta \cdot \frac{e^{-\theta}\theta^{x}}{x!}\, dg(\theta) \;=\; \frac{1}{f(x)} \int_0^\infty \frac{e^{-\theta}\theta^{x+1}}{x!}\, dg(\theta).
+$$
+
+Multiply and divide the integrand by $x + 1$, using $(x+1)\cdot x! = (x+1)!$:
+
+$$
+\int_0^\infty \frac{e^{-\theta}\theta^{x+1}}{x!}\, dg(\theta) \;=\; (x+1)\int_0^\infty \frac{e^{-\theta}\theta^{x+1}}{(x+1)!}\, dg(\theta) \;=\; (x+1)\, f(x+1).
+$$
+
+Dividing by $f(x)$ gives the formula. $\blacksquare$ — using Bayes' theorem and the Poisson pmf (ROB1956).
+
+</ProofBlock>
+
+The prior has disappeared. Replacing $f(x)$ by the empirical frequency $y_x/N$, where $y_x$ is the number of holders with exactly $x$ claims, gives **Robbins' estimator** $(x+1)\,y_{x+1}/y_x$, in which $N$ cancels. For each fixed $x$ with $f(x) > 0$, the frequencies $y_x/N$ and $y_{x+1}/N$ converge almost surely to $f(x)$ and $f(x+1)$ by the strong law of large numbers ([Topic 10](/topics/law-of-large-numbers)), and the ratio converges because it is a continuous function of them away from $f(x) = 0$.
+
+<ExampleBlock number={3} title="Insurance claims">
+CASI Table 6.1 (EFR2016) records one year of claims for 9,461 policy holders of a European auto insurer:
+
+| Claims $x$ | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| Holders $y_x$ | 7840 | 1317 | 239 | 42 | 14 | 4 | 4 | 1 |
+| Robbins $(x+1)y_{x+1}/y_x$ | 0.168 | 0.363 | 0.527 | 1.33 | 1.43 | 6.00 | 1.75 | — |
+
+These are identical to CASI's published row. The first entry is the cold-start answer: customers with no claims this year should expect $1317/7840 = 0.168$ claims next year — not 0, which is what the MLE $\hat\theta = x$ says. Customers with one claim should expect 0.363, far less than 1: one claim is weak evidence of a high rate, because most of the book has low rates and some of them file a claim by chance.
+</ExampleBlock>
+
+<ExampleBlock number={4} title="Gamma–Poisson parametric empirical Bayes">
+The parametric alternative assumes a shape for $g$: $\theta \sim \mathrm{Gamma}(\nu, s)$ with shape $\nu$ and scale $s$. Then the posterior given $x$ is $\mathrm{Gamma}(\nu + x,\, s/(1+s))$, with mean
+
+$$
+E[\theta \mid x] = \frac{(x + \nu)\, s}{1 + s},
+$$
+
+and the marginal of $X$ is negative binomial. Its maximum-likelihood fit preserves the sample mean, $\hat\nu\hat s = \bar x = 0.2144$, so the fit reduces to a one-dimensional profile in $\nu$, which gives $\hat\nu = 0.7015$ and $\hat s = 0.3056$. The fitted rule for $x = 0, \dots, 6$ is
+
+**0.164, 0.398, 0.632, 0.866, 1.100, 1.334, 1.568**
+
+(CASI: .164 .398 .633 .87 1.10 1.34 1.57). Figure 3 puts the two side by side: they agree where the counts are large, and Robbins goes erratic where they are small.
+</ExampleBlock>
+
+![Two panels. Left: insurance claim counts by number of claims on a log scale, with the Gamma-Poisson fitted counts in violet. Right: estimated next-year claim rate against this year's claims: the MLE diagonal dashed in amber, Robbins' estimates in sky blue spiking to 6.00 at x equals 5 (annotated 6 times 4 over 4), and the Gamma-Poisson empirical Bayes rule in violet, a straight line with nu-hat 0.702 and s-hat 0.306.](/images/topics/empirical-bayes/33-robbins-insurance.png)
+
+*Figure 3. Robbins' formula on 9,461 insurance policy holders. It needs no prior and no parameters, and it is erratic exactly where the counts are small.*
+
+The explorer below puts both rules next to each other on the insurance data and on a simulated book where the true posterior mean is known. Click a count bar to perturb that count by ±1 and watch which estimates move.
+
+<RobbinsPoissonExplorer client:visible />
+
+<RemarkBlock number={5} title="Instability where counts are small">
+At $x = 5$, Robbins' estimate is $6 \cdot y_6/y_5 = 6 \cdot 4/4 = 6.00$: two tiny counts drive it. A single extra policy holder with six claims would change it to $6 \cdot 5/4 = 7.5$. The parametric fit borrows strength across every $x$; Robbins borrows only from the neighboring cell $x + 1$. The explorer's perturbation buttons make the difference tactile — perturbing $y_5$ moves Robbins at $x = 4$ and $x = 5$ substantially and leaves the Gamma rule essentially unchanged.
+</RemarkBlock>
+
+<RemarkBlock number={6} title="Robbins' rule need not be monotone; the Bayes rule is">
+For the Poisson family, $E[\theta \mid x]$ is nondecreasing in $x$ for *every* prior. The posterior at $x + 1$ is the posterior at $x$ tilted by a factor of $\theta$, so
+
+$$
+E[\theta \mid x+1] = \frac{E[\theta^2 \mid x]}{E[\theta \mid x]} \;\ge\; E[\theta \mid x],
+$$
+
+because $E[\theta^2 \mid x] - (E[\theta \mid x])^2 = \mathrm{Var}(\theta \mid x) \ge 0$. This is the discrete twin of §33.4 Theorem 3(iii). Robbins' drop from 6.00 at $x = 5$ to 1.75 at $x = 6$ is therefore an estimation artifact, not a feature of any prior. We'll turn this observation into a diagnostic in §33.7.
+</RemarkBlock>
+
+<a id="section-33-4"></a>
+
+## 33.4 Tweedie's formula (featured)
+
+Now return to the setting of §33.1: Normal noise with known variance $\sigma^2$ and an arbitrary prior $g$. Write
+
+$$
+\varphi_\sigma(u) = \frac{1}{\sqrt{2\pi\sigma^2}}\, e^{-u^2/(2\sigma^2)}
+$$
+
+for the $\mathcal{N}(0, \sigma^2)$ density — the bell curve of the noise — and $\varphi = \varphi_1$ for the standard Normal density. The **marginal density** of an observation is $f(x) = \int \varphi_\sigma(x - \theta)\, dg(\theta)$, written $f = g \ast \varphi_\sigma$: the prior smeared out by the noise. Let $\ell = \log f$. Its derivative $\ell'$ is the **score** of the marginal — the slope of the log-density, which tells us which way, and how steeply, the data pile up. Robbins (ROB1956) credits the next result to Maurice Tweedie; Efron's "Tweedie's formula and selection bias" (EFR2011) is the modern treatment. It is the Normal-noise version of Robbins' formula, and it is the featured result of this topic.
+
+<TheoremBlock number={3} title="Tweedie's formula (ROB1956, crediting Tweedie; EFR2011)">
+Let $g$ be any probability measure on $\mathbb{R}$, $\theta \sim g$, and $X \mid \theta \sim \mathcal{N}(\theta, \sigma^2)$ with $\sigma^2 > 0$ known. Write $\varphi_\sigma(u) = (2\pi\sigma^2)^{-1/2}e^{-u^2/(2\sigma^2)}$ and
+
+$$
+f(x) \;=\; \int \varphi_\sigma(x - \theta)\, dg(\theta), \qquad \ell(x) = \log f(x).
+$$
+
+Then $f$ is strictly positive and twice differentiable, and for every $x$:
+
+(i) $E[\theta \mid X = x] = x + \sigma^2\,\ell'(x)$;
+
+(ii) $\mathrm{Var}(\theta \mid X = x) = \sigma^2\big(1 + \sigma^2\,\ell''(x)\big)$;
+
+(iii) $\dfrac{d}{dx}E[\theta \mid X = x] = \mathrm{Var}(\theta \mid X = x)/\sigma^2 \ge 0$ — the Bayes rule is nondecreasing in $x$.
+</TheoremBlock>
+
+<ProofBlock number={3} title="Proof of Thm 3 (Tweedie's formula)">
+
+*Step 0 — differentiating under the integral.* The $x$-derivatives of the integrand are
+
+$$
+\frac{\partial}{\partial x}\varphi_\sigma(x - \theta) = -\frac{x - \theta}{\sigma^2}\,\varphi_\sigma(x - \theta), \qquad \frac{\partial^2}{\partial x^2}\varphi_\sigma(x - \theta) = \Big(\frac{(x - \theta)^2}{\sigma^4} - \frac{1}{\sigma^2}\Big)\varphi_\sigma(x - \theta).
+$$
+
+Both are bounded functions of $(x, \theta)$, because $u \mapsto |u|^k e^{-u^2/(2\sigma^2)}$ is bounded for $k = 1, 2$. A bounded function is integrable against the probability measure $g$, so dominated convergence lets us differentiate $f$ twice under the integral sign (<ExternalLink site="formalcalculus" topic="The Lebesgue Integral" href="https://formalcalculus.com/topics/lebesgue-integral" />, Ex 10). The integrand is strictly positive, so $f > 0$ and $\ell$ is well defined.
+
+*Step 1 — the mean.* By Step 0,
+
+$$
+f'(x) \;=\; \frac{1}{\sigma^2}\int (\theta - x)\,\varphi_\sigma(x - \theta)\, dg(\theta).
+$$
+
+The posterior is $dg(\theta \mid x) = \varphi_\sigma(x - \theta)\,dg(\theta)/f(x)$, so dividing by $f(x)$ turns the integral into a posterior expectation:
+
+$$
+\ell'(x) \;=\; \frac{f'(x)}{f(x)} \;=\; \frac{1}{\sigma^2}\,E[\theta - x \mid X = x] \;=\; \frac{E[\theta \mid X = x] - x}{\sigma^2}.
+$$
+
+Multiplying by $\sigma^2$ and adding $x$ gives (i).
+
+*Step 2 — the variance.* Again by Step 0 and the same division,
+
+$$
+\frac{f''(x)}{f(x)} \;=\; \frac{E[(\theta - x)^2 \mid X = x]}{\sigma^4} - \frac{1}{\sigma^2}.
+$$
+
+Since $\ell'' = f''/f - (f'/f)^2$ and $f'/f = E[\theta - x \mid X = x]/\sigma^2$,
+
+$$
+\ell''(x) \;=\; \frac{E[(\theta - x)^2 \mid X = x] - \big(E[\theta - x \mid X = x]\big)^2}{\sigma^4} - \frac{1}{\sigma^2} \;=\; \frac{\mathrm{Var}(\theta \mid X = x)}{\sigma^4} - \frac{1}{\sigma^2},
+$$
+
+where the last step uses that shifting $\theta$ by the constant $x$ does not change its conditional variance. Multiplying by $\sigma^4$ and rearranging gives (ii).
+
+*Step 3 — monotonicity.* Differentiating (i) gives $1 + \sigma^2\ell''(x)$, which equals $\mathrm{Var}(\theta \mid X = x)/\sigma^2$ by (ii), and a variance is nonnegative. $\blacksquare$ — using dominated convergence (formalCalculus: The Lebesgue Integral) and Bayes' theorem (ROB1956; EFR2011).
+
+</ProofBlock>
+
+Read (i) geometrically. The Bayes rule is the identity map plus a correction, and the correction $\sigma^2\ell'(x)$ is a vector field on the line: at each point it says which way the marginal density increases and how fast. Figure 4 draws it.
+
+![Two stacked panels. Top: a histogram of 2,000 draws from the spike-and-slab marginal, the true marginal density f in near-black, and a kernel density estimate with bandwidth 0.32 dashed in sky blue; violet horizontal arrows on the curve at x equals plus or minus 0.75 through plus or minus 3.75 show sigma squared times the score, every one pointing toward the peak at zero. Bottom: shrinkage rules on minus 5.5 to 5.5, the identity dashed in amber, the oracle Bayes rule in near-black, and Tweedie with the KDE marginal dashed in sky blue, with the gap between identity and oracle shaded violet.](/images/topics/empirical-bayes/33-tweedie-shrinkage-field.png)
+
+*Figure 4. Tweedie's formula as geometry: the Bayes correction is σ² times the score of the marginal, a field of arrows pointing uphill on f. Bottom: the resulting nonlinear shrinkage rule, oracle versus KDE estimate.*
+
+The explorer makes the field live. Choose a prior, change the sample size and the bandwidth, and compare the KDE-estimated rule to the oracle. Try the Normal prior first: the oracle rule becomes a straight line, which is Topic 28's linear shrinkage (Example 5 below). Then shrink $N$ or the bandwidth and watch the estimated rule wiggle in the tails.
+
+<TweedieShrinkageField client:visible />
+
+<ExampleBlock number={5} title="A Normal prior recovers Topic 28">
+Take $g = \mathcal{N}(\mu, \tau^2)$. The marginal is $f = \mathcal{N}(\mu, \sigma^2 + \tau^2)$ — a Normal prior smeared by Normal noise is Normal with the variances added — so
+
+$$
+\ell(x) = -\frac{(x - \mu)^2}{2(\sigma^2 + \tau^2)} + \text{const}, \qquad \ell'(x) = -\frac{x - \mu}{\sigma^2 + \tau^2}, \qquad \ell''(x) = -\frac{1}{\sigma^2 + \tau^2}.
+$$
+
+Tweedie's formula returns $x - \sigma^2(x - \mu)/(\sigma^2 + \tau^2) = (1 - B)x + B\mu$ with $B = \sigma^2/(\sigma^2 + \tau^2)$, and part (ii) gives the posterior variance $\sigma^2(1 - B) = (1 - B)\sigma^2$. This is exactly Topic 28's partial-pooling formula ([§28.6](/topics/hierarchical-bayes-and-partial-pooling#section-28-6), Thm 4), now a one-line special case. The rule is linear because $\ell$ is quadratic; every non-Normal prior bends it.
+</ExampleBlock>
+
+<ExampleBlock number={6} title="Spike-and-slab prior: oracle versus KDE">
+Take $g = 0.9\,\delta_0 + 0.1\,\mathcal{N}(0, 3^2)$ — 90% of the effects are exactly zero, the rest are spread widely — with $\sigma = 1$ and $N = 2000$ draws. The oracle rule $E[\theta \mid x]$ at $x = 1, 2, 3, 5$ is **0.047, 0.316, 1.805, 4.498**: near-total shrinkage near 0, where an observation is most likely a null plus noise, and near-identity in the tails, where it is most likely a real effect.
+
+For the f-modeling estimate, fit a Gaussian KDE ([Topic 30](/topics/kernel-density-estimation)) with Silverman's bandwidth $h = 0.32$: $\hat f_h(x) = \frac{1}{Nh}\sum_j \varphi((x - X_j)/h)$. Differentiating term by term and dividing by $\hat f_h$, the KDE score has the closed form
+
+$$
+(\log \hat f_h)'(x) = \sum_{j=1}^N w_j(x)\,\frac{X_j - x}{h^2}, \qquad w_j(x) = \frac{\varphi((x - X_j)/h)}{\sum_k \varphi((x - X_k)/h)},
+$$
+
+a softmax-weighted pull toward nearby data points. Per-coordinate mean squared error on the sample: the MLE $\hat\theta_i = x_i$ scores **1.033**, Tweedie–KDE **0.244**, the oracle **0.193**. With $g$ unknown, Tweedie–KDE captures about 94% of the oracle's improvement over the MLE.
+</ExampleBlock>
+
+<RemarkBlock number={7} title="The shrinkage field points uphill">
+Part (i) says the correction $\sigma^2\ell'(x)$ points toward higher marginal density. Observations in sparse regions get pulled toward where the data are dense — Figure 4's arrows all point at the spike. The noise variance $\sigma^2$ sets the step size: noisier measurements are pulled harder, because they say less about their own $\theta$. That is the whole content of shrinkage, stated without a prior.
+</RemarkBlock>
+
+<RemarkBlock number={8} title="Tweedie never names g">
+The rule depends on $g$ only through $f$, which is what makes f-modeling possible: estimate $f$ from the $x_i$, differentiate its logarithm, done. The price is that we need a *derivative* of a density estimate, and derivative estimates are noisy where data are thin — Example 6's KDE rule wiggles in the tails. Bandwidth controls the trade-off exactly as in Topic 30: see the MISE/AMISE analysis in [§30.5](/topics/kernel-density-estimation#section-30-5) and data-driven bandwidth selection in [§30.8](/topics/kernel-density-estimation#section-30-8).
+</RemarkBlock>
+
+<RemarkBlock number={9} title="Diffusion models are Tweedie machines">
+Corrupt a clean sample $x_0$ with Gaussian noise, $x_t = x_0 + \sigma_t\varepsilon$ with $\varepsilon \sim \mathcal{N}(0, I)$. Theorem 3 in $\mathbb{R}^d$ — the proof runs coordinate by coordinate — gives
+
+$$
+E[x_0 \mid x_t] = x_t + \sigma_t^2\,\nabla \log p_t(x_t),
+$$
+
+where $p_t$ is the density of the noisy samples. A denoiser trained by squared error, minimizing $E\|D(x_t) - x_0\|^2$, converges to the posterior mean $E[x_0 \mid x_t]$, so $(D(x_t) - x_t)/\sigma_t^2$ estimates the score $\nabla\log p_t$. That is denoising score matching (VIN2011), the training objective behind score-based diffusion models: every denoising network is an f-modeling estimate of Tweedie's correction. formalML's representation-learning topic develops the identity (§3.4 there, Thm 3.2): <ExternalLink site="formalml" topic="representation-learning" href="https://formalml.com/topics/representation-learning" />.
+</RemarkBlock>
+
+<a id="section-33-5"></a>
+
+## 33.5 Tweedie beyond the Normal, and selection bias
+
+Tweedie's formula is not special to Normal noise. Any one-parameter exponential family ([Topic 7](/topics/exponential-families)) has the same structure: the posterior mean of the natural parameter is a log-derivative of the marginal, corrected by the carrier. This matters in ML because many of the quantities we shrink are not Normal — counts, rates, variances.
+
+<TheoremBlock number={4} title="Exponential-family Tweedie (EFR2011)">
+Let $p(x \mid \eta) = e^{\eta x - \psi(\eta)}h(x)$ be a one-parameter exponential family of densities on an open interval $\mathcal{X}$, in Topic 7's notation (natural parameter $\eta$, cumulant function $\psi$, carrier $h > 0$ twice differentiable on $\mathcal{X}$). Let $\eta \sim g$, a probability measure on the natural parameter space with $\int (1 + |\eta| + \eta^2)\, e^{\eta x - \psi(\eta)}\, dg(\eta) < \infty$ for every $x \in \mathcal{X}$. With $f(x) = \int p(x \mid \eta)\,dg(\eta)$ and $\ell = \log f$:
+
+(i) $E[\eta \mid X = x] = \ell'(x) - (\log h)'(x)$; (ii) $\mathrm{Var}(\eta \mid X = x) = \ell''(x) - (\log h)''(x)$.
+</TheoremBlock>
+
+<ProofBlock number={4} title="Proof of Thm 4 (exponential-family Tweedie)">
+
+Factor the carrier out of the marginal:
+
+$$
+f(x) \;=\; h(x)\, M(x), \qquad M(x) = \int e^{\eta x - \psi(\eta)}\, dg(\eta),
+$$
+
+so $\ell = \log h + \log M$ and it suffices to show $(\log M)' = E[\eta \mid X = x]$ and $(\log M)'' = \mathrm{Var}(\eta \mid X = x)$. For $x$ in a compact sub-interval $[a, b] \subset \mathcal{X}$, $\eta x \le \max(\eta a, \eta b)$ gives $e^{\eta x} \le e^{\eta a} + e^{\eta b}$, so $|\eta|^k e^{\eta x - \psi(\eta)}$ ($k = 0, 1, 2$) is dominated by a $g$-integrable function not depending on $x$. Dominated convergence (<ExternalLink site="formalcalculus" topic="The Lebesgue Integral" href="https://formalcalculus.com/topics/lebesgue-integral" />) then justifies
+
+$$
+M'(x) = \int \eta\, e^{\eta x - \psi(\eta)}\, dg(\eta), \qquad M''(x) = \int \eta^2\, e^{\eta x - \psi(\eta)}\, dg(\eta).
+$$
+
+The posterior is $dg(\eta \mid x) = p(x \mid \eta)\,dg(\eta)/f(x) = e^{\eta x - \psi(\eta)}\,dg(\eta)/M(x)$ — the carrier cancels. Hence $M'/M = E[\eta \mid X = x]$ and $M''/M = E[\eta^2 \mid X = x]$, so
+
+$$
+(\log M)' = \frac{M'}{M} = E[\eta \mid X = x], \qquad (\log M)'' = \frac{M''}{M} - \Big(\frac{M'}{M}\Big)^2 = \mathrm{Var}(\eta \mid X = x).
+$$
+
+Substituting $\log M = \ell - \log h$ gives (i) and (ii). $\blacksquare$ — using dominated convergence, as in Thm 3, and the exponential-family representation of Topic 7 (EFR2011).
+
+</ProofBlock>
+
+Check that Theorem 4 contains Theorem 3. The Normal density factors as $\varphi_\sigma(x - \theta) = \exp\big(x\theta/\sigma^2 - \theta^2/(2\sigma^2)\big)\,\varphi_\sigma(x)$, so the natural parameter is $\eta = \theta/\sigma^2$, the cumulant function is $\psi(\eta) = \sigma^2\eta^2/2$, and the carrier is $h = \varphi_\sigma$, with $(\log h)'(x) = -x/\sigma^2$ and $(\log h)''(x) = -1/\sigma^2$. Part (i) reads $E[\theta/\sigma^2 \mid x] = \ell'(x) + x/\sigma^2$, which is Theorem 3(i) after multiplying by $\sigma^2$; part (ii) reads $\mathrm{Var}(\theta \mid x)/\sigma^4 = \ell''(x) + 1/\sigma^2$, which is Theorem 3(ii).
+
+<ExampleBlock number={7} title="Robbins is discrete Tweedie">
+For an integer-valued family $p(x \mid \eta) = e^{\eta x - \psi(\eta)}h(x)$, derivatives in $x$ are replaced by shifts. Dividing the marginal by the carrier,
+
+$$
+\frac{f(x+1)}{h(x+1)} = \int e^{\eta}\, e^{\eta x - \psi(\eta)}\, dg(\eta), \qquad \frac{f(x)}{h(x)} = \int e^{\eta x - \psi(\eta)}\, dg(\eta),
+$$
+
+and the ratio of the two is a posterior expectation, because the posterior given $x$ is proportional to $e^{\eta x - \psi(\eta)}\,dg(\eta)$:
+
+$$
+E[e^{\eta} \mid x] = \frac{h(x)\, f(x+1)}{h(x+1)\, f(x)}.
+$$
+
+For the Poisson family, $p(x \mid \theta) = e^{-\theta}\theta^x/x! = \exp(x\log\theta - \theta)/x!$, so $\eta = \log\theta$, $e^\eta = \theta$, and $h(x) = 1/x!$, which makes $h(x)/h(x+1) = x + 1$. The display becomes $E[\theta \mid x] = (x+1)f(x+1)/f(x)$ — Theorem 2.
+</ExampleBlock>
+
+To use Tweedie's formula on real data we need an estimate of $\ell'$. The KDE of Example 6 is one choice. A second, which Efron uses for the prostate data, fits a smooth exponential family to the histogram.
+
+<DefinitionBlock number={4} title="Lindsey's method (EFR1996)">
+Bin the data into $K$ equal-width bins with centers $c_k$, width $\Delta$, and counts $y_k$. Fit the Poisson regression
+
+$$
+\log E[y_k] = \sum_{j=0}^{J}\beta_j u_k^j,
+$$
+
+where $u_k$ is the standardized bin center, and set $\hat f(x) = \exp\big(\sum_j \beta_j u(x)^j\big)/(N\Delta)$. The estimated score $\hat\ell'$ is the derivative of a polynomial — smooth everywhere. The fit is exactly the Poisson generalized linear model of [Topic 22](/topics/generalized-linear-models), with histogram counts as the response.
+</DefinitionBlock>
+
+Now the selection question. The top genes were chosen *because* their $z$-scores were large, and the winning configuration was chosen *because* its validation score was largest. Does choosing on the data invalidate the posterior mean? It does not.
+
+<TheoremBlock number={5} title="The Bayes rule is immune to selection (DAW1994, EFR2011)">
+Let $(\theta_i, X_i)$, $i = 1, \dots, N$, be independent pairs with $\theta_i \sim g$ and $X_i \mid \theta_i \sim p(\cdot \mid \theta_i)$, and let $t_g(x) = E[\theta \mid X = x]$. Let $S \subseteq \{1, \dots, N\}$ be any selection rule that is a function of $\mathbf{X} = (X_1, \dots, X_N)$ — the indices of the $k$ largest $X_i$, or all $i$ with $X_i > c$. Then for every $i$ with $P(i \in S) > 0$,
+
+$$
+E[\theta_i \mid \mathbf{X}] = t_g(X_i) \quad \text{almost surely, and} \quad E\big[\theta_i - t_g(X_i) \,\big|\, i \in S\big] = 0.
+$$
+</TheoremBlock>
+
+<ProofBlock number={5} title="Proof of Thm 5 (selection invariance of the Bayes rule)">
+
+Independence of the pairs means $\theta_i$ is conditionally independent of $(X_j)_{j \ne i}$ given $X_i$, so the other coordinates carry no information about $\theta_i$ once $X_i$ is known:
+
+$$
+E[\theta_i \mid \mathbf{X}] \;=\; E[\theta_i \mid X_i] \;=\; t_g(X_i).
+$$
+
+The indicator $\mathbf{1}\{i \in S\}$ is a function of $\mathbf{X}$, so it can be pulled inside a conditional expectation given $\mathbf{X}$. By the tower property,
+
+$$
+E\big[(\theta_i - t_g(X_i))\,\mathbf{1}\{i \in S\}\big] \;=\; E\Big[\mathbf{1}\{i \in S\}\,\big(E[\theta_i \mid \mathbf{X}] - t_g(X_i)\big)\Big] \;=\; 0.
+$$
+
+Dividing by $P(i \in S) > 0$ gives the conditional statement. $\blacksquare$ — using the tower property and conditional independence (DAW1994; EFR2011).
+
+</ProofBlock>
+
+By contrast, $E[X_i - \theta_i \mid i \in S] > 0$ when $S$ selects large $X_i$ — that is the winner's curse of §33.1. Selection biases the naive estimate, not the posterior mean. The posterior mean already accounts for the fact that a large $x$ is more likely to be a moderate $\theta$ plus favorable noise than a large $\theta$, and that accounting doesn't care why we are looking at this particular $x$.
+
+<ExampleBlock number={8} title="The prostate top genes, corrected">
+Fit Lindsey's method to the 6,033 prostate $z$-scores with 90 bins on $[\min z, \max z]$ and degree $J = 6$. The leading coefficient is negative, so the fitted density is integrable, and $1 + \hat\ell''(z) \ge 0.030$ across the data range, so the estimated rule $z + \hat\ell'(z)$ is monotone, as Theorem 3(iii) says a Bayes rule must be. For the ten largest $z$-scores:
+
+| $z$ | 5.29 | 4.83 | 4.47 | 4.40 | 4.25 | 4.19 | 4.14 | 4.12 | 4.10 | 3.98 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| $\hat E[\mu \mid z]$ | **4.64** | **3.86** | **3.26** | **3.14** | **2.90** | **2.80** | **2.72** | **2.71** | **2.67** | **2.49** |
+
+The top gene's effect is estimated at 4.64, not 5.29; the tenth gene's at 2.49, not 3.98. Is this $\hat f$ really Efron's? A cross-check: with the theoretical null $\mathcal{N}(0, 1)$ and null proportion 1, the local false discovery rate $\varphi(z)/\hat f(z) \le 0.2$ flags **51** genes (26 right, 25 left) — EFR2008's count exactly.
+</ExampleBlock>
+
+![Two panels. Left: prostate z-score bin counts on a log scale over 90 bins, with the degree-6 Lindsey fit in sky blue and the all-null curve, N times bin width times the standard Normal density, dashed in slate. Right: the Tweedie rule z plus the estimated score in sky blue against the naive rule z dashed in amber, the top 10 genes marked, and violet arrows showing the deflation of the top 3; an annotation reads z equals 5.29 maps to 4.64.](/images/topics/empirical-bayes/33-prostate-tweedie.png)
+
+*Figure 5. Lindsey's method on the prostate z-scores, and Tweedie's selection-bias correction for the top genes: the largest z-score, 5.29, deflates to an estimated effect of 4.64.*
+
+<ExampleBlock number={9} title="Deflating a hyperparameter sweep">
+Return to Example 1, now with $g$ unknown, as it always is in practice. Fit a Gaussian KDE to the 1,000 observed scores themselves and apply Tweedie's formula: the top-20 overstatement falls from +1.41 to **+0.21** (the oracle, which knows $g$, gets +0.08). The practical recipe for a sweep:
+
+1. Standardize each configuration's validation score by its sampling standard deviation — for an accuracy, $\sqrt{\hat p(1 - \hat p)/n_{\text{val}}}$ — so that the noise is approximately $\mathcal{N}(0, 1)$.
+2. Fit a KDE (or Lindsey's method) to the standardized scores and apply $x + \hat\ell'(x)$.
+3. Report the corrected score of the leader, not its raw score; by Theorem 5, the correction stays valid even though we selected the leader on the data.
+</ExampleBlock>
+
+The explorer below runs the experiment. The default scenario is Example 1's; averaged over the default draw and the next 19 resamples, the implementation here gives naive +1.27, Tweedie–KDE +0.13, and oracle −0.04 — the oracle sits near zero, as Theorem 5 predicts — and a single resample varies around those values. Raise the validation noise and watch the curse get worse and the correction get larger.
+
+<WinnersCurseCorrector client:visible />
+
+<RemarkBlock number={10} title="Other exponential families">
+Theorem 4 covers the Gamma and chi-square families as well, which is how one shrinks thousands of sample variances at once — the idea behind moderated $t$-statistics in genomics (the limma approach), where each gene's variance estimate borrows strength from all the others. Poisson rates are covered through Example 7. The structure is always the same: estimate the marginal, take a log-derivative, correct by the carrier.
+</RemarkBlock>
+
+<RemarkBlock number={11} title="Choosing the marginal estimate: KDE versus Lindsey">
+The KDE continues Topic 30 and needs no model, but its score oscillates in sparse tails, where only a few data points contribute to the softmax weights. Lindsey's polynomial is smooth and extrapolates sensibly, but it needs a degree choice: $J = 5$ to $7$ is standard, and EFR2011 uses natural splines with 5 degrees of freedom and a sixth-degree polynomial in its examples. The interactive components in this topic use KDE; the prostate figures use Lindsey.
+</RemarkBlock>
+
+<RemarkBlock number={12} title="Selection: Bayesian immunity versus frequentist selective inference">
+Theorem 5 needs the *true* $g$. Empirical Bayes estimates $t_g$, so the immunity is inherited only approximately; EFR2011 gives the empirical evidence that it holds up well in practice. The frequentist alternative keeps $\theta$ fixed and builds intervals that are valid conditional on the selection event — selective inference: <ExternalLink site="formalml" topic="selective-inference" href="https://formalml.com/topics/selective-inference" />. The two answer different questions: selective inference controls error over repetitions of the selection, while the posterior mean averages over the ensemble of effects that produced the data.
+</RemarkBlock>
+
+<a id="section-33-6"></a>
+
+## 33.6 g-modeling: the nonparametric MLE of the prior
+
+f-modeling sidesteps the prior. g-modeling goes straight at it: find the prior that makes the observed data most likely, over *all* priors. This is maximum likelihood ([Topic 14](/topics/maximum-likelihood)) over an infinite-dimensional parameter — a probability measure.
+
+<DefinitionBlock number={5} title="NPMLE of the mixing distribution (KIE1956)">
+The **nonparametric maximum-likelihood estimator** of the prior is
+
+$$
+\hat G = \arg\max_G \sum_{i=1}^N \log f_G(x_i), \qquad f_G(x) = \int \varphi_\sigma(x - \theta)\,dG(\theta),
+$$
+
+where the maximum is over *all* probability measures $G$ on $\mathbb{R}$. The objective is concave in $G$: $f_G$ is linear in $G$, and the logarithm of a linear function is concave.
+</DefinitionBlock>
+
+<TheoremBlock number={6} title="Existence, discreteness, and the gradient characterization of the NPMLE (stated, LIN1983)">
+Let $x_1, \dots, x_N$ have $n$ distinct values, and $\ell(G) = \sum_i \log f_G(x_i)$ with $f_G(x) = \int \varphi_\sigma(x - \theta)\,dG(\theta)$ over all probability measures $G$ on $\mathbb{R}$. (a) $\ell$ attains its maximum, and the fitted values $f_{\hat G}(x_1), \dots, f_{\hat G}(x_N)$ are the same for every maximizer $\hat G$. (b) Some maximizer is discrete with at most $n$ support points, all in $[\min_i x_i, \max_i x_i]$. (c) $\hat G$ maximizes $\ell$ if and only if the *gradient function*
+
+$$
+D_{\hat G}(\theta) \;=\; \frac1N\sum_{i=1}^N \frac{\varphi_\sigma(x_i - \theta)}{f_{\hat G}(x_i)}
+$$
+
+satisfies $D_{\hat G}(\theta) \le 1$ for all $\theta$, with equality at every support point of $\hat G$.
+</TheoremBlock>
+
+The intuition for (c): $D_{\hat G}(\theta) - 1$ is the directional derivative of the concave average log-likelihood in the direction of a point mass at $\theta$. At the optimum, no direction improves it, so $D \le 1$ everywhere; and moving mass *off* a support point can't help either, which forces $D = 1$ there (LIN1983).
+
+<TheoremBlock number={7} title="Consistency and regret of NPMLE empirical Bayes (stated, KIE1956, JIA2009)">
+(a) *(Kiefer–Wolfowitz 1956.)* If $\theta_i \sim G$ i.i.d. and $X_i \mid \theta_i \sim \mathcal{N}(\theta_i, \sigma^2)$, then $\hat G_N \to G$ weakly, almost surely. (b) *(Jiang–Zhang 2009.)* Under mild moment conditions on the unknown means, the rule $t_{\hat G_N}$ ("general maximum likelihood empirical Bayes") has compound risk $R_N(t_{\hat G_N}; \theta) = (1 + o(1))\,R_N(t_{G_N}; \theta)$ — asymptotically as good as the oracle separable rule of Theorem 1 — provided that oracle risk is of larger order than $(\log N)^5/N$.
+</TheoremBlock>
+
+Part (b) is the payoff of the whole compound-decision frame: the NPMLE rule achieves the benchmark of Theorem 1 without knowing $G_N$, for essentially any configuration of the means. Part (a) says the estimated prior converges too, but weakly — in the sense of distribution functions, not densities — which is why we judge g-modeling by its rule rather than by how $\hat G$ looks.
+
+**Computing the NPMLE.** Restrict $G$ to a fixed grid $\vartheta_1 < \dots < \vartheta_K$ on $[\min x, \max x]$ with weights $w_k \ge 0$ summing to 1. The EM algorithm (LAI1978) updates
+
+$$
+w_k \;\leftarrow\; w_k \cdot \frac1N\sum_{i=1}^N \frac{\varphi_\sigma(x_i - \vartheta_k)}{\hat f(x_i)}, \qquad \hat f(x_i) = \sum_{k'} w_{k'}\varphi_\sigma(x_i - \vartheta_{k'}).
+$$
+
+The factor multiplying $w_k$ is exactly the gradient function $D(\vartheta_k)$ of Theorem 6: EM raises the weight of every grid point where $D > 1$ and lowers it where $D < 1$, and its fixed points have $D = 1$ wherever $w_k > 0$. Each step increases the likelihood, and we stop when $\max_k D(\vartheta_k) \le 1 + \epsilon$ — the certificate of Theorem 6(c). The empirical-Bayes rule is then
+
+$$
+t_{\hat G}(x) = \frac{\sum_k \vartheta_k\, w_k\, \varphi_\sigma(x - \vartheta_k)}{\sum_k w_k\, \varphi_\sigma(x - \vartheta_k)},
+$$
+
+a genuine Bayes rule for the prior $\hat G$, and therefore monotone by Theorem 3(iii).
+
+<ExampleBlock number={10} title="Recovering a three-atom prior">
+Take $g = 0.15\,\delta_{-1.5} + 0.6\,\delta_0 + 0.25\,\delta_2$ — three types of unit, with no spread within a type — with $N = 1000$, $\sigma = 1$, a 181-point grid on $[-4, 5]$, and 20,000 EM steps. The estimated mass concentrates in three clusters near the true atoms, with cluster masses **0.07 / 0.66 / 0.26** (true 0.15 / 0.60 / 0.25), and $\max_\theta D(\theta) = 1.00003$: the Theorem 6(c) certificate is satisfied. The fit is not perfect, and it shouldn't be — the atoms at $-1.5$ and $0$ are only $1.5\sigma$ apart, so at $N = 1000$ the data can't fully separate them, and some of the $-1.5$ atom's mass is absorbed by the atom at 0.
+</ExampleBlock>
+
+![Two panels. Left: the NPMLE prior estimated by grid EM drawn as teal stems, with the three true atoms as emerald diamonds and cluster-mass labels 0.07, 0.66, and 0.26 against true masses 0.15, 0.60, and 0.25. Right: the gradient function D of theta in teal, touching the dashed line D equals 1 on the support of the estimate and lying below it elsewhere.](/images/topics/empirical-bayes/33-npmle-atoms.png)
+
+*Figure 6. g-modeling: the NPMLE concentrates its mass near the true atoms, and the gradient function certifies optimality by touching 1 exactly on its support.*
+
+The fitter below runs the EM live. Step it a few times from the uniform start, then run it to the certificate and watch the gradient function settle onto the line $D = 1$. The bottom panel compares the resulting NPMLE rule with Tweedie–KDE and the oracle.
+
+<NPMLEFitter client:visible />
+
+<RemarkBlock number={13} title="EM is slow; convex solvers are fast">
+EM smears mass over adjacent grid points — Example 10's fit has 17 support points, not 3 — and converges sublinearly, which is why it needed 20,000 steps. On a fixed grid the problem is a finite-dimensional convex program, and interior-point methods solve it exactly in seconds (KOE2014; the R package REBayes). We use EM here because each step is one line, it is monotone, and it can be paused and resumed — which is what the fitter's step buttons need.
+</RemarkBlock>
+
+<RemarkBlock number={14} title="A discrete prior estimate, a smooth rule">
+Theorem 6(b) makes $\hat G$ discrete even when the true $g$ is continuous — try the Normal preset in the fitter. That is not a defect. The rule $t_{\hat G}$ is still a smooth function of $x$, because it averages the atoms with Gaussian weights, and Theorem 7(b) is a statement about the rule, not about $\hat G$.
+</RemarkBlock>
+
+<RemarkBlock number={15} title="Reclaiming Topic 28's nonparametric prior">
+Topic 28 Remark 11 pointed "a nonparametric empirical-Bayes prior" toward formalML. The NPMLE is that object, and it lives here: James–Stein shrinks toward an implicitly estimated Normal prior, while g-modeling estimates the prior with no shape restriction at all. Positive-part James–Stein and the Baranchik family themselves remain Topic 28's ([§28.5](/topics/hierarchical-bayes-and-partial-pooling#section-28-5)).
+</RemarkBlock>
+
+<a id="section-33-7"></a>
+
+## 33.7 f-modeling versus g-modeling
+
+We now have two complete empirical-Bayes strategies. Which is better? The question matters in practice because the two disagree exactly where the decisions are made: in the tails, where the interesting genes and the winning configurations live.
+
+<ExampleBlock number={11} title="Regret against the oracle">
+Take a sparse prior $g = 0.9\,\delta_0 + 0.1\,\mathcal{N}(3, 0.5^2)$ with $\sigma = 1$ — most effects are exactly zero, a few sit well above it — and run 40 replications for each $N$. Regret is the per-coordinate mean squared error of each rule minus that of the oracle Bayes rule under the true $g$, on the same sample:
+
+| $N$ | 100 | 200 | 500 | 1000 | 2000 | 5000 |
+|---|---:|---:|---:|---:|---:|---:|
+| MLE $\hat\theta = x$ | 0.7952 | 0.7802 | 0.7829 | 0.7897 | 0.7668 | 0.7681 |
+| Positive-part James–Stein | 0.2525 | 0.2564 | 0.2558 | 0.2501 | 0.2474 | 0.2482 |
+| Tweedie–KDE | 0.1416 | 0.0958 | 0.0656 | 0.0456 | 0.0286 | 0.0196 |
+| NPMLE–EB | 0.0647 | 0.0336 | 0.0180 | 0.0096 | 0.0033 | 0.0025 |
+
+The MLE's regret does not shrink with $N$: it never learns anything from the ensemble. Positive-part James–Stein's regret is flat too, at about 0.25 — linear shrinkage cannot adapt to sparsity, because no single shrinkage factor is right both for the zeros and for the effects near 3. The two nonparametric rules learn the prior: Tweedie–KDE's regret falls from **0.142 to 0.020**, and the NPMLE rule's from **0.065 to 0.0025**.
+</ExampleBlock>
+
+![Log-log plot of regret against the oracle Bayes rule versus the number of parallel problems N from 100 to 5,000, with plus or minus one Monte Carlo standard error bars: the MLE in amber, flat near 0.78; positive-part James-Stein in violet, flat near 0.25; Tweedie with a KDE marginal in sky blue, falling from 0.142 to 0.020; and the NPMLE rule in teal, falling from 0.065 to 0.0025.](/images/topics/empirical-bayes/33-f-vs-g-regret.png)
+
+*Figure 7. Regret against the oracle Bayes rule. Empirical Bayes learns the prior — Tweedie–KDE and NPMLE regret fall with N — while the MLE and linear shrinkage stay flat.*
+
+Theorem 3(iii) gives a cheap diagnostic that needs no oracle: every Bayes rule is nondecreasing. An estimated rule that decreases somewhere cannot be the Bayes rule for *any* prior, so wherever it decreases it is wrong.
+
+<ExampleBlock number={12} title="Where f and g disagree: the prostate right tail">
+Restrict to $z \in [2, 5.4]$, which contains the 223 genes with $z > 2$, and compare three empirical-Bayes rules. The Tweedie–KDE rule (bandwidth $h = 0.21$) is wildly non-monotone, with minimum slope $-18.2$: it maps $z = 4.47$ to 1.20 while mapping $z = 4.25$ to 2.35, so a larger observed effect gets a smaller estimated effect. Tweedie–Lindsey is monotone (minimum slope 0.57). The NPMLE rule is monotone (minimum slope 0.02) and saturates near **2.7**, because the largest atom of $\hat G$ sits at about 2.7 — a posterior mean can never exceed the largest value the prior allows. For the top gene, Lindsey estimates **4.64** and the NPMLE **2.72**.
+</ExampleBlock>
+
+![Two panels on the prostate right tail, z from 2 to 5.4. Left: the Tweedie rule with a KDE marginal dashed in sky blue, oscillating; the Tweedie rule with Lindsey's fit solid in sky blue; the NPMLE Bayes rule in teal, saturating near 2.7; and the naive rule dashed in amber; a rug marks the 223 genes with z above 2. Right: the slopes of the three rules, with the regions where the KDE rule's slope is negative shaded rose and labeled impossible for a Bayes rule.](/images/topics/empirical-bayes/33-monotonicity.png)
+
+*Figure 8. Every Bayes rule is monotone. In the sparse prostate tail the KDE-based rule is not; Lindsey's smooth fit and the NPMLE rule are — but they disagree about how far to shrink.*
+
+<RemarkBlock number={16} title="Reading the disagreement">
+In the bulk of the data all three rules agree. In the sparse tail, f-modeling extrapolates the *shape* of $\hat f$ — Lindsey's polynomial keeps bending at the rate it bent where data were plentiful — while g-modeling refuses to place prior mass where no cluster of data supports it, and so caps the estimate at its largest atom. Neither is "right" from 223 tail genes. EFR2019 discusses the oracle-Bayes benchmark and why g-modeling's extra structure usually wins on regret (Example 11), while f-modeling is easier to compute and to explain. A good habit: when the two disagree about the decision you care about, report both.
+</RemarkBlock>
+
+<RemarkBlock number={17} title="Rates and shape constraints">
+Brown and Greenshtein (BRO2009) show that kernel f-modeling with a slowly shrinking bandwidth has vanishing relative regret, so the KDE route is asymptotically sound; Example 12's pathology is a finite-sample problem. Koenker and Mizera (KOE2014) repair it directly: imposing monotonicity of the rule — equivalently, convexity of $x^2/2 + \sigma^2\log f(x)$ — turns the KDE estimate into a convex program whose solution is always a legitimate Bayes-rule shape.
+</RemarkBlock>
+
+<a id="section-33-8"></a>
+
+## 33.8 Large-scale inference as empirical Bayes
+
+Topic 27 introduced the two-groups model for thousands of simultaneous tests ([§27.9](/topics/bayesian-model-comparison-and-bma#section-27-9)). Each $z$-score comes from the null with probability $\pi_0$ and from a non-null distribution otherwise, so the marginal density is $f = \pi_0 f_0 + (1 - \pi_0) f_1$, and the **local false discovery rate**
+
+$$
+\mathrm{fdr}(z) = \frac{\pi_0 f_0(z)}{f(z)}
+$$
+
+is the posterior probability that a case with score $z$ is null — a Bayes quantity. Topic 27 assumed the three ingredients were known: $f$, the null density $f_0$, and $\pi_0$. Here we estimate all three from the 6,033 genes. That estimation step is empirical Bayes, and it is how screening at scale — genomics, fraud flags, A/B-test portfolios — is done in practice.
+
+<DefinitionBlock number={6} title="Empirical null by central matching (EFR2004)">
+Fit a quadratic $\log\hat f(z) \approx a + bz + cz^2$ to the log of the estimated marginal on a central interval ($[-2, 2]$ here), where nearly all cases are null, and match it to the log of a scaled Normal, $\log[\pi_0\varphi_{\delta_0,\sigma_0}(z)]$, where $\varphi_{\delta_0,\sigma_0}$ is the $\mathcal{N}(\delta_0, \sigma_0^2)$ density. Matching the coefficients of $z^2$, $z$, and $1$ gives
+
+$$
+\hat\sigma_0 = (-2c)^{-1/2}, \qquad \hat\delta_0 = -\frac{b}{2c}, \qquad \hat\pi_0 = \exp\!\Big(a + \frac{\hat\delta_0^2}{2\hat\sigma_0^2}\Big)\sqrt{2\pi}\,\hat\sigma_0.
+$$
+</DefinitionBlock>
+
+<ExampleBlock number={13} title="Prostate empirical null">
+Central matching on the Lindsey fit of Example 8 gives $(\hat\delta_0, \hat\sigma_0, \hat\pi_0) = $ **(−0.001, 1.060, 0.980)**; EFR2008 reports $(0.00, 1.06)$. The null is centered where theory says, but it is 6% wider than $\mathcal{N}(0, 1)$. That small change matters a great deal. Counting genes with $\widehat{\mathrm{fdr}} \le 0.2$: the theoretical null flags **51** (26 right, 25 left); the empirical null flags **21** (13 right, 8 left). A 6% wider null removes more than half of the discoveries, because the discoveries live in the tails, where a slightly wider null puts a lot more null mass.
+</ExampleBlock>
+
+![Two panels. Left: a density histogram of the prostate z-scores with Lindsey's estimated marginal in sky blue, the theoretical null standard Normal dashed in slate, and the empirical null, pi-hat-zero times a Normal with mean 0.00 and standard deviation 1.06, in rose. Right: the estimated local false discovery rate under the theoretical null, 51 genes, 26 right and 25 left, and under the empirical null, 21 genes, 13 right and 8 left, with a dotted line at 0.2.](/images/topics/empirical-bayes/33-empirical-null-prostate.png)
+
+*Figure 9. Large-scale inference as empirical Bayes: an empirical null fit by central matching is 6% wider than N(0,1) and cuts the genes at fdr ≤ 0.2 from 51 to 21.*
+
+The Benjamini–Hochberg procedure of Topic 20 looks like a purely frequentist device. It is also an empirical-Bayes estimate.
+
+<ExampleBlock number={14} title="Benjamini–Hochberg is an empirical-Bayes estimate">
+Define the tail-area false discovery rate $\mathrm{Fdr}(z) = \pi_0 S_0(z)/S(z)$, where $S$ and $S_0$ are the survival functions of $|Z|$ under the mixture and under the null: the posterior probability that a case is null *given* that its score is at least as extreme as $z$. Estimate each piece crudely: $\pi_0 = 1$; $S_0(|z|) = p$, the two-sided $p$-value; and the empirical survival function $\hat S(p_{(k)}) = k/N$ at the $k$-th smallest $p$-value. Then
+
+$$
+\widehat{\mathrm{Fdr}}(p_{(k)}) = \frac{N p_{(k)}}{k}.
+$$
+
+Benjamini–Hochberg rejects the hypotheses with the $k^*$ smallest $p$-values, where
+
+$$
+k^* = \max\{k : p_{(k)} \le kq/N\} = \max\{k : \widehat{\mathrm{Fdr}}(p_{(k)}) \le q\},
+$$
+
+which is the largest tail region whose empirical-Bayes estimate of the Fdr is at most $q$. On the prostate data with $q = 0.1$, BH rejects **60** genes. The frequentist guarantee — FDR control under independence — is Topic 20's §20.7 Theorem 5 ([Topic 20](/topics/multiple-testing-and-false-discovery)); the empirical-Bayes reading explains *why* the procedure has the form it has.
+</ExampleBlock>
+
+<RemarkBlock number={18} title="What is new relative to Topic 27">
+Topic 27 derived the local fdr with a theoretical null and a known mixture. The only new content here is estimating $\pi_0$, $f$, and $f_0$ from the ensemble — and that is exactly the empirical-Bayes step. Topic 27's `LocalFDRExplorer` already exposes a `theoreticalNull: false` switch (Topic 27 Remark 24); central matching is the estimator behind it.
+</RemarkBlock>
+
+<RemarkBlock number={19} title="Why the null widens">
+Correlation among genes, unobserved covariates that affect many genes at once, and miscalibrated test statistics all widen the central peak of the $z$-score histogram, and Efron's analyses find all three at work in microarray data. The empirical null absorbs them without our having to model them. Correlation-adjusted inference proper is out of scope for this topic.
+</RemarkBlock>
+
+<a id="section-33-9"></a>
+
+## 33.9 Empirical-Bayes confidence intervals
+
+Point estimates are half the job. Per-item uncertainty — an interval for each gene's effect, each item's click-through rate, each user's treatment effect — is the other half, and it is where empirical Bayes is most often misused. Topic 28 Remark 16 said that empirical-Bayes intervals are "too narrow." This section makes that precise, and shows the sense in which they are not. We need two more pieces of notation: $\Phi(c) = P(Z \le c)$ is the standard Normal cumulative distribution function, and $z_{1-\alpha/2}$ is its $(1 - \alpha/2)$ quantile ($z_{0.975} = 1.96$).
+
+<DefinitionBlock number={7} title="EBCI; average versus conditional coverage">
+In the Normal–Normal model with known $(\mu, \tau^2, \sigma^2)$ and shrinkage factor $B = \sigma^2/(\sigma^2 + \tau^2)$, the **parametric empirical-Bayes confidence interval (EBCI)** is
+
+$$
+(1 - B)X + B\mu \;\pm\; z_{1-\alpha/2}\sqrt{(1 - B)\sigma^2}.
+$$
+
+Its **conditional coverage** at $\theta$ is $P(\theta \in \mathrm{CI} \mid \theta)$, a frequentist probability with $\theta$ held fixed. Its **average coverage** is $\int P(\theta \in \mathrm{CI} \mid \theta)\,dg(\theta)$ — equivalently, the long-run fraction of the $N$ intervals that cover their own $\theta_i$.
+</DefinitionBlock>
+
+<TheoremBlock number={8} title="EBCI coverage: exact on average, not conditionally">
+Let $\theta \sim \mathcal{N}(\mu, \tau^2)$ and $X \mid \theta \sim \mathcal{N}(\theta, \sigma^2)$ with $(\mu, \tau^2, \sigma^2)$ known, $B = \sigma^2/(\sigma^2 + \tau^2)$, $m(X) = (1-B)X + B\mu$, $v = (1-B)\sigma^2$, $z = z_{1-\alpha/2}$, and $\mathrm{CI}(X) = [m(X) - z\sqrt v,\; m(X) + z\sqrt v]$. Then:
+
+(i) $P\big(\theta \in \mathrm{CI}(X)\big) = 1 - \alpha$, the probability taken over $(\theta, X)$ jointly;
+
+(ii) for fixed $\theta$ with $\delta = \theta - \mu$ and $b = B\delta/((1-B)\sigma)$,
+
+$$
+c(\delta) \;=\; P\big(\theta \in \mathrm{CI}(X) \mid \theta\big) \;=\; \Phi\Big(\frac{z}{\sqrt{1-B}} - b\Big) - \Phi\Big(-\frac{z}{\sqrt{1-B}} - b\Big);
+$$
+
+(iii) $c(0) > 1 - \alpha$ and $c(\delta) \to 0$ as $|\delta| \to \infty$.
+</TheoremBlock>
+
+<ProofBlock number={6} title="Proof of Thm 8 (average and conditional coverage of the parametric EBCI)">
+
+(i) By Topic 28 §28.6 Thm 4, $\theta \mid X \sim \mathcal{N}(m(X), v)$. Hence, for every value of $X$, $P(\theta \in \mathrm{CI}(X) \mid X) = P(|Z| \le z) = 1 - \alpha$ with $Z \sim \mathcal{N}(0,1)$; averaging over $X$ leaves $1 - \alpha$.
+
+(ii) Fix $\theta$. Rewrite the estimation error as a noise part and a bias part:
+
+$$
+\theta - m(X) \;=\; (1 - B)(\theta - X) + B(\theta - \mu).
+$$
+
+Given $\theta$, $X - \theta \sim \mathcal{N}(0, \sigma^2)$, so $\theta - m(X) \sim \mathcal{N}\big(B\delta,\, (1-B)^2\sigma^2\big)$. Standardizing by $(1-B)\sigma$ gives $W \sim \mathcal{N}(b, 1)$. The interval covers exactly when $|\theta - m(X)| \le z\sqrt v$, that is, when
+
+$$
+|W| \;\le\; \frac{z\sqrt{(1-B)\sigma^2}}{(1-B)\sigma} \;=\; \frac{z}{\sqrt{1-B}},
+$$
+
+and $P(|W| \le c) = \Phi(c - b) - \Phi(-c - b)$ for $W \sim \mathcal{N}(b, 1)$.
+
+(iii) At $\delta = 0$, $b = 0$ and $c(0) = 2\Phi(z/\sqrt{1-B}) - 1 > 2\Phi(z) - 1 = 1 - \alpha$, because $0 < 1 - B < 1$. As $|\delta| \to \infty$, $|b| \to \infty$ and both $\Phi$ terms tend to the same limit (both to 1 if $b \to -\infty$, both to 0 if $b \to +\infty$), so $c(\delta) \to 0$. $\blacksquare$ — using the Normal–Normal posterior (Topic 28 §28.6 Thm 4).
+
+</ProofBlock>
+
+A consistency check ties (ii) back to (i). Averaging over $\delta \sim \mathcal{N}(0, \tau^2)$ makes $b \sim \mathcal{N}(0, \sigma^2/\tau^2)$, since $B/(1-B) = \sigma^2/\tau^2$. Unconditionally, then, $W \sim \mathcal{N}(0, 1 + \sigma^2/\tau^2) = \mathcal{N}(0, 1/(1-B))$, and $P(|W| \le z/\sqrt{1-B}) = 1 - \alpha$ — part (i) again, by direct computation. The two parts together say what "too narrow" means: the interval is exactly right *on average across units*, and it pays for that by overcovering units near the prior mean and badly undercovering units far from it.
+
+The parametric guarantee leans on the prior being Normal. Armstrong, Kolesár, and Plagborg-Møller (ARM2022) keep only its variance.
+
+<TheoremBlock number={9} title="Robust EB confidence intervals (stated, ARM2022)">
+Let $\hat\theta = \mu + w(X - \mu)$ with $w = 1 - B = \tau^2/(\tau^2 + \sigma^2)$, and define the normalized bias $b = (w - 1)(\theta - \mu)/(w\sigma)$, the non-coverage function $r(b, \chi) = P(|Z - b| > \chi)$ for $Z \sim \mathcal{N}(0,1)$, and
+
+$$
+\rho(m_2, \chi) \;=\; \sup_F\; E_F\big[r(b, \chi)\big] \quad \text{subject to} \quad E_F[b^2] = m_2 .
+$$
+
+With $\mathrm{cva}_\alpha(m_2)$ the value of $\chi$ solving $\rho(m_2, \chi) = \alpha$: (a) for *every* distribution of $\theta$ with $E(\theta - \mu)^2 = \tau^2$ — so that $m_2 = \sigma^2/\tau^2$ — the interval $\hat\theta \pm \mathrm{cva}_\alpha(m_2)\, w\sigma$ has average coverage at least $1 - \alpha$; (b) writing $r_0(t, \chi) = r(\sqrt t, \chi)$ and $t_0 = \arg\max_{t > 0}\,(r_0(t,\chi) - r_0(0,\chi))/t$ ($t_0 = 0$ when $\chi < \sqrt 3$),
+
+$$
+\rho(m_2, \chi) \;=\; r_0(0, \chi) + \frac{m_2}{\max(m_2, t_0)}\Big(r_0\big(\max(m_2, t_0), \chi\big) - r_0(0, \chi)\Big),
+$$
+
+attained by the distribution putting mass $1 - m_2/t_0$ at $b = 0$ and $m_2/t_0$ split equally at $b = \pm\sqrt{t_0}$ when $m_2 < t_0$. The parametric EBCI of Theorem 8 corresponds to the smaller critical value $z_{1-\alpha/2}\sqrt{1 + m_2}$.
+</TheoremBlock>
+
+The intuition: once only the variance of $\theta$ is pinned down, nature can choose the prior that hurts the interval most, and the worst case piles most units exactly at the prior mean (where the interval overcovers, wasting nothing) and puts a few far out (where it undercovers badly). The robust critical value is the smallest one that survives that adversary (ARM2022, §2 and Prop. B.1).
+
+<ExampleBlock number={15} title="Equal noise and prior spread">
+Take $\sigma = \tau = 1$, so $B = 1/2$ and the parametric half-width is $1.96\sqrt{0.5} = 1.386$. Conditional coverage at $|\theta - \mu| = 0, 1, 2, 3$ (in units of $\tau$) is **0.994, 0.962, 0.780, 0.410**, while the average is exactly **0.95**. A unit three prior standard deviations from the mean — a genuine outlier, the kind we most want to get right — is covered 41% of the time.
+
+The robust critical value is $\mathrm{cva}_{0.05}(1) = $ **3.259**, so the robust half-width is $3.259 \times 0.5 = 1.630$, 18% wider than the parametric one. Average coverage under three priors, all with variance $\tau^2$:
+
+| Prior $g$ | Parametric | Robust |
+|---|---:|---:|
+| Normal $\mathcal{N}(\mu, \tau^2)$ | 0.950 | 0.979 |
+| Spike-and-slab $0.9\,\delta_\mu + 0.1\,\mathcal{N}(\mu, 10)$ | 0.955 | 0.966 |
+| Least favorable: mass 0.889 at $\mu$, 0.111 split at $\mu \pm 2.995\tau$ | **0.929** | 0.950 |
+
+The parametric interval's average guarantee breaks under the least-favorable prior; the robust interval's holds for all three.
+</ExampleBlock>
+
+![Two panels. Left: conditional coverage against theta minus mu in units of tau for the parametric EBCI with critical value 2.772 in indigo, the robust EBCI with critical value 3.259 in teal, and the unshrunk interval x plus or minus 1.96 sigma in amber, flat at 0.95, over a shaded prior density. Right: average coverage bars under Normal, spike-and-slab, and least-favorable priors, all with variance tau squared: parametric 0.950, 0.955, and 0.929; robust 0.979, 0.966, and 0.950.](/images/topics/empirical-bayes/33-ebci-coverage.png)
+
+*Figure 10. Empirical-Bayes intervals cover on average but not individually: conditional coverage dips in the tails, and robust intervals keep the average guarantee for every prior with the right variance.*
+
+<ExampleBlock number={16} title="Eight schools: the zero-width interval">
+Topic 28's Type-II MLE on the eight-schools data ([§28.7](/topics/hierarchical-bayes-and-partial-pooling#section-28-7), Example 9) found $\hat\tau^2 = 0$. Then $\hat B_k = 1$ for every school, and every plug-in EBCI collapses to the single point $\hat\mu = 7.69$ with zero width — the extreme case of "too narrow." Plug-in robust EBCIs inherit the problem, since $m_2 = \sigma_k^2/\hat\tau^2 = \infty$. The fix is to account for the uncertainty in $\hat\tau^2$ (Remark 20) or to go fully Bayes with a weakly informative hyperprior (Topic 28 Remark 17).
+</ExampleBlock>
+
+<RemarkBlock number={20} title="Hyperparameter uncertainty: Morris and Laird–Louis">
+Theorem 8 assumed $(\mu, \tau^2)$ known. In practice they are estimated, and the plug-in interval ignores that error. Morris (MOR1983) inflates the interval with an analytic correction for estimating the hyperparameters; Laird and Louis (LAI1987) use a parametric bootstrap — the "corrected EB" workflow Topic 28 Remark 16 named. Nonparametric EBCIs that drop the Normal-prior assumption altogether (Ignatiadis and Wager) are beyond this topic.
+</RemarkBlock>
+
+<RemarkBlock number={21} title="How badly can the parametric interval undercover?">
+Across all priors with the right variance and all shrinkage levels, the parametric EBCI's average non-coverage can reach $1/\max\{z_{1-\alpha/2}^2, 1\} = 0.260$ at $\alpha = 0.05$ (ARM2022, Lemma 4.1) — 74% coverage for a nominal 95% interval. Adding a constraint on the kurtosis of the prior narrows the robust interval (ARM2022, §3). The ML reading: per-item uncertainty for shrunken estimates — per-arm click-through rates in a bandit, per-user treatment effects, per-segment conversion rates — should be reported with robust EBCIs, not plug-in posterior intervals, whenever there is no strong reason to believe the effects are Normally distributed.
+</RemarkBlock>
+
+<a id="section-33-10"></a>
+
+## 33.10 Forward look
+
+The spine of this topic is one idea in five forms. Robbins showed that a large ensemble can stand in for an unknown prior, and that for Poisson counts the Bayes rule can be read off the marginal frequencies. Tweedie's formula did the same for Normal noise and made the picture geometric: the Bayes correction is $\sigma^2$ times the score of the marginal, a field of arrows pointing uphill on $f$, which is why it deflates the winner's curse and why it survives selection. The NPMLE estimated the prior outright and, through the compound-decision theorem, achieved the oracle's risk without knowing the oracle's prior. Large-scale testing turned out to be the same computation applied to the null, and empirical-Bayes intervals turned out to promise average coverage across units — no more, and no less. Topic 28 remains the closer of Track 7's core arc; this topic is its nonparametric coda, and the remaining threads lead to formalML.
+
+<RemarkBlock number={22} title="Fully Bayesian nonparametrics">
+g-modeling maximizes over priors. The fully Bayesian alternative puts a prior on the prior — a Dirichlet process on $g$ — and integrates over it instead of maximizing. Dirichlet-process mixtures are the Bayesian counterpart of the NPMLE, with posterior uncertainty about $g$ built in: <ExternalLink site="formalml" topic="bayesian-nonparametrics" href="https://formalml.com/topics/bayesian-nonparametrics" />.
+</RemarkBlock>
+
+<RemarkBlock number={23} title="Meta-learning is empirical Bayes over tasks">
+In meta-learning, many related tasks play the role of the $N$ parallel problems, and the learned initialization or prior plays the role of $\hat g$: training across tasks estimates the prior, and adapting to a new task shrinks its estimate toward what the prior expects. formalML's meta-learning topic develops the parametric (Type-II) version in its §6.3; this topic supplies the nonparametric toolkit and the compound-decision justification: <ExternalLink site="formalml" topic="meta-learning" href="https://formalml.com/topics/meta-learning" />.
+</RemarkBlock>
+
+<RemarkBlock number={24} title="Heteroskedastic and multivariate empirical Bayes">
+Everything here assumed a common noise level $\sigma$. Real ensembles rarely cooperate: Efron and Morris's baseball batting averages (EFR1975) already had unequal sample sizes, and shrinkage with unequal $\sigma_i$ is done well by minimizing Stein's unbiased risk estimate (SURE; XIE2012). The NPMLE extends to multivariate parameters and to heteroskedastic noise, and nonparametric empirical-Bayes intervals are an active research area. Each is a natural next step from the tools of this topic.
+</RemarkBlock>
+
+---
+
+### References
+
+1. Robbins, Herbert. (1956). [*An Empirical Bayes Approach to Statistics*](https://doi.org/10.1525/9780520313880-015). In *Proceedings of the Third Berkeley Symposium on Mathematical Statistics and Probability*, Vol. 1 (University of California Press), 157–163.
+2. Robbins, Herbert. (1951). [*Asymptotically Subminimax Solutions of Compound Statistical Decision Problems*](https://doi.org/10.1525/9780520411586-011). In *Proceedings of the Second Berkeley Symposium on Mathematical Statistics and Probability* (University of California Press), 131–148.
+3. Zhang, Cun-Hui. (2003). [*Compound Decision Theory and Empirical Bayes Methods*](https://projecteuclid.org/journals/annals-of-statistics/volume-31/issue-2/Compound-decision-theory-and-empirical-Bayes-methods-invited-paper/10.1214/aos/1051027872.full). *Annals of Statistics*, 31(2), 379–390.
+4. Efron, Bradley, and Carl Morris. (1973). [*Stein's Estimation Rule and Its Competitors — An Empirical Bayes Approach*](https://www.jstor.org/stable/2284155). *Journal of the American Statistical Association*, 68(341), 117–130.
+5. James, Willard, and Charles Stein. (1961). [*Estimation with Quadratic Loss*](https://projecteuclid.org/ebooks/berkeley-symposium-on-mathematical-statistics-and-probability/Proceedings-of-the-Fourth-Berkeley-Symposium-on-Mathematical-Statistics-and/chapter/Estimation-with-Quadratic-Loss/bsmsp/1200512173). In *Proceedings of the Fourth Berkeley Symposium on Mathematical Statistics and Probability*, Vol. 1 (University of California Press), 361–379.
+6. Efron, Bradley, and Trevor Hastie. (2016). [*Computer Age Statistical Inference: Algorithms, Evidence, and Data Science*](https://hastie.su.domains/CASI/). Cambridge University Press.
+7. Efron, Bradley. (2011). [*Tweedie's Formula and Selection Bias*](https://doi.org/10.1198/jasa.2011.tm11181). *Journal of the American Statistical Association*, 106(496), 1602–1614.
+8. Vincent, Pascal. (2011). [*A Connection Between Score Matching and Denoising Autoencoders*](https://doi.org/10.1162/NECO_a_00142). *Neural Computation*, 23(7), 1661–1674.
+9. Dawid, A. Philip. (1994). [*Selection Paradoxes of Bayesian Inference*](https://doi.org/10.1214/lnms/1215463797). In *Multivariate Analysis and Its Applications*, IMS Lecture Notes–Monograph Series 24, 211–220.
+10. Efron, Bradley, and Robert Tibshirani. (1996). [*Using Specially Designed Exponential Families for Density Estimation*](https://projecteuclid.org/journals/annals-of-statistics/volume-24/issue-6/Using-specially-designed-exponential-families-for-density-estimation/10.1214/aos/1032181161.full). *Annals of Statistics*, 24(6), 2431–2461.
+11. Singh, Dinesh, Phillip G. Febbo, Kenneth Ross, et al. (2002). [*Gene Expression Correlates of Clinical Prostate Cancer Behavior*](https://doi.org/10.1016/S1535-6108%2802%2900030-2). *Cancer Cell*, 1(2), 203–209.
+12. Kiefer, J., and J. Wolfowitz. (1956). [*Consistency of the Maximum Likelihood Estimator in the Presence of Infinitely Many Incidental Parameters*](https://doi.org/10.1214/aoms/1177728066). *Annals of Mathematical Statistics*, 27(4), 887–906.
+13. Laird, Nan. (1978). [*Nonparametric Maximum Likelihood Estimation of a Mixing Distribution*](https://doi.org/10.1080/01621459.1978.10480103). *Journal of the American Statistical Association*, 73(364), 805–811.
+14. Lindsay, Bruce G. (1983). [*The Geometry of Mixture Likelihoods: A General Theory*](https://projecteuclid.org/journals/annals-of-statistics/volume-11/issue-1/The-Geometry-of-Mixture-Likelihoods-A-General-Theory/10.1214/aos/1176346059.full). *Annals of Statistics*, 11(1), 86–94.
+15. Jiang, Wenhua, and Cun-Hui Zhang. (2009). [*General Maximum Likelihood Empirical Bayes Estimation of Normal Means*](https://projecteuclid.org/journals/annals-of-statistics/volume-37/issue-4/General-maximum-likelihood-empirical-Bayes-estimation-of-normal-means/10.1214/08-AOS638.full). *Annals of Statistics*, 37(4), 1647–1684.
+16. Koenker, Roger, and Ivan Mizera. (2014). [*Convex Optimization, Shape Constraints, Compound Decisions, and Empirical Bayes Rules*](https://doi.org/10.1080/01621459.2013.869224). *Journal of the American Statistical Association*, 109(506), 674–685.
+17. Brown, Lawrence D., and Eitan Greenshtein. (2009). [*Nonparametric Empirical Bayes and Compound Decision Approaches to Estimation of a High-Dimensional Vector of Normal Means*](https://projecteuclid.org/journals/annals-of-statistics/volume-37/issue-4/Nonparametric-empirical-Bayes-and-compound-decision-approaches-to-estimation-of/10.1214/08-AOS630.full). *Annals of Statistics*, 37(4), 1685–1704.
+18. Efron, Bradley. (2014). [*Two Modeling Strategies for Empirical Bayes Estimation*](https://projecteuclid.org/journals/statistical-science/volume-29/issue-2/Two-Modeling-Strategies-for-Empirical-Bayes-Estimation/10.1214/13-STS455.full). *Statistical Science*, 29(2), 285–301.
+19. Efron, Bradley. (2019). [*Bayes, Oracle Bayes and Empirical Bayes*](https://projecteuclid.org/journals/statistical-science/volume-34/issue-2/Bayes-Oracle-Bayes-and-Empirical-Bayes/10.1214/18-STS674.full). *Statistical Science*, 34(2), 177–201.
+20. Efron, Bradley. (2004). [*Large-Scale Simultaneous Hypothesis Testing: The Choice of a Null Hypothesis*](https://doi.org/10.1198/016214504000000089). *Journal of the American Statistical Association*, 99(465), 96–104.
+21. Efron, Bradley. (2008). [*Microarrays, Empirical Bayes and the Two-Groups Model*](https://projecteuclid.org/journals/statistical-science/volume-23/issue-1/Microarrays-Empirical-Bayes-and-the-Two-Groups-Model/10.1214/07-STS236.full). *Statistical Science*, 23(1), 1–22.
+22. Efron, Bradley. (2010). [*Large-Scale Inference: Empirical Bayes Methods for Estimation, Testing, and Prediction*](https://www.cambridge.org/core/books/largescale-inference/A0B183B0080A92966497F12CE5D12589). Cambridge University Press.
+23. Morris, Carl N. (1983). [*Parametric Empirical Bayes Inference: Theory and Applications*](https://doi.org/10.1080/01621459.1983.10477920). *Journal of the American Statistical Association*, 78(381), 47–55.
+24. Laird, Nan M., and Thomas A. Louis. (1987). [*Empirical Bayes Confidence Intervals Based on Bootstrap Samples*](https://doi.org/10.1080/01621459.1987.10478490). *Journal of the American Statistical Association*, 82(399), 739–750.
+25. Armstrong, Timothy B., Michal Kolesár, and Mikkel Plagborg-Møller. (2022). [*Robust Empirical Bayes Confidence Intervals*](https://doi.org/10.3982/ECTA18597). *Econometrica*, 90(6), 2567–2602.
+26. Efron, Bradley, and Carl Morris. (1975). [*Data Analysis Using Stein's Estimator and Its Generalizations*](https://doi.org/10.1080/01621459.1975.10479864). *Journal of the American Statistical Association*, 70(350), 311–319.
+27. Xie, Xianchao, S. C. Kou, and Lawrence D. Brown. (2012). [*SURE Estimates for a Heteroscedastic Hierarchical Model*](https://doi.org/10.1080/01621459.2012.728154). *Journal of the American Statistical Association*, 107(500), 1465–1479.

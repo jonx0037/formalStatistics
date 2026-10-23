@@ -531,7 +531,7 @@ Topic 19 explicitly deferred simultaneous CIs to Topic 20. The construction abov
 Track 5 — Hypothesis Testing & Confidence — ends here, 4 topics deep. The next tracks inherit this topic's scaffolding rather than re-derive it:
 
 - **[Track 6 (Regression)](/topics/linear-regression)** uses Bonferroni-adjusted coefficient CIs (§21.8 Rem 16) as the default simultaneous-inference tool and BH for variable selection. F-tests for nested-model comparisons (§21.8 Thm 9, Example 8) are the closed-testing ancestor of Holm (§20.5 Rem 11).
-- **Track 7 (Bayesian)** contrasts FDR with Bayesian local-FDR (Efron 2010) — the posterior probability that an individual observation is from the null. Bayesian multiplicity reduces to posterior updating; no closed-testing scaffold is required.
+- **Track 7 (Bayesian)** contrasts FDR with Bayesian local-FDR (Efron 2010) — the posterior probability that an individual observation is from the null. Bayesian multiplicity reduces to posterior updating; no closed-testing scaffold is required. [Topic 33 §33.8](/topics/empirical-bayes#section-33-8) reads BH itself as an empirical-Bayes estimate of the tail-area false discovery rate.
 - **Track 8 (High-Dimensional)** builds knockoffs (Barber–Candès 2015) and online FDR (Javanmard–Montanari 2018) directly on top of BH. Every modern multiplicity method traces to §20.7 Thm 5.
 
 The figure below maps Track 5's arc into these downstream topics.

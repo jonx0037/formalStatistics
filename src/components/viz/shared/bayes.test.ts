@@ -74,6 +74,23 @@ import {
   nonCenteredTransform,
   centeredToNonCentered,
   funnelLogDensity,
+  insuranceClaimsData,
+  robbinsEstimate,
+  gammaPoissonEB,
+  kdeScore,
+  tweedieKDE,
+  lindseyFit,
+  tweedieLindsey,
+  normalMixtureMarginal,
+  posteriorMeanNormalMixturePrior,
+  sampleNormalMixture,
+  posteriorMeanDiscretePrior,
+  npmleGridEM,
+  npmleGradientFunction,
+  ebciConditionalCoverage,
+  robustEbciMaxNonCoverage,
+  robustEbciCriticalValue,
+  type NormalMixtureComponent,
   type PriorHyperparams,
   type SuffStats,
   type PosteriorHyperparams,
@@ -1506,6 +1523,161 @@ console.log('========================================\n');
   let threw = false;
   try { rng.chiSquared(0); } catch { threw = true; }
   check('S31.C chiSquared(df=0) throws', threw, threw, true, 'df must be a positive integer');
+}
+
+console.log('\n========================================');
+console.log(' Topic 33 · bayes.ts verification (Empirical Bayes)');
+console.log('========================================\n');
+
+// ── T33.1. insuranceClaimsData: 9,461 holders in 8 categories ─────────────
+{
+  const { claims, counts } = insuranceClaimsData();
+  const total = counts.reduce((a, c) => a + c, 0);
+  check('T33.1 insuranceClaimsData total = 9461, 8 categories',
+    total === 9461 && claims.length === 8 && counts.length === 8, `${total}, ${counts.length}`, '9461, 8',
+    'CASI Table 6.1');
+}
+
+// ── T33.2–T33.4. Robbins' formula on CASI Table 6.1 ───────────────────────
+{
+  const rob = robbinsEstimate(insuranceClaimsData().counts);
+  check('T33.2 robbinsEstimate[0] = 1317/7840', approx(rob[0], 0.1679846939, 1e-10), rob[0].toFixed(10), '0.1679846939',
+    'CASI row: .168');
+  check('T33.3 robbinsEstimate[1] = 2·239/1317', approx(rob[1], 0.3629460896, 1e-10), rob[1].toFixed(10), '0.3629460896',
+    'CASI row: .363');
+  check('T33.4 robbinsEstimate[5] = 6·4/4 = 6', approx(rob[5], 6.0, 1e-12), rob[5], '6',
+    'the unstable tail cell (§33.3 Rem 5)');
+}
+
+// ── T33.5–T33.7. Gamma–Poisson parametric EB ──────────────────────────────
+{
+  const gp = gammaPoissonEB(insuranceClaimsData().counts);
+  check('T33.5 gammaPoissonEB shape ν̂ ≈ 0.701512', approx(gp.shape, 0.701512, 1e-4), gp.shape.toFixed(6), '0.701512');
+  check('T33.6 gammaPoissonEB scale ŝ ≈ 0.305559', approx(gp.scale, 0.305559, 1e-4), gp.scale.toFixed(6), '0.305559',
+    'ν̂·ŝ = x̄ = 2028/9461 = 0.214354');
+  check('T33.7 gammaPoissonEB posteriorMean[0] ≈ 0.164185', approx(gp.posteriorMean[0], 0.164185, 1e-4),
+    gp.posteriorMean[0].toFixed(6), '0.164185', 'CASI Gamma-MLE row: .164');
+}
+
+// ── T33.8–T33.9. KDE score and Tweedie–KDE on a 3-point sample ────────────
+// u = (0.5 − X_j)/1 = (1.5, 0.5, −1.5); score = −0.5 e^{−1/8}/(2e^{−9/8} + e^{−1/8}) = −0.5/(1 + 2/e).
+{
+  const s = kdeScore([-1, 0, 2], 0.5, 1);
+  check('T33.8 kdeScore([-1,0,2], 0.5, h=1) = −0.5/(1 + 2/e)', approx(s, -0.2880584424, 1e-10), s.toFixed(10),
+    '-0.2880584424');
+  const t = tweedieKDE([-1, 0, 2], [0.5], 1, 1)[0];
+  check('T33.9 tweedieKDE([-1,0,2], [0.5], σ²=1, h=1) = 0.5 + score', approx(t, 0.2119415576, 1e-10), t.toFixed(10),
+    '0.2119415576');
+}
+
+// ── T33.10–T33.12. Oracle rule under Normal-mixture priors ────────────────
+{
+  const single: NormalMixtureComponent[] = [{ weight: 1, mean: 1, variance: 4 }];
+  const v = posteriorMeanNormalMixturePrior(3, single, 1);
+  check('T33.10 single Normal prior N(1,4): E[θ|x=3] = 1 + (4/5)·2 = 2.6', approx(v, 2.6, 1e-12), v, '2.6',
+    'Tweedie reduces to Topic 28 Thm 4 (§33.4 Ex 5)');
+  const ss: NormalMixtureComponent[] = [
+    { weight: 0.9, mean: 0, variance: 0 },
+    { weight: 0.1, mean: 0, variance: 9 },
+  ];
+  const v1 = posteriorMeanNormalMixturePrior(1, ss, 1);
+  const v4 = posteriorMeanNormalMixturePrior(4, ss, 1);
+  check('T33.11 spike-and-slab E[θ|x=1] ≈ 0.0470042241', approx(v1, 0.0470042241, 1e-10), v1.toFixed(10), '0.0470042241');
+  check('T33.12 spike-and-slab E[θ|x=4] ≈ 3.5250979965', approx(v4, 3.5250979965, 1e-10), v4.toFixed(10), '3.5250979965');
+}
+
+// ── T33.13. Oracle rule under a discrete prior ────────────────────────────
+{
+  const v = posteriorMeanDiscretePrior(1, [-1, 0, 2], [0.2, 0.5, 0.3], 1);
+  check('T33.13 posteriorMeanDiscretePrior(1; [-1,0,2], [.2,.5,.3]) ≈ 0.6575383032', approx(v, 0.6575383032, 1e-10),
+    v.toFixed(10), '0.6575383032');
+}
+
+// ── T33.14–T33.15. NPMLE fixture: 6 points, 11-point grid ─────────────────
+{
+  const xs = [-1.2, -0.3, 0.1, 0.4, 2.2, 2.9];
+  const grid = Array.from({ length: 11 }, (_, k) => -2 + 0.5 * k);
+  const fit = npmleGridEM(xs, grid, 1, { maxIter: 20000, tol: 1e-14 });
+  check('T33.14 npmleGridEM logLik ≈ −9.99894235', approx(fit.logLik, -9.99894235, 1e-6), fit.logLik.toFixed(8),
+    '-9.99894235', 'converged NPMLE log-likelihood (grid EM)');
+  const Dmax = Math.max(...grid.map((g) => npmleGradientFunction(xs, grid, fit.weights, 1, g)));
+  check('T33.15 max over grid of npmleGradientFunction ≈ 1 (KKT certificate)', approx(Dmax, 1, 1e-4), Dmax.toFixed(8), '1',
+    'Lindsay 1983 (§33.6 Thm 6c)');
+}
+
+// ── T33.16–T33.17. Lindsey's method on a deterministic N(0,1) sample ──────
+{
+  const zq = Array.from({ length: 2000 }, (_, i) => quantileStdNormal((i + 0.5) / 2000));
+  const fit = lindseyFit(zq, { nBins: 40, degree: 2 });
+  const s1 = fit.score(1);
+  check('T33.16 lindseyFit(quantile sample, 40 bins, J=2).score(1) ≈ −0.99143041', approx(s1, -0.99143041, 1e-5),
+    s1.toFixed(8), '-0.99143041', 'N(0,1) score at 1 is −1; binning shifts it slightly');
+  const t2 = tweedieLindsey(zq, [2], 1, { nBins: 40, degree: 2 })[0];
+  check('T33.17 tweedieLindsey(same, x=2, σ²=1) ≈ 0.01713918', approx(t2, 0.01713918, 1e-5), t2.toFixed(8),
+    '0.01713918', 'N(0,1) marginal at σ²=1 ⇒ g = δ0 ⇒ E[θ|x] ≈ 0');
+}
+
+// ── T33.18–T33.20. Parametric EBCI coverage (σ² = τ² = 1, α = .05) ────────
+{
+  const c0 = ebciConditionalCoverage(0, 1, 1, 0.05);
+  check('T33.18 ebciConditionalCoverage(δ=0) = 2Φ(1.96/√.5) − 1 ≈ 0.9944254033', approx(c0, 0.9944254033, 1e-6),
+    c0.toFixed(10), '0.9944254033', 'tol 1e-6: cdfStdNormal uses A&S 7.1.26 erf');
+  const c2 = ebciConditionalCoverage(2, 1, 1, 0.05);
+  check('T33.19 ebciConditionalCoverage(δ=2) ≈ 0.7798849066', approx(c2, 0.7798849066, 1e-6), c2.toFixed(10),
+    '0.7798849066');
+  // Thm 8(i): average over δ ~ N(0, τ²) is exactly 1 − α. Simpson, n = 2000 on [−10, 10].
+  const n = 2000;
+  const a = -10;
+  const h = 20 / n;
+  let acc = 0;
+  for (let k = 0; k <= n; k++) {
+    const d = a + k * h;
+    const wgt = k === 0 || k === n ? 1 : k % 2 === 1 ? 4 : 2;
+    acc += wgt * ebciConditionalCoverage(d, 1, 1, 0.05) * Math.exp(-0.5 * d * d) / Math.sqrt(2 * Math.PI);
+  }
+  const avg = (acc * h) / 3;
+  check('T33.20 average coverage over N(0, τ²) = 0.95 (Thm 8i)', approx(avg, 0.95, 1e-5), avg.toFixed(8), '0.95');
+}
+
+// ── T33.21–T33.22. Robust EBCI critical value (ARM2022) ───────────────────
+{
+  const cv1 = robustEbciCriticalValue(1, 0.05);
+  check('T33.21 robustEbciCriticalValue(m2=1) ≈ 3.25919852', approx(cv1, 3.25919852, 1e-4), cv1.toFixed(8), '3.25919852',
+    'vs parametric z√(1+m2) = 2.7718');
+  const cv0 = robustEbciCriticalValue(0, 0.05);
+  check('T33.22 robustEbciCriticalValue(m2=0) = z_.975 ≈ 1.95996398', approx(cv0, 1.95996398, 1e-6), cv0.toFixed(8),
+    '1.95996398');
+}
+
+// ── S33.A–S33.C. Supplementary consistency checks ─────────────────────────
+{
+  // S33.A — Tweedie identity: (E[θ|x] − x)/σ² equals d/dx log f by central difference.
+  const ss: NormalMixtureComponent[] = [
+    { weight: 0.9, mean: 0, variance: 0 },
+    { weight: 0.1, mean: 0, variance: 9 },
+  ];
+  const x = 2.5;
+  const eps = 1e-5;
+  const lhs = posteriorMeanNormalMixturePrior(x, ss, 1) - x;
+  const rhs = (Math.log(normalMixtureMarginal(x + eps, ss, 1)) - Math.log(normalMixtureMarginal(x - eps, ss, 1))) / (2 * eps);
+  check('S33.A Tweedie identity at x=2.5: E[θ|x] − x = (log f)′(x) ≈ −1.66949218', approx(lhs, rhs, 1e-6) && approx(lhs, -1.66949218, 1e-6),
+    `${lhs.toFixed(8)} vs ${rhs.toFixed(8)}`, '-1.66949218');
+
+  // S33.B — sampleNormalMixture moments (seeded; tolerance ≈ 4 SE).
+  const draws = sampleNormalMixture(ss, 40000, createSeededRng(3304));
+  const m = draws.reduce((s, v) => s + v, 0) / draws.length;
+  const v = draws.reduce((s, d) => s + (d - m) ** 2, 0) / (draws.length - 1);
+  const zeroFrac = draws.filter((d) => d === 0).length / draws.length;
+  check('S33.B sampleNormalMixture: mean ≈ 0, var ≈ 0.9, P(θ = 0) ≈ 0.9',
+    approx(m, 0, 0.02) && approx(v, 0.9, 0.06) && approx(zeroFrac, 0.9, 0.006),
+    `${m.toFixed(4)}, ${v.toFixed(4)}, ${zeroFrac.toFixed(4)}`, '0, 0.9, 0.9');
+
+  // S33.C — the parametric critical value undercovers in the worst case; the robust one is exact.
+  const rhoPar = robustEbciMaxNonCoverage(1, 1.959963985 * Math.SQRT2);
+  const rhoRob = robustEbciMaxNonCoverage(1, robustEbciCriticalValue(1, 0.05));
+  check('S33.C worst-case non-coverage: parametric ≈ 0.07054, robust = 0.05',
+    approx(rhoPar, 0.07053902, 1e-5) && approx(rhoRob, 0.05, 1e-6), `${rhoPar.toFixed(8)}, ${rhoRob.toFixed(8)}`,
+    '0.07053902, 0.05', 'Fig 10 least-favorable bar: 1 − 0.0705 = 0.9295');
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

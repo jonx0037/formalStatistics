@@ -178,6 +178,9 @@ export const informationCriteriaLineStyles = {
  *   mle        orange    — frequentist θ̂_MLE (BvM reference)
  *   shrink     violet-600 — James–Stein + partial-pool shrinkage (Topic 28)
  *   divergence red-600   — HMC divergences in funnel diagnostics (Topic 28)
+ *   oracle     gray-900  — oracle Bayes rule t_G, prior known (Topic 33)
+ *   fModel     sky-600   — f-modeling: Robbins, Tweedie (KDE / Lindsey) (Topic 33)
+ *   gModel     teal-600  — g-modeling: NPMLE of the prior (Topic 33)
  */
 export const bayesianColors = {
   prior:      'var(--color-prior)',
@@ -187,6 +190,10 @@ export const bayesianColors = {
   mle:        'var(--color-mle)',
   shrink:     'var(--color-shrink)',
   divergence: 'var(--color-divergence)',
+  // Topic 33 — empirical Bayes accents
+  oracle:     'var(--color-oracle)',   // oracle Bayes rule t_G (prior known)
+  fModel:     'var(--color-f-model)',  // f-modeling: Robbins, Tweedie (KDE / Lindsey)
+  gModel:     'var(--color-g-model)',  // g-modeling: NPMLE
   chains: [
     'var(--chain-1)',
     'var(--chain-2)',

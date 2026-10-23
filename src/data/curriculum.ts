@@ -104,8 +104,9 @@ export const tracks: Track[] = [
       'Bayesian Computation & MCMC',
       'Bayesian Model Comparison & BMA',
       'Hierarchical & Empirical Bayes',
+      'Empirical Bayes',
     ],
-    planned: ['Empirical Bayes'],
+    planned: [],
   },
   {
     id: 'high-dimensional-nonparametric',
