@@ -11,7 +11,7 @@
  * context lives in the MDX body, not here.
  */
 
-import { eightSchoolsData } from '../components/viz/shared/bayes';
+import { eightSchoolsData, type NormalMixtureComponent } from '../components/viz/shared/bayes';
 
 // ── PriorPosteriorExplorer presets ─────────────────────────────────────────
 
@@ -833,3 +833,189 @@ export const funnelGeometryPresets = [
 // =========================================================================
 // END TOPIC 28 PRESETS
 // =========================================================================
+
+// ==========================================================================
+// TOPIC 33 PRESETS — Empirical Bayes (Track 7 coda)
+// ==========================================================================
+//
+// Typed presets (Topic 26/27 style) rather than `as const` literals: the
+// mixture components are passed straight to bayes.ts functions that take a
+// mutable NormalMixtureComponent[]. Seeds are the notebook's sub-seeds, but
+// createSeededRng (MINSTD LCG) ≠ numpy's PCG64, so component samples differ
+// from the static figures; readouts are described as "typically".
+
+/** Presets for TweedieShrinkageField (§33.4, featured). */
+export interface TweedieShrinkagePreset {
+  id: string;
+  label: string;
+  comps: NormalMixtureComponent[];
+}
+
+export const tweedieShrinkagePresets: TweedieShrinkagePreset[] = [
+  {
+    id: 'spike-slab',
+    label: 'Spike-and-slab: 0.9·δ₀ + 0.1·N(0, 3²)',
+    comps: [
+      { weight: 0.9, mean: 0, variance: 0 },
+      { weight: 0.1, mean: 0, variance: 9 },
+    ],
+  },
+  {
+    id: 'normal',
+    label: "Normal N(0, 2²) — Topic 28's linear case",
+    comps: [{ weight: 1, mean: 0, variance: 4 }],
+  },
+  {
+    id: 'bimodal',
+    label: 'Bimodal: ½·N(−2, 0.5²) + ½·N(2, 0.5²)',
+    comps: [
+      { weight: 0.5, mean: -2, variance: 0.25 },
+      { weight: 0.5, mean: 2, variance: 0.25 },
+    ],
+  },
+  {
+    id: 'three-atoms',
+    label: 'Three atoms: 0.15·δ(−1.5) + 0.6·δ(0) + 0.25·δ(2)',
+    comps: [
+      { weight: 0.15, mean: -1.5, variance: 0 },
+      { weight: 0.6, mean: 0, variance: 0 },
+      { weight: 0.25, mean: 2, variance: 0 },
+    ],
+  },
+];
+
+export const tweedieShrinkageDefaults = {
+  presetId: 'spike-slab',
+  N: 2000,
+  sigma: 1,
+  seed: 3304,
+  bandwidthMultiplier: 1,
+};
+
+/** Presets for RobbinsPoissonExplorer (§33.3). */
+export interface RobbinsExplorerPreset {
+  id: 'insurance' | 'gamma-sim';
+  label: string;
+  gammaShape?: number;
+  gammaScale?: number;
+  nDefault?: number;
+  seed?: number;
+}
+
+export const robbinsExplorerPresets: RobbinsExplorerPreset[] = [
+  { id: 'insurance', label: 'Insurance claims (CASI Table 6.1)' },
+  {
+    id: 'gamma-sim',
+    label: 'Simulated: θ ~ Gamma(shape 0.7, scale 0.3)',
+    gammaShape: 0.7,
+    gammaScale: 0.3,
+    nDefault: 10000,
+    seed: 3303,
+  },
+];
+
+/** Presets for WinnersCurseCorrector (§33.5). */
+export interface WinnersCursePreset {
+  id: string;
+  label: string;
+  comps: NormalMixtureComponent[];
+  K: number;
+  topK: number;
+  sigma: number;
+  seed: number;
+}
+
+export const winnersCursePresets: WinnersCursePreset[] = [
+  {
+    id: 'mostly-baseline',
+    label: 'Mostly baseline: 0.9·N(0, 0.3²) + 0.1·N(2.5, 0.5²)',
+    comps: [
+      { weight: 0.9, mean: 0, variance: 0.09 },
+      { weight: 0.1, mean: 2.5, variance: 0.25 },
+    ],
+    K: 1000,
+    topK: 20,
+    sigma: 1,
+    seed: 3301,
+  },
+  {
+    id: 'all-similar',
+    label: 'All configs similar: N(0, 1)',
+    comps: [{ weight: 1, mean: 0, variance: 1 }],
+    K: 1000,
+    topK: 20,
+    sigma: 1,
+    seed: 3302,
+  },
+  {
+    id: 'rare-big-wins',
+    label: 'Rare big wins: 0.95·δ₀ + 0.05·N(0, 4²)',
+    comps: [
+      { weight: 0.95, mean: 0, variance: 0 },
+      { weight: 0.05, mean: 0, variance: 16 },
+    ],
+    K: 1000,
+    topK: 20,
+    sigma: 1,
+    seed: 3305,
+  },
+];
+
+/** Presets for NPMLEFitter (§33.6). Grid = linspace(lo, hi, size). */
+export interface NpmleFitterPreset {
+  id: string;
+  label: string;
+  comps: NormalMixtureComponent[];
+  N: number;
+  grid: { lo: number; hi: number; size: number };
+  seed: number;
+}
+
+export const npmleFitterPresets: NpmleFitterPreset[] = [
+  {
+    id: 'three-atoms',
+    label: 'Three atoms (Figure 6): 0.15·δ(−1.5) + 0.6·δ(0) + 0.25·δ(2)',
+    comps: [
+      { weight: 0.15, mean: -1.5, variance: 0 },
+      { weight: 0.6, mean: 0, variance: 0 },
+      { weight: 0.25, mean: 2, variance: 0 },
+    ],
+    N: 1000,
+    grid: { lo: -4, hi: 5, size: 181 },
+    seed: 3306,
+  },
+  {
+    id: 'two-atoms',
+    label: 'Two atoms: ½·δ(−2) + ½·δ(2)',
+    comps: [
+      { weight: 0.5, mean: -2, variance: 0 },
+      { weight: 0.5, mean: 2, variance: 0 },
+    ],
+    N: 1000,
+    grid: { lo: -5, hi: 5, size: 181 },
+    seed: 3307,
+  },
+  {
+    id: 'normal',
+    label: 'Continuous: N(0, 1)',
+    comps: [{ weight: 1, mean: 0, variance: 1 }],
+    N: 1000,
+    grid: { lo: -5, hi: 5, size: 181 },
+    seed: 3308,
+  },
+  {
+    id: 'sparse',
+    label: 'Sparse: 0.9·δ(0) + 0.1·N(3, 0.5²)',
+    comps: [
+      { weight: 0.9, mean: 0, variance: 0 },
+      { weight: 0.1, mean: 3, variance: 0.25 },
+    ],
+    N: 1000,
+    grid: { lo: -4, hi: 6, size: 181 },
+    seed: 3309,
+  },
+];
+
+// ==========================================================================
+// END TOPIC 33 PRESETS
+// ==========================================================================

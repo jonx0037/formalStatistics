@@ -650,7 +650,7 @@ Theorem 5 says no regular estimator can beat the MLE asymptotically. The catch i
 
 This does not violate Theorem 5 because the Hodges estimator is irregular at $\theta_0 = 0$ — the sampling distribution does not converge uniformly in $\theta_0$ near zero. More fundamentally, the maximum risk over a shrinking neighborhood of $\theta_0 = 0$ *diverges*: the estimator pays for its superefficiency at one point with enormous variance at nearby points. Le Cam's convolution theorem makes this precise: any estimator that is asymptotically better than the MLE at one point is asymptotically worse at nearby points, in a specific technical sense.
 
-For practical purposes, the lesson is that superefficiency is a local, fragile phenomenon. The MLE is the default for good reason, and the escape routes — shrinkage, empirical Bayes, Stein-type estimators — deliver their gains through bias, regularization, or prior information, not through asymptotic efficiency.
+For practical purposes, the lesson is that superefficiency is a local, fragile phenomenon. The MLE is the default for good reason, and the escape routes — shrinkage, [empirical Bayes](/topics/empirical-bayes), Stein-type estimators — deliver their gains through bias, regularization, or prior information, not through asymptotic efficiency.
 </RemarkBlock>
 
 <a id="section-14-7"></a>

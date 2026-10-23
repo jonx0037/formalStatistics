@@ -1,6 +1,6 @@
 ---
 title: "Hierarchical & Empirical Bayes"
-subtitle: "Topic 28 closes Track 7 by bending the tools of Topics 25–27 onto structures where group-level parameters share a common distribution and the prior itself has a prior. Eight schools as the spine example. Three full proofs — Stein's paradox via Stein's identity (featured), the partial-pooling shrinkage formula in the Normal–Normal hierarchy, and volume preservation + funnel decoupling for the non-centered reparameterization. Empirical Bayes as the boundary case. Linear mixed-effects. HMC diagnostics. The forward-map to formalml closes the track."
+subtitle: "Topic 28 closes Track 7 by bending the tools of Topics 25–27 onto structures where group-level parameters share a common distribution and the prior itself has a prior. Eight schools as the spine example. Three full proofs — Stein's paradox via Stein's identity (featured), the partial-pooling shrinkage formula in the Normal–Normal hierarchy, and volume preservation + funnel decoupling for the non-centered reparameterization. Empirical Bayes as the boundary case — Topic 33 takes it nonparametric. Linear mixed-effects. HMC diagnostics. The forward-map to formalml closes the track."
 status: "published"
 difficulty: "intermediate"
 prerequisites:
@@ -445,7 +445,7 @@ Savings are largest when $\theta$ is near the shrinkage target (here, the origin
 <ShrinkageExplorer client:visible />
 
 <RemarkBlock number={11} title="Positive-part JS and the Baranchik family">
-The plain JS estimator can flip signs when $\|X\|^2 < d - 2$. The positive-part correction (EFR1973) clamps the shrinkage coefficient at zero and dominates plain JS uniformly. Baranchik 1970 generalizes further: any estimator of the form $(1 - a(\|X\|^2)/\|X\|^2) X$ with $a$ bounded between 0 and $2(d - 2)$ dominates the MLE in $d \geq 3$. The full Baranchik family and its Bayesian-structural interpretation (a nonparametric empirical-Bayes prior) lives at formalml.
+The plain JS estimator can flip signs when $\|X\|^2 < d - 2$. The positive-part correction (EFR1973) clamps the shrinkage coefficient at zero and dominates plain JS uniformly. Baranchik 1970 generalizes further: any estimator of the form $(1 - a(\|X\|^2)/\|X\|^2) X$ with $a$ bounded between 0 and $2(d - 2)$ dominates the MLE in $d \geq 3$. The Bayesian-structural reading of this family — shrinkage toward a prior that is itself estimated nonparametrically from the data — is developed in [Topic 33 §33.6](/topics/empirical-bayes#section-33-6), where the prior is fit by nonparametric maximum likelihood.
 </RemarkBlock>
 
 <RemarkBlock number={12} title="Why $d \geq 3$">
@@ -597,7 +597,7 @@ The iterative Type-II MLE update — "given $\phi$, compute posterior means of $
 </RemarkBlock>
 
 <RemarkBlock number={16} title="EB confidence intervals are too narrow">
-The EB point estimate $\hat\phi$ comes with uncertainty — the Type-II MLE is subject to sampling variation. Plug-in EB ignores this uncertainty in the downstream $\theta_k$ posteriors, producing credible intervals that are anti-conservative (too narrow). Full-Bayes integration corrects for this automatically. A "corrected EB" workflow (Laird and Louis 1987) inflates the EB intervals using the Fisher information of the marginal likelihood, partially restoring coverage. Modern practice: just do full Bayes with a weakly-informative hyperprior (Remark 17).
+The EB point estimate $\hat\phi$ comes with uncertainty — the Type-II MLE is subject to sampling variation. Plug-in EB ignores this uncertainty in the downstream $\theta_k$ posteriors, producing credible intervals that are anti-conservative (too narrow). Full-Bayes integration corrects for this automatically. A "corrected EB" workflow (Laird and Louis 1987) inflates the EB intervals using the Fisher information of the marginal likelihood, partially restoring coverage. Modern practice: just do full Bayes with a weakly-informative hyperprior (Remark 17). [Topic 33 §33.9](/topics/empirical-bayes#section-33-9) makes "too narrow" precise: with known hyperparameters the plug-in interval has exact *average* coverage but undercovers extreme groups, and robust EB intervals restore the average guarantee without assuming a Normal prior.
 </RemarkBlock>
 
 <RemarkBlock number={17} title="Gelman 2006: the half-Cauchy default on $\tau$">
@@ -738,7 +738,7 @@ For pathological posteriors where even non-centered doesn't mix well (heavy-tail
 
 ## 28.10 Track 7 closer: the forward-map to formalml
 
-Track 7 has developed Bayesian foundations, MCMC, model comparison, and hierarchical inference — a complete computational and conceptual toolkit for practical Bayesian analysis. Topic 28 closes the track, but the story continues at formalml. This final section maps the forward-pointers.
+Track 7 has developed Bayesian foundations, MCMC, model comparison, and hierarchical inference — a complete computational and conceptual toolkit for practical Bayesian analysis. Topic 28 closes the track's core arc, but the story continues — in [Topic 33](/topics/empirical-bayes), which takes empirical Bayes nonparametric, and at formalml. This final section maps the forward-pointers.
 
 ![Forward-map diagram. The Topic 28 hub in the center, with seven arrows pointing right to formalml topics: horseshoe and continuous shrinkage, variational inference, Bayesian neural networks, Bayesian nonparametrics, meta-learning, mixed effects, deep ensembles. Back-arrows on the left connect to Topics 23 (ridge and Stein), 25 (Bayes foundations), 26 (MCMC), 27 (BMA).](/images/topics/hierarchical-bayes-and-partial-pooling/28-track7-forward-map.png)
 
@@ -777,7 +777,7 @@ When the number of groups $K$ is itself unknown and should be inferred from the 
      class="w-full rounded-lg border my-6 opacity-0 h-0 overflow-hidden"
      style="border-color: var(--color-border);" />
 
-Track 7 is complete. Topic 25 gave us the Bayesian update mechanism; Topic 26 let us sample any posterior via MCMC; Topic 27 taught us to compare and average across models; Topic 28 extended all three to hierarchical structures — the setting where the prior itself has a prior, where partial pooling emerges, and where Stein's paradox is reinterpreted as empirical Bayes. The forward-pointers above lead to the full modern Bayesian ML toolkit: sparse priors, variational inference, Bayesian neural networks, nonparametrics, meta-learning, and hierarchical deep ensembles.
+Track 7's core arc is complete; [Topic 33](/topics/empirical-bayes) adds a nonparametric empirical-Bayes coda. Topic 25 gave us the Bayesian update mechanism; Topic 26 let us sample any posterior via MCMC; Topic 27 taught us to compare and average across models; Topic 28 extended all three to hierarchical structures — the setting where the prior itself has a prior, where partial pooling emerges, and where Stein's paradox is reinterpreted as empirical Bayes. The forward-pointers above lead to the full modern Bayesian ML toolkit: sparse priors, variational inference, Bayesian neural networks, nonparametrics, meta-learning, and hierarchical deep ensembles.
 
 The 8-schools example that ran through §§28.1/28.4/28.6/28.9 was chosen deliberately: 45 years after Rubin's paper, it remains the canonical test case for every hierarchical Bayesian tool — a reminder that the computational and conceptual problems of small-$K$ hierarchies were never really about 8-schools, but about how to share information across groups when information is scarce.
 

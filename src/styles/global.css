@@ -80,6 +80,11 @@
   --color-shrink:         #7C3AED;  /* violet-600 — Topic 28 JS + partial-pool */
   --color-divergence:     #DC2626;  /* red-600 — Topic 28 HMC divergences      */
 
+  /* Topic 33 — empirical Bayes accents (light) */
+  --color-oracle:  #111827;  /* gray-900 */
+  --color-f-model: #0284C7;  /* sky-600  */
+  --color-g-model: #0D9488;  /* teal-600 */
+
   /* Chain-accent palette (Topic 26, Track 7) — four Tableau-10 hues for
      Gelman–Rubin multi-chain diagnostics and HMC/Gibbs trace overlays.
      Inherited by Topics 27–28. Always paired with linestyle redundancy
@@ -125,6 +130,11 @@
     --color-ic-bic:  #c084fc;
     --color-ic-cp:   #34d399;
     --color-ic-loo:  #fbbf24;
+
+    /* Topic 33 dark — gray-200 oracle: the light-mode near-black would vanish */
+    --color-oracle:  #E5E7EB;  /* gray-200 */
+    --color-f-model: #38BDF8;  /* sky-400  */
+    --color-g-model: #2DD4BF;  /* teal-400 */
   }
 }
 
@@ -156,6 +166,12 @@
   --color-ic-bic:  #c084fc;
   --color-ic-cp:   #34d399;
   --color-ic-loo:  #fbbf24;
+
+
+  /* Topic 33 dark — matches @media block above */
+  --color-oracle:  #E5E7EB;  /* gray-200 */
+  --color-f-model: #38BDF8;  /* sky-400  */
+  --color-g-model: #2DD4BF;  /* teal-400 */
 }
 
 /* ============================================================
