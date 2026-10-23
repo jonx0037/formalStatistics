@@ -19,10 +19,10 @@ The template assumes Claude Chat will produce **at least the handoff brief** dur
 
 | Placeholder | Meaning | Example |
 |---|---|---|
-| `{{TOPIC_NUMBER}}` | Topic index in the 32-topic curriculum | `20` |
+| `{{TOPIC_NUMBER}}` | Topic index (chronological ship order — not track order; e.g. Topic 33 sits in Track 7) | `20` |
 | `{{TOPIC_TITLE}}` | Working title (locked or provisional) | `Multiple Testing & False Discovery` |
 | `{{PROVISIONAL_SLUG}}` | Best-guess kebab-case slug — actual slug is a session decision | `multiple-testing-and-false-discovery` |
-| `{{TRACK_NUMBER}}` | Track index (1–8) | `5` |
+| `{{TRACK_NUMBER}}` | Track index (`number` field of the track in `src/data/curriculum.ts`) | `5` |
 | `{{TRACK_NAME}}` | Track human-readable name | `Hypothesis Testing & Confidence` |
 | `{{POSITION_IN_TRACK}}` | Ordinal position with total | `4th of 4 (track closer)` |
 
@@ -33,7 +33,8 @@ The template assumes Claude Chat will produce **at least the handoff brief** dur
 | `{{LAST_SHIPPED_TOPIC}}` | Most recently merged topic | `Topic 19: Confidence Intervals & Duality` |
 | `{{LAST_SHIPPED_PR_URL}}` | URL of that PR | `https://github.com/jonx0037/formalStatistics/pull/21` |
 | `{{TRACK_PUBLISHED_COUNT}}` | "X of Y" status for the current track | `3 of 4 published` |
-| `{{TOTAL_PUBLISHED_COUNT}}` | Total topics shipped across all tracks | `19 of 32` |
+| `{{TOTAL_PUBLISHED_COUNT}}` | Total topics shipped across all tracks (`publishedTotal` / `plannedTotal` in `src/data/curriculum.ts`) | `19 of 32` |
+| `{{TRACK_COUNT}}` | Number of tracks (`tracks.length` in `src/data/curriculum.ts`) | `8` |
 | `{{NEXT_TRACK_OPENER}}` | If this topic closes a track, the next track's opener (for forward pointers) | `Track 6 opens with Linear Regression` |
 
 ### Predecessor & relevant prior topics
@@ -93,7 +94,7 @@ I'm Jonathan Rocha — founder of DataSalt LLC (AI/ML consultancy), SMU MSDS stu
 
 ## Project context
 
-**formalStatistics** is a 32-topic static site teaching probability and statistics rigorously, organized into 8 tracks of 4 topics each. Stack: Astro 6 + React 19 + MDX + KaTeX + D3.js, deployed to Vercel.
+**formalStatistics** is a static site teaching probability and statistics rigorously, organized into {{TRACK_COUNT}} tracks. Stack: Astro 6 + React 19 + MDX + KaTeX + D3.js, deployed to Vercel.
 
 **Three-pillar pedagogy** (every topic):
 1. **Rigorous math** — full proofs, no "it can be shown."
@@ -115,7 +116,7 @@ I'm Jonathan Rocha — founder of DataSalt LLC (AI/ML consultancy), SMU MSDS stu
 
 ## Curriculum state at session start
 
-- **{{TOTAL_PUBLISHED_COUNT}}** topics shipped across the 8 tracks.
+- **{{TOTAL_PUBLISHED_COUNT}}** topics shipped across the {{TRACK_COUNT}} tracks.
 - **Track {{TRACK_NUMBER}} ({{TRACK_NAME}})** status: {{TRACK_PUBLISHED_COUNT}}.
 - **Most recent ship:** {{LAST_SHIPPED_TOPIC}} — see {{LAST_SHIPPED_PR_URL}}.
 - **Topic {{TOPIC_NUMBER}}** is **{{POSITION_IN_TRACK}}**.
