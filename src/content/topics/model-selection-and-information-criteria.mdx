@@ -430,7 +430,9 @@ with $\hat{\mathcal{K}}_n = -\nabla^2\ell(\hat\theta)$ the observed Fisher infor
 
 **Step 2 — Gaussian integral.** Treating $\pi(\theta) \approx \pi(\hat\theta)$ on the shrinking neighborhood (valid by continuity + posterior concentration):
 
-$$m(\mathbf{y}) \approx \pi(\hat\theta)\exp(\hat\ell)\int\exp\!\left\{-\tfrac12(\theta - \hat\theta)^\top \hat{\mathcal{K}}_n (\theta - \hat\theta)\right\}\,\mathrm d\theta.$$
+$$
+m(\mathbf{y}) \approx \pi(\hat\theta)\exp(\hat\ell)\int\exp\!\left\{-\tfrac12(\theta - \hat\theta)^\top \hat{\mathcal{K}}_n (\theta - \hat\theta)\right\}\,\mathrm d\theta.
+$$
 
 The Gaussian integral evaluates to $(2\pi)^{k/2}|\hat{\mathcal{K}}_n|^{-1/2}$. Substituting $|\hat{\mathcal{K}}_n| = n^k|\hat{\mathcal{K}}_1|$:
 

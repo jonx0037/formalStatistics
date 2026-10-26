@@ -96,30 +96,32 @@ export default function InclusionExclusionExplorer() {
 
       {/* Venn diagram */}
       <div ref={containerRef} className="w-full">
-        <svg width={width} height={h} viewBox={`0 0 ${width} ${h}`}>
-          <rect x={2} y={2} width={width - 4} height={h - 4} rx={8}
-            fill="none" stroke="var(--color-border-strong)" strokeWidth={1} />
-          {circles.map((c, i) => (
-            <g key={i}>
-              <circle
-                cx={c.cx} cy={c.cy} r={r}
-                fill={i < currentStep ? c.color : 'transparent'}
-                fillOpacity={i < currentStep ? 0.15 : 0}
-                stroke={c.color}
-                strokeWidth={2}
-              />
-              <text
-                x={c.cx + (mode === '2-event' ? (i === 0 ? -r * 0.5 : r * 0.5) : 0)}
-                y={c.cy + (mode === '3-event' && i === 0 ? -r * 0.4 : mode === '3-event' ? r * 0.4 : 0)}
-                textAnchor="middle"
-                dominantBaseline="middle"
-                fontSize={16} fontWeight={700} fill={c.color}
-              >
-                {c.label}
-              </text>
-            </g>
-          ))}
-        </svg>
+        {width > 0 && (
+          <svg width={width} height={h} viewBox={`0 0 ${width} ${h}`}>
+            <rect x={2} y={2} width={width - 4} height={h - 4} rx={8}
+              fill="none" stroke="var(--color-border-strong)" strokeWidth={1} />
+            {circles.map((c, i) => (
+              <g key={i}>
+                <circle
+                  cx={c.cx} cy={c.cy} r={r}
+                  fill={i < currentStep ? c.color : 'transparent'}
+                  fillOpacity={i < currentStep ? 0.15 : 0}
+                  stroke={c.color}
+                  strokeWidth={2}
+                />
+                <text
+                  x={c.cx + (mode === '2-event' ? (i === 0 ? -r * 0.5 : r * 0.5) : 0)}
+                  y={c.cy + (mode === '3-event' && i === 0 ? -r * 0.4 : mode === '3-event' ? r * 0.4 : 0)}
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                  fontSize={16} fontWeight={700} fill={c.color}
+                >
+                  {c.label}
+                </text>
+              </g>
+            ))}
+          </svg>
+        )}
       </div>
 
       {/* Step controls */}

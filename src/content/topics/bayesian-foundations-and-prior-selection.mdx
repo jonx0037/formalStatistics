@@ -631,7 +631,9 @@ This is the featured section. Under regularity conditions identical to those req
 <TheoremBlock number={6} title="Bernstein–von Mises">
 Let $Y_1, \ldots, Y_n \overset{\text{iid}}{\sim} f(\cdot; \theta_0)$ with $\theta_0$ in the interior of $\Theta \subseteq \mathbb{R}$, a regular parametric family with Fisher information $\mathcal{I}(\theta_0) \in (0, \infty)$. Let $\hat\theta_n$ be the MLE. For any proper prior $\pi$ continuous and positive at $\theta_0$,
 
-$$\sup_{B \in \mathcal{B}(\mathbb{R})} \left| \Pr_{\theta \sim p(\cdot \mid \mathbf{y})}\!\left(\sqrt{n}(\theta - \hat\theta_n) \in B\right) - \Pr_{Z \sim \mathcal{N}(0, \mathcal{I}(\theta_0)^{-1})}(Z \in B) \right| \;\xrightarrow{P}\; 0.$$
+$$
+\sup_{B \in \mathcal{B}(\mathbb{R})} \left| \Pr_{\theta \sim p(\cdot \mid \mathbf{y})}\!\left(\sqrt{n}(\theta - \hat\theta_n) \in B\right) - \Pr_{Z \sim \mathcal{N}(0, \mathcal{I}(\theta_0)^{-1})}(Z \in B) \right| \;\xrightarrow{P}\; 0.
+$$
 
 That is, the rescaled posterior converges in total variation to $\mathcal{N}(0, \mathcal{I}(\theta_0)^{-1})$ in probability under the true distribution $\Pr_{\theta_0}$.
 </TheoremBlock>

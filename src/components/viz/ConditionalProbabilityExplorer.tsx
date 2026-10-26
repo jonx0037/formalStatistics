@@ -62,153 +62,155 @@ export default function ConditionalProbabilityExplorer() {
 
       {/* SVG Venn diagram */}
       <div ref={containerRef} className="w-full">
-        <svg
-          width={width}
-          height={h}
-          viewBox={`0 0 ${width} ${h}`}
-          style={{ overflow: 'visible' }}
-        >
-          <defs>
-            <clipPath id={clipAId}>
-              <circle cx={cx1} cy={cy} r={r} />
-            </clipPath>
-            <clipPath id={clipBId}>
-              <circle cx={cx2} cy={cy} r={r} />
-            </clipPath>
-            <clipPath id={clipIntersectionId}>
-              <circle cx={cx1} cy={cy} r={r} />
-            </clipPath>
-          </defs>
-
-          {/* Omega rectangle */}
-          <rect
-            x={4} y={4}
-            width={width - 8} height={h - 8}
-            rx={8}
-            fill="transparent"
-            fillOpacity={0}
-            stroke="var(--color-border-strong)"
-            strokeWidth={1.5}
-            style={{
-              opacity: conditioning ? 0.1 : 1,
-              transition: 'opacity 0.3s ease',
-            }}
-          />
-
-          {/* Omega label */}
-          <text
-            x={16} y={24}
-            fontSize={14}
-            fill="var(--color-text-muted)"
-            fontFamily="var(--font-serif)"
-            style={{
-              opacity: conditioning ? 0.1 : 1,
-              transition: 'opacity 0.3s ease',
-            }}
+        {width > 0 && (
+          <svg
+            width={width}
+            height={h}
+            viewBox={`0 0 ${width} ${h}`}
+            style={{ overflow: 'visible' }}
           >
-            {'\u03A9'}
-          </text>
+            <defs>
+              <clipPath id={clipAId}>
+                <circle cx={cx1} cy={cy} r={r} />
+              </clipPath>
+              <clipPath id={clipBId}>
+                <circle cx={cx2} cy={cy} r={r} />
+              </clipPath>
+              <clipPath id={clipIntersectionId}>
+                <circle cx={cx1} cy={cy} r={r} />
+              </clipPath>
+            </defs>
 
-          {/* Only A region (A \ B) */}
-          <g clipPath={`url(#${clipAId})`}>
+            {/* Omega rectangle */}
             <rect
-              x={0} y={0} width={width} height={h}
-              fill="#2563eb"
-              fillOpacity={conditioning ? 0.03 : 0.15}
-              style={{ transition: 'fill-opacity 0.3s ease' }}
+              x={4} y={4}
+              width={width - 8} height={h - 8}
+              rx={8}
+              fill="transparent"
+              fillOpacity={0}
+              stroke="var(--color-border-strong)"
+              strokeWidth={1.5}
+              style={{
+                opacity: conditioning ? 0.1 : 1,
+                transition: 'opacity 0.3s ease',
+              }}
             />
-            {/* Carve out B intersection so it can be drawn separately */}
+
+            {/* Omega label */}
+            <text
+              x={16} y={24}
+              fontSize={14}
+              fill="var(--color-text-muted)"
+              fontFamily="var(--font-serif)"
+              style={{
+                opacity: conditioning ? 0.1 : 1,
+                transition: 'opacity 0.3s ease',
+              }}
+            >
+              {'\u03A9'}
+            </text>
+
+            {/* Only A region (A \ B) */}
+            <g clipPath={`url(#${clipAId})`}>
+              <rect
+                x={0} y={0} width={width} height={h}
+                fill="#2563eb"
+                fillOpacity={conditioning ? 0.03 : 0.15}
+                style={{ transition: 'fill-opacity 0.3s ease' }}
+              />
+              {/* Carve out B intersection so it can be drawn separately */}
+              <circle
+                cx={cx2} cy={cy} r={r}
+                fill={conditioning ? '#f59e0b' : '#2563eb'}
+                fillOpacity={conditioning ? 0.35 : 0.25}
+                style={{ transition: 'fill-opacity 0.3s ease, fill 0.3s ease' }}
+              />
+            </g>
+
+            {/* Only B region (B \ A) */}
+            <g clipPath={`url(#${clipBId})`}>
+              <rect
+                x={0} y={0} width={width} height={h}
+                fill={conditioning ? '#f59e0b' : '#7c3aed'}
+                fillOpacity={conditioning ? 0.15 : 0.1}
+                style={{ transition: 'fill-opacity 0.3s ease, fill 0.3s ease' }}
+              />
+              {/* Carve out A intersection */}
+              <circle
+                cx={cx1} cy={cy} r={r}
+                fill={conditioning ? '#f59e0b' : '#2563eb'}
+                fillOpacity={conditioning ? 0.35 : 0.25}
+                style={{ transition: 'fill-opacity 0.3s ease, fill 0.3s ease' }}
+              />
+            </g>
+
+            {/* Intersection region A∩B — drawn on top */}
             <circle
               cx={cx2} cy={cy} r={r}
+              clipPath={`url(#${clipIntersectionId})`}
               fill={conditioning ? '#f59e0b' : '#2563eb'}
               fillOpacity={conditioning ? 0.35 : 0.25}
               style={{ transition: 'fill-opacity 0.3s ease, fill 0.3s ease' }}
             />
-          </g>
 
-          {/* Only B region (B \ A) */}
-          <g clipPath={`url(#${clipBId})`}>
-            <rect
-              x={0} y={0} width={width} height={h}
-              fill={conditioning ? '#f59e0b' : '#7c3aed'}
-              fillOpacity={conditioning ? 0.15 : 0.1}
-              style={{ transition: 'fill-opacity 0.3s ease, fill 0.3s ease' }}
-            />
-            {/* Carve out A intersection */}
+            {/* Circle outlines */}
             <circle
               cx={cx1} cy={cy} r={r}
-              fill={conditioning ? '#f59e0b' : '#2563eb'}
-              fillOpacity={conditioning ? 0.35 : 0.25}
-              style={{ transition: 'fill-opacity 0.3s ease, fill 0.3s ease' }}
+              fill="none"
+              stroke="#2563eb"
+              strokeWidth={2}
+              style={{
+                opacity: conditioning ? 0.2 : 1,
+                transition: 'opacity 0.3s ease',
+              }}
             />
-          </g>
+            <circle
+              cx={cx2} cy={cy} r={r}
+              fill="none"
+              stroke={conditioning ? '#f59e0b' : '#7c3aed'}
+              strokeWidth={conditioning ? 2.5 : 2}
+              style={{ transition: 'stroke 0.3s ease, stroke-width 0.3s ease' }}
+            />
 
-          {/* Intersection region A∩B — drawn on top */}
-          <circle
-            cx={cx2} cy={cy} r={r}
-            clipPath={`url(#${clipIntersectionId})`}
-            fill={conditioning ? '#f59e0b' : '#2563eb'}
-            fillOpacity={conditioning ? 0.35 : 0.25}
-            style={{ transition: 'fill-opacity 0.3s ease, fill 0.3s ease' }}
-          />
-
-          {/* Circle outlines */}
-          <circle
-            cx={cx1} cy={cy} r={r}
-            fill="none"
-            stroke="#2563eb"
-            strokeWidth={2}
-            style={{
-              opacity: conditioning ? 0.2 : 1,
-              transition: 'opacity 0.3s ease',
-            }}
-          />
-          <circle
-            cx={cx2} cy={cy} r={r}
-            fill="none"
-            stroke={conditioning ? '#f59e0b' : '#7c3aed'}
-            strokeWidth={conditioning ? 2.5 : 2}
-            style={{ transition: 'stroke 0.3s ease, stroke-width 0.3s ease' }}
-          />
-
-          {/* Labels */}
-          <text
-            x={cx1 - r * 0.5} y={cy}
-            textAnchor="middle"
-            fontSize={16}
-            fontWeight={600}
-            fill="#2563eb"
-            style={{
-              opacity: conditioning ? 0.25 : 1,
-              transition: 'opacity 0.3s ease',
-            }}
-          >
-            A
-          </text>
-          <text
-            x={cx2 + r * 0.5} y={cy}
-            textAnchor="middle"
-            fontSize={16}
-            fontWeight={600}
-            fill={conditioning ? '#f59e0b' : '#7c3aed'}
-            style={{ transition: 'fill 0.3s ease' }}
-          >
-            B
-          </text>
-
-          {/* Conditioning annotation */}
-          {conditioning && (
+            {/* Labels */}
             <text
-              x={width / 2} y={h - 12}
+              x={cx1 - r * 0.5} y={cy}
               textAnchor="middle"
-              fontSize={13}
+              fontSize={16}
               fontWeight={600}
-              fill="var(--color-text-heading)"
+              fill="#2563eb"
+              style={{
+                opacity: conditioning ? 0.25 : 1,
+                transition: 'opacity 0.3s ease',
+              }}
             >
-              B is the new sample space
+              A
             </text>
-          )}
-        </svg>
+            <text
+              x={cx2 + r * 0.5} y={cy}
+              textAnchor="middle"
+              fontSize={16}
+              fontWeight={600}
+              fill={conditioning ? '#f59e0b' : '#7c3aed'}
+              style={{ transition: 'fill 0.3s ease' }}
+            >
+              B
+            </text>
+
+            {/* Conditioning annotation */}
+            {conditioning && (
+              <text
+                x={width / 2} y={h - 12}
+                textAnchor="middle"
+                fontSize={13}
+                fontWeight={600}
+                fill="var(--color-text-heading)"
+              >
+                B is the new sample space
+              </text>
+            )}
+          </svg>
+        )}
       </div>
 
       {/* Sliders */}
