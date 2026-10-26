@@ -6,13 +6,16 @@ import tailwindcss from '@tailwindcss/vite';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import rehypeExternalLinks from 'rehype-external-links';
+import remarkDisplayMath from './src/plugins/remark-display-math.mjs';
 
 // https://astro.build/config
 export default defineConfig({
   site: 'https://formalstatistics.com',
   integrations: [react(), mdx()],
   markdown: {
-    remarkPlugins: [remarkMath],
+    // remarkDisplayMath promotes single-line `$$…$$` to display math; see the
+    // plugin header for why remark-math alone leaves them inline.
+    remarkPlugins: [remarkMath, remarkDisplayMath],
     rehypePlugins: [
       rehypeKatex,
       [rehypeExternalLinks, { target: '_blank', rel: ['noopener', 'noreferrer'] }],

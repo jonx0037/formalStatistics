@@ -339,7 +339,7 @@ The systematic-scan Gibbs sampler preserves $\pi$. Equivalently: each coordinate
 
 **Step 2 — the $i$-th component update as MH.** Propose $\boldsymbol\theta' = (\theta_1, \ldots, \theta_i', \ldots, \theta_d)$ with density
 
-$$q_i(\boldsymbol\theta' \mid \boldsymbol\theta) \;=\; \pi(\theta_i' \mid \boldsymbol\theta_{-i}) \prod_{j \ne i} \mathbf{1}\\{\theta_j' = \theta_j\\},$$
+$$q_i(\boldsymbol\theta' \mid \boldsymbol\theta) \;=\; \pi(\theta_i' \mid \boldsymbol\theta_{-i}) \prod_{j \ne i} \mathbf{1}\{\theta_j' = \theta_j\},$$
 
 a proposal that only moves coordinate $i$, drawing it from the target's full conditional given the other coordinates held fixed.
 
