@@ -100,6 +100,9 @@
   --color-ts-smoothed-spectrum: #0D9488;  /* teal-600 */
   --color-ts-garch:    #7C3AED;  /* violet-600 */
   --color-ts-warn:     #E11D48;  /* rose-600 */
+  --color-ts-predicted: #7C3AED;  /* violet-600 */
+  --color-ts-forecast:  #D97706;  /* amber-600 */
+  --color-ts-seasonal:  #0284C7;  /* sky-600 */
 
   /* Chain-accent palette (Topic 26, Track 7) — four Tableau-10 hues for
      Gelman–Rubin multi-chain diagnostics and HMC/Gibbs trace overlays.
@@ -167,6 +170,9 @@
     --color-ts-smoothed-spectrum: #2DD4BF;  /* teal-400 */
     --color-ts-garch:    #A78BFA;  /* violet-400 */
     --color-ts-warn:     #FB7185;  /* rose-400 */
+    --color-ts-predicted: #A78BFA;  /* violet-400 */
+    --color-ts-forecast:  #FBBF24;  /* amber-400 */
+    --color-ts-seasonal:  #38BDF8;  /* sky-400 */
   }
 }
 
@@ -220,6 +226,9 @@
   --color-ts-smoothed-spectrum: #2DD4BF;  /* teal-400 */
   --color-ts-garch:    #A78BFA;  /* violet-400 */
   --color-ts-warn:     #FB7185;  /* rose-400 */
+  --color-ts-predicted: #A78BFA;  /* violet-400 */
+  --color-ts-forecast:  #FBBF24;  /* amber-400 */
+  --color-ts-seasonal:  #38BDF8;  /* sky-400 */
 }
 
 /* ============================================================

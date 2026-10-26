@@ -11,6 +11,12 @@
  * (notebooks/stationary-time-series-and-arma/35_stationary_time_series.ipynb);
  * see docs/formalstatistics-stationary-time-series-and-arma-handoff-brief.md §7.
  *
+ * Topic 36 — State-Space Models & Kalman Smoothing: smoother-explorer,
+ * ellipse-stepper, likelihood-surface and structural presets, locked to
+ * notebook Cells 4–12
+ * (notebooks/state-space-models-and-kalman-smoothing/36_state_space_models.ipynb);
+ * see docs/formalstatistics-state-space-models-and-kalman-smoothing-handoff-brief.md §7.
+ *
  * Typed presets, not `as const` (readonly arrays do not type-check against
  * HMMParams / ARMAParams — Topic 33 Appendix B.10).
  */
@@ -245,4 +251,71 @@ export const woldPresets: WoldPreset[] = [
   { id: 'ar2osc', label: 'AR(2), roots 1 ± i', params: { phi: [1, -0.5], theta: [], sigma2: 1 }, seed: 3542 },
   { id: 'ma2', label: 'MA(2), θ = (0.6, 0.4)', params: { phi: [], theta: [0.6, 0.4], sigma2: 1 }, seed: 3542 },
   { id: 'arma11', label: 'ARMA(1,1), φ = 0.7, θ = 0.4', params: { phi: [0.7], theta: [0.4], sigma2: 1 }, seed: 3542 },
+];
+
+// ═══ Topic 36 — State-Space Models & Kalman Smoothing ═══
+
+export interface KalmanExplorerPreset {
+  id: string;
+  label: string;
+  source: 'nile' | 'simulated';
+  /** 0-based half-open index ranges [a, b) set to missing. */
+  gaps: [number, number][];
+  q: number;
+  r: number;
+  seed: number;
+}
+
+/** KalmanSmootherExplorer presets (q, r = the Nile direct MLE, Ex 1). */
+export const kalmanExplorerPresets: KalmanExplorerPreset[] = [
+  { id: 'nile', label: 'Nile 1871–1970', source: 'nile', gaps: [], q: 1463.5474, r: 15108.3145, seed: 3616 },
+  { id: 'nileGaps', label: 'Nile, DK gaps', source: 'nile', gaps: [[20, 40], [60, 80]], q: 1463.5474, r: 15108.3145, seed: 3616 },
+  { id: 'simulated', label: 'Simulated local level', source: 'simulated', gaps: [], q: 1463.5474, r: 15108.3145, seed: 3616 },
+];
+
+export interface EllipseStepperPreset {
+  id: string;
+  label: string;
+  dt: number;
+  qa: number;
+  r: number;
+  observe: 'position' | 'velocity' | 'both';
+  seed: number;
+}
+
+/** CovarianceEllipseStepper presets (Ex 3's constant-velocity model). */
+export const ellipseStepperPresets: EllipseStepperPreset[] = [
+  { id: 'ex3', label: 'Ex 3: observe position', dt: 1, qa: 0.3, r: 0.4, observe: 'position', seed: 3602 },
+  { id: 'velocityOnly', label: 'Observe velocity only', dt: 1, qa: 0.3, r: 0.4, observe: 'velocity', seed: 3602 },
+  { id: 'noisy', label: 'Noisy position (r = 4)', dt: 1, qa: 0.3, r: 4, observe: 'position', seed: 3602 },
+];
+
+export interface LikelihoodSurfacePreset {
+  id: string;
+  label: string;
+  mode: 'localLevel' | 'arma11';
+  emStart?: [number, number];
+  /** localLevel: log10 q × log10 r; arma11: φ × θ. */
+  grid: { x: [number, number]; y: [number, number]; n: number };
+}
+
+/** StateSpaceLikelihoodSurface presets (mode A = Nile (q, r); mode B = ARMA(1,1) (φ, θ)). */
+export const likelihoodSurfacePresets: LikelihoodSurfacePreset[] = [
+  { id: 'nile', label: 'A: Nile local level (q, r)', mode: 'localLevel', emStart: [10000, 5000], grid: { x: [2, 4.6], y: [3.6, 4.6], n: 60 } },
+  { id: 'arma11', label: 'B: ARMA(1,1) (φ, θ)', mode: 'arma11', grid: { x: [0.45, 0.85], y: [0.2, 0.6], n: 50 } },
+];
+
+export interface StructuralPreset {
+  id: string;
+  label: string;
+  level: number;
+  slope: number | null;
+  seasonal: number | null;
+  irregular: number;
+}
+
+/** StructuralDecomposer presets: the UnobservedComponents MLE of Ex 13 (null = component off). */
+export const structuralPresets: StructuralPreset[] = [
+  { id: 'co2Mle', label: 'Trend + seasonal (MLE)', level: 0.050844309968, slope: 3.450003e-6, seasonal: 1.0336517e-5, irregular: 0.024022091168 },
+  { id: 'levelOnly', label: 'Level only', level: 0.050844309968, slope: null, seasonal: null, irregular: 0.024022091168 },
 ];

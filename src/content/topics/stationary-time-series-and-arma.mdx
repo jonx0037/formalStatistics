@@ -599,7 +599,7 @@ $$
 p(x_1, \dots, x_n) = \prod_{t=1}^{n}\bigl(2\pi v_{t-1}\bigr)^{-1/2}\exp\Bigl(-\frac{(x_t - \hat x_t)^2}{2v_{t-1}}\Bigr),
 $$
 
-where $\hat x_t$ is the best linear predictor of $x_t$ from $x_1, \dots, x_{t-1}$ and $v_{t-1}$ its mean squared error. The exact likelihood is a product of one-step prediction errors. Theorem 3 computes the $\hat x_t$ and $v_t$ in $O(n^2)$ operations; Topic 36 computes them in $O(n)$ with the Kalman filter, after writing an ARMA model in state-space form.
+where $\hat x_t$ is the best linear predictor of $x_t$ from $x_1, \dots, x_{t-1}$ and $v_{t-1}$ its mean squared error. The exact likelihood is a product of one-step prediction errors. Theorem 3 computes the $\hat x_t$ and $v_t$ in $O(n^2)$ operations; [Topic 36](/topics/state-space-models-and-kalman-smoothing#section-36-3) computes them in $O(n)$ with the Kalman filter, after [writing an ARMA model in state-space form](/topics/state-space-models-and-kalman-smoothing#section-36-4).
 </RemarkBlock>
 
 <RemarkBlock number={9} title="Gaussian series: linear is optimal">
@@ -727,7 +727,7 @@ Drag the AR roots (×) and MA roots (○) around the unit circle and watch causa
 <ARMARootExplorer client:visible />
 
 <RemarkBlock number={10} title="Roots, the companion matrix, and stability">
-An AR($p$) is a first-order recursion in disguise. Stack $\mathbf{Y}_t = (X_t, X_{t-1}, \dots, X_{t-p+1})^\top$; then $\mathbf{Y}_t = \Phi\mathbf{Y}_{t-1} + \mathbf{e}_t$, where the **companion matrix** $\Phi$ has $(\phi_1, \dots, \phi_p)$ as its first row and ones on the subdiagonal, and $\mathbf{e}_t = (\varepsilon_t, 0, \dots, 0)^\top$. Its eigenvalues are the reciprocals of the roots of $\phi(z)$, so causality says the spectral radius of $\Phi$ is below 1 — the stability condition of linear dynamical systems (<ExternalLink site="formalcalculus" topic="stability-dynamics" href="https://formalcalculus.com/topics/stability-dynamics" />, <ExternalLink site="formalcalculus" topic="eigenvalues-eigenvectors" href="https://formalcalculus.com/topics/eigenvalues-eigenvectors" />). This first-order vector form is exactly the state-space representation Topic 36 starts from.
+An AR($p$) is a first-order recursion in disguise. Stack $\mathbf{Y}_t = (X_t, X_{t-1}, \dots, X_{t-p+1})^\top$; then $\mathbf{Y}_t = \Phi\mathbf{Y}_{t-1} + \mathbf{e}_t$, where the **companion matrix** $\Phi$ has $(\phi_1, \dots, \phi_p)$ as its first row and ones on the subdiagonal, and $\mathbf{e}_t = (\varepsilon_t, 0, \dots, 0)^\top$. Its eigenvalues are the reciprocals of the roots of $\phi(z)$, so causality says the spectral radius of $\Phi$ is below 1 — the stability condition of linear dynamical systems (<ExternalLink site="formalcalculus" topic="stability-dynamics" href="https://formalcalculus.com/topics/stability-dynamics" />, <ExternalLink site="formalcalculus" topic="eigenvalues-eigenvectors" href="https://formalcalculus.com/topics/eigenvalues-eigenvectors" />). This first-order vector form is exactly the state-space representation [Topic 36](/topics/state-space-models-and-kalman-smoothing#section-36-4) starts from.
 </RemarkBlock>
 
 <RemarkBlock number={11} title="Non-invertible MA models are not identifiable from γ">
@@ -832,7 +832,7 @@ Fit AR($p$) models with a constant to the sunspot series by exact Gaussian MLE f
 | $p$ | log-lik | AIC | BIC | HQIC |
 |---|---|---|---|---|
 | 1 | −1406.585 | 2819.17 | 2830.37 | 2823.65 |
-| 2 | −1307.319 | 2622.64 | 2637.57 | 2628.61 |
+| 2 | −1307.318 | 2622.64 | 2637.57 | 2628.61 |
 | 3 | −1304.702 | 2619.40 | 2638.07 | 2626.87 |
 | 8 | −1284.202 | 2588.40 | 2625.74 | 2603.33 |
 | 9 | −1274.311 | **2570.62** | **2611.69** | **2587.04** |
@@ -857,7 +857,7 @@ Theorem 8 says these estimators share one Gaussian limit; at $n = 1000$ they agr
 </ExampleBlock>
 
 <RemarkBlock number={14} title="The exact likelihood is Topic 36's job">
-The exact Gaussian ARMA likelihood needs $\hat x_t$ and $v_{t-1}$ for every $t$ (Remark 8); the figures above used statsmodels, which runs a Kalman filter internally. Topic 36 derives that filter for ARMA in state-space form. Until then, the components on this page fit by Yule–Walker, CSS, and Whittle only.
+The exact Gaussian ARMA likelihood needs $\hat x_t$ and $v_{t-1}$ for every $t$ (Remark 8); the figures above used statsmodels, which runs a Kalman filter internally. [Topic 36 §36.4](/topics/state-space-models-and-kalman-smoothing#section-36-4) derives that filter for ARMA in state-space form and compares the exact MLE with CSS and Whittle on these sunspots; the components on this page fit by Yule–Walker, CSS, and Whittle only.
 </RemarkBlock>
 
 <RemarkBlock number={15} title="Yule–Walker always returns a causal fit, and can be badly biased">
@@ -1183,7 +1183,7 @@ VAR models, Granger causality and cointegration (HAM1994 Chs. 11, 19); long memo
 </RemarkBlock>
 
 <RemarkBlock number={28} title="The road to Topic 36">
-Topic 36 writes an ARMA($p$, $q$) in state-space form (Remark 10's companion form) and runs the Kalman filter of [Topic 34 §34.9](/topics/hidden-markov-models#section-34-9) to get $\hat x_t$ and $v_{t-1}$, evaluating Remark 8's exact likelihood in $O(n)$ and handling missing data for free; Kalman smoothing and EM follow. The notation here — $\phi$, $\theta$, $\sigma^2$, $\gamma$, $f$, $v_n$ — carries over unchanged.
+[Topic 36](/topics/state-space-models-and-kalman-smoothing) writes an ARMA($p$, $q$) in state-space form (Remark 10's companion form) and runs the Kalman filter of [Topic 34 §34.9](/topics/hidden-markov-models#section-34-9) to get $\hat x_t$ and $v_{t-1}$, evaluating Remark 8's exact likelihood in $O(n)$ and handling missing data for free; Kalman smoothing and EM follow. The notation here — $\phi$, $\theta$, $\sigma^2$, $\gamma$, $f$, $v_n$ — carries over unchanged.
 </RemarkBlock>
 
 ---

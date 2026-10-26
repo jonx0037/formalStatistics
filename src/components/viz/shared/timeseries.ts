@@ -44,6 +44,28 @@
  *   • GARCH(1,1): conditional variances, Gaussian QMLE with an
  *     arch-compatible backcast, squared-return ACF (Thm 15, Ex 18).
  *
+ * Topic 36 — State-Space Models & Kalman Smoothing extends the module
+ * (sections 11–16; see
+ * docs/formalstatistics-state-space-models-and-kalman-smoothing-handoff-brief.md
+ * §6.1, mirroring Cell 3 of
+ * notebooks/state-space-models-and-kalman-smoothing/36_state_space_models.ipynb):
+ *
+ *   • A small dense-matrix block (Cholesky solve, log-determinant, block
+ *     diagonal, discrete Lyapunov via the Kronecker system); `matMul` and
+ *     `solveLinear` are promoted to exports unchanged.
+ *   • Linear-Gaussian models and builders: local level, local linear trend,
+ *     dummy seasonal, stacking, Harvey's ARMA form (Def 2), constant-velocity
+ *     tracking, and the Matérn-3/2 GP as a two-state model (Ex 16).
+ *   • The Kalman filter (Joseph-form update, NaN = missing → skip the update,
+ *     Thm 4; log-likelihood burn by time index, Def 5), the RTS smoother with
+ *     lag-one covariances (Thm 5), FFBS (Thm 6), forecasting, simulation.
+ *   • Exact ARMA likelihood via the filter (Thms 1–3; fulfills Topic 35
+ *     Rems 8 and 14), a profile likelihood with an allocation-free path, and
+ *     the exact Gaussian ARMA MLE.
+ *   • Learning: direct local-level MLE, Shumway–Stoffer EM (Thm 7).
+ *   • Steady state: the scalar Riccati fixed point (Thm 9), the matrix
+ *     Riccati iteration (Thm 10), observability (Def 6).
+ *
  * Imports `SeededRng` from bayes.ts; bayes.ts must not import this module.
  */
 
@@ -144,7 +166,8 @@ export function stationaryDistribution(A: Matrix): number[] {
   return M.map((row, i) => row[K] / row[i]);
 }
 
-function matMul(X: Matrix, Y: Matrix): Matrix {
+/** X·Y for dense row-major matrices (promoted to an export by Topic 36, unchanged). */
+export function matMul(X: Matrix, Y: Matrix): Matrix {
   const n = X.length;
   const m = Y[0].length;
   const p = Y.length;
@@ -805,8 +828,8 @@ export function piWeights(phi: number[], theta: number[], n: number): number[] {
   return pi;
 }
 
-/** Solve M x = b by Gaussian elimination with partial pivoting (M is copied). */
-function solveLinear(M: number[][], b: number[]): number[] {
+/** Solve M x = b by Gaussian elimination with partial pivoting (M is copied; exported since Topic 36). */
+export function solveLinear(M: number[][], b: number[]): number[] {
   const n = b.length;
   const A = M.map((row, i) => [...row, b[i]]);
   for (let col = 0; col < n; col++) {
@@ -1349,4 +1372,834 @@ export function garchSqACF(alpha: number, beta: number, nlags: number): number[]
 /** E x⁴ < ∞ for Gaussian z: 3α² + 2αβ + β² < 1. */
 export function garchFourthMomentFinite(alpha: number, beta: number): boolean {
   return 3 * alpha * alpha + 2 * alpha * beta + beta * beta < 1;
+}
+
+// ═══ Topic 36 — State-Space Models & Kalman Smoothing ═══
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 11. Dense-matrix block (small k; no external library)
+// ═══════════════════════════════════════════════════════════════════════════
+
+const LOG_2PI = Math.log(2 * Math.PI);
+
+export function identity(k: number): Matrix {
+  return Array.from({ length: k }, (_, i) => Array.from({ length: k }, (__, j) => (i === j ? 1 : 0)));
+}
+
+export function transpose(A: Matrix): Matrix {
+  if (!A.length) return [];
+  return A[0].map((_, j) => A.map((row) => row[j]));
+}
+
+/** A + αB (α = 1 by default; α = −1 subtracts). */
+export function matAdd(A: Matrix, B: Matrix, alpha = 1): Matrix {
+  return A.map((row, i) => row.map((v, j) => v + alpha * B[i][j]));
+}
+
+export function matVec(A: Matrix, v: number[]): number[] {
+  return A.map((row) => row.reduce((s, a, j) => s + a * v[j], 0));
+}
+
+export function outer(u: number[], v: number[]): Matrix {
+  return u.map((a) => v.map((b) => a * b));
+}
+
+/** (A + Aᵀ)/2. */
+export function symmetrize(A: Matrix): Matrix {
+  return A.map((row, i) => row.map((v, j) => 0.5 * (v + A[j][i])));
+}
+
+/** Lower-triangular L with A = LLᵀ. Throws if A is not (numerically) positive definite. */
+export function cholesky(A: Matrix): Matrix {
+  const n = A.length;
+  const L: Matrix = Array.from({ length: n }, () => new Array<number>(n).fill(0));
+  for (let j = 0; j < n; j++) {
+    let d = A[j][j];
+    for (let k = 0; k < j; k++) d -= L[j][k] * L[j][k];
+    if (!(d > 0)) throw new Error('cholesky: matrix is not positive definite');
+    const ljj = Math.sqrt(d);
+    L[j][j] = ljj;
+    for (let i = j + 1; i < n; i++) {
+      let s = A[i][j];
+      for (let k = 0; k < j; k++) s -= L[i][k] * L[j][k];
+      L[i][j] = s / ljj;
+    }
+  }
+  return L;
+}
+
+/** Solve L y = b by forward substitution (L lower triangular). */
+function forwardSub(L: Matrix, b: number[]): number[] {
+  const n = b.length;
+  const y = new Array<number>(n).fill(0);
+  for (let i = 0; i < n; i++) {
+    let s = b[i];
+    for (let k = 0; k < i; k++) s -= L[i][k] * y[k];
+    y[i] = s / L[i][i];
+  }
+  return y;
+}
+
+/** Solve Lᵀ x = y by back substitution. */
+function backSub(L: Matrix, y: number[]): number[] {
+  const n = y.length;
+  const x = new Array<number>(n).fill(0);
+  for (let i = n - 1; i >= 0; i--) {
+    let s = y[i];
+    for (let k = i + 1; k < n; k++) s -= L[k][i] * x[k];
+    x[i] = s / L[i][i];
+  }
+  return x;
+}
+
+/** Solves (LLᵀ) X = B column by column (forward, then back substitution). */
+export function choleskySolve(L: Matrix, B: Matrix): Matrix {
+  const cols = B[0].length;
+  const out: Matrix = B.map(() => new Array<number>(cols).fill(0));
+  for (let j = 0; j < cols; j++) {
+    const x = backSub(L, forwardSub(L, B.map((row) => row[j])));
+    x.forEach((v, i) => (out[i][j] = v));
+  }
+  return out;
+}
+
+/** log det(LLᵀ) = 2 Σ log L_ii. */
+export function logDetChol(L: Matrix): number {
+  let s = 0;
+  for (let i = 0; i < L.length; i++) s += Math.log(L[i][i]);
+  return 2 * s;
+}
+
+export function blockDiag(...blocks: Matrix[]): Matrix {
+  const n = blocks.reduce((s, b) => s + b.length, 0);
+  const out: Matrix = Array.from({ length: n }, () => new Array<number>(n).fill(0));
+  let off = 0;
+  for (const b of blocks) {
+    b.forEach((row, i) => row.forEach((v, j) => (out[off + i][off + j] = v)));
+    off += b.length;
+  }
+  return out;
+}
+
+/**
+ * P = F P Fᵀ + Q via the Kronecker system (I − F⊗F) vec P = vec Q (row-major
+ * vec), solved by `solveLinear`, then symmetrized. k ≤ 13 → ≤ 169 unknowns.
+ */
+export function solveDiscreteLyapunov(F: Matrix, Q: Matrix): Matrix {
+  const k = F.length;
+  const n = k * k;
+  const A: number[][] = Array.from({ length: n }, () => new Array<number>(n).fill(0));
+  for (let i = 0; i < k; i++)
+    for (let j = 0; j < k; j++)
+      for (let a = 0; a < k; a++)
+        for (let b = 0; b < k; b++) A[i * k + j][a * k + b] = (i * k + j === a * k + b ? 1 : 0) - F[i][a] * F[j][b];
+  const v = solveLinear(A, Q.flat());
+  const P: Matrix = Array.from({ length: k }, (_, i) => v.slice(i * k, i * k + k));
+  return symmetrize(P);
+}
+
+/**
+ * Cholesky factor of a positive-SEMIdefinite matrix for drawing Normal vectors:
+ * pivots below tol·max diag are treated as exact zeros (that column is 0), so
+ * rank-deficient covariances such as Harvey's Q = σ² g gᵀ are handled.
+ */
+function choleskyPSD(A: Matrix, tol = 1e-12): Matrix {
+  const n = A.length;
+  const scale = Math.max(1e-300, ...A.map((row, i) => Math.abs(row[i])));
+  const L: Matrix = Array.from({ length: n }, () => new Array<number>(n).fill(0));
+  for (let j = 0; j < n; j++) {
+    let d = A[j][j];
+    for (let k = 0; k < j; k++) d -= L[j][k] * L[j][k];
+    if (d <= tol * scale) continue;
+    const ljj = Math.sqrt(d);
+    L[j][j] = ljj;
+    for (let i = j + 1; i < n; i++) {
+      let s = A[i][j];
+      for (let k = 0; k < j; k++) s -= L[i][k] * L[j][k];
+      L[i][j] = s / ljj;
+    }
+  }
+  return L;
+}
+
+/** One draw from N(m, C); an all-zero C returns m without a factorization. */
+function mvnDraw(m: number[], C: Matrix, rng: SeededRng): number[] {
+  if (C.every((row) => row.every((v) => v === 0))) return m.slice();
+  const L = choleskyPSD(C);
+  const u = m.map(() => rng.normal());
+  return m.map((mi, i) => mi + L[i].reduce((s, l, k) => s + l * u[k], 0));
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 12. Model type and builders
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Z_t = F Z_{t−1} + W_t, X_t = H Z_t + V_t, W ~ N(0, Q), V ~ N(0, R),
+ * Z_1 ~ N(m1, P1) (Topic 34 Def 8; m⁻_1 = m1, P⁻_1 = P1). `burn` = number of
+ * leading time steps whose log-likelihood terms are dropped (0-based time
+ * index, = statsmodels' loglikelihood_burn).
+ */
+export interface SSModel {
+  F: Matrix;
+  H: Matrix;
+  Q: Matrix;
+  R: Matrix;
+  m1: number[];
+  P1: Matrix;
+  burn: number;
+}
+
+/** Approximate-diffuse prior variance κ (Def 5; statsmodels UnobservedComponents default). */
+export const KAPPA_DIFFUSE = 1e6;
+
+/** Random walk plus noise with an approximate-diffuse level (burn 1). */
+export function localLevel(q: number, r: number, kappa = KAPPA_DIFFUSE): SSModel {
+  return { F: [[1]], H: [[1]], Q: [[q]], R: [[r]], m1: [0], P1: [[kappa]], burn: 1 };
+}
+
+/** State (μ_t, ν_t): μ_t = μ_{t−1} + ν_{t−1} + W_1, ν_t = ν_{t−1} + W_2 (burn 2). */
+export function localLinearTrend(qLevel: number, qSlope: number, r: number, kappa = KAPPA_DIFFUSE): SSModel {
+  return {
+    F: [
+      [1, 1],
+      [0, 1],
+    ],
+    H: [[1, 0]],
+    Q: [
+      [qLevel, 0],
+      [0, qSlope],
+    ],
+    R: [[r]],
+    m1: [0, 0],
+    P1: [
+      [kappa, 0],
+      [0, kappa],
+    ],
+    burn: 2,
+  };
+}
+
+/**
+ * Dummy seasonal of period s: δ_t = −Σ_{j=1}^{s−1} δ_{t−j} + W_t. State
+ * (δ_t, …, δ_{t−s+2}) of dimension s − 1; F row 0 = −1s with the subdiagonal
+ * identity, H = e1ᵀ, Q = diag(qSeas, 0, …).
+ */
+export function seasonalBlock(s: number, qSeas: number): { F: Matrix; H: Matrix; Q: Matrix } {
+  const k = s - 1;
+  const F: Matrix = Array.from({ length: k }, (_, i) =>
+    Array.from({ length: k }, (__, j) => (i === 0 ? -1 : j === i - 1 ? 1 : 0)),
+  );
+  const Q: Matrix = Array.from({ length: k }, (_, i) => Array.from({ length: k }, (__, j) => (i === 0 && j === 0 ? qSeas : 0)));
+  const H: Matrix = [Array.from({ length: k }, (_, j) => (j === 0 ? 1 : 0))];
+  return { F, H, Q };
+}
+
+/** Block-diagonal F and Q, concatenated H, every state diffuse: m1 = 0, P1 = κI, burn = k. */
+export function stackModels(blocks: { F: Matrix; H: Matrix; Q: Matrix }[], r: number, kappa = KAPPA_DIFFUSE): SSModel {
+  const F = blockDiag(...blocks.map((b) => b.F));
+  const Q = blockDiag(...blocks.map((b) => b.Q));
+  const H: Matrix = [blocks.flatMap((b) => b.H[0])];
+  const k = F.length;
+  return { F, H, Q, R: [[r]], m1: new Array<number>(k).fill(0), P1: identity(k).map((row) => row.map((v) => v * kappa)), burn: k };
+}
+
+/** Local linear trend plus a dummy seasonal of period s (default 12): k = s + 1. */
+export function lltSeasonal(qLevel: number, qSlope: number, qSeas: number, r: number, s = 12, kappa = KAPPA_DIFFUSE): SSModel {
+  const trend = { F: [[1, 1], [0, 1]], H: [[1, 0]], Q: [[qLevel, 0], [0, qSlope]] };
+  return stackModels([trend, seasonalBlock(s, qSeas)], r, kappa);
+}
+
+/**
+ * Harvey's state-space form of an ARMA(p, q) (Def 2): k = max(p, q + 1); F has
+ * the zero-padded φ in column 0 and ones on the superdiagonal;
+ * g = (1, θ_1, …, θ_{k−1}); Q = σ² g gᵀ; H = e1ᵀ; R = 0; m1 = 0;
+ * P1 = the stationary covariance (discrete Lyapunov, Thm 2(iii)); burn 0.
+ */
+export function armaToStateSpace(p: ARMAParams): SSModel & { g: number[] } {
+  const { phi, theta, sigma2 } = p;
+  const k = Math.max(phi.length, theta.length + 1);
+  const F: Matrix = Array.from({ length: k }, (_, i) =>
+    Array.from({ length: k }, (__, j) => (j === 0 ? (i < phi.length ? phi[i] : 0) : 0) + (j === i + 1 ? 1 : 0)),
+  );
+  const g = Array.from({ length: k }, (_, i) => (i === 0 ? 1 : i - 1 < theta.length ? theta[i - 1] : 0));
+  const Q = outer(g, g).map((row) => row.map((v) => sigma2 * v));
+  const H: Matrix = [Array.from({ length: k }, (_, j) => (j === 0 ? 1 : 0))];
+  return { F, H, Q, R: [[0]], m1: new Array<number>(k).fill(0), P1: solveDiscreteLyapunov(F, Q), burn: 0, g };
+}
+
+/**
+ * Constant-velocity tracking (Ex 3): F = [[1, dt], [0, 1]],
+ * Q = qa [[dt³/3, dt²/2], [dt²/2, dt]]; observe position (H = (1, 0)),
+ * velocity (H = (0, 1)) or both (H = I, R = rI). m1 = (0, 1), P1 = diag(0.5, 0.5).
+ */
+export function constantVelocity(
+  dt: number,
+  qa: number,
+  r: number,
+  observe: 'position' | 'velocity' | 'both' = 'position',
+): SSModel {
+  const H: Matrix = observe === 'position' ? [[1, 0]] : observe === 'velocity' ? [[0, 1]] : identity(2);
+  const R: Matrix = observe === 'both' ? [[r, 0], [0, r]] : [[r]];
+  return {
+    F: [
+      [1, dt],
+      [0, 1],
+    ],
+    H,
+    Q: [
+      [(qa * dt ** 3) / 3, (qa * dt ** 2) / 2],
+      [(qa * dt ** 2) / 2, qa * dt],
+    ],
+    R,
+    m1: [0, 1],
+    P1: [
+      [0.5, 0],
+      [0, 0.5],
+    ],
+    burn: 0,
+  };
+}
+
+/**
+ * Exact discretization of the Matérn-3/2 SDE (Ex 16): F(Δ) = e^{AΔ} in closed
+ * form, e^{−λΔ}[[1 + λΔ, Δ], [−λ²Δ, 1 − λΔ]]; P∞ = diag(s², λ²s²);
+ * Q(Δ) = P∞ − F P∞ Fᵀ.
+ */
+export function matern32StateSpace(dt: number, s2: number, lambda: number): { F: Matrix; Q: Matrix; Pinf: Matrix } {
+  const e = Math.exp(-lambda * dt);
+  const F: Matrix = [
+    [e * (1 + lambda * dt), e * dt],
+    [-e * lambda * lambda * dt, e * (1 - lambda * dt)],
+  ];
+  const Pinf: Matrix = [
+    [s2, 0],
+    [0, lambda * lambda * s2],
+  ];
+  const Q = symmetrize(matAdd(Pinf, matMul(matMul(F, Pinf), transpose(F)), -1));
+  return { F, Q, Pinf };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 13. Filter, likelihood, smoother
+// ═══════════════════════════════════════════════════════════════════════════
+
+export interface KalmanResult {
+  mPred: number[][];
+  PPred: Matrix[];
+  mFilt: number[][];
+  PFilt: Matrix[];
+  /** Innovation e_t = x_t − H m⁻_t, its covariance S_t, and the gain K_t; null at missing t. */
+  e: (number[] | null)[];
+  S: (Matrix | null)[];
+  K: (Matrix | null)[];
+  /** log N(x_t; H m⁻_t, S_t); 0 at missing t. */
+  llTerms: number[];
+  /** Σ_{t ≥ burn} llTerms[t]. */
+  loglik: number;
+  observed: boolean[];
+}
+
+export interface SmootherResult {
+  mS: number[][];
+  PS: Matrix[];
+  /** Smoother gains G_t and lag-one covariances C[t] = Cov(Z_{t+1}, Z_t | x) = PS[t+1] G[t]ᵀ; length T − 1. */
+  G: Matrix[];
+  C: Matrix[];
+}
+
+function asRows(x: number[] | number[][]): number[][] {
+  return x.length && Array.isArray(x[0]) ? (x as number[][]) : (x as number[]).map((v) => [v]);
+}
+
+/** Predict: m⁻ = F m, P⁻ = F P Fᵀ + Q (symmetrized). */
+export function kalmanPredict(m: number[], P: Matrix, model: SSModel): { m: number[]; P: Matrix } {
+  const { F, Q } = model;
+  return { m: matVec(F, m), P: symmetrize(matAdd(matMul(matMul(F, P), transpose(F)), Q)) };
+}
+
+/**
+ * Update with an observed x: S = H P⁻ Hᵀ + R; K = (S⁻¹ H P⁻)ᵀ via cholesky(S);
+ * Joseph form P = (I − KH) P⁻ (I − KH)ᵀ + K R Kᵀ, symmetrized (Rem 4);
+ * llTerm = −½(d log 2π + log det S + ‖L⁻¹e‖²).
+ */
+export function kalmanUpdate(
+  mPred: number[],
+  PPred: Matrix,
+  x: number[],
+  model: SSModel,
+): { m: number[]; P: Matrix; e: number[]; S: Matrix; K: Matrix; llTerm: number } {
+  const { H, R } = model;
+  const d = H.length;
+  const k = mPred.length;
+  const Hm = matVec(H, mPred);
+  const e = x.map((v, i) => v - Hm[i]);
+  const HP = matMul(H, PPred);
+  const S = symmetrize(matAdd(matMul(HP, transpose(H)), R));
+  const L = cholesky(S);
+  const K = transpose(choleskySolve(L, HP));
+  const A = matAdd(identity(k), matMul(K, H), -1);
+  const P = symmetrize(
+    matAdd(matMul(matMul(A, PPred), transpose(A)), matMul(matMul(K, R), transpose(K))),
+  );
+  const Ke = matVec(K, e);
+  const m = mPred.map((v, i) => v + Ke[i]);
+  const u = forwardSub(L, e);
+  const llTerm = -0.5 * (d * LOG_2PI + logDetChol(L) + u.reduce((s, v) => s + v * v, 0));
+  return { m, P, e, S, K, llTerm };
+}
+
+/**
+ * The Kalman filter (Topic 34 Thm 12): t = 0 starts from (m1, P1), later
+ * steps predict from (m_{t−1}, P_{t−1}). A row containing NaN is missing: the
+ * update is skipped (m_t = m⁻_t, P_t = P⁻_t) and no likelihood term is added
+ * (Def 3, Thm 4).
+ */
+export function kalmanFilter(x: number[] | number[][], model: SSModel): KalmanResult {
+  const X = asRows(x);
+  const T = X.length;
+  const out: KalmanResult = {
+    mPred: [], PPred: [], mFilt: [], PFilt: [], e: [], S: [], K: [],
+    llTerms: new Array<number>(T).fill(0), loglik: 0, observed: [],
+  };
+  for (let t = 0; t < T; t++) {
+    const pr = t === 0 ? { m: model.m1.slice(), P: symmetrize(model.P1) } : kalmanPredict(out.mFilt[t - 1], out.PFilt[t - 1], model);
+    out.mPred.push(pr.m);
+    out.PPred.push(pr.P);
+    const obs = X[t].every((v) => !Number.isNaN(v));
+    out.observed.push(obs);
+    if (!obs) {
+      out.mFilt.push(pr.m);
+      out.PFilt.push(pr.P);
+      out.e.push(null);
+      out.S.push(null);
+      out.K.push(null);
+      continue;
+    }
+    const up = kalmanUpdate(pr.m, pr.P, X[t], model);
+    out.mFilt.push(up.m);
+    out.PFilt.push(up.P);
+    out.e.push(up.e);
+    out.S.push(up.S);
+    out.K.push(up.K);
+    out.llTerms[t] = up.llTerm;
+  }
+  for (let t = model.burn; t < T; t++) out.loglik += out.llTerms[t];
+  return out;
+}
+
+export function kalmanLogLik(x: number[] | number[][], model: SSModel): number {
+  return kalmanFilter(x, model).loglik;
+}
+
+/**
+ * Smoother gain G_t = P_t Fᵀ (P⁻_{t+1})⁻¹ = (choleskySolve(chol(P⁻_{t+1}), F P_t))ᵀ.
+ * If P⁻_{t+1} is singular (Harvey's ARMA form can make it so) the Cholesky
+ * throws and we fall back to partial-pivot solves; Rem 15's Moore–Penrose
+ * inverse is the principled replacement, and no component smooths ARMA models.
+ */
+function smootherGain(PFilt: Matrix, PPredNext: Matrix, F: Matrix): Matrix {
+  const FP = matMul(F, PFilt);
+  try {
+    return transpose(choleskySolve(cholesky(PPredNext), FP));
+  } catch {
+    // row j of G = column j of (P⁻)⁻¹ F P
+    return FP[0].map((_, j) => solveLinear(PPredNext, FP.map((row) => row[j])));
+  }
+}
+
+/** Rauch–Tung–Striebel smoother with lag-one covariances (Thm 5; Thm 4(iii) with gaps). */
+export function rtsSmoother(kf: KalmanResult, model: SSModel): SmootherResult {
+  const T = kf.mFilt.length;
+  const mS = kf.mFilt.map((m) => m.slice());
+  const PS = kf.PFilt.map((P) => P.map((row) => row.slice()));
+  const G: Matrix[] = new Array(Math.max(T - 1, 0));
+  const C: Matrix[] = new Array(Math.max(T - 1, 0));
+  for (let t = T - 2; t >= 0; t--) {
+    const Gt = smootherGain(kf.PFilt[t], kf.PPred[t + 1], model.F);
+    const dm = matVec(Gt, mS[t + 1].map((v, i) => v - kf.mPred[t + 1][i]));
+    mS[t] = kf.mFilt[t].map((v, i) => v + dm[i]);
+    PS[t] = symmetrize(matAdd(kf.PFilt[t], matMul(matMul(Gt, matAdd(PS[t + 1], kf.PPred[t + 1], -1)), transpose(Gt))));
+    G[t] = Gt;
+    C[t] = matMul(PS[t + 1], transpose(Gt));
+  }
+  return { mS, PS, G, C };
+}
+
+/** Forward-filtering backward-sampling (Thm 6): one exact draw of Z_{1:T} | x_{1:T}. */
+export function ffbs(kf: KalmanResult, model: SSModel, rng: SeededRng): number[][] {
+  const T = kf.mFilt.length;
+  const z: number[][] = new Array(T);
+  z[T - 1] = mvnDraw(kf.mFilt[T - 1], kf.PFilt[T - 1], rng);
+  for (let t = T - 2; t >= 0; t--) {
+    const Gt = smootherGain(kf.PFilt[t], kf.PPred[t + 1], model.F);
+    const Fm = matVec(model.F, kf.mFilt[t]);
+    const dm = matVec(Gt, z[t + 1].map((v, i) => v - Fm[i]));
+    const mean = kf.mFilt[t].map((v, i) => v + dm[i]);
+    const cov = symmetrize(matAdd(kf.PFilt[t], matMul(matMul(Gt, kf.PPred[t + 1]), transpose(Gt)), -1));
+    z[t] = mvnDraw(mean, cov, rng);
+  }
+  return z;
+}
+
+/** h predict steps from (m_T, P_T): state moments and observation moments H m, H P Hᵀ + R. */
+export function forecast(
+  kf: KalmanResult,
+  model: SSModel,
+  h: number,
+): { m: number[][]; P: Matrix[]; obsMean: number[][]; obsCov: Matrix[] } {
+  const T = kf.mFilt.length;
+  let cur = { m: kf.mFilt[T - 1], P: kf.PFilt[T - 1] };
+  const out = { m: [] as number[][], P: [] as Matrix[], obsMean: [] as number[][], obsCov: [] as Matrix[] };
+  for (let i = 0; i < h; i++) {
+    cur = kalmanPredict(cur.m, cur.P, model);
+    out.m.push(cur.m);
+    out.P.push(cur.P);
+    out.obsMean.push(matVec(model.H, cur.m));
+    out.obsCov.push(symmetrize(matAdd(matMul(matMul(model.H, cur.P), transpose(model.H)), model.R)));
+  }
+  return out;
+}
+
+/** Simulate (z, x) for T steps from Z_1 ~ N(m1, P1); an all-zero Q or R block is skipped. */
+export function simulateSSM(model: SSModel, T: number, rng: SeededRng): { z: number[][]; x: number[][] } {
+  const { F, H, Q, R } = model;
+  const d = H.length;
+  const z: number[][] = [];
+  const x: number[][] = [];
+  const zd = new Array<number>(d).fill(0);
+  for (let t = 0; t < T; t++) {
+    z.push(t === 0 ? mvnDraw(model.m1, model.P1, rng) : mvnDraw(matVec(F, z[t - 1]), Q, rng));
+    const v = mvnDraw(zd, R, rng);
+    const Hz = matVec(H, z[t]);
+    x.push(Hz.map((h, i) => h + v[i]));
+  }
+  return { z, x };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 14. ARMA via the Kalman filter (fulfills Topic 35 Rems 8, 14)
+// ═══════════════════════════════════════════════════════════════════════════
+
+/** Exact Gaussian ARMA log-likelihood of x − μ (Thm 1 + Thm 2; stationary P1). */
+export function armaExactLogLik(x: number[], p: ARMAParams, mu = 0): number {
+  return kalmanLogLik(
+    x.map((v) => v - mu),
+    armaToStateSpace(p),
+  );
+}
+
+/**
+ * Profile log-likelihood with σ² concentrated out (Rem 9): run the filter at
+ * σ² = 1 to get e_t and s_t, σ̂² = mean(e²/s), and
+ * ℓ_p = −(n/2)(log 2π + log σ̂² + 1) − ½ Σ log s_t.
+ * Allocation-free Float64Array path specialised to d = 1, H = e1ᵀ, R = 0
+ * (StateSpaceLikelihoodSurface mode B calls it 2,500 times at n = 1000); the
+ * Joseph update with R = 0 is (I − K e1ᵀ) P⁻ (I − K e1ᵀ)ᵀ, computed in O(k²).
+ */
+export function armaProfileLogLik(
+  x: number[],
+  phi: number[],
+  theta: number[],
+  mu = 0,
+): { loglik: number; sigma2: number; S: number[] } {
+  const mod = armaToStateSpace({ phi, theta, sigma2: 1 });
+  const k = mod.F.length;
+  const F = Float64Array.from(mod.F.flat());
+  const Q = Float64Array.from(mod.Q.flat());
+  const m = new Float64Array(k);
+  const mT = new Float64Array(k);
+  const P = Float64Array.from(mod.P1.flat());
+  const AP = new Float64Array(k * k);
+  const FP = new Float64Array(k * k);
+  const Kv = new Float64Array(k);
+  const n = x.length;
+  const S: number[] = new Array<number>(n).fill(Number.NaN);
+  let sumE2s = 0;
+  let sumLogS = 0;
+  let nObs = 0;
+  for (let t = 0; t < n; t++) {
+    if (t > 0) {
+      // m = F m; P = F P Fᵀ + Q, symmetrized
+      for (let i = 0; i < k; i++) {
+        let s = 0;
+        for (let j = 0; j < k; j++) s += F[i * k + j] * m[j];
+        mT[i] = s;
+      }
+      m.set(mT);
+      for (let i = 0; i < k; i++)
+        for (let j = 0; j < k; j++) {
+          let s = 0;
+          for (let l = 0; l < k; l++) s += F[i * k + l] * P[l * k + j];
+          FP[i * k + j] = s;
+        }
+      for (let i = 0; i < k; i++)
+        for (let j = 0; j < k; j++) {
+          let s = Q[i * k + j];
+          for (let l = 0; l < k; l++) s += FP[i * k + l] * F[j * k + l];
+          AP[i * k + j] = s;
+        }
+      for (let i = 0; i < k; i++) for (let j = 0; j < k; j++) P[i * k + j] = 0.5 * (AP[i * k + j] + AP[j * k + i]);
+    }
+    const xt = x[t] - mu;
+    if (Number.isNaN(xt)) continue;
+    const s = P[0];
+    const e = xt - m[0];
+    for (let i = 0; i < k; i++) Kv[i] = P[i * k] / s;
+    // AP = (I − K e1ᵀ) P;  P = AP (I − K e1ᵀ)ᵀ = AP − AP[:,0] Kᵀ
+    for (let i = 0; i < k; i++) for (let j = 0; j < k; j++) AP[i * k + j] = P[i * k + j] - Kv[i] * P[j];
+    for (let i = 0; i < k; i++) for (let j = 0; j < k; j++) FP[i * k + j] = AP[i * k + j] - AP[i * k] * Kv[j];
+    for (let i = 0; i < k; i++) for (let j = 0; j < k; j++) P[i * k + j] = 0.5 * (FP[i * k + j] + FP[j * k + i]);
+    for (let i = 0; i < k; i++) m[i] += Kv[i] * e;
+    S[t] = s;
+    sumE2s += (e * e) / s;
+    sumLogS += Math.log(s);
+    nObs++;
+  }
+  const sigma2 = sumE2s / nObs;
+  const loglik = -0.5 * nObs * (LOG_2PI + Math.log(sigma2) + 1) - 0.5 * sumLogS;
+  return { loglik, sigma2, S };
+}
+
+/**
+ * Exact Gaussian ARMA MLE: `nelderMead` (Topic 35 defaults) over (μ, φ, θ), or
+ * over (φ, θ) with μ = 0 when estimateMean === false, from
+ * (x̄, yuleWalker(x − x̄, p).phi, zeros(q)); objective −armaProfileLogLik, and
+ * 1e10 for non-causal φ or non-invertible θ. σ² is profiled.
+ */
+export function armaMLE(
+  x: number[],
+  p: number,
+  q: number,
+  opts: { estimateMean?: boolean } = {},
+): ARMAParams & { mu: number; loglik: number; iterations: number } {
+  const estMean = opts.estimateMean !== false;
+  const xbar = x.reduce((s, v) => s + v, 0) / x.length;
+  const phi0 = p ? yuleWalker(x.map((v) => v - xbar), p).phi : [];
+  const x0 = [...(estMean ? [xbar] : []), ...phi0, ...new Array<number>(q).fill(0)];
+  const off = estMean ? 1 : 0;
+  const unpack = (b: number[]) => ({ mu: estMean ? b[0] : 0, phi: b.slice(off, off + p), theta: b.slice(off + p) });
+  const nll = (b: number[]) => {
+    const u = unpack(b);
+    if (p && !isCausal(u.phi)) return 1e10;
+    if (q && !isInvertible(u.theta)) return 1e10;
+    return -armaProfileLogLik(x, u.phi, u.theta, u.mu).loglik;
+  };
+  const res = nelderMead(nll, x0);
+  const u = unpack(res.x);
+  const pl = armaProfileLogLik(x, u.phi, u.theta, u.mu);
+  return { phi: u.phi, theta: u.theta, sigma2: pl.sigma2, mu: u.mu, loglik: pl.loglik, iterations: res.iterations };
+}
+
+/** Thm 3 readout: the scalar Kalman innovations e_t and variances S_t (= v_{t−1}) at the given σ². */
+export function kalmanInnovations(x: number[], p: ARMAParams): { e: number[]; S: number[] } {
+  const kf = kalmanFilter(x, armaToStateSpace(p));
+  return { e: kf.e.map((v) => (v ? v[0] : Number.NaN)), S: kf.S.map((v) => (v ? v[0][0] : Number.NaN)) };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 15. Learning
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Direct diffuse-likelihood MLE of the local level: `nelderMead` over
+ * (log q, log r) from (log v/10, log v/2), v = population variance of the
+ * non-NaN x; objective −kalmanLogLik(x, localLevel(e^a, e^b)).
+ */
+export function localLevelMLE(x: number[]): { q: number; r: number; loglik: number; iterations: number } {
+  const v = populationVariance(x.filter((u) => !Number.isNaN(u)));
+  const res = nelderMead((b) => -kalmanLogLik(x, localLevel(Math.exp(b[0]), Math.exp(b[1]))), [
+    Math.log(v / 10),
+    Math.log(v / 2),
+  ]);
+  return { q: Math.exp(res.x[0]), r: Math.exp(res.x[1]), loglik: -res.fun, iterations: res.iterations };
+}
+
+/**
+ * One Shumway–Stoffer EM iteration (Thm 7), F, H, m1, P1 held fixed. E-step:
+ * filter + RTS smoother. M-step: Q' = (1/(T−1)) Σ_{t ≥ 1} (M_t − F M_{t,t−1}ᵀ
+ * − M_{t,t−1} Fᵀ + F M_{t−1} Fᵀ), symmetrized; R' = (1/|O|) Σ_{t ∈ O}
+ * ((x_t − H m^s_t)(·)ᵀ + H P^s_t Hᵀ). `loglik` is ℓ of the INPUT model.
+ */
+export function ssmEMStep(
+  x: number[] | number[][],
+  model: SSModel,
+  estimate: ('Q' | 'R')[] = ['Q', 'R'],
+): { model: SSModel; loglik: number } {
+  const X = asRows(x);
+  const kf = kalmanFilter(X, model);
+  const sm = rtsSmoother(kf, model);
+  const { F, H } = model;
+  const T = sm.mS.length;
+  const next: SSModel = { ...model };
+  if (estimate.includes('Q')) {
+    let acc: Matrix = model.Q.map((row) => row.map(() => 0));
+    for (let t = 1; t < T; t++) {
+      const Ett = matAdd(sm.PS[t], outer(sm.mS[t], sm.mS[t]));
+      const Ett1 = matAdd(sm.C[t - 1], outer(sm.mS[t], sm.mS[t - 1]));
+      const Et1 = matAdd(sm.PS[t - 1], outer(sm.mS[t - 1], sm.mS[t - 1]));
+      const FE = matMul(F, transpose(Ett1));
+      acc = matAdd(acc, matAdd(matAdd(Ett, matAdd(FE, transpose(FE)), -1), matMul(matMul(F, Et1), transpose(F))));
+    }
+    next.Q = symmetrize(acc.map((row) => row.map((v) => v / (T - 1))));
+  }
+  if (estimate.includes('R')) {
+    let acc: Matrix = model.R.map((row) => row.map(() => 0));
+    let nObs = 0;
+    for (let t = 0; t < T; t++) {
+      if (!kf.observed[t]) continue;
+      const Hm = matVec(H, sm.mS[t]);
+      const res = X[t].map((v, i) => v - Hm[i]);
+      acc = matAdd(acc, matAdd(outer(res, res), matMul(matMul(H, sm.PS[t]), transpose(H))));
+      nObs++;
+    }
+    next.R = acc.map((row) => row.map((v) => v / nObs));
+  }
+  return { model: next, loglik: kf.loglik };
+}
+
+/**
+ * EM loop: record (Q, R); step; push ℓ; stop when it > 0 and
+ * ℓ_it − ℓ_{it−1} < rtol·|ℓ_{it−1}| (rtol 1e-8) or after maxIter (500). The
+ * model returned is the one whose ℓ was pushed last.
+ */
+export function ssmEM(
+  x: number[] | number[][],
+  model: SSModel,
+  opts: { rtol?: number; maxIter?: number; estimate?: ('Q' | 'R')[] } = {},
+): { model: SSModel; loglik: number; logliks: number[]; path: { Q: Matrix; R: Matrix }[]; iterations: number } {
+  const rtol = opts.rtol ?? 1e-8;
+  const maxIter = opts.maxIter ?? 500;
+  const X = asRows(x);
+  const path: { Q: Matrix; R: Matrix }[] = [];
+  const logliks: number[] = [];
+  let cur = model;
+  for (let it = 0; it < maxIter; it++) {
+    path.push({ Q: cur.Q.map((r) => r.slice()), R: cur.R.map((r) => r.slice()) });
+    const step = ssmEMStep(X, cur, opts.estimate);
+    logliks.push(step.loglik);
+    if (it > 0 && step.loglik - logliks[it - 1] < rtol * Math.abs(logliks[it - 1])) break;
+    cur = step.model;
+  }
+  return { model: cur, loglik: logliks[logliks.length - 1], logliks, path, iterations: logliks.length };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 16. Steady state, observability
+// ═══════════════════════════════════════════════════════════════════════════
+
+/** Scalar Riccati fixed point (Thm 9): P⁻∞ = (q + √(q² + 4qr))/2, K∞ = P⁻∞/(P⁻∞ + r), rate (1 − K∞)². */
+export function localLevelSteady(q: number, r: number): { Pminus: number; K: number; rate: number } {
+  const Pminus = 0.5 * (q + Math.sqrt(q * q + 4 * q * r));
+  const K = Pminus / (Pminus + r);
+  return { Pminus, K, rate: (1 - K) * (1 - K) };
+}
+
+/**
+ * Iterate the predicted-covariance Riccati map P ← F(P − K S Kᵀ)Fᵀ + Q from
+ * P = Q until max|ΔP| < tol·max(1, max|P|) (Thm 10). K is the filter gain
+ * P⁻Hᵀ S⁻¹ at the fixed point.
+ */
+export function steadyStateGain(
+  F: Matrix,
+  H: Matrix,
+  Q: Matrix,
+  R: Matrix,
+  tol = 1e-12,
+  maxIter = 10000,
+): { Pminus: Matrix; K: Matrix; S: Matrix; iterations: number } {
+  const gainAt = (P: Matrix) => {
+    const S = symmetrize(matAdd(matMul(matMul(H, P), transpose(H)), R));
+    return { S, K: transpose(choleskySolve(cholesky(S), matMul(H, P))) };
+  };
+  let P = Q.map((r) => r.slice());
+  let it = 0;
+  for (it = 0; it < maxIter; it++) {
+    const { S, K } = gainAt(P);
+    const Pn = symmetrize(
+      matAdd(matMul(matMul(F, matAdd(P, matMul(matMul(K, S), transpose(K)), -1)), transpose(F)), Q),
+    );
+    const diff = Math.max(...Pn.flatMap((row, i) => row.map((v, j) => Math.abs(v - P[i][j]))));
+    const scale = Math.max(1, ...P.flatMap((row) => row.map(Math.abs)));
+    P = Pn;
+    if (diff < tol * scale) break;
+  }
+  const { S, K } = gainAt(P);
+  return { Pminus: P, K, S, iterations: Math.min(it + 1, maxIter) };
+}
+
+/** Rank of the stacked observability matrix [H; HF; …; HF^{k−1}] equals k (Def 6). */
+export function isObservable(F: Matrix, H: Matrix, tol = 1e-10): boolean {
+  const k = F.length;
+  const rows: number[][] = [];
+  let HF = H.map((r) => r.slice());
+  for (let i = 0; i < k; i++) {
+    rows.push(...HF.map((r) => r.slice()));
+    HF = matMul(HF, F);
+  }
+  let rank = 0;
+  const A = rows;
+  for (let col = 0; col < k && rank < A.length; col++) {
+    let piv = rank;
+    for (let r = rank + 1; r < A.length; r++) if (Math.abs(A[r][col]) > Math.abs(A[piv][col])) piv = r;
+    if (Math.abs(A[piv][col]) <= tol) continue;
+    [A[rank], A[piv]] = [A[piv], A[rank]];
+    for (let r = rank + 1; r < A.length; r++) {
+      const f = A[r][col] / A[rank][col];
+      for (let c = col; c < k; c++) A[r][c] -= f * A[rank][c];
+    }
+    rank++;
+  }
+  return rank === k;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 16b. GP regression as a state-space model (Ex 16)
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Matérn-3/2 GP posterior at the (sorted, possibly irregular) inputs t by the
+ * Kalman filter + RTS smoother with a time-varying F(Δ), Q(Δ) per gap
+ * (Rem 5), started from the stationary P∞. O(n) instead of O(n³).
+ */
+export function gpSSMPosterior(
+  t: number[],
+  y: number[],
+  s2: number,
+  lambda: number,
+  noise: number,
+): { mean: number[]; variance: number[] } {
+  const n = t.length;
+  const { Pinf } = matern32StateSpace(1, s2, lambda);
+  const mPred: number[][] = [];
+  const PPred: Matrix[] = [];
+  const mF: number[][] = [];
+  const PF: Matrix[] = [];
+  const Fs: Matrix[] = [];
+  let m = [0, 0];
+  let P = Pinf;
+  for (let i = 0; i < n; i++) {
+    if (i > 0) {
+      const ss = matern32StateSpace(t[i] - t[i - 1], s2, lambda);
+      Fs.push(ss.F);
+      m = matVec(ss.F, mF[i - 1]);
+      P = matAdd(matMul(matMul(ss.F, PF[i - 1]), transpose(ss.F)), ss.Q);
+    }
+    mPred.push(m);
+    PPred.push(P);
+    const S = P[0][0] + noise;
+    const K = [P[0][0] / S, P[1][0] / S];
+    const e = y[i] - m[0];
+    mF.push([m[0] + K[0] * e, m[1] + K[1] * e]);
+    PF.push(matAdd(P, outer(K, K).map((row) => row.map((v) => v * S)), -1));
+  }
+  const mS = mF.map((v) => v.slice());
+  const PS = PF.map((M) => M.map((r) => r.slice()));
+  for (let i = n - 2; i >= 0; i--) {
+    const G = smootherGain(PF[i], PPred[i + 1], Fs[i]);
+    const dm = matVec(G, mS[i + 1].map((v, j) => v - mPred[i + 1][j]));
+    mS[i] = mF[i].map((v, j) => v + dm[j]);
+    PS[i] = matAdd(PF[i], matMul(matMul(G, matAdd(PS[i + 1], PPred[i + 1], -1)), transpose(G)));
+  }
+  return { mean: mS.map((v) => v[0]), variance: PS.map((M) => M[0][0]) };
 }

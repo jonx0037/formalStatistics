@@ -42,7 +42,8 @@
     { "id": "empirical-processes", "label": "Empirical Processes & Uniform Convergence", "domain": "high-dimensional-nonparametric", "status": "published", "url": "/topics/empirical-processes" },
 
     { "id": "hidden-markov-models", "label": "Hidden Markov Models", "domain": "time-series-state-space", "status": "published", "url": "/topics/hidden-markov-models" },
-    { "id": "stationary-time-series-and-arma", "label": "Stationary Time Series & ARMA", "domain": "time-series-state-space", "status": "published", "url": "/topics/stationary-time-series-and-arma" }
+    { "id": "stationary-time-series-and-arma", "label": "Stationary Time Series & ARMA", "domain": "time-series-state-space", "status": "published", "url": "/topics/stationary-time-series-and-arma" },
+    { "id": "state-space-models-and-kalman-smoothing", "label": "State-Space Models & Kalman Smoothing", "domain": "time-series-state-space", "status": "published", "url": "/topics/state-space-models-and-kalman-smoothing" }
   ],
   "edges": [
     { "source": "sample-spaces", "target": "conditional-probability" },
@@ -195,6 +196,16 @@
     { "source": "model-selection", "target": "stationary-time-series-and-arma" },
     { "source": "bayesian-computation", "target": "stationary-time-series-and-arma" },
     { "source": "kernel-density-estimation", "target": "stationary-time-series-and-arma" },
-    { "source": "hidden-markov-models", "target": "stationary-time-series-and-arma" }
+    { "source": "hidden-markov-models", "target": "stationary-time-series-and-arma" },
+    { "source": "multivariate-distributions", "target": "state-space-models-and-kalman-smoothing" },
+    { "source": "maximum-likelihood", "target": "state-space-models-and-kalman-smoothing" },
+    { "source": "linear-regression", "target": "state-space-models-and-kalman-smoothing" },
+    { "source": "model-selection", "target": "state-space-models-and-kalman-smoothing" },
+    { "source": "bayesian-foundations", "target": "state-space-models-and-kalman-smoothing" },
+    { "source": "bayesian-computation", "target": "state-space-models-and-kalman-smoothing" },
+    { "source": "hierarchical-bayes", "target": "state-space-models-and-kalman-smoothing" },
+    { "source": "empirical-bayes", "target": "state-space-models-and-kalman-smoothing" },
+    { "source": "hidden-markov-models", "target": "state-space-models-and-kalman-smoothing" },
+    { "source": "stationary-time-series-and-arma", "target": "state-space-models-and-kalman-smoothing" }
   ]
 }
