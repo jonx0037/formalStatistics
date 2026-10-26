@@ -44,6 +44,7 @@ const difficultyMap: Record<string, 'foundational' | 'intermediate' | 'advanced'
   'kernel-density-estimation': 'intermediate',
   'bootstrap': 'intermediate',
   'empirical-processes': 'advanced',
+  'hidden-markov-models': 'intermediate',
 };
 
 // Topic descriptions for cards
@@ -81,6 +82,7 @@ const topicDescriptions: Record<string, string> = {
   'kernel-density-estimation': 'Bandwidth selection, bias-variance for density estimation',
   'bootstrap': 'Efron\'s bootstrap, bootstrap confidence intervals, bootstrap hypothesis tests',
   'empirical-processes': 'Glivenko-Cantelli, Donsker\'s theorem, VC dimension',
+  'hidden-markov-models': 'Forward–backward, Viterbi, Baum–Welch, and the Kalman filter',
 };
 
 // Group nodes by domain
@@ -102,7 +104,7 @@ for (const node of graphData.nodes) {
         Curriculum
       </h1>
       <p class="text-lg" style="color: var(--color-text-muted);">
-        {publishedTotal} {topicNoun} across {tracks.length} {trackNoun}{plannedTotal > 0 ? ` (${plannedTotal} planned)` : ''} &mdash; from probability foundations to high-dimensional statistics.
+        {publishedTotal} {topicNoun} across {tracks.length} {trackNoun}{plannedTotal > 0 ? ` (${plannedTotal} planned)` : ''} &mdash; from probability foundations to high-dimensional statistics and state-space models.
       </p>
       <p class="text-sm mt-2" style="color: var(--color-text-muted);">
         Every topic connects backward to

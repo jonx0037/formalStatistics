@@ -38,6 +38,7 @@ const difficultyMap: Record<string, 'foundational' | 'intermediate' | 'advanced'
   'kernel-density-estimation': 'intermediate',
   'bootstrap': 'intermediate',
   'empirical-processes': 'advanced',
+  'hidden-markov-models': 'intermediate',
 };
 
 const topicDescriptions: Record<string, string> = {
@@ -74,6 +75,7 @@ const topicDescriptions: Record<string, string> = {
   'kernel-density-estimation': 'Bandwidth selection, bias-variance',
   'bootstrap': 'Efron\'s bootstrap, bootstrap confidence intervals',
   'empirical-processes': 'Glivenko-Cantelli, Donsker, VC dimension',
+  'hidden-markov-models': 'Forward–backward, Viterbi, Baum–Welch, Kalman',
 };
 
 const nodesByDomain = new Map<string, typeof graphData.nodes>();
@@ -84,7 +86,7 @@ for (const node of graphData.nodes) {
 }
 ---
 
-<BaseLayout title="Topics" description="All formalStatistics topics — from probability foundations to high-dimensional statistics.">
+<BaseLayout title="Topics" description="All formalStatistics topics — from probability foundations to high-dimensional statistics and state-space models.">
   <div class="max-w-5xl mx-auto px-4 sm:px-6 py-12">
     <header class="mb-12 text-center">
       <h1

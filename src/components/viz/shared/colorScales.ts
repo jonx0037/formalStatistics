@@ -15,6 +15,7 @@ export const domainColorScale = d3
     'regression-linear-models',
     'bayesian-statistics',
     'high-dimensional-nonparametric',
+    'time-series-state-space',
   ])
   .range([
     '#2563EB', // blue — probability foundations
@@ -25,6 +26,7 @@ export const domainColorScale = d3
     '#0891B2', // cyan — regression
     '#4F46E5', // indigo — Bayesian
     '#BE185D', // pink — nonparametric
+    '#65A30D', // lime — time series & state space
   ]);
 
 /**
@@ -377,3 +379,29 @@ export const empiricalProcessColors = {
 } as const;
 
 export type EmpiricalProcessColorKey = keyof typeof empiricalProcessColors;
+
+/**
+ * Topic 34 — Hidden Markov Models palette (Track 9).
+ *
+ * Mirrors the notebook's Track 9 palette (Cell 2) through CSS variables so
+ * dark mode lifts each hue to its 400 shade:
+ *
+ *   state1    sky-600    — state 1 / calm / fair
+ *   state2    rose-600   — state 2 / turbulent / loaded
+ *   state3    amber-600  — state 3
+ *   filtered  indigo-600 — filtering distribution P(Z_t | x_{1:t})
+ *   smoothed  teal-600   — smoothing distribution P(Z_t | x_{1:T})
+ *   viterbi   gray-900   — Viterbi (MAP) path; gray-200 in dark mode
+ *   neutral   slate-600  — observations, reference curves
+ *
+ * `truthAlpha` is the fill opacity for true-state shading behind a plot.
+ * Filtered vs smoothed always differ in dash style too (redundant encoding).
+ */
+export const timeSeriesColors = {
+  states: ['var(--color-ts-state1)', 'var(--color-ts-state2)', 'var(--color-ts-state3)'],
+  filtered: 'var(--color-ts-filtered)',
+  smoothed: 'var(--color-ts-smoothed)',
+  viterbi: 'var(--color-ts-viterbi)',
+  neutral: 'var(--color-ts-neutral)',
+  truthAlpha: 0.15,
+} as const;

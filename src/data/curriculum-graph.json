@@ -39,7 +39,9 @@
     { "id": "order-statistics-and-quantiles", "label": "Order Statistics & Quantiles", "domain": "high-dimensional-nonparametric", "status": "published", "url": "/topics/order-statistics-and-quantiles" },
     { "id": "kernel-density-estimation", "label": "Kernel Density Estimation", "domain": "high-dimensional-nonparametric", "status": "published", "url": "/topics/kernel-density-estimation" },
     { "id": "bootstrap", "label": "The Bootstrap", "domain": "high-dimensional-nonparametric", "status": "published", "url": "/topics/bootstrap" },
-    { "id": "empirical-processes", "label": "Empirical Processes & Uniform Convergence", "domain": "high-dimensional-nonparametric", "status": "published", "url": "/topics/empirical-processes" }
+    { "id": "empirical-processes", "label": "Empirical Processes & Uniform Convergence", "domain": "high-dimensional-nonparametric", "status": "published", "url": "/topics/empirical-processes" },
+
+    { "id": "hidden-markov-models", "label": "Hidden Markov Models", "domain": "time-series-state-space", "status": "published", "url": "/topics/hidden-markov-models" }
   ],
   "edges": [
     { "source": "sample-spaces", "target": "conditional-probability" },
@@ -176,6 +178,12 @@
     { "source": "multiple-testing-and-false-discovery", "target": "empirical-bayes" },
     { "source": "exponential-families", "target": "empirical-bayes" },
     { "source": "point-estimation", "target": "empirical-bayes" },
-    { "source": "maximum-likelihood", "target": "empirical-bayes" }
+    { "source": "maximum-likelihood", "target": "empirical-bayes" },
+    { "source": "conditional-probability", "target": "hidden-markov-models" },
+    { "source": "discrete-distributions", "target": "hidden-markov-models" },
+    { "source": "multivariate-distributions", "target": "hidden-markov-models" },
+    { "source": "maximum-likelihood", "target": "hidden-markov-models" },
+    { "source": "bayesian-foundations", "target": "hidden-markov-models" },
+    { "source": "bayesian-computation", "target": "hidden-markov-models" }
   ]
 }
