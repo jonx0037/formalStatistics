@@ -731,7 +731,7 @@ When conjugacy fails and MCMC is too slow (hierarchical models with millions of 
 </RemarkBlock>
 
 <RemarkBlock number={31} title="Sequential Monte Carlo">
-**Sequential Monte Carlo / particle filters** target a sequence $\pi_t$ indexed by time or annealing parameter, importance-sampling from $\pi_{t-1}$ and resampling. The natural framework for state-space models (Kalman filter generalizations) and rare-event estimation. The exact discrete-state and linear-Gaussian recursions that particle filters approximate are derived in [Topic 34](/topics/hidden-markov-models#section-34-4). Parallel to MCMC's single-target framework. <ExternalLink href="https://formalml.com/topics/sequential-monte-carlo" site="formalml" topic="Sequential Monte Carlo" />.
+**Sequential Monte Carlo / particle filters** target a sequence $\pi_t$ indexed by time or annealing parameter, importance-sampling from $\pi_{t-1}$ and resampling. The natural framework for state-space models (Kalman filter generalizations) and rare-event estimation. The exact discrete-state and linear-Gaussian recursions that particle filters approximate are derived in [Topic 34](/topics/hidden-markov-models#section-34-4); [Topic 36](/topics/state-space-models-and-kalman-smoothing#section-36-6) adds the linear-Gaussian smoother and forward-filtering backward-sampling, the exact case that particle smoothers approximate. Parallel to MCMC's single-target framework. <ExternalLink href="https://formalml.com/topics/sequential-monte-carlo" site="formalml" topic="Sequential Monte Carlo" />.
 </RemarkBlock>
 
 <RemarkBlock number={32} title="Parallel tempering">

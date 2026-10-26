@@ -1,0 +1,1206 @@
+---
+title: "State-Space Models & Kalman Smoothing"
+subtitle: "Track 9's two halves turn out to be one object. Every ARMA model is a linear-Gaussian state-space model, and the Kalman filter's innovations are Wold's. Seven full proofs, featuring the Rauch–Tung–Striebel smoother. The exact likelihood is a product of innovation densities, computed in O(n), and missing data and forecasting cost nothing. Structural models become a modeling language, and EM's M-step is regression on smoothed moments. The steady-state Riccati equation explains why the gain settles. The Nile, Mauna Loa CO2 and Yule's sunspots are the data; O(n) Gaussian-process regression, recursive least squares, FFBS and S4 are the ML payoff. Track 9 closes here."
+status: "published"
+difficulty: "advanced"
+prerequisites:
+  - "multivariate-distributions"
+  - "maximum-likelihood"
+  - "linear-regression"
+  - "model-selection-and-information-criteria"
+  - "bayesian-foundations-and-prior-selection"
+  - "bayesian-computation-and-mcmc"
+  - "hierarchical-bayes-and-partial-pooling"
+  - "empirical-bayes"
+  - "hidden-markov-models"
+  - "stationary-time-series-and-arma"
+tags:
+  - "state-space"
+  - "kalman-filter"
+  - "kalman-smoothing"
+  - "rts-smoother"
+  - "prediction-error-decomposition"
+  - "innovations"
+  - "exact-likelihood"
+  - "arma"
+  - "missing-data"
+  - "forecasting"
+  - "structural-time-series"
+  - "em-algorithm"
+  - "riccati-equation"
+  - "ffbs"
+  - "gaussian-processes"
+  - "time-series"
+domain: "time-series-state-space"
+videoId: null
+notebookPath: "notebooks/state-space-models-and-kalman-smoothing/36_state_space_models.ipynb"
+githubUrl: "https://github.com/jonx0037/formalStatistics/blob/main/src/content/topics/state-space-models-and-kalman-smoothing.mdx"
+datePublished: 2026-10-27
+estimatedReadTime: 65
+abstract: >-
+  A linear-Gaussian state-space model has a hidden state that evolves by a linear map plus Gaussian noise and is observed through another linear map plus noise. Topic 34 derived its filter. This topic shows that the model is the common form of everything in Track 9. Every ARMA model can be written in state-space form, with the AR polynomial's roots reappearing as the eigenvalues of the transition matrix, and the Kalman filter's innovations are exactly the finite-past prediction errors of the Wold decomposition. Their variances converge to the white-noise variance. The innovations are independent, so the exact Gaussian likelihood is a product of their densities. This prediction-error decomposition costs O(n) instead of O(n³), and it gives the exact ARMA maximum-likelihood estimator that conditional least squares and Whittle's method only approximate. A missing observation is handled by skipping one update, and a forecast is a run of missing observations. The featured Rauch–Tung–Striebel smoother runs backward through the filter's output to give every state's distribution given all the data, including the lag-one covariances. It is projection onto the past and the future together, and its uncertainty bulges inside gaps and pinches at observations. Local level, local linear trend and seasonal blocks stack into structural models of the Nile flow and the Mauna Loa CO2 record. Parameters are learned by maximizing the exact likelihood directly or by EM, whose M-step is closed-form regression on smoothed moments. The steady-state Riccati equation explains why the Kalman gain settles to a constant. A Matérn Gaussian process is itself a two-state model, so exact GP regression on a line runs in linear time.
+formalcalculusPrereqs:
+  - topic: "linear-algebra"
+    site: "formalcalculus"
+    relationship: "Block matrices, transposes, positive-definite covariances and the Cholesky factor carry every proof; the prediction-error decomposition is the block LDLᵀ factorization of the data covariance (§36.3 Thm 1)."
+  - topic: "linear-systems"
+    site: "formalcalculus"
+    relationship: "Z_t = F Z_{t−1} + W_t is a linear difference system driven by noise; Harvey's ARMA form (§36.4 Def 2) and the local-linear-trend and seasonal blocks (§36.7) are its canonical instances."
+  - topic: "stability-dynamics"
+    site: "formalcalculus"
+    relationship: "Stationarity of the state is spectral radius ρ(F) < 1, which makes the Lyapunov equation P = FPFᵀ + Q solvable (§36.4 Thm 2); stability of F(I − K∞H) is what the steady-state Riccati theory delivers (§36.9 Thm 10)."
+  - topic: "eigenvalues-eigenvectors"
+    site: "formalcalculus"
+    relationship: "The eigenvalues of Harvey's transition matrix are the reciprocals of the AR polynomial's roots (§36.4 Thm 2(ii)), so Topic 35's causality condition becomes an eigenvalue condition on F."
+  - topic: "hilbert-spaces"
+    site: "formalcalculus"
+    relationship: "Kalman innovations are Gram–Schmidt in time order (§36.3 Thm 1), the filter mean is the projection onto the past, and the smoother mean is the projection onto the closed span of the whole sample (§36.6 Rem 14)."
+  - topic: "first-order-odes"
+    site: "formalcalculus"
+    relationship: "A Matérn-3/2 Gaussian process solves a linear stochastic ODE whose exact discretization is the matrix exponential (§36.10 Ex 16); the continuous-time Kalman–Bucy filter replaces the Riccati recursion with a Riccati ODE (§36.9 Rem 23)."
+formalmlConnections:
+  - topic: "sequential-monte-carlo"
+    site: "formalml"
+    relationship: "Particle filters and particle smoothers replace this topic's closed-form Gaussian predict, update and backward passes with weighted samples; the Kalman filter and the RTS smoother (§36.6 Thm 5) are the exact linear-Gaussian baselines they approximate, and FFBS (Thm 6) is the exact case of backward-simulation particle smoothing."
+  - topic: "gaussian-processes"
+    site: "formalml"
+    relationship: "A Matérn-ν GP with half-integer ν is a (ν + 1/2)-state linear SSM, so the RTS smoother returns the exact GP posterior in O(n) time instead of O(n³) (§36.10 Ex 16)."
+  - topic: "variational-inference"
+    site: "formalml"
+    relationship: "When the state or observation model is nonlinear or non-Gaussian the smoothing posterior has no closed form; structured variational families that keep this topic's Markov chain structure approximate it (§36.10 Rem 25)."
+  - topic: "bayesian-inference"
+    site: "formalml"
+    relationship: "The Kalman filter is sequential Bayesian updating with a Gaussian prior that moves between observations; FFBS (§36.6 Thm 6) makes a state-space model one block of a Gibbs sampler for its parameters (Rem 16)."
+  - topic: "random-walks"
+    site: "formalml"
+    relationship: "The local level model's hidden state is a Gaussian random walk observed with noise (§36.1 Ex 1); differencing it gives an MA(1) with θ = K∞ − 1 (Ex 2), the state-space reading of an ARIMA(0,1,1)."
+references:
+  - type: "book"
+    author: "James Durbin and Siem Jan Koopman"
+    year: 2012
+    title: "Time Series Analysis by State Space Methods"
+    publisher: "Oxford University Press (2nd ed.)"
+    note: "DUR2012. Primary reference; the Nile local level, the gap experiment, and diffuse initialization (§36.1 Ex 1, §36.5 Ex 9, §36.7). https://doi.org/10.1093/acprof:oso/9780199641178.001.0001"
+  - type: "book"
+    author: "Andrew C. Harvey"
+    year: 1989
+    title: "Forecasting, Structural Time Series Models and the Kalman Filter"
+    publisher: "Cambridge University Press"
+    note: "HAR1989. Structural time-series models and Harvey's ARMA state-space form (§36.4 Def 2, §36.7 Def 4). https://doi.org/10.1017/CBO9781107049994"
+  - type: "book"
+    author: "Simo Särkkä"
+    year: 2013
+    title: "Bayesian Filtering and Smoothing"
+    publisher: "Cambridge University Press"
+    note: "SAR2013. Filtering and RTS smoothing as Gaussian conditioning; FFBS (§36.6 Thms 5–6). https://doi.org/10.1017/CBO9781139344203"
+  - type: "book"
+    author: "Peter J. Brockwell and Richard A. Davis"
+    year: 1991
+    title: "Time Series: Theory and Methods"
+    publisher: "Springer (2nd ed.)"
+    note: "BRO1991. Innovations algorithm and exact ARMA likelihood (§36.3 Thm 1, §36.4 Thm 3). https://doi.org/10.1007/978-1-4419-0320-4"
+  - type: "book"
+    author: "Robert H. Shumway and David S. Stoffer"
+    year: 2017
+    title: "Time Series Analysis and Its Applications: With R Examples"
+    publisher: "Springer (4th ed.)"
+    note: "SHU2017. Applied companion; state-space EM and missing data (§36.5, §36.8). https://doi.org/10.1007/978-3-319-52452-8"
+  - type: "article"
+    author: "Rudolph E. Kalman"
+    year: 1960
+    title: "A New Approach to Linear Filtering and Prediction Problems"
+    publisher: "Journal of Basic Engineering 82(1): 35–45"
+    note: "KAL1960. The Kalman filter, recapped from Topic 34 (§36.2). https://doi.org/10.1115/1.3662552"
+  - type: "article"
+    author: "Herbert E. Rauch, F. Tung, and Charlotte T. Striebel"
+    year: 1965
+    title: "Maximum Likelihood Estimates of Linear Dynamic Systems"
+    publisher: "AIAA Journal 3(8): 1445–1450"
+    note: "RTS1965. The Rauch–Tung–Striebel smoother (§36.6 Thm 5, featured). https://doi.org/10.2514/3.3166"
+  - type: "article"
+    author: "Robert H. Shumway and David S. Stoffer"
+    year: 1982
+    title: "An Approach to Time Series Smoothing and Forecasting Using the EM Algorithm"
+    publisher: "Journal of Time Series Analysis 3(4): 253–264"
+    note: "SHU1982. EM for linear-Gaussian state-space models; the closed-form M-step (§36.8 Thm 7). https://doi.org/10.1111/j.1467-9892.1982.tb00349.x"
+  - type: "article"
+    author: "A. P. Dempster, N. M. Laird, and D. B. Rubin"
+    year: 1977
+    title: "Maximum Likelihood from Incomplete Data via the EM Algorithm"
+    publisher: "Journal of the Royal Statistical Society, Series B 39(1): 1–22"
+    note: "DEM1977. EM's ascent property, cited through Topic 34 Thm 9 (§36.8). https://doi.org/10.1111/j.2517-6161.1977.tb01600.x"
+  - type: "article"
+    author: "Richard H. Jones"
+    year: 1980
+    title: "Maximum Likelihood Fitting of ARMA Models to Time Series with Missing Observations"
+    publisher: "Technometrics 22(3): 389–395"
+    note: "JON1980. Exact ARMA likelihood with missing observations via the Kalman filter (§36.4, §36.5 Thm 4). https://doi.org/10.1080/00401706.1980.10486171"
+  - type: "article"
+    author: "C. K. Carter and R. Kohn"
+    year: 1994
+    title: "On Gibbs Sampling for State Space Models"
+    publisher: "Biometrika 81(3): 541–553"
+    note: "CAR1994. Forward-filtering backward-sampling (§36.6 Thm 6). https://doi.org/10.1093/biomet/81.3.541"
+  - type: "article"
+    author: "Sylvia Frühwirth-Schnatter"
+    year: 1994
+    title: "Data Augmentation and Dynamic Linear Models"
+    publisher: "Journal of Time Series Analysis 15(2): 183–202"
+    note: "FRU1994. Forward-filtering backward-sampling, independently (§36.6 Thm 6). https://doi.org/10.1111/j.1467-9892.1994.tb00184.x"
+  - type: "article"
+    author: "Piet de Jong"
+    year: 1991
+    title: "The Diffuse Kalman Filter"
+    publisher: "Annals of Statistics 19(2): 1073–1083"
+    note: "DEJ1991. The diffuse Kalman filter (§36.7 Rem 17). https://doi.org/10.1214/aos/1176348139"
+  - type: "article"
+    author: "Siem Jan Koopman"
+    year: 1997
+    title: "Exact Initial Kalman Filtering and Smoothing for Nonstationary Time Series Models"
+    publisher: "Journal of the American Statistical Association 92(440): 1630–1638"
+    note: "KOO1997. Exact initial Kalman filtering and smoothing (§36.7 Rem 17). https://doi.org/10.1080/01621459.1997.10473685"
+  - type: "book"
+    author: "Brian D. O. Anderson and John B. Moore"
+    year: 1979
+    title: "Optimal Filtering"
+    publisher: "Prentice-Hall (Dover reprint 2005)"
+    note: "AND1979. Riccati convergence, detectability and stabilizability (§36.9 Thm 10). https://archive.org/details/optimalfiltering0000ande"
+  - type: "book"
+    author: "E. J. Hannan and Manfred Deistler"
+    year: 1988
+    title: "The Statistical Theory of Linear Systems"
+    publisher: "Wiley (SIAM Classics reprint 2012)"
+    note: "HAN1988. Asymptotic theory of MLE for linear state-space and ARMA systems (§36.8 Thm 8). https://doi.org/10.1137/1.9781611972191"
+  - type: "book"
+    author: "Richard S. Bucy and Peter D. Joseph"
+    year: 1968
+    title: "Filtering for Stochastic Processes with Applications to Guidance"
+    publisher: "Interscience"
+    note: "JOS1968. The Joseph-form covariance update (§36.2 Rem 4). https://openlibrary.org/books/OL5616331M"
+  - type: "article"
+    author: "Rudolph E. Kalman and Richard S. Bucy"
+    year: 1961
+    title: "New Results in Linear Filtering and Prediction Theory"
+    publisher: "Journal of Basic Engineering 83(1): 95–108"
+    note: "KAL1961. The continuous-time Kalman–Bucy filter (§36.9 Rem 23). https://doi.org/10.1115/1.3658902"
+  - type: "article"
+    author: "Jouni Hartikainen and Simo Särkkä"
+    year: 2010
+    title: "Kalman Filtering and Smoothing Solutions to Temporal Gaussian Process Regression Models"
+    publisher: "2010 IEEE International Workshop on Machine Learning for Signal Processing: 379–384"
+    note: "HAR2010. Matérn Gaussian processes as state-space models; O(n) GP regression (§36.10 Ex 16). https://doi.org/10.1109/MLSP.2010.5589113"
+  - type: "book"
+    author: "Mike West and Jeff Harrison"
+    year: 1997
+    title: "Bayesian Forecasting and Dynamic Models"
+    publisher: "Springer (2nd ed.)"
+    note: "WES1997. Bayesian dynamic linear models (§36.6 Rem 16). https://doi.org/10.1007/b98971"
+  - type: "article"
+    author: "N. J. Gordon, D. J. Salmond, and A. F. M. Smith"
+    year: 1993
+    title: "Novel Approach to Nonlinear/Non-Gaussian Bayesian State Estimation"
+    publisher: "IEE Proceedings F 140(2): 107–113"
+    note: "GOR1993. The bootstrap particle filter (§36.10 Rem 25). https://doi.org/10.1049/ip-f-2.1993.0015"
+  - type: "article"
+    author: "Albert Gu, Karan Goel, and Christopher Ré"
+    year: 2022
+    title: "Efficiently Modeling Long Sequences with Structured State Spaces"
+    publisher: "International Conference on Learning Representations (ICLR 2022)"
+    note: "GU2022. S4 as a learned, noise-free linear state-space layer (§36.10 Rem 24). https://arxiv.org/abs/2111.00396"
+  - type: "article"
+    author: "Albert Gu and Tri Dao"
+    year: 2023
+    title: "Mamba: Linear-Time Sequence Modeling with Selective State Spaces"
+    publisher: "arXiv preprint arXiv:2312.00752"
+    note: "GU2023. Mamba's input-dependent state-space layers (§36.10 Rem 24). https://arxiv.org/abs/2312.00752"
+  - type: "article"
+    author: "George W. Cobb"
+    year: 1978
+    title: "The Problem of the Nile: Conditional Solution to a Changepoint Problem"
+    publisher: "Biometrika 65(2): 243–251"
+    note: "COB1978. The Nile flow series and its 1898 change point (§36.1 Ex 1). https://doi.org/10.1093/biomet/65.2.243"
+  - type: "misc"
+    author: "Charles D. Keeling and Timothy P. Whorf"
+    year: 2004
+    title: "Atmospheric CO2 Concentrations Derived from Flask Air Samples at Sites in the SIO Network"
+    publisher: "Trends: A Compendium of Data on Global Change, Carbon Dioxide Information Analysis Center, Oak Ridge National Laboratory, U.S. Department of Energy [Data set]"
+    note: "KEE2004. Mauna Loa CO2 flask record, as bundled in statsmodels (§36.7 Ex 13). https://web.archive.org/web/20150323200447/http://cdiac.ornl.gov/trends/co2/sio-keel-flask/sio-keel-flaskmlo_c.html"
+---
+
+import TheoremBlock from '../../components/ui/TheoremBlock.astro';
+import ProofBlock from '../../components/ui/ProofBlock.astro';
+import ExampleBlock from '../../components/ui/ExampleBlock.astro';
+import RemarkBlock from '../../components/ui/RemarkBlock.astro';
+import DefinitionBlock from '../../components/ui/DefinitionBlock.astro';
+import ExternalLink from '../../components/ui/ExternalLink.astro';
+
+import CovarianceEllipseStepper from '../../components/viz/CovarianceEllipseStepper.tsx';
+import KalmanSmootherExplorer from '../../components/viz/KalmanSmootherExplorer.tsx';
+import StructuralDecomposer from '../../components/viz/StructuralDecomposer.tsx';
+import StateSpaceLikelihoodSurface from '../../components/viz/StateSpaceLikelihoodSurface.tsx';
+
+## 36.1 Motivation: one river, two views
+
+One hundred years of annual Nile flow at Aswan, 1871–1970, in $10^8\,\mathrm{m}^3$ (COB1978), is the running example of Durbin and Koopman's book (DUR2012), and it will be ours. The readings jump around, but something slower lies underneath: the level drops visibly around 1898, when work on the Aswan Low Dam began. Ask the question an ML practitioner would ask of any sensor log. What was the *true* level in 1913, given the noisy readings before *and after* it? The later readings carry information about 1913 because the level moves slowly. Using them is **smoothing**, the title half of this topic.
+
+Topic 34 read a series like this as a hidden state seen through noise; Topic 35 read it through its autocovariance and its prediction errors. The Nile can be read both ways, and the readings agree. This topic explains why.
+
+<ExampleBlock number={1} title="The Nile as a local level">
+Model the unobserved level $\mu_t$ as a random walk and each reading as the level plus noise:
+
+$$
+\mu_t = \mu_{t-1} + W_t, \qquad X_t = \mu_t + V_t, \qquad W_t \sim \mathcal{N}(0, q), \quad V_t \sim \mathcal{N}(0, r),
+$$
+
+with all noise terms independent: a Gaussian random walk (<ExternalLink site="formalml" topic="random-walks" href="https://formalml.com/topics/random-walks" />) seen through measurement error. Here $q$ is the variance of the level's yearly step and $r$ that of the measurement error (Durbin and Koopman's $\sigma^2_\eta$ and $\sigma^2_\varepsilon$). The maximum-likelihood estimates (§36.8) are $\hat q = 1463.5474$ and $\hat r = 15108.3145$, so $\hat q/\hat r = 0.096870$, with diffuse log-likelihood $\hat\ell = -632.537686$ (Definition 5). Theorem 5 gives the distribution of each $\mu_t$ given all 100 readings; its mean falls from **1038.36** in 1897 to **951.00** in 1899 (Figure 1, left).
+</ExampleBlock>
+
+<ExampleBlock number={2} title="The same model, read as an ARIMA">
+Difference the observations: $\Delta X_t = X_t - X_{t-1} = W_t + V_t - V_{t-1}$, which is stationary, with autocovariances
+
+$$
+\mathrm{Var}(\Delta X_t) = q + 2r, \qquad \mathrm{Cov}(\Delta X_t, \Delta X_{t-1}) = -r, \qquad \mathrm{Cov}(\Delta X_t, \Delta X_{t-h}) = 0 \quad (h \ge 2).
+$$
+
+An autocovariance that cuts off after lag 1 is the signature of an MA(1) ([Topic 35 §35.5](/topics/stationary-time-series-and-arma#section-35-5)), with $\rho(1) = -r/(q + 2r)$. So the hidden-level model is, from the observation-driven side, an ARIMA(0,1,1). At the MLE, $\rho(1) = -0.476901$; the sample lag-1 autocorrelation of the 99 differences is $-0.402043$, far outside the white-noise band $\pm 0.197$. The MA coefficient is $\theta = K_\infty - 1 = -0.733449$, where $K_\infty = 0.266551$ is the steady-state Kalman gain (§36.9, Example 15); as a check, $\theta/(1 + \theta^2) = -0.476901$.
+</ExampleBlock>
+
+![Left: annual Nile flows from 1871 to 1970 with a teal smoothed level and band that drops after 1898. Right: sample autocorrelations of the differenced flows, with an indigo diamond at lag 1 for the local-level model value.](/images/topics/state-space-models-and-kalman-smoothing/36-nile-two-views.png)
+
+*Figure 1. One series, two readings. As a hidden random-walk level seen through noise, the Nile drops after 1898; as an observation-driven model, its differences are an MA(1) with θ = K∞ − 1.*
+
+<RemarkBlock number={1} title="Notation">
+We write $\mathbb{E}$, $\mathrm{Var}$ and $\mathrm{Cov}$ for expectation, variance and covariance, and $\mathcal{N}(x; \mu, \Sigma)$ for the Normal density with mean $\mu$ and covariance $\Sigma$ at $x$ (not Topic 34's $\varphi$: $\phi$ is Topic 35's AR coefficient). Bold letters stack over time. $T$ is a state-space sample length and $n$ an ARMA series length; they coincide in §36.4. Clashes are settled where they arise: the Kalman innovation $e_t$ versus Wold's $\varepsilon_t$, the innovation variance $S_t$ versus Topic 35's $v_{t-1}$ (equal, by Theorem 3), the covariance $P_t$ versus Topic 35's projection $P_n$ (here $\Pi_n$), and $\vartheta$ for the parameter vector, because $\theta$ is the MA coefficient.
+</RemarkBlock>
+
+<RemarkBlock number={2} title="Two views, one object: the thesis of Track 9">
+Section 36.4 proves that the hidden-state and autocovariance descriptions coincide for every ARMA model, and §36.3 shows that the Kalman filter computes Topic 35's prediction errors exactly and fast. Then every tool works on both: the smoother answers the 1913 question (§36.6), the exact likelihood costs $O(n)$ (§36.3), missing data and forecasts are free (§36.5), and EM learns the parameters (§36.8).
+</RemarkBlock>
+
+<a id="section-36-2"></a>
+
+## 36.2 The linear-Gaussian model, revisited
+
+We work with the linear-Gaussian state-space model of [Topic 34 §34.9](/topics/hidden-markov-models#section-34-9) (Definition 8 there): a hidden state $Z_t \in \mathbb{R}^k$ and an observation $X_t \in \mathbb{R}^d$ with
+
+$$
+Z_t = FZ_{t-1} + W_t, \qquad X_t = HZ_t + V_t, \qquad W_t \sim \mathcal{N}(0, Q), \quad V_t \sim \mathcal{N}(0, R), \quad Z_1 \sim \mathcal{N}(m_1, P_1),
+$$
+
+all mutually independent; $x_t$ is the observed value. Topic 34's Theorem 12 (the Kalman filter) gives Gaussian predicted moments $m^-_t, P^-_t$ given $x_{1:t-1}$ and filtered moments $m_t, P_t$ given $x_{1:t}$. From $m^-_1 = m_1$ and $P^-_1 = P_1$:
+
+$$
+m^-_t = Fm_{t-1}, \qquad P^-_t = FP_{t-1}F^\top + Q,
+$$
+
+$$
+e_t = x_t - Hm^-_t, \qquad S_t = HP^-_tH^\top + R, \qquad K_t = P^-_tH^\top S_t^{-1}, \qquad m_t = m^-_t + K_te_t, \qquad P_t = P^-_t - K_tS_tK_t^\top .
+$$
+
+Here $e_t$ is the **innovation**, $S_t$ its covariance and $K_t$ the **gain**; we cite the filter rather than re-prove it. Keep a geometric picture in mind: a Gaussian belief about a two-dimensional state is an ellipse, a level set of its density. Each step the dynamics carry it forward, the noise $Q$ fattens it, and the observation cuts it down.
+
+<DefinitionBlock number={1} title="Predictive, filtering, smoothing and forecast distributions">
+For data $x_{1:T}$ and the state $Z_t$:
+
+- the **predictive** distribution is $p(z_t \mid x_{1:t-1}) = \mathcal{N}(m^-_t, P^-_t)$;
+- the **filtering** distribution is $p(z_t \mid x_{1:t}) = \mathcal{N}(m_t, P_t)$;
+- the **smoothing** distribution is $p(z_t \mid x_{1:T}) = \mathcal{N}(m^s_t, P^s_t)$, for $t \le T$;
+- the **$h$-step forecast** distribution is $p(z_{T+h} \mid x_{1:T})$, for $h \ge 1$.
+
+Filtering is what we believe now; smoothing is what we believe in hindsight. Gaussianity of the last two is Theorems 4–5.
+</DefinitionBlock>
+
+<ExampleBlock number={3} title="Tracking: one predict/update cycle as ellipses">
+A constant-velocity tracker with state (position, velocity) observes position, with step $\Delta = 1$:
+
+$$
+F = \begin{pmatrix} 1 & 1 \\ 0 & 1 \end{pmatrix}, \qquad Q = 0.3\begin{pmatrix} 1/3 & 1/2 \\ 1/2 & 1 \end{pmatrix}, \qquad H = \begin{pmatrix} 1 & 0 \end{pmatrix}, \qquad r = 0.4 .
+$$
+
+Start from $m_{t-1} = (0, 1)^\top$ and $P_{t-1} = \begin{pmatrix} 0.6 & 0.2 \\ 0.2 & 0.4 \end{pmatrix}$.
+
+- **Predict.** $F$ shears the ellipse (position picks up velocity), then $Q$ inflates it: $m^-_t = (1, 1)^\top$ and $P^-_t = \begin{pmatrix} 1.5 & 0.75 \\ 0.75 & 0.7 \end{pmatrix}$.
+- **Update.** We observe position $x_t = 1.8$. Then $S_t = 1.9$, $K_t = (0.789474, 0.394737)^\top$, $m_t = (1.631579, 1.315789)^\top$, and $P_t = \begin{pmatrix} 0.315789 & 0.157895 \\ 0.157895 & 0.403947 \end{pmatrix}$.
+- **Area** ($\propto \sqrt{\det P}$): **0.4472 → 0.6982 → 0.3204**. **Correlation:** **0.408 → 0.732 → 0.442**.
+
+We observe only position, yet velocity's variance shrinks too, from 0.7 to 0.404: the predict step correlated the coordinates, and the update slices the ellipse along the direction the observation sees, pulling the correlated direction along.
+</ExampleBlock>
+
+![Three position-velocity panels: the previous filtered ellipse; the sheared and then inflated predicted ellipses in violet; and the smaller indigo updated ellipse inside an amber strip for the position observation.](/images/topics/state-space-models-and-kalman-smoothing/36-covariance-ellipses.png)
+
+*Figure 2. One Kalman step as geometry. The dynamics shear the belief and the noise inflates it; the observation slices it along the direction it sees, and the correlated direction shrinks too.*
+
+Step through the cycle, then switch Observe to velocity: the slice turns, and the position uncertainty grows without bound (§36.9).
+
+<CovarianceEllipseStepper client:visible />
+
+<ExampleBlock number={4} title="Recursive least squares is a Kalman filter">
+Take a regression $y_t = \mathbf{x}_t^\top\beta + V_t$, $V_t \sim \mathcal{N}(0, r)$, with examples arriving one at a time. Make the coefficients a state that never moves ($F = I$, $Q = 0$), with time-varying observation row $H_t = \mathbf{x}_t^\top$ (Remark 5) and prior $Z_1 \sim \mathcal{N}(0, \kappa I)$.
+
+The filter mean after $t$ observations is the Bayesian linear regression posterior mean ([Topic 25 §25.9](/topics/bayesian-foundations-and-prior-selection#section-25-9)), which is ridge regression with penalty $r/\kappa$; as $\kappa \to \infty$ it becomes ordinary least squares ([Topic 21 §21.4](/topics/linear-regression#section-21-4)). With $n = 200$ examples, three coefficients, $r = 0.25$ and $\kappa = 10^8$, the final filter mean differs from $\hat\beta_{\text{OLS}}$ by at most $1.5 \times 10^{-10}$, and $P_T/r$ matches $(X^\top X)^{-1}$ to $3.1 \times 10^{-12}$.
+
+This is **recursive least squares**: online learning with exact uncertainty in $O(p^2)$ per example for $p$ coefficients, and no refit. Setting $Q \ne 0$ lets the coefficients drift, the Kalman answer to concept drift.
+</ExampleBlock>
+
+<RemarkBlock number={3} title="What Topic 34 proved, and what is new here">
+Topic 34 delivered the filter and the predictive likelihood terms; the rest is new. The smoother of §36.6 is the continuous-state twin of [§34.5's forward–backward](/topics/hidden-markov-models#section-34-5), and §36.8's EM is the twin of [§34.7's Baum–Welch](/topics/hidden-markov-models#section-34-7).
+</RemarkBlock>
+
+<RemarkBlock number={4} title="Numerical form of the covariance update">
+The proofs use $P_t = P^-_t - K_tS_tK_t^\top$. Code should use the **Joseph form** (JOS1968),
+
+$$
+P_t = (I - K_tH)P^-_t(I - K_tH)^\top + K_tRK_t^\top .
+$$
+
+The two are algebraically identical (agreement $4.5 \times 10^{-11}$ on the Nile), but the Joseph form is a sum of positive-semidefinite terms, so rounding cannot destroy that property. Square-root filters propagate a Cholesky factor of $P_t$; information filters propagate $P_t^{-1}$, which suits vague priors; UD filters factor $P_t = UDU^\top$ (SAR2013, AND1979).
+</RemarkBlock>
+
+<RemarkBlock number={5} title="Time-varying systems">
+Every result below holds verbatim with $F_t, H_t, Q_t, R_t$ in place of $F, H, Q, R$, since only §36.9 uses time invariance. Examples 4 and 16 need this.
+</RemarkBlock>
+
+<a id="section-36-3"></a>
+
+## 36.3 Innovations and the exact likelihood
+
+Gram–Schmidt takes vectors in order and keeps from each only the part orthogonal to everything before it. Run it on $X_1, X_2, \dots$ in time order, with covariance as the inner product (<ExternalLink site="formalcalculus" topic="hilbert-spaces" href="https://formalcalculus.com/topics/hilbert-spaces" />): the new part of $X_t$ is the innovation, Topic 35's one-step prediction error ([§35.3 Def 5](/topics/stationary-time-series-and-arma#section-35-3)), which Durbin–Levinson computes in $O(n^2)$. Orthogonal Gaussian pieces are independent, so the likelihood factors over innovations, which the filter computes in $O(T)$.
+
+<TheoremBlock number={1} title="Prediction-error decomposition">
+Let $e_t = x_t - Hm^-_t$ and $S_t$ be the Kalman innovations and innovation covariances, with every $x_t$ observed. Stack $\mathbf{x} = (x_1, \dots, x_T)$ and let $\boldsymbol\mu_X = \mathbb{E}[\mathbf{X}]$ and $\Sigma_X = \mathrm{Cov}(\mathbf{X})$. Then:
+
+(i) The innovations $e_1, \dots, e_T$ are independent, with $e_t \sim \mathcal{N}(0, S_t)$.
+
+(ii) There is a unit lower block-triangular matrix $L$ (identity $d \times d$ blocks on the diagonal) with $\mathbf{x} - \boldsymbol\mu_X = L\mathbf{e}$. Hence $\Sigma_X = LDL^\top$ with $D = \mathrm{diag}(S_1, \dots, S_T)$.
+
+(iii) The log-likelihood is
+
+$$
+\log p(x_{1:T}) = -\frac12\sum_{t=1}^{T}\Bigl[d\log 2\pi + \log\det S_t + e_t^\top S_t^{-1}e_t\Bigr],
+$$
+
+and the filter evaluates it in $O\bigl(T(k^3 + d^3)\bigr)$ operations.
+</TheoremBlock>
+
+<ProofBlock number={1} title="Proof of Thm 1 (Prediction-error decomposition)">
+
+**Step 1: the innovations are a triangular affine function of the data.** In Topic 34's Theorem 12 the matrices $P^-_t$, $S_t$, $K_t$, $P_t$ are computed from $F, H, Q, R, P_1$ alone, never from the data. The means obey $m_t = m^-_t + K_t(x_t - Hm^-_t)$ and $m^-_{t+1} = Fm_t$, each an affine map of the previous mean and of $x_t$. By induction on $t$, $m^-_t$ is an affine function of $x_{1:t-1}$:
+
+$$
+m^-_t = c_t + \sum_{s<t}B_{ts}x_s ,
+$$
+
+for fixed vectors $c_t$ and matrices $B_{ts}$. Therefore
+
+$$
+e_t = x_t - Hc_t - \sum_{s<t}HB_{ts}\,x_s .
+$$
+
+Stacking over $t$, $\mathbf{e} = A\mathbf{x} - \mathbf{c}$, where $A$ has identity blocks on its diagonal and zeros above it. Such a matrix is invertible with $\det A = 1$, and its inverse $L = A^{-1}$ has the same form. Taking expectations, Step 2's $\mathbb{E}[e_t] = 0$ gives $\mathbf{c} = A\boldsymbol\mu_X$, so $\mathbf{e} = A(\mathbf{x} - \boldsymbol\mu_X)$ and $\mathbf{x} - \boldsymbol\mu_X = L\mathbf{e}$.
+
+**Step 2: independence.** Theorem 12 says that given $X_{1:t-1} = x_{1:t-1}$, $X_t \sim \mathcal{N}(Hm^-_t, S_t)$. Subtracting the conditional mean,
+
+$$
+e_t \mid x_{1:t-1} \sim \mathcal{N}(0, S_t).
+$$
+
+This conditional law does not depend on $x_{1:t-1}$, so $e_t$ is independent of $X_{1:t-1}$, and in particular $\mathbb{E}[e_t] = 0$. By Step 1, $(e_1, \dots, e_{t-1})$ is an invertible function of $X_{1:t-1}$, so conditioning on one is conditioning on the other. The chain rule then gives
+
+$$
+p(e_1, \dots, e_T) = \prod_{t=1}^T p(e_t \mid e_{1:t-1}) = \prod_{t=1}^T \mathcal{N}(e_t; 0, S_t),
+$$
+
+which is (i): $\mathbf{e} \sim \mathcal{N}(0, D)$.
+
+**Step 3: factorization.** From $\mathbf{X} - \boldsymbol\mu_X = L\mathbf{e}$ and the covariance rule for linear maps ([Topic 8 §8.3](/topics/multivariate-distributions)), $\Sigma_X = LDL^\top$, which is (ii). Since $\det L = 1$,
+
+$$
+\det\Sigma_X = \det L\,\det D\,\det L^\top = \prod_{t=1}^T\det S_t .
+$$
+
+For the quadratic form, $\Sigma_X^{-1} = L^{-\top}D^{-1}L^{-1}$ and $L^{-1}(\mathbf{x} - \boldsymbol\mu_X) = \mathbf{e}$, so
+
+$$
+(\mathbf{x} - \boldsymbol\mu_X)^\top\Sigma_X^{-1}(\mathbf{x} - \boldsymbol\mu_X) = \mathbf{e}^\top D^{-1}\mathbf{e} = \sum_{t=1}^T e_t^\top S_t^{-1}e_t .
+$$
+
+Substituting both identities into $\log\mathcal{N}(\mathbf{x}; \boldsymbol\mu_X, \Sigma_X) = -\tfrac12\bigl[Td\log 2\pi + \log\det\Sigma_X + (\mathbf{x} - \boldsymbol\mu_X)^\top\Sigma_X^{-1}(\mathbf{x} - \boldsymbol\mu_X)\bigr]$ gives the formula in (iii).
+
+**Step 4: cost.** One filter step forms $FP_{t-1}F^\top + Q$ in $O(k^3)$ and $S_t = HP^-_tH^\top + R$ in $O(k^2d + kd^2)$. It takes a Cholesky factor of $S_t$ in $O(d^3)$, the gain in $O(k^2d + kd^2)$, and the update in $O(k^3 + k^2d)$. That is $O(k^3 + d^3)$ per step and $O(T(k^3 + d^3))$ in total, against $O\bigl((Td)^3\bigr)$ for a Cholesky factor of $\Sigma_X$. $\blacksquare$ — using Topic 34 Thm 12 (the filter and its predictive law), Topic 8 §8.3 (linear maps of Normal vectors), and the chain rule for densities.
+
+</ProofBlock>
+
+Row $t$ of $\mathbf{x} - \boldsymbol\mu_X = L\mathbf{e}$ reads $X_t - \mathbb{E}X_t = e_t + \sum_{s<t}L_{ts}e_s$, with $L_{ts} = \mathrm{Cov}(X_t, e_s)S_s^{-1}$. This is Gram–Schmidt in the covariance inner product, run in time order, and $\Sigma_X = LDL^\top$ is the block Cholesky factorization that Gram–Schmidt produces (<ExternalLink site="formalcalculus" topic="linear-algebra" href="https://formalcalculus.com/topics/linear-algebra" />), one row at a time.
+
+<ExampleBlock number={5} title="The Nile's exact likelihood, term by term">
+Theorem 1 holds for any $P_1$. Starting the Nile filter from $P_1 = \kappa = 10^6$ (Definition 5), the $t = 1$ term ($-8.4521$) measures only the vague prior, so we drop it; at $(\hat q, \hat r)$ the diffuse log-likelihood is
+
+$$
+\sum_{t=2}^{100}\log\mathcal{N}(e_t; 0, S_t) = -632.537686 .
+$$
+
+- The innovation variance shrinks as the level is learned, from $S_2 = 31455.31$ to $S_{100} = 20599.00$.
+- The innovations whiten the series. The lag-1 autocorrelation is **0.4984** for the flows and **0.1151** for the standardized innovations $e_t/\sqrt{S_t}$, and 4 of the 99 standardized innovations fall outside $\pm 1.96$.
+- For an ARMA(1,1), the factorization $\Gamma = LDL^\top$ of Topic 35's $12 \times 12$ Toeplitz $\Gamma_n$ returns the Kalman $S_t$ on the diagonal of $D$, to $1.1 \times 10^{-15}$.
+</ExampleBlock>
+
+![Left: standardized Nile innovations inside a 1.96 band. Middle: large autocorrelations for the flows, small ones for the innovations. Right: a 12 by 12 unit lower-triangular heatmap.](/images/topics/state-space-models-and-kalman-smoothing/36-innovations.png)
+
+*Figure 3. Innovations are Gram–Schmidt in time order. The filter turns an autocorrelated series into nearly white standardized errors, and the data are a unit-triangular mix of them.*
+
+<RemarkBlock number={6} title="Why O(T) matters">
+Evaluating $\mathcal{N}(\mathbf{x}; \boldsymbol\mu_X, \Sigma_X)$ directly needs a Cholesky factor of a $Td \times Td$ matrix: $O(T^3d^3)$ time, $O(T^2d^2)$ memory. The filter needs $O(T(k^3 + d^3))$ time and $O(k^2)$ memory. For a 10,000-step sensor log that is infeasible versus instant; Example 16 shows the same gap for GP regression.
+</RemarkBlock>
+
+<RemarkBlock number={7} title="Innovations as diagnostics">
+Under a correct model the standardized innovations are i.i.d. $\mathcal{N}(0, 1)$ (Theorem 1(i)): they are the residuals. Check them with the sample ACF and its white-noise band ([Topic 35 §35.6](/topics/stationary-time-series-and-arma#section-35-6)), a Ljung–Box statistic, and a Normal Q-Q plot. On the Nile, the run of large values after 1898 flags the level shift as an intervention (Remark 18). This is the residual check for any learned state-space or sequence model.
+</RemarkBlock>
+
+<a id="section-36-4"></a>
+
+## 36.4 ARMA models are state-space models
+
+Topic 35's Remark 10 stacked an AR($p$) into a first-order recursion with a companion matrix ([§35.4](/topics/stationary-time-series-and-arma#section-35-4)). MA terms need one more idea: the state carries the part of each upcoming observation that the present already determines.
+
+<DefinitionBlock number={2} title="Harvey's state-space form of an ARMA(p, q)">
+Let $\phi(B)X_t = \theta(B)\varepsilon_t$ be an ARMA($p$, $q$) with $\varepsilon_t$ i.i.d. $\mathcal{N}(0, \sigma^2)$. Let $k = \max(p, q + 1)$, and pad with $\phi_j = 0$ for $j > p$ and $\theta_j = 0$ for $j > q$.
+
+- $F$ is $k \times k$, with first column $(\phi_1, \dots, \phi_k)^\top$, ones on the superdiagonal, and zeros elsewhere.
+- $\mathbf{g} = (1, \theta_1, \dots, \theta_{k-1})^\top$.
+- $Z_t = FZ_{t-1} + \mathbf{g}\varepsilon_t$ and $X_t = HZ_t$, with $H = (1, 0, \dots, 0)$.
+- So $Q = \sigma^2\mathbf{g}\mathbf{g}^\top$ (rank 1) and $R = 0$: an observation with no noise.
+- $P_1$ is the stationary covariance, the solution of $P = FPF^\top + Q$.
+
+For an ARMA(1,1), $k = 2$ and
+
+$$
+F = \begin{pmatrix} \phi & 1 \\ 0 & 0 \end{pmatrix}, \qquad \mathbf{g} = \begin{pmatrix} 1 \\ \theta \end{pmatrix}.
+$$
+
+This is a noise-driven linear difference system (<ExternalLink site="formalcalculus" topic="linear-systems" href="https://formalcalculus.com/topics/linear-systems" />; HAR1989).
+</DefinitionBlock>
+
+<TheoremBlock number={2} title="ARMA ⇔ state-space">
+Let $\phi(B)X_t = \theta(B)\varepsilon_t$ be an ARMA($p$, $q$) with $\varepsilon_t$ i.i.d. $\mathcal{N}(0, \sigma^2)$, and take $F$, $\mathbf{g}$, $H$ from Definition 2, with $k = \max(p, q+1)$. Then:
+
+(i) If $Z_t = FZ_{t-1} + \mathbf{g}\varepsilon_t$ and $X_t = HZ_t$, the process $X_t$ satisfies $X_t = \sum_{j=1}^{p}\phi_jX_{t-j} + \varepsilon_t + \sum_{j=1}^{q}\theta_j\varepsilon_{t-j}$.
+
+(ii) A nonzero $\lambda$ is an eigenvalue of $F$ if and only if $\phi(1/\lambda) = 0$. So the process is causal if and only if the spectral radius $\rho(F)$ is below 1.
+
+(iii) If the model is causal, $P = FPF^\top + Q$ (with $Q = \sigma^2\mathbf{g}\mathbf{g}^\top$) has the unique solution $P_1 = \sum_{j\ge 0}F^jQF^{j\top}$. Started from $Z_1 \sim \mathcal{N}(0, P_1)$, the observations $(X_1, \dots, X_n)$ have the law of $n$ consecutive values of the stationary ARMA, with autocovariance $\gamma(h) = HF^hP_1H^\top$ and $\psi_j = HF^j\mathbf{g}$.
+</TheoremBlock>
+
+<ProofBlock number={2} title="Proof of Thm 2 (ARMA ⇔ state-space)">
+
+**(i)** Write the state's coordinates as $Z_t = (Z_{1,t}, \dots, Z_{k,t})^\top$, and set $Z_{k+1,t} = 0$ and $\theta_0 = 1$. Row $j$ of the state equation reads
+
+$$
+Z_{j,t} = \phi_jZ_{1,t-1} + Z_{j+1,t-1} + \theta_{j-1}\varepsilon_t, \qquad j = 1, \dots, k.
+$$
+
+We claim that for each $j$,
+
+$$
+Z_{j,t} = \sum_{i=j}^{k}\Bigl(\phi_iZ_{1,t-1-i+j} + \theta_{i-1}\varepsilon_{t-i+j}\Bigr).
+$$
+
+For $j = k$ this is row $k$ itself. If it holds for $j + 1$ at every time, substitute it (at time $t - 1$) into row $j$:
+
+$$
+Z_{j,t} = \phi_jZ_{1,t-1} + \theta_{j-1}\varepsilon_t + \sum_{i=j+1}^{k}\Bigl(\phi_iZ_{1,t-1-i+j} + \theta_{i-1}\varepsilon_{t-i+j}\Bigr),
+$$
+
+and the first two terms are the $i = j$ summand. At $j = 1$, using $X_t = Z_{1,t}$ and the zero padding $\phi_i = 0$ for $i > p$ and $\theta_i = 0$ for $i > q$,
+
+$$
+X_t = \sum_{i=1}^{k}\phi_iX_{t-i} + \sum_{i=1}^{k}\theta_{i-1}\varepsilon_{t-i+1} = \sum_{i=1}^{p}\phi_iX_{t-i} + \varepsilon_t + \sum_{i=1}^{q}\theta_i\varepsilon_{t-i}.
+$$
+
+**(ii)** $F^\top$ has first row $(\phi_1, \dots, \phi_k)$ and ones on the subdiagonal: it is Topic 35's companion matrix $\Phi$ (§35.4 Rem 10), zero-padded to size $k$. $F$ and $F^\top$ share eigenvalues. Take $\lambda \ne 0$ and $\mathbf{v} = (\lambda^{k-1}, \lambda^{k-2}, \dots, 1)^\top$. Rows $2, \dots, k$ of $F^\top\mathbf{v} = \lambda\mathbf{v}$ hold automatically: row $i$ of $F^\top\mathbf{v}$ is $v_{i-1} = \lambda^{k-i+1} = \lambda v_i$. Row 1 reads $\sum_{i=1}^{k}\phi_i\lambda^{k-i} = \lambda^k$. Dividing by $\lambda^k$ gives $1 - \sum_i\phi_i\lambda^{-i} = 0$, that is, $\phi(1/\lambda) = 0$.
+
+Conversely, any eigenvector of $F^\top$ with $\lambda \ne 0$ has this form. Rows $2, \dots, k$ force $v_{i-1} = \lambda v_i$, so $\mathbf{v}$ is a multiple of the vector above. So the nonzero eigenvalues are exactly the reciprocals of the roots of $\phi$; the padding contributes only zero eigenvalues. Causality ([Topic 35 §35.4 Thm 5](/topics/stationary-time-series-and-arma#section-35-4)) is "every root of $\phi$ lies outside the unit circle", which is $\rho(F) < 1$.
+
+**(iii)** If $\rho(F) < 1$, pick $\rho(F) < \bar\rho < 1$. Then $\|F^j\| \le C\bar\rho^{\,j}$ for some constant $C$, so $\sum_j F^jQF^{j\top}$ converges absolutely. Its sum $P_1$ satisfies
+
+$$
+FP_1F^\top + Q = \sum_{j\ge 0}F^{j+1}QF^{(j+1)\top} + Q = P_1 .
+$$
+
+If $P$ and $P'$ both solve the equation, $\Delta = P - P'$ satisfies $\Delta = F\Delta F^\top = F^j\Delta F^{j\top}$ for every $j$, and the right side tends to 0. So the solution is unique.
+
+The stationary causal ARMA is $X_t = \sum_{j\ge0}\psi_j\varepsilon_{t-j}$ (Topic 35 Thm 5). Define $Z_t = \sum_{j\ge0}F^j\mathbf{g}\varepsilon_{t-j}$, which converges in $L^2$ by the bound on $\|F^j\|$. It satisfies $Z_t = FZ_{t-1} + \mathbf{g}\varepsilon_t$, it is independent of $\varepsilon_{t+1}, \varepsilon_{t+2}, \dots$, and
+
+$$
+\mathrm{Cov}(Z_t) = \sigma^2\sum_{j\ge0}F^j\mathbf{g}\mathbf{g}^\top F^{j\top} = P_1 .
+$$
+
+By (i), $HZ_t$ solves the ARMA equations. It is causal and stationary, so by the uniqueness in Topic 35 Thm 5 it equals $X_t$, and matching coefficients of $\varepsilon_{t-j}$ gives $\psi_j = HF^j\mathbf{g}$. Its state at any time $t_0$ is $\mathcal{N}(0, P_1)$ and independent of later shocks, which is exactly how Definition 2 starts $Z_1$. So the model started at $Z_1 \sim \mathcal{N}(0, P_1)$ produces the law of $(X_{t_0}, \dots, X_{t_0+n-1})$.
+
+Finally, iterating the state equation $h$ times gives $Z_{t+h} = F^hZ_t + \sum_{j<h}F^j\mathbf{g}\varepsilon_{t+h-j}$, and the sum is independent of $Z_t$. So $\mathrm{Cov}(Z_{t+h}, Z_t) = F^hP_1$, and
+
+$$
+\gamma(h) = \mathrm{Cov}(X_{t+h}, X_t) = HF^hP_1H^\top .
+$$
+
+$\blacksquare$ — using Topic 35 §35.4 Rem 10 (the companion matrix) and Thm 5 (causality; uniqueness of the causal solution), and $L^2$ convergence of geometrically dominated series.
+
+</ProofBlock>
+
+Part (ii) keeps Topic 35's Remark 10 promise: AR roots become eigenvalues, and causality becomes the stability condition $\rho(F) < 1$ (<ExternalLink site="formalcalculus" topic="eigenvalues-eigenvectors" href="https://formalcalculus.com/topics/eigenvalues-eigenvectors" />, <ExternalLink site="formalcalculus" topic="stability-dynamics" href="https://formalcalculus.com/topics/stability-dynamics" />). Part (iii) makes the filter, started at the stationary $P_1$, compute the *exact* likelihood.
+
+<ExampleBlock number={6} title="AR(1) in state-space form">
+Here $k = 1$, $F = \phi$, and the Lyapunov equation $P = \phi^2P + \sigma^2$ gives $P_1 = \sigma^2/(1 - \phi^2) = \gamma(0)$. Since $R = 0$, the first update pins the state to $x_1$, and the filter then predicts $\phi x_{t-1}$ with variance $\sigma^2$. So $S_1 = \gamma(0)$ and $S_t = \sigma^2$ for $t \ge 2$: the exact likelihood is the conditional likelihood plus one term for $x_1$. For $\phi = 0.7$, $S_1/\sigma^2 = 1.960784$.
+</ExampleBlock>
+
+<TheoremBlock number={3} title="Kalman innovations are Wold innovations">
+Let $\{X_t\}$ be a causal, mean-zero ARMA($p$, $q$) driven by i.i.d. $\mathcal{N}(0, \sigma^2)$ noise, filtered in the form of Definition 2 with the stationary $P_1$ of Theorem 2(iii). Write $\hat X_t = \Pi_{t-1}X_t$ for the best linear predictor of $X_t$ from $X_1, \dots, X_{t-1}$, and $v_{t-1} = \mathbb{E}(X_t - \hat X_t)^2$ (Topic 35 Def 5, with $\hat X_1 = 0$ and $v_0 = \gamma(0)$). Topic 35 wrote this projection $P_{t-1}X_t$; here $P_t$ is a covariance, so the projection is $\Pi_{t-1}$. Then for every $t \ge 1$:
+
+(i) $Hm^-_t = \hat x_t$, so the Kalman innovation is the prediction error: $e_t = x_t - \hat x_t$.
+
+(ii) $S_t = v_{t-1}$.
+
+(iii) If the model is also invertible, then $S_t \ge \sigma^2$, $S_t \to \sigma^2$, and $\mathbb{E}(e_t - \varepsilon_t)^2 = S_t - \sigma^2 \to 0$, where $e_t$ denotes the random innovation $X_t - \hat X_t$.
+</TheoremBlock>
+
+<ProofBlock number={3} title="Proof of Thm 3 (Kalman innovations are Wold innovations)">
+
+**(i)** By Theorem 2(iii), $(X_1, \dots, X_t)$ is a mean-zero Gaussian vector. Topic 34's Theorem 12 gives $\mathbb{E}[X_t \mid X_{1:t-1}] = Hm^-_t$, and by Step 1 of Proof 1 (with $m_1 = 0$, so $c_t = 0$) this is a *linear* combination of $X_1, \dots, X_{t-1}$. The conditional expectation minimizes $\mathbb{E}(X_t - Y)^2$ over all square-integrable functions $Y$ of $X_{1:t-1}$, so in particular over the linear span $\mathrm{sp}\{X_1, \dots, X_{t-1}\}$, and we have just seen that it lies in that span. By the projection theorem, the minimizer over a closed subspace is unique ([formalCalculus: Hilbert spaces](https://formalcalculus.com/topics/hilbert-spaces)). Hence $Hm^-_t = \Pi_{t-1}X_t = \hat X_t$.
+
+**(ii)** Theorem 12 also says that $\mathrm{Var}(X_t \mid x_{1:t-1}) = S_t$ does not depend on $x_{1:t-1}$. Taking expectations of the conditional mean-squared error, $S_t = \mathbb{E}(X_t - Hm^-_t)^2 = \mathbb{E}(X_t - \hat X_t)^2 = v_{t-1}$.
+
+**(iii)** Invertibility gives $\varepsilon_t = \sum_{j\ge0}\pi_jX_{t-j}$ with $\pi_0 = 1$ and $\sum_j|\pi_j| < \infty$ (Topic 35 Thm 6). So
+
+$$
+X_t = \varepsilon_t - \sum_{j\ge1}\pi_jX_{t-j} .
+$$
+
+Causality makes $\varepsilon_t$ uncorrelated with every $X_s$, $s < t$. Write
+
+$$
+e_t = X_t - \hat X_t = \varepsilon_t + U_t, \qquad U_t = -\sum_{j\ge1}\pi_jX_{t-j} - \hat X_t .
+$$
+
+$U_t$ is a mean-square limit of linear combinations of past values, so $\mathbb{E}[\varepsilon_tU_t] = 0$, and Pythagoras gives
+
+$$
+v_{t-1} = \sigma^2 + \mathbb{E}\,U_t^2, \qquad e_t - \varepsilon_t = U_t .
+$$
+
+So $v_{t-1} \ge \sigma^2$ and $\mathbb{E}(e_t - \varepsilon_t)^2 = v_{t-1} - \sigma^2$. For the upper bound, the truncated predictor $Y_t = -\sum_{j=1}^{t-1}\pi_jX_{t-j}$ lies in $\mathrm{sp}\{X_1, \dots, X_{t-1}\}$, and $\hat X_t$ is the best element of that span, so
+
+$$
+v_{t-1} \le \mathbb{E}(X_t - Y_t)^2 = \mathbb{E}\Bigl(\varepsilon_t - \sum_{j\ge t}\pi_jX_{t-j}\Bigr)^2 .
+$$
+
+By Minkowski's inequality in $L^2$ and $\mathbb{E} X_s^2 = \gamma(0)$,
+
+$$
+\sqrt{v_{t-1}} \le \sigma + \sqrt{\gamma(0)}\sum_{j\ge t}|\pi_j| \;\longrightarrow\; \sigma ,
+$$
+
+since the tail of a convergent series tends to 0. Combined with $v_{t-1} \ge \sigma^2$, we get $v_{t-1} \to \sigma^2$. By (ii), $S_t \to \sigma^2$ and $\mathbb{E}(e_t - \varepsilon_t)^2 \to 0$. $\blacksquare$ — using Topic 34 Thm 12, Topic 8 §8.4 Thm 3 (Gaussian conditional means are linear), Topic 35 Def 5 and Thm 6, and the projection theorem.
+
+</ProofBlock>
+
+The clash of Remark 1 is now a theorem: the innovation $e_t$ predicts from the finite past, the Wold innovation $\varepsilon_t$ from the infinite past, and they agree in $L^2$ as $t \to \infty$. Topic 35's Remark 8 follows: the exact Gaussian ARMA likelihood is a product of innovation densities, computed in $O(n)$.
+
+<ExampleBlock number={7} title="ARMA(1,1): exact vs CSS vs Whittle">
+Topic 35's ARMA(1,1) fixture ($\phi = 0.7$, $\theta = 0.4$, $n = 1000$), demeaned, with every estimate evaluated under the exact likelihood:
+
+| Estimator | $\hat\phi$ | $\hat\theta$ | $\hat\sigma^2$ | exact $\ell$ at the estimate |
+|---|---|---|---|---|
+| Exact Gaussian MLE (Kalman, profile; 57 Nelder–Mead iterations) | 0.637421 | 0.404190 | 1.000176 | **−1419.605827** |
+| CSS (Topic 35) | 0.638968 | 0.402674 | 1.001488 | −1419.607146 |
+| Whittle (Topic 35) | 0.641025 | 0.389910 | 1.011371 | −1419.678996 |
+
+At $n = 1000$ all three are within one standard error of each other; Theorem 8's asymptotic equivalence shows as contour-level agreement in Figure 4 (left). At the true parameters, the ratios $S_t/\sigma^2$ for $t = 1, \dots, 6$ are 3.372549, 1.112558, 1.016187, 1.002549, 1.000407 and 1.000065, converging at the rate $\theta^2 = 0.16$ per step (Figure 4, right). See mode B of the explorer in §36.8.
+</ExampleBlock>
+
+<ExampleBlock number={8} title="Yule's sunspots, exactly">
+Exact Gaussian MLE, mean estimated, on Yule's sunspots ([Topic 35 §35.6](/topics/stationary-time-series-and-arma#section-35-6)); the exact Kalman log-likelihood agrees with SARIMAX to $10^{-9}$:
+
+| Model | $\hat\mu$ | $\hat\phi$ | $\hat\theta$ | $\hat\sigma^2$ | $\hat\ell$ |
+|---|---|---|---|---|---|
+| AR(2) | 49.659396 | (1.390656, −0.688571) | — | 274.760365 | −1307.318169 |
+| ARMA(2,1) | 49.749208 | (1.470738, −0.755121) | −0.153691 | 270.878333 | −1305.138596 |
+
+CSS gives AR(2) $\hat\phi = (1.391812, -0.690282)$ and ARMA(2,1) $(1.472013, -0.756875;\ -0.154109)$; Whittle gives $(1.393809, -0.688528)$ and $(1.469596, -0.751783;\ -0.144834)$.
+
+- **AR(2) innovation variances:** $S_1/\sigma^2 = 5.910522$ and $S_2/\sigma^2 = 1.901612$, then exactly 1 from $t = 3$ on. CSS throws away precisely these two start-up terms (Remark 10).
+- **AIC vs BIC:** with $n_\vartheta = p + q + 2$ parameters, AIC prefers ARMA(2,1) (2620.28 vs 2622.64) and BIC prefers AR(2) (2637.57 vs 2638.94).
+- **Reconciliation:** Topic 35's table printed AR(2) $\hat\ell = -1307.319$ from a slightly early-stopped optimizer; the exact optimum is $-1307.318169$.
+
+This is the exact estimator that Topic 35's Remark 14 deferred.
+</ExampleBlock>
+
+![Left: profile log-likelihood contours over the AR and MA coefficients, with the truth, the exact maximum, conditional least squares and Whittle all close together. Right: innovation variance ratio minus one on a log scale, decaying geometrically for the ARMA(1,1) and vanishing after two steps for the sunspot AR(2).](/images/topics/state-space-models-and-kalman-smoothing/36-arma-exact-likelihood.png)
+
+*Figure 4. The exact ARMA likelihood, computed by the Kalman filter. CSS and Whittle land near its peak, and the innovation variances converge to σ² exactly as Theorem 3 predicts.*
+
+<RemarkBlock number={8} title="State-space forms are not unique">
+For invertible $M$, $(MFM^{-1}, HM^{-1}, MQM^\top)$ gives the same observation process. Harvey's, the companion and Akaike's forms are similarity transforms of one another, so $F$, $H$, $Q$ are unidentifiable without a canonical form (Remark 20).
+</RemarkBlock>
+
+<RemarkBlock number={9} title="Profiling out the noise variance">
+Because $P_1$ and $Q$ scale with $\sigma^2$, run the filter at $\sigma^2 = 1$ to get $e_t$ and $s_t = S_t/\sigma^2$. Then $\hat\sigma^2 = n^{-1}\sum_t e_t^2/s_t$ and
+
+$$
+\ell_p(\phi, \theta) = -\tfrac{n}{2}\bigl(\log 2\pi + \log\hat\sigma^2 + 1\bigr) - \tfrac12\textstyle\sum_t\log s_t .
+$$
+
+This is the surface of Figure 4 and mode B, with one parameter fewer for Nelder–Mead.
+</RemarkBlock>
+
+<RemarkBlock number={10} title="What conditional least squares discards">
+CSS conditions on the first $p$ values and sets pre-sample shocks to zero. The exact likelihood keeps the start-up terms with $S_t > \sigma^2$: $O(1)$ in total, but they matter when $n$ is small or roots are near the unit circle. They vanish geometrically, so all three estimators share a limit ([Topic 35 Thm 8](/topics/stationary-time-series-and-arma#section-35-6)).
+</RemarkBlock>
+
+<RemarkBlock number={11} title="ARIMA and nonstationary models">
+A unit root makes $\rho(F) = 1$, and the Lyapunov equation has no solution. State-space methods handle ARIMA by differencing first or by a diffuse prior on the nonstationary states (Definition 5, §36.7, Remark 17).
+</RemarkBlock>
+
+<a id="section-36-5"></a>
+
+## 36.5 Missing data and forecasting
+
+In a state-space model a missing value is not a hole to patch but a step with nothing to update on.
+
+<DefinitionBlock number={3} title="Observation set; filtering with gaps">
+Write $\mathcal{O} \subseteq \{1, \dots, T\}$ for the set of times observed and $x_{\mathcal{O}}$ for the observed values. At a time $t \notin \mathcal{O}$ the filter skips the update, setting $m_t = m^-_t$ and $P_t = P^-_t$, and adds no likelihood term. In code, a missing value is `NaN`.
+</DefinitionBlock>
+
+<TheoremBlock number={4} title="Missing observations">
+Let $\mathcal{O} \subseteq \{1, \dots, T\}$ be the observed times, and run the filter of Definition 3: at $t \notin \mathcal{O}$, set $m_t = m^-_t$ and $P_t = P^-_t$ and add no likelihood term. Then for every $t$:
+
+(i) $Z_t \mid x_{\mathcal{O}\cap[1,t-1]} \sim \mathcal{N}(m^-_t, P^-_t)$ and $Z_t \mid x_{\mathcal{O}\cap[1,t]} \sim \mathcal{N}(m_t, P_t)$;
+
+(ii) $\log p(x_{\mathcal{O}}) = \sum_{t\in\mathcal{O}}\log\mathcal{N}(x_t; Hm^-_t, S_t)$, the log-density of the observed values alone;
+
+(iii) the backward recursion of Theorem 5, run on these filtered moments, returns $Z_t \mid x_{\mathcal{O}} \sim \mathcal{N}(m^s_t, P^s_t)$.
+</TheoremBlock>
+
+<ProofBlock number={4} title="Proof of Thm 4 (Missing observations)">
+
+Write $\mathcal{O}_t = \mathcal{O}\cap[1, t]$. We prove (i) by induction on $t$; the base case is $Z_1 \sim \mathcal{N}(m_1, P_1)$ with $\mathcal{O}_0 = \emptyset$.
+
+*Predict.* Suppose $Z_{t-1} \mid x_{\mathcal{O}_{t-1}} \sim \mathcal{N}(m_{t-1}, P_{t-1})$. The noise $W_t$ is independent of $Z_{t-1}$ and of every $X_s$ with $s \le t - 1$, since those are functions of $Z_1, W_{2:t-1}, V_{1:t-1}$. So the predict step of Proof 10 in Topic 34 applies verbatim with the conditioning set $x_{\mathcal{O}_{t-1}}$ in place of $x_{1:t-1}$, giving the first half of (i). That argument never used which past observations were in the conditioning set.
+
+*Update.* If $t \notin \mathcal{O}$, then $\mathcal{O}_t = \mathcal{O}_{t-1}$: no new information arrives, the conditional law is unchanged, and setting $m_t = m^-_t$, $P_t = P^-_t$ is exact. If $t \in \mathcal{O}$, then $V_t$ is independent of $(Z_t, X_{\mathcal{O}_{t-1}})$. So $(Z_t, X_t)$ given $x_{\mathcal{O}_{t-1}}$ is jointly Gaussian with the covariance blocks of Proof 10, and the conditional MVN formula ([Topic 8 §8.4 Thm 3](/topics/multivariate-distributions#section-8-4)) gives the usual update. That proves (i).
+
+*Likelihood.* Order the observed times $t_1 < t_2 < \dots$. The chain rule gives
+
+$$
+p(x_{\mathcal{O}}) = \prod_{t\in\mathcal{O}}p\bigl(x_t \mid x_{\mathcal{O}_{t-1}}\bigr),
+$$
+
+and by the predict step and $X_t = HZ_t + V_t$, each factor is $\mathcal{N}(x_t; Hm^-_t, S_t)$, which is (ii). A missing time contributes no factor because it is not a variable of $p(x_{\mathcal{O}})$.
+
+*Smoother.* Proof 5 uses three facts: the Markov property $Z_t \perp X_{t+1:T} \mid Z_{t+1}$, restricted here to whichever of $X_{t+1:T}$ are observed; the filtered law $Z_t \mid x_{\mathcal{O}_t}$ from (i); and the linear-Gaussian dynamics. Each holds with $\mathcal{O}$ in place of $\{1, \dots, T\}$, so (iii) follows by the same argument. $\blacksquare$ — using Topic 34 Proof 10 (predict and update), Topic 8 §8.4 Thm 3, the chain rule, and Theorem 5.
+
+</ProofBlock>
+
+<ExampleBlock number={9} title="Durbin–Koopman's gap experiment">
+Delete Nile observations 21–40 and 61–80, leaving 60 values (DUR2012). With $P_1 = 10^7$ and no burn-in, the Kalman log-likelihood of the 60 observed values is **−389.62213776**, and the 60-dimensional brute-force Normal marginal gives the same number to $1.0 \times 10^{-11}$. The diffuse gapped log-likelihood used for estimation is $-380.573887$. This is the "missing data for free" of Topic 35's Remark 28.
+</ExampleBlock>
+
+<ExampleBlock number={10} title="Forecasting the Nile">
+Append 20 missing years. The forecast mean stays flat at $m_T = 798.5277$, and the state variance grows linearly, $P_T + hq$, with $P_T = 4027.1365$. The observation forecast standard deviation (sd) $\sqrt{P_T + hq + r}$ rises from 143.5235 ($h = 1$) to 220.0145 ($h = 20$); the state sd at $h = 20$ is 182.4776. The NaN-padded filter and the closed form agree to $2.2 \times 10^{-11}$. Probabilistic forecasting with honest bands is a filter run past the data.
+</ExampleBlock>
+
+![The Nile series with its filtered band, then a flat 20-year amber forecast whose 50 and 95 percent bands widen, with dots at the closed-form band edges.](/images/topics/state-space-models-and-kalman-smoothing/36-missing-and-forecast.png)
+
+*Figure 5. A forecast is a run of missing observations: the update is skipped and the variance grows by q each year.*
+
+<RemarkBlock number={12} title="Partially observed vectors; irregular times">
+If only some coordinates of $x_t$ are missing, drop those rows of $H$ and rows and columns of $R$ at that time (Remark 5). Irregular sampling is a time-varying $F$ and $Q$ from a continuous-time model, as in Example 16.
+</RemarkBlock>
+
+<RemarkBlock number={13} title="When skipping is legitimate">
+Theorem 4 gives the likelihood of what was observed, which is the right one when missingness does not depend on the unobserved values (missing at random; JON1980). Sensor dropouts qualify; a reading censored *because* it was extreme does not.
+</RemarkBlock>
+
+<a id="section-36-6"></a>
+
+## 36.6 Smoothing: the Rauch–Tung–Striebel recursion (featured)
+
+Back to §36.1's question. The filter at 1913 used only 1871–1913, but the later readings carry information too. Smoothing runs a second, backward pass that folds the future in: the continuous-state counterpart of [§34.5's forward–backward](/topics/hidden-markov-models#section-34-5).
+
+<TheoremBlock number={5} title="Rauch–Tung–Striebel smoother (featured)">
+Run the filter on $x_{1:T}$, and assume $P^-_{t+1}$ is invertible (true whenever $Q \succ 0$; Remark 15 covers the singular case). Set $m^s_T = m_T$ and $P^s_T = P_T$, and for $t = T-1, \dots, 1$ define the smoother gain and the recursion
+
+$$
+G_t = P_tF^\top\bigl(P^-_{t+1}\bigr)^{-1},
+$$
+
+$$
+m^s_t = m_t + G_t\bigl(m^s_{t+1} - m^-_{t+1}\bigr), \qquad P^s_t = P_t + G_t\bigl(P^s_{t+1} - P^-_{t+1}\bigr)G_t^\top .
+$$
+
+Then $Z_t \mid x_{1:T} \sim \mathcal{N}(m^s_t, P^s_t)$ for every $t$, and the lag-one smoothed covariance is
+
+$$
+C_{t+1,t} := \mathrm{Cov}\bigl(Z_{t+1}, Z_t \mid x_{1:T}\bigr) = P^s_{t+1}G_t^\top .
+$$
+</TheoremBlock>
+
+<ProofBlock number={5} title="Proof of Thm 5 (Rauch–Tung–Striebel smoother)">
+
+Backward induction on $t$. The case $t = T$ is the filter (Topic 34 Thm 12). Assume $Z_{t+1} \mid x_{1:T} \sim \mathcal{N}(m^s_{t+1}, P^s_{t+1})$.
+
+**Step 1: the future enters only through $Z_{t+1}$.** By Topic 34 Thm 4 (whose proof holds verbatim for densities), the joint density factors as
+
+$$
+p(z_{1:T}, x_{1:T}) = p(z_1)\prod_{s=2}^{T}p(z_s \mid z_{s-1})\prod_{s=1}^{T}p(x_s \mid z_s).
+$$
+
+Group the factors that involve $z_{1:t}$ or $x_{1:t}$, the single factor $p(z_{t+1} \mid z_t)$, and the factors that involve only $z_{t+1:T}$ and $x_{t+1:T}$. Integrating out $z_{1:t-1}$ and conditioning on $z_{t+1}$ and $x_{1:T}$ leaves
+
+$$
+p(z_t \mid z_{t+1}, x_{1:T}) \propto p(z_t \mid x_{1:t})\,p(z_{t+1} \mid z_t),
+$$
+
+because the last group does not involve $z_t$ and cancels in the normalization. The right side does not involve $x_{t+1:T}$, so $p(z_t \mid z_{t+1}, x_{1:T}) = p(z_t \mid z_{t+1}, x_{1:t})$. Once we know $Z_{t+1}$, later observations tell us nothing more about $Z_t$.
+
+**Step 2: one backward conditioning.** Given $x_{1:t}$, $Z_t \sim \mathcal{N}(m_t, P_t)$ and $Z_{t+1} = FZ_t + W_{t+1}$ with $W_{t+1}$ independent. So the pair $(Z_t, Z_{t+1})$ is jointly Gaussian with means $(m_t, m^-_{t+1})$ and covariance blocks
+
+$$
+\mathrm{Cov}(Z_t) = P_t, \qquad \mathrm{Cov}(Z_t, Z_{t+1}) = P_tF^\top, \qquad \mathrm{Cov}(Z_{t+1}) = P^-_{t+1} .
+$$
+
+The conditional MVN formula ([Topic 8 §8.4 Thm 3](/topics/multivariate-distributions#section-8-4)), with block 1 = $Z_t$ and block 2 = $Z_{t+1}$, gives
+
+$$
+Z_t \mid z_{t+1}, x_{1:t} \sim \mathcal{N}\Bigl(m_t + G_t(z_{t+1} - m^-_{t+1}),\; P_t - G_tP^-_{t+1}G_t^\top\Bigr),
+$$
+
+where the Schur complement $P_t - P_tF^\top(P^-_{t+1})^{-1}FP_t$ was rewritten using $G_tP^-_{t+1}G_t^\top = P_tF^\top(P^-_{t+1})^{-1}P^-_{t+1}(P^-_{t+1})^{-1}FP_t$.
+
+**Step 3: average over the smoothed $Z_{t+1}$.** By Step 1, the law in Step 2 is also the law of $Z_t$ given $(Z_{t+1}, x_{1:T})$. Define
+
+$$
+U_t = Z_t - m_t - G_t\bigl(Z_{t+1} - m^-_{t+1}\bigr).
+$$
+
+Given $(Z_{t+1}, x_{1:T})$, $U_t \sim \mathcal{N}(0, P_t - G_tP^-_{t+1}G_t^\top)$, a law that does not depend on $Z_{t+1}$. So, given $x_{1:T}$, $U_t$ is independent of $Z_{t+1}$, and
+
+$$
+Z_t = m_t + G_t\bigl(Z_{t+1} - m^-_{t+1}\bigr) + U_t
+$$
+
+is an affine function of the Gaussian vector $Z_{t+1} \sim \mathcal{N}(m^s_{t+1}, P^s_{t+1})$ plus independent Gaussian noise. By [Topic 8 §8.3](/topics/multivariate-distributions) it is Gaussian, with mean $m_t + G_t(m^s_{t+1} - m^-_{t+1}) = m^s_t$ and covariance
+
+$$
+G_tP^s_{t+1}G_t^\top + P_t - G_tP^-_{t+1}G_t^\top = P_t + G_t\bigl(P^s_{t+1} - P^-_{t+1}\bigr)G_t^\top = P^s_t .
+$$
+
+The same representation gives $\mathrm{Cov}(Z_t, Z_{t+1} \mid x_{1:T}) = G_tP^s_{t+1}$, since $U_t$ contributes nothing. Transposing yields $C_{t+1,t} = P^s_{t+1}G_t^\top$. This completes the induction. $\blacksquare$ — using Topic 34 Thm 4 (factorization, for densities), Topic 8 §8.4 Thm 3 (conditional MVN and the Schur complement), Topic 8 §8.3 (affine maps of Normals), and Topic 34 Thm 12 (the filter, for the base case).
+
+</ProofBlock>
+
+The structure is §34.5's forward–backward line for line. The filter supplies $p(z_t \mid x_{1:t})$; the backward pass multiplies in what the future says through one transition. The correction $m^s_{t+1} - m^-_{t+1}$ is how far hindsight moved our belief about tomorrow, and $G_t$ carries it back to today. In the scalar local level, $G_t = P_t/(P_t + q)$, a weight between 0 and 1: small when the level was well pinned down at $t$, and large when $q$ is small, so the level barely moves.
+
+![Top left: full Nile data with an indigo filtered band and a narrower teal smoothed band. Bottom left: two deleted stretches shaded rose, where the filtered band fans out and snaps back while the smoothed band bulges smoothly. Right: filtered and smoothed posterior standard deviations over time, gapped and full.](/images/topics/state-space-models-and-kalman-smoothing/36-nile-filter-vs-smoother.png)
+
+*Figure 6. Filtering looks back; smoothing looks both ways. Across a gap the filtered band fans out and snaps shut, while the smoothed band bulges in the middle and pinches at the observations on either side.*
+
+Tap observations to delete them, or pick the gaps preset. Raise $q$ and both means chase the data; lower it and they flatten. The forecast slider is a gap at the end, and "MLE" refits $(q, r)$.
+
+<KalmanSmootherExplorer client:visible />
+
+<ExampleBlock number={11} title="Filtered vs smoothed on the Nile">
+With full data, the mid-sample filtered sd is 63.46 and the smoothed sd 48.20. The smoothed sd is 63.33 at $t = 1$ and equals the filtered 63.46 at $t = 100$ (no future to borrow). With Example 9's gaps:
+
+- the filtered sd ramps from 74.10 to **182.48** across the first gap;
+- the smoothed sd bulges to **98.40** mid-gap and pinches to 68.65 at the gap's first year and 60.08 at the last observed year before it.
+
+The 1897-to-1899 level change is $-87.36$ smoothed against $-107.76$ filtered: the smoother spreads the 1898 shift symmetrically instead of reacting late.
+</ExampleBlock>
+
+The smoother gives marginals. For whole paths, say as one block of a Gibbs sampler, the same ingredients give exact joint draws.
+
+<TheoremBlock number={6} title="Forward-filtering backward-sampling (stated; CAR1994, FRU1994)">
+Run the filter on $x_{1:T}$. Draw $Z_T \sim \mathcal{N}(m_T, P_T)$, then for $t = T - 1, \dots, 1$ draw
+
+$$
+Z_t \sim \mathcal{N}\bigl(m_t + G_t(Z_{t+1} - m^-_{t+1}),\ P_t - G_tP^-_{t+1}G_t^\top\bigr).
+$$
+
+Then $(Z_1, \dots, Z_T)$ is an exact draw from $p(z_{1:T} \mid x_{1:T})$, at cost $O(Tk^3)$.
+</TheoremBlock>
+
+Steps 1 and 2 of Proof 5 are its two ingredients; the extension of Step 1 to $Z_t \perp (Z_{t+2:T}, X_{t+1:T}) \mid Z_{t+1}$ is the same factorization argument.
+
+<ExampleBlock number={12} title="FFBS draws on the Nile">
+With 2,000 FFBS draws at the MLE, the largest deviation of the draw mean from $m^s_t$ is **0.053** smoothed sds, and the average ratio of draw sd to $\sqrt{P^s_t}$ is 1.0018. The explorer's "Sample paths" toggle shows five draws, each a plausible history of the river's level.
+</ExampleBlock>
+
+<RemarkBlock number={14} title="Smoothing is projection onto past and future">
+For Gaussian models the conditional mean is the $L^2$ projection ([Topic 8 §8.4 Thm 3](/topics/multivariate-distributions#section-8-4)). So $m_t$ projects $Z_t$ onto the span of $X_{1:t}$, and $m^s_t$ onto the span of the whole sample, extending Topic 35's projection picture ([§35.3](/topics/stationary-time-series-and-arma#section-35-3)) from the past to the past and future. A larger subspace can only reduce error, so $P^s_t \preceq P_t$, with equality at $t = T$ (<ExternalLink site="formalcalculus" topic="hilbert-spaces" href="https://formalcalculus.com/topics/hilbert-spaces" />).
+</RemarkBlock>
+
+<RemarkBlock number={15} title="Other smoothers">
+Besides fixed-lag, fixed-point and two-filter smoothers, the disturbance smoother, which estimates $W_t$ and $V_t$, is the efficient route to EM and outlier detection (DUR2012). If $P^-_{t+1}$ is singular, as in Harvey's form, use the Moore–Penrose inverse; Proof 5 still holds.
+</RemarkBlock>
+
+<RemarkBlock number={16} title="FFBS is a Gibbs block">
+Given the states, $(q, r)$ have conjugate inverse-gamma updates; given the variances, FFBS draws all states at once. Alternating is a blocked Gibbs sampler ([Topic 26 §26.3](/topics/bayesian-computation-and-mcmc#section-26-3)) for West and Harrison's dynamic linear models (WES1997; <ExternalLink site="formalml" topic="bayesian-inference" href="https://formalml.com/topics/bayesian-inference" />). Drawing the states jointly is what makes it mix.
+</RemarkBlock>
+
+<a id="section-36-7"></a>
+
+## 36.7 Structural time-series models
+
+Real series have trends that bend and cycles that repeat. State-space models write each feature as its own small component and add them: a modeling language in which we say what the series is made of, and the filter and smoother do the rest.
+
+<DefinitionBlock number={4} title="Structural components">
+- **Local level:** state $\mu_t$, with $\mu_t = \mu_{t-1} + W_t$ and $W_t \sim \mathcal{N}(0, q_\mu)$.
+- **Local linear trend:** state $(\mu_t, \nu_t)$ of level and slope, with $\mu_t = \mu_{t-1} + \nu_{t-1} + W_{1,t}$ and $\nu_t = \nu_{t-1} + W_{2,t}$, so
+
+$$
+F = \begin{pmatrix} 1 & 1 \\ 0 & 1 \end{pmatrix}, \qquad Q = \begin{pmatrix} q_\mu & 0 \\ 0 & q_\nu \end{pmatrix}.
+$$
+
+- **Dummy seasonal of period $s$:** the effect obeys $\delta_t = -\sum_{j=1}^{s-1}\delta_{t-j} + W_{3,t}$, so that $s$ consecutive effects sum to noise. The state is $(\delta_t, \dots, \delta_{t-s+2})$, of dimension $s - 1$. $F$ has first row $(-1, \dots, -1)$ and the identity on its subdiagonal, and $Q = \mathrm{diag}(q_\delta, 0, \dots, 0)$.
+- **Stacking:** block-diagonal $F$ and $Q$, horizontally concatenated $H$, and observation noise $r$: a sum of independent, interpretable components (HAR1989, DUR2012).
+</DefinitionBlock>
+
+<DefinitionBlock number={5} title="Approximate-diffuse initialization">
+Nonstationary components have no stationary start. We set $P_1 = \kappa I$ with $\kappa = 10^6$ and drop the first $b$ log-likelihood terms, where $b$ is the number of diffuse states (1 for the local level, 13 for Example 13's model). We call the result the **diffuse log-likelihood**. This is statsmodels' default (`loglikelihood_burn = k_states`). The dropped terms are dominated by $-\tfrac12\log\kappa$ and carry essentially no information about the parameters.
+</DefinitionBlock>
+
+<ExampleBlock number={13} title="Mauna Loa CO2: trend plus season">
+Monthly means of the weekly Scripps flask record, March 1958 – December 2001 ($n = 526$; KEE2004, as bundled in statsmodels). The 5 months with no weekly sample are `NaN`, so Theorem 4 handles real missing data.
+
+- **Model:** local linear trend plus a 12-month dummy seasonal, a **13-dimensional state**.
+- **Fit:** the maximum-likelihood variances (statsmodels' `UnobservedComponents`) are irregular $r = 0.0240221$, level $q_\mu = 0.0508443$, slope $q_\nu = 3.45 \times 10^{-6}$ and seasonal $q_\delta = 1.03365 \times 10^{-5}$, with diffuse log-likelihood $\hat\ell = -157.914578$, which our own filter reproduces to $10^{-6}$.
+- **Findings:** the smoothed growth rate climbs from **1.006 ppm/yr** in January 1960 to **1.545 ppm/yr** in December 2000. The seasonal swing is **6.07 ppm** from peak to trough. The smoother fills in the empty months.
+</ExampleBlock>
+
+![Four stacked panels from 1958 to 2001: carbon dioxide readings with the rising smoothed level, the slowly climbing slope, a regular seasonal cycle, and a small irregular part; empty months shaded rose.](/images/topics/state-space-models-and-kalman-smoothing/36-structural-co2.png)
+
+*Figure 7. A structural model as a sum of interpretable parts: a slowly accelerating trend and a stable 6 ppm seasonal cycle in the Mauna Loa CO2 record.*
+
+Toggle components and move their variances; watch the badge when a toggle changes $b$ (Remark 21).
+
+<StructuralDecomposer client:visible />
+
+<RemarkBlock number={17} title="Exact diffuse initialization">
+The honest limit is $\kappa \to \infty$, where the naive filter loses precision; de Jong's diffuse filter (DEJ1991) and Koopman's exact initial filter (KOO1997) carry the $\kappa$ and $\kappa^0$ parts separately. For the scalar local level with prior mean 0 and variance $P^-_1 = \kappa$, the first update gives
+
+$$
+K_1 = \frac{\kappa}{\kappa + r} \to 1, \qquad \text{filtered mean } \frac{\kappa}{\kappa + r}\,x_1 \to x_1, \qquad \text{filtered variance } \frac{\kappa r}{\kappa + r} \to r .
+$$
+
+So the exact diffuse filter is "start at $x_1$ with variance $r$, drop $t = 1$", which equals Definition 5 to $O(1/\kappa)$. In general the diffuse part takes $b$ steps to clear.
+</RemarkBlock>
+
+<RemarkBlock number={18} title="Reduced forms and interventions">
+The local linear trend's reduced form is an ARIMA(0,2,2), and a seasonal block corresponds to seasonal differencing. A known break such as 1898 enters as a level-shift dummy, the canonical intervention analysis (DUR2012).
+</RemarkBlock>
+
+<a id="section-36-8"></a>
+
+## 36.8 Learning the parameters: direct likelihood and EM
+
+**Direct maximization.** Theorem 1 makes $\ell(\vartheta)$ computable in $O(T)$, so any optimizer applies ([Topic 14 §14.7](/topics/maximum-likelihood#section-14-7)). Nelder–Mead on $(\log q, \log r)$, the same `nelderMead` Topic 35 ships, converges on the Nile in **60 iterations** to $(\hat q, \hat r) = (1463.5474, 15108.3145)$, with diffuse $\hat\ell = -632.537686$. That is slightly *higher* than statsmodels' default fit ($-632.537761$ at $q = 1478.81$, $r = 15078.01$), and Durbin and Koopman's published $(1469.1, 15099)$ give $-632.537695$: a flat ridge (Figure 8).
+
+**EM.** Treat the state path as missing data ([Topic 14's EM appendix](/topics/maximum-likelihood#appendix-em), [Topic 34 §34.7](/topics/hidden-markov-models#section-34-7)). For the linear-Gaussian model the M-step is closed-form.
+
+<TheoremBlock number={7} title="EM M-step for the linear-Gaussian state-space model (SHU1982)">
+Hold $F$, $H$, $m_1$, $P_1$ fixed, let $\vartheta = (Q, R)$, and let all smoothed moments be computed under the current $\vartheta$ by Theorem 5. Write
+
+$$
+\mathbf{M}_t = P^s_t + m^s_tm^{s\top}_t, \qquad \mathbf{M}_{t,t-1} = C_{t,t-1} + m^s_tm^{s\top}_{t-1}
+$$
+
+for $\mathbb{E}[Z_tZ_t^\top \mid x]$ and $\mathbb{E}[Z_tZ_{t-1}^\top \mid x]$. The EM objective $\mathcal{J}(\vartheta' \mid \vartheta) = \mathbb{E}_\vartheta\bigl[\log p_{\vartheta'}(Z_{1:T}, x_{1:T}) \mid x_{1:T}\bigr]$ is uniquely maximized over $Q', R' \succ 0$ by
+
+$$
+Q' = \frac{1}{T-1}\sum_{t=2}^{T}\Bigl(\mathbf{M}_t - F\mathbf{M}_{t,t-1}^\top - \mathbf{M}_{t,t-1}F^\top + F\mathbf{M}_{t-1}F^\top\Bigr),
+$$
+
+$$
+R' = \frac1T\sum_{t=1}^{T}\Bigl((x_t - Hm^s_t)(x_t - Hm^s_t)^\top + HP^s_tH^\top\Bigr),
+$$
+
+provided both right sides are positive definite. Combined with EM's ascent property ([Topic 34 §34.7 Thm 9](/topics/hidden-markov-models#section-34-7)), each iteration $\vartheta \mapsto \vartheta'$ does not decrease $\ell$.
+</TheoremBlock>
+
+<ProofBlock number={6} title="Proof of Thm 7 (EM M-step)">
+
+**Step 1: the complete-data log-likelihood.** By the factorization in Step 1 of Proof 5,
+
+$$
+\log p_{\vartheta'}(z, x) = \log p(z_1) - \frac{T-1}{2}\log\det Q' - \frac12\sum_{t=2}^{T}(z_t - Fz_{t-1})^\top Q'^{-1}(z_t - Fz_{t-1}) - \frac T2\log\det R' - \frac12\sum_{t=1}^{T}(x_t - Hz_t)^\top R'^{-1}(x_t - Hz_t),
+$$
+
+up to constants that do not involve $\vartheta'$. The first term does not involve $\vartheta'$ either.
+
+**Step 2: conditional expectations.** For a vector $u$ and a matrix $A$, $u^\top Au = \mathrm{tr}(Auu^\top)$, and trace commutes with expectation. Expanding the outer product of $Z_t - FZ_{t-1}$ and inserting $\mathbb{E}[Z_tZ_t^\top \mid x] = \mathbf{M}_t$ and $\mathbb{E}[Z_tZ_{t-1}^\top \mid x] = \mathbf{M}_{t,t-1}$ (Theorem 5) gives
+
+$$
+\mathbb{E}\bigl[(Z_t - FZ_{t-1})(Z_t - FZ_{t-1})^\top \mid x\bigr] = \mathbf{M}_t - F\mathbf{M}_{t,t-1}^\top - \mathbf{M}_{t,t-1}F^\top + F\mathbf{M}_{t-1}F^\top =: A_t .
+$$
+
+Similarly, writing $x_t - HZ_t = (x_t - Hm^s_t) - H(Z_t - m^s_t)$, the cross term has conditional mean zero, so
+
+$$
+\mathbb{E}\bigl[(x_t - HZ_t)(x_t - HZ_t)^\top \mid x\bigr] = (x_t - Hm^s_t)(x_t - Hm^s_t)^\top + HP^s_tH^\top =: B_t .
+$$
+
+With $\bar A = \frac{1}{T-1}\sum_{t\ge2}A_t$ and $\bar B = \frac1T\sum_tB_t$,
+
+$$
+\mathcal{J}(\vartheta' \mid \vartheta) = \text{const} - \frac{T-1}{2}\Bigl[\log\det Q' + \mathrm{tr}\bigl(Q'^{-1}\bar A\bigr)\Bigr] - \frac T2\Bigl[\log\det R' + \mathrm{tr}\bigl(R'^{-1}\bar B\bigr)\Bigr].
+$$
+
+The two brackets involve $Q'$ and $R'$ separately, so we can minimize each one on its own.
+
+**Step 3: a matrix inequality.** For a fixed $S \succ 0$, let $g(\Sigma) = \log\det\Sigma + \mathrm{tr}(\Sigma^{-1}S)$ over $\Sigma \succ 0$. Let $\lambda_1, \dots, \lambda_m > 0$ be the eigenvalues of $\Sigma^{-1}S$; they equal those of the symmetric positive-definite matrix $S^{1/2}\Sigma^{-1}S^{1/2}$. Then
+
+$$
+g(\Sigma) - g(S) = \mathrm{tr}(\Sigma^{-1}S) - \log\det(\Sigma^{-1}S) - m = \sum_{i=1}^{m}\bigl(\lambda_i - \log\lambda_i - 1\bigr).
+$$
+
+Each term is nonnegative, since $u - \log u - 1 \ge 0$ for $u > 0$ with equality only at $u = 1$. So $g(\Sigma) \ge g(S)$, with equality exactly when every $\lambda_i = 1$, that is, $\Sigma^{-1}S = I$ and $\Sigma = S$.
+
+**Step 4: conclude.** Applying Step 3 with $S = \bar A$ and $S = \bar B$ gives the unique maximizers $Q' = \bar A$ and $R' = \bar B$, the displayed formulas. $\blacksquare$ — using Theorem 5 (smoothed means, covariances and lag-one covariances), the factorization of Topic 34 Thm 4, and Topic 34 §34.7 Thm 9 for ascent.
+
+</ProofBlock>
+
+For the local level ($F = H = 1$) the M-step reads
+
+$$
+q' = \frac{1}{T-1}\sum_{t=2}^{T}\Bigl[(m^s_t - m^s_{t-1})^2 + P^s_t + P^s_{t-1} - 2C_{t,t-1}\Bigr], \qquad r' = \frac1T\sum_{t=1}^{T}\Bigl[(x_t - m^s_t)^2 + P^s_t\Bigr].
+$$
+
+The squared residuals are the naive plug-in estimates; the $P^s$ and $C$ terms correct for the states being unobserved, Baum–Welch's expected counts in continuous form. With missing data, $R'$ averages over $t \in \mathcal{O}$ only (divide by $|\mathcal{O}|$).
+
+<ExampleBlock number={14} title="EM on the Nile">
+Start at $(q, r) = (10000, 5000)$, where $\ell = -640.1247$. The first M-step moves to $(10501.6097, 6033.8233)$.
+
+- After **172 iterations** the relative-tolerance rule ($10^{-8}$) stops EM at $q = 1482.5693$, $r = 15079.4881$, $\ell = -632.537795$, still $1.09 \times 10^{-4}$ below the direct MLE.
+- EM is within 0.01 of the maximum after 88 iterations, and every step increases $\ell$; the smallest increase is $6.0 \times 10^{-6}$.
+
+In Figure 8 the EM path climbs the contours and then crawls along the ridge: EM's linear convergence, against Nelder–Mead's 60 iterations. All log-likelihoods here are diffuse.
+</ExampleBlock>
+
+![Left: Nile log-likelihood contours over log q and log r, with an amber EM path that climbs quickly and then creeps along a long ridge toward the indigo direct maximum. Right: the EM log-likelihood gap on a log scale against iteration.](/images/topics/state-space-models-and-kalman-smoothing/36-likelihood-surface-em.png)
+
+*Figure 8. Two ways up the same hill. Direct maximization reaches the top in 60 iterations; EM climbs every step but crawls along the ridge.*
+
+<TheoremBlock number={8} title="Asymptotic normality of the SSM maximum-likelihood estimator (stated; HAN1988 Ch. 4; HAR1989 Ch. 3)">
+Let $\vartheta \in \Theta \subset \mathbb{R}^{n_\vartheta}$ parameterize a stationary SSM, with $\rho(F_\vartheta) < 1$ and the observation law depending smoothly on $\vartheta$. Assume the model is identifiable, the truth $\vartheta_0$ is interior, and the per-observation information
+
+$$
+\mathcal{I}(\vartheta_0)_{ij} = \lim_{T\to\infty}\frac1T\sum_{t=1}^{T}\Bigl[\tfrac12\mathrm{tr}\bigl(S_t^{-1}\partial_iS_tS_t^{-1}\partial_jS_t\bigr) + \mathbb{E}\bigl(\partial_ie_t^\top S_t^{-1}\partial_je_t\bigr)\Bigr]
+$$
+
+is nonsingular. Then the MLE is consistent and $\sqrt T(\hat\vartheta - \vartheta_0) \Rightarrow \mathcal{N}\bigl(0, \mathcal{I}(\vartheta_0)^{-1}\bigr)$.
+</TheoremBlock>
+
+This is [Topic 14 §14.5](/topics/maximum-likelihood#section-14-5)'s theorem for dependent data, with the score built from innovations; Topic 35's Theorem 8 is the ARMA case. Variances on the boundary ($q = 0$: a level that never moves) have nonstandard limits.
+
+<RemarkBlock number={19} title="Type-II maximum likelihood">
+The variances $(q, r)$ are hyperparameters of a Gaussian prior on the state path, and $\ell(q, r) = \log\int p(x \mid z)\,p(z \mid q)\,dz$ is a marginal likelihood. Maximizing it is [Topic 28 §28.7](/topics/hierarchical-bayes-and-partial-pooling#section-28-7)'s Type-II MLE and [Topic 33](/topics/empirical-bayes)'s empirical Bayes: the data choose the smoothing strength $q/r$, as evidence maximization chooses GP kernel hyperparameters.
+</RemarkBlock>
+
+<RemarkBlock number={20} title="EM in practice">
+- EM's rate is set by the fraction of missing information (here, of the state path), which is why Example 14 crawls. Practitioners run EM to get close, then switch to quasi-Newton.
+- With $F$ and $H$ free, the M-step is two regressions on smoothed moments: $F' = (\sum_t \mathbf{M}_{t,t-1})(\sum_t \mathbf{M}_{t-1})^{-1}$ and $H' = (\sum_t x_t m^{s\top}_t)(\sum_t \mathbf{M}_t)^{-1}$. Remark 8's similarity transforms make that model unidentifiable without constraints.
+- Subspace methods such as N4SID estimate $(F, H)$ without likelihood iterations; HAN1988 gives the theory.
+</RemarkBlock>
+
+<RemarkBlock number={21} title="Choosing among structural models">
+Use AIC or BIC ([Topic 24 §24.3](/topics/model-selection-and-information-criteria#section-24-3), [§24.4](/topics/model-selection-and-information-criteria#section-24-4)) with $n_\vartheta$ free variances. Diffuse log-likelihoods with *different* numbers of diffuse states drop different numbers of terms, so compare them only via the exact diffuse likelihood (Remark 17) or on a common burn-in; comparing them directly is a common silent error.
+</RemarkBlock>
+
+Mode A is Figure 8's surface: tap to start EM anywhere and watch every increase stay positive. Mode B is §36.4's exact ARMA(1,1) surface with the exact, CSS and Whittle optima; at $n = 100$ they spread apart.
+
+<StateSpaceLikelihoodSurface client:visible />
+
+<a id="section-36-9"></a>
+
+## 36.9 The steady state: Riccati, observability, and the constant gain
+
+In [Topic 34's Example 15](/topics/hidden-markov-models#section-34-9) the local-level gain settled to $K_\infty = 0.270156$ from step 22 on. Since $P^-_t$ and $K_t$ never depend on the data, why and how fast it settles is a property of a deterministic map, the Riccati recursion.
+
+<TheoremBlock number={9} title="Convergence of the scalar Riccati recursion">
+Let $q > 0$ and $r > 0$, and define $f(P) = \dfrac{Pr}{P + r} + q$ on $[0, \infty)$. The local level's predicted variances obey $P^-_{t+1} = f(P^-_t)$ (Topic 34 Ex 15). Then for any $P^-_1 \ge 0$:
+
+(i) $f$ has exactly one fixed point in $[0, \infty)$, namely $P^-_\infty = \bigl(q + \sqrt{q^2 + 4qr}\bigr)/2$.
+
+(ii) With $K_\infty = P^-_\infty/(P^-_\infty + r)$,
+
+$$
+\bigl|P^-_{t+1} - P^-_\infty\bigr| \le (1 - K_\infty)\,\bigl|P^-_t - P^-_\infty\bigr|,
+$$
+
+so $P^-_t \to P^-_\infty$ geometrically.
+
+(iii) $\bigl|P^-_{t+1} - P^-_\infty\bigr|/\bigl|P^-_t - P^-_\infty\bigr| \to (1 - K_\infty)^2$ whenever $P^-_t \ne P^-_\infty$, and the gains satisfy $|K_t - K_\infty| \le |P^-_t - P^-_\infty|/r$, so they converge at the same rate.
+</TheoremBlock>
+
+<ProofBlock number={7} title="Proof of Thm 9 (Convergence of the scalar Riccati recursion)">
+
+**(i)** For $P \ge 0$, $P = f(P)$ means $P(P + r) = Pr + q(P + r)$, that is,
+
+$$
+P^2 - qP - qr = 0 .
+$$
+
+The two roots multiply to $-qr < 0$, so exactly one is positive: $P^-_\infty = \bigl(q + \sqrt{q^2 + 4qr}\bigr)/2$.
+
+**(ii)** For $P, P' \ge 0$,
+
+$$
+\frac{Pr}{P + r} - \frac{P'r}{P' + r} = \frac{r\bigl[P(P' + r) - P'(P + r)\bigr]}{(P + r)(P' + r)} = \frac{r^2(P - P')}{(P + r)(P' + r)} .
+$$
+
+Take $P = P^-_t$ and $P' = P^-_\infty$, and use $f(P^-_\infty) = P^-_\infty$ (the $q$'s cancel):
+
+$$
+P^-_{t+1} - P^-_\infty = \frac{r}{P^-_t + r}\cdot\frac{r}{P^-_\infty + r}\,\bigl(P^-_t - P^-_\infty\bigr).
+$$
+
+Since $P^-_t \ge 0$, the first factor is at most 1, and the second equals $1 - K_\infty$. This gives the inequality. Iterating, $|P^-_t - P^-_\infty| \le (1 - K_\infty)^{t-1}|P^-_1 - P^-_\infty| \to 0$, because $0 < 1 - K_\infty < 1$.
+
+**(iii)** By (ii), $P^-_t \to P^-_\infty$, so the ratio $\dfrac{r}{P^-_t + r}\cdot\dfrac{r}{P^-_\infty + r} \to \Bigl(\dfrac{r}{P^-_\infty + r}\Bigr)^2 = (1 - K_\infty)^2$. For the gains, with $K_t = P^-_t/(P^-_t + r)$,
+
+$$
+K_t - K_\infty = \frac{P^-_t(P^-_\infty + r) - P^-_\infty(P^-_t + r)}{(P^-_t + r)(P^-_\infty + r)} = \frac{r\bigl(P^-_t - P^-_\infty\bigr)}{(P^-_t + r)(P^-_\infty + r)} ,
+$$
+
+whose absolute value is at most $|P^-_t - P^-_\infty|/r$, because $(P^-_t + r)(P^-_\infty + r) \ge r^2$. $\blacksquare$ — using Topic 34 Ex 15 (the Riccati recursion and its fixed-point equation) and elementary algebra.
+
+</ProofBlock>
+
+For $q = 0.1$ and $r = 1$ the asymptotic rate is $(1 - 0.270156)^2 = 0.532672$ per step, so $|K_t - K_\infty|$ loses a factor of 10 roughly every 3.6 steps. That is why Topic 34 saw the gain settle within $10^{-6}$ by step 22. The uniform rate $(1 - K_\infty)$ in (ii) holds from the first step, whatever the prior variance.
+
+<ExampleBlock number={15} title="The rate, measured">
+For $q = 0.1$ and $r = 1$: $P^-_\infty = 0.370156212$ and $K_\infty = 0.270156212$: Topic 34's values, now to nine digits.
+
+- **Rate:** Theorem 9(iii) predicts the asymptotic contraction $(1 - K_\infty)^2 = 0.532672$; the measured log-linear rate of $|K_t - K_\infty|$ is 0.532363.
+- **Nile at the MLE:** $K_\infty = 0.266551$, rate 0.537947 (Example 2's $\theta = K_\infty - 1$).
+- **Matrix case:** for Example 3's tracking model the gain converges to $K_\infty = (0.731705, 0.448577)^\top$, with
+
+$$
+P^-_\infty = \begin{pmatrix} 1.090894 & 0.668781 \\ 0.668781 & 0.639350 \end{pmatrix}.
+$$
+
+That solves the discrete algebraic Riccati equation (agreement $4.3 \times 10^{-13}$ after 22 iterations), reached from $P_1 = 100I$ and $P_1 = 0$ alike.
+</ExampleBlock>
+
+![Left: the scalar Riccati map with cobweb paths from 1.15 and 0 converging to the fixed point near 0.37. Right: the gain error on a log scale, falling along straight lines at the predicted rate for the local level and the tracking model.](/images/topics/state-space-models-and-kalman-smoothing/36-riccati-convergence.png)
+
+*Figure 9. Why the gain settles. The Riccati map contracts toward its fixed point, and every starting covariance is forgotten at a geometric rate.*
+
+In more dimensions the question is whether, not just how fast: a state direction the data never see has nothing to pin it down.
+
+<DefinitionBlock number={6} title="Observability, controllability, detectability, stabilizability">
+- $(F, H)$ is **observable** if the $kd \times k$ matrix stacking $H, HF, \dots, HF^{k-1}$ has rank $k$: every direction of the state eventually shows up in the data.
+- $(F, B)$ is **controllable**, where $Q = BB^\top$, if the matrix placing $B, FB, \dots, F^{k-1}B$ side by side has rank $k$: noise eventually reaches every direction.
+- **Detectable** and **stabilizable** weaken these to "every unstable mode" (eigenvalues $|\lambda| \ge 1$).
+
+Constant velocity with position observed is observable: the rank-2 matrix stacks $(1, 0)$ and $(1, 1)$. With velocity observed, $H = HF = (0, 1)$, and the unstable position mode is not detectable.
+</DefinitionBlock>
+
+<TheoremBlock number={10} title="Convergence of the matrix Riccati recursion (stated; AND1979 Ch. 4)">
+Let $Q = BB^\top$ and $R \succ 0$, and suppose $(F, H)$ is detectable and $(F, B)$ stabilizable (Definition 6). Then the discrete algebraic Riccati equation
+
+$$
+P = F\bigl(P - PH^\top(HPH^\top + R)^{-1}HP\bigr)F^\top + Q
+$$
+
+has a unique positive-semidefinite solution $P^-_\infty$. For every $P_1 \succeq 0$ the predicted covariances $P^-_t$ converge to it, and the steady-state closed-loop matrix $F(I - K_\infty H)$ has spectral radius less than 1.
+</TheoremBlock>
+
+Theorem 9 is the $k = d = 1$ case with an explicit rate, and $(1 - K_\infty)$ is its closed-loop factor. In §36.2's stepper, "Run to steady state" converges in about 20 steps with position observed and never with velocity alone, where detectability fails.
+
+<RemarkBlock number={22} title="The steady-state filter is a fixed linear filter">
+Once $K_t \approx K_\infty$, the filter is the time-invariant recursion $m_t = Fm_{t-1} + K_\infty(x_t - HFm_{t-1})$: the Wiener filter, exponential smoothing for the local level (Topic 34 Ex 15), and the invertible AR($\infty$) predictor of Theorem 3(iii) for an ARMA. Production systems often precompute $K_\infty$; the price is a slightly wrong start-up transient, exactly Remark 10's CSS-versus-exact difference.
+</RemarkBlock>
+
+<RemarkBlock number={23} title="Continuous time: Kalman–Bucy">
+For $dZ = AZ\,dt + L\,dB_t$ observed continuously through $H$ with white noise, the Riccati recursion becomes the Riccati ODE
+
+$$
+\dot P = AP + PA^\top + LL^\top - PH^\top R^{-1}HP
+$$
+
+(KAL1961; <ExternalLink site="formalcalculus" topic="first-order-odes" href="https://formalcalculus.com/topics/first-order-odes" />). Its steady state solves the continuous algebraic Riccati equation, $\dot P = 0$.
+</RemarkBlock>
+
+<a id="section-36-10"></a>
+
+## 36.10 Connections, and the Track 9 synthesis
+
+Exact GP regression on $n$ points costs $O(n^3)$. On a line, for the Matérn family, the state-space view removes that cost.
+
+<ExampleBlock number={16} title="A Matérn-3/2 GP is a two-state SSM">
+The kernel $c(\tau) = s^2(1 + \lambda|\tau|)e^{-\lambda|\tau|}$, with $\lambda = \sqrt3$ divided by the length scale, is the covariance of the stationary solution of $df = Af\,dt + L\,dB_t$ for the state $(f, f')$, where
+
+$$
+A = \begin{pmatrix} 0 & 1 \\ -\lambda^2 & -2\lambda \end{pmatrix}, \qquad L = \begin{pmatrix} 0 \\ 2s\lambda^{3/2} \end{pmatrix},
+$$
+
+and $B_t$ is a Brownian motion (HAR2010).
+
+- **Exact discretization:** between inputs a gap $\Delta$ apart,
+
+$$
+F(\Delta) = e^{A\Delta} = e^{-\lambda\Delta}\begin{pmatrix} 1 + \lambda\Delta & \Delta \\ -\lambda^2\Delta & 1 - \lambda\Delta \end{pmatrix}, \qquad Q(\Delta) = P_\infty - F(\Delta)P_\infty F(\Delta)^\top,
+$$
+
+with $P_\infty = \mathrm{diag}(s^2, \lambda^2s^2)$; irregular inputs give a different $F$ and $Q$ at each step (Remark 5), and $H = (1, 0)$.
+- **Setup:** 60 irregular inputs on $[0, 10]$, $s^2 = 1$, length scale 1.5 (so $\lambda = 1.154701$), and noise variance $r = 0.09$. The RTS smoother's posterior mean equals the $O(n^3)$ Cholesky GP posterior mean to $4.8 \times 10^{-15}$, and its variance to $4.4 \times 10^{-16}$.
+- **Cost:** fitted log-log slopes of runtime against $n$ are 2.6 (dense) and 1.0 (Kalman); absolute timings are machine-dependent, and the gap widens with $n$.
+
+Exact one-dimensional GP regression is an $O(n)$ smoothing problem, and every half-integer Matérn-$\nu$ kernel works the same way with $\nu + 1/2$ states (<ExternalLink site="formalml" topic="gaussian-processes" href="https://formalml.com/topics/gaussian-processes" />).
+</ExampleBlock>
+
+![Left: 60 noisy points with the dense Gaussian-process posterior band in indigo and teal Kalman smoother means lying on it. Right: log-log runtime against the number of points, with the dense method climbing more steeply.](/images/topics/state-space-models-and-kalman-smoothing/36-matern-gp-ssm.png)
+
+*Figure 10. A Matérn Gaussian process is a two-state linear model, so the Kalman smoother returns the exact GP posterior in linear time.*
+
+<RemarkBlock number={24} title="S4, Mamba, and what the probabilistic view adds">
+This extends [Topic 34's Remark 25](/topics/hidden-markov-models#section-34-10). S4 (GU2022) discretizes a continuous linear system $\dot h = Ah + Bu$ exactly as Example 16 does, $F(\Delta) = e^{A\Delta}$, and runs the state equation as a learned, noise-free layer. Mamba (GU2023) makes $\Delta$, $B$ and the output map input-dependent. What they omit is everything this topic adds: a noise model, a likelihood, uncertainty bands, smoothing, and principled handling of missing tokens.
+</RemarkBlock>
+
+<RemarkBlock number={25} title="Leaving linear or Gaussian">
+This extends [Topic 34's Remark 22](/topics/hidden-markov-models#section-34-9). With nonlinear $F(\cdot)$ or $H(\cdot)$, the extended and unscented filters linearize; the smoother then needs the same linearization backward (the extended RTS smoother), and EM needs Monte Carlo or variational E-steps (<ExternalLink site="formalml" topic="variational-inference" href="https://formalml.com/topics/variational-inference" />). Particle filters (GOR1993) and particle smoothers replace every Gaussian closed form with weighted samples, and FFBS (Theorem 6) is the exact linear-Gaussian case of backward-simulation smoothing (<ExternalLink site="formalml" topic="sequential-monte-carlo" href="https://formalml.com/topics/sequential-monte-carlo" />).
+</RemarkBlock>
+
+<RemarkBlock number={26} title="Track 9 closer">
+Three topics, one object. Topic 34 built a hidden chain and got filtering, smoothing and EM on a trellis. Topic 35 built a stationary series from its autocovariance and got Wold's innovations and the spectrum. This topic proved they meet: an ARMA is a linear-Gaussian SSM, its innovations are Kalman's, and the exact likelihood, smoother and EM are the continuous-state versions of Topic 34's recursions. The road forward runs to formalML (<ExternalLink site="formalml" topic="gaussian-processes" href="https://formalml.com/topics/gaussian-processes" />, <ExternalLink site="formalml" topic="sequential-monte-carlo" href="https://formalml.com/topics/sequential-monte-carlo" />, <ExternalLink site="formalml" topic="bayesian-inference" href="https://formalml.com/topics/bayesian-inference" />). This closes Track 9, not the site: Track 8's Parametric vs Nonparametric Models is still to come.
+</RemarkBlock>
+
+---
+
+### References
+
+1. Durbin, James, and Siem Jan Koopman. (2012). [*Time Series Analysis by State Space Methods*](https://doi.org/10.1093/acprof:oso/9780199641178.001.0001) (2nd ed.). Oxford University Press.
+2. Harvey, Andrew C. (1989). [*Forecasting, Structural Time Series Models and the Kalman Filter*](https://doi.org/10.1017/CBO9781107049994). Cambridge University Press.
+3. Särkkä, Simo. (2013). [*Bayesian Filtering and Smoothing*](https://doi.org/10.1017/CBO9781139344203). Cambridge University Press.
+4. Brockwell, Peter J., and Richard A. Davis. (1991). [*Time Series: Theory and Methods*](https://doi.org/10.1007/978-1-4419-0320-4) (2nd ed.). Springer.
+5. Shumway, Robert H., and David S. Stoffer. (2017). [*Time Series Analysis and Its Applications: With R Examples*](https://doi.org/10.1007/978-3-319-52452-8) (4th ed.). Springer.
+6. Kalman, Rudolph E. (1960). [*A New Approach to Linear Filtering and Prediction Problems*](https://doi.org/10.1115/1.3662552). *Journal of Basic Engineering*, 82(1), 35–45.
+7. Rauch, Herbert E., F. Tung, and Charlotte T. Striebel. (1965). [*Maximum Likelihood Estimates of Linear Dynamic Systems*](https://doi.org/10.2514/3.3166). *AIAA Journal*, 3(8), 1445–1450.
+8. Shumway, Robert H., and David S. Stoffer. (1982). [*An Approach to Time Series Smoothing and Forecasting Using the EM Algorithm*](https://doi.org/10.1111/j.1467-9892.1982.tb00349.x). *Journal of Time Series Analysis*, 3(4), 253–264.
+9. Dempster, A. P., N. M. Laird, and D. B. Rubin. (1977). [*Maximum Likelihood from Incomplete Data via the EM Algorithm*](https://doi.org/10.1111/j.2517-6161.1977.tb01600.x). *Journal of the Royal Statistical Society, Series B*, 39(1), 1–22.
+10. Jones, Richard H. (1980). [*Maximum Likelihood Fitting of ARMA Models to Time Series with Missing Observations*](https://doi.org/10.1080/00401706.1980.10486171). *Technometrics*, 22(3), 389–395.
+11. Carter, C. K., and R. Kohn. (1994). [*On Gibbs Sampling for State Space Models*](https://doi.org/10.1093/biomet/81.3.541). *Biometrika*, 81(3), 541–553.
+12. Frühwirth-Schnatter, Sylvia. (1994). [*Data Augmentation and Dynamic Linear Models*](https://doi.org/10.1111/j.1467-9892.1994.tb00184.x). *Journal of Time Series Analysis*, 15(2), 183–202.
+13. de Jong, Piet. (1991). [*The Diffuse Kalman Filter*](https://doi.org/10.1214/aos/1176348139). *Annals of Statistics*, 19(2), 1073–1083.
+14. Koopman, Siem Jan. (1997). [*Exact Initial Kalman Filtering and Smoothing for Nonstationary Time Series Models*](https://doi.org/10.1080/01621459.1997.10473685). *Journal of the American Statistical Association*, 92(440), 1630–1638.
+15. Anderson, Brian D. O., and John B. Moore. (1979). [*Optimal Filtering*](https://archive.org/details/optimalfiltering0000ande). Prentice-Hall.
+16. Hannan, E. J., and Manfred Deistler. (1988). [*The Statistical Theory of Linear Systems*](https://doi.org/10.1137/1.9781611972191). Wiley.
+17. Bucy, Richard S., and Peter D. Joseph. (1968). [*Filtering for Stochastic Processes with Applications to Guidance*](https://openlibrary.org/books/OL5616331M). Interscience.
+18. Kalman, Rudolph E., and Richard S. Bucy. (1961). [*New Results in Linear Filtering and Prediction Theory*](https://doi.org/10.1115/1.3658902). *Journal of Basic Engineering*, 83(1), 95–108.
+19. Hartikainen, Jouni, and Simo Särkkä. (2010). [*Kalman Filtering and Smoothing Solutions to Temporal Gaussian Process Regression Models*](https://doi.org/10.1109/MLSP.2010.5589113). *2010 IEEE International Workshop on Machine Learning for Signal Processing*, 379–384.
+20. West, Mike, and Jeff Harrison. (1997). [*Bayesian Forecasting and Dynamic Models*](https://doi.org/10.1007/b98971) (2nd ed.). Springer.
+21. Gordon, N. J., D. J. Salmond, and A. F. M. Smith. (1993). [*Novel Approach to Nonlinear/Non-Gaussian Bayesian State Estimation*](https://doi.org/10.1049/ip-f-2.1993.0015). *IEE Proceedings F*, 140(2), 107–113.
+22. Gu, Albert, Karan Goel, and Christopher Ré. (2022). [*Efficiently Modeling Long Sequences with Structured State Spaces*](https://arxiv.org/abs/2111.00396). *International Conference on Learning Representations* (ICLR 2022).
+23. Gu, Albert, and Tri Dao. (2023). [*Mamba: Linear-Time Sequence Modeling with Selective State Spaces*](https://arxiv.org/abs/2312.00752). arXiv preprint arXiv:2312.00752.
+24. Cobb, George W. (1978). [*The Problem of the Nile: Conditional Solution to a Changepoint Problem*](https://doi.org/10.1093/biomet/65.2.243). *Biometrika*, 65(2), 243–251.
+25. Keeling, Charles D., and Timothy P. Whorf. (2004). [*Atmospheric CO2 Concentrations Derived from Flask Air Samples at Sites in the SIO Network*](https://web.archive.org/web/20150323200447/http://cdiac.ornl.gov/trends/co2/sio-keel-flask/sio-keel-flaskmlo_c.html) [Data set]. In *Trends: A Compendium of Data on Global Change*. Carbon Dioxide Information Analysis Center, Oak Ridge National Laboratory.

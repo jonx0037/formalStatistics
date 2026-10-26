@@ -404,6 +404,13 @@ export type EmpiricalProcessColorKey = keyof typeof empiricalProcessColors;
  *   garch             violet-600 — GARCH volatility
  *   warn              rose-600   — non-causal region, failure badges
  *
+ * Topic 36 extends it again (state-space filtering and smoothing); gaps reuse
+ * `warn` at alpha 0.08, filtered/smoothed reuse their keys, observations `raw`:
+ *
+ *   predicted         violet-600 — predicted (prior) moments m⁻_t, P⁻_t; dashed
+ *   forecast          amber-600  — forecasts, EM paths, CSS markers; hatched regions
+ *   seasonal          sky-600    — seasonal components
+ *
  * `truthAlpha` is the fill opacity for true-state shading behind a plot.
  * Filtered vs smoothed always differ in dash style too (redundant encoding).
  */
@@ -421,4 +428,7 @@ export const timeSeriesColors = {
   smoothedSpectrum: 'var(--color-ts-smoothed-spectrum)',
   garch: 'var(--color-ts-garch)',
   warn: 'var(--color-ts-warn)',
+  predicted: 'var(--color-ts-predicted)',
+  forecast: 'var(--color-ts-forecast)',
+  seasonal: 'var(--color-ts-seasonal)',
 } as const;
