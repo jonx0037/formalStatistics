@@ -27,6 +27,9 @@ pnpm build          # Production build (runs pagefind post-build)
 pnpm preview        # Preview production build
 pnpm test:testing       # Run the Track 5 testing.ts regression harness
 pnpm test:regression    # Run the Track 6 regression.ts harness (T7 + T8 GLM tests)
+pnpm test:bayes         # Track 7 bayes.ts harness
+pnpm test:nonparametric # Track 8 nonparametric.ts harness
+pnpm test:timeseries    # Track 9 timeseries.ts harness (T34 + T35 pins)
 pnpm astro check        # TypeScript + Astro frontmatter check (no `lint` script exists)
 ```
 
@@ -103,10 +106,11 @@ Each topic in `src/content/topics/` is an MDX file with YAML frontmatter definin
 
 - All viz components live in `src/components/viz/` (flat — no per-topic subdirectories).
 - Two D3 integration patterns coexist: early topics use the `useD3` hook in `viz/shared/useD3.ts`; Track 5 components use direct React refs with `d3.line` / `d3.scaleLog` / manual SVG primitives (see `CITestDualityVisualizer.tsx`, `MultipleTestingProcedureExplorer.tsx`). Pick the pattern that matches neighboring components.
+- Track 9 components (Topics 34–35) use hand-built SVG with no d3, plus `useResizeObserver`/`useMemo`.
 - Use `useResizeObserver` for responsive sizing.
 - Shared color scales in `viz/shared/colorScales.ts`.
 - Shared types in `viz/shared/types.ts`.
-- Shared statistics utilities in track-specific modules — `viz/shared/probability.ts`, `distributions.ts`, `convergence.ts`, `estimation.ts`, `moments.ts`, and Track 5's `testing.ts` (non-exhaustive — read the directory for the current set). **Append, don't create siblings:** Topics 17–20 all extend `testing.ts` rather than adding new test modules.
+- Shared statistics utilities in track-specific modules — `viz/shared/probability.ts`, `distributions.ts`, `convergence.ts`, `estimation.ts`, `moments.ts`, Track 5's `testing.ts`, Track 7's `bayes.ts` (also owns `createSeededRng`, `autocorrelation`, `effectiveSampleSize` — import, don't duplicate), Track 8's `nonparametric.ts`, Track 9's `timeseries.ts` (non-exhaustive — read the directory for the current set). **Append, don't create siblings:** Topics 17–20 all extend `testing.ts` rather than adding new test modules.
 - Use `.style()` for CSS custom properties in D3 SVG elements (not `.attr("style", ...)`).
 - MDX import paths are **relative** (`'../../components/viz/Name.tsx'`), not `@viz/` or `@components/viz/`. The TS path aliases exist in `tsconfig.json` but MDX topics have never used them.
 - Components embed in MDX as `<Name client:visible />` — never `client:load` (which blocks page hydration for below-the-fold components).
@@ -131,7 +135,8 @@ Statistics visualizations have unique requirements:
 - When adding a new topic, update both files and add cross-links in related topics
 - Prerequisite links may reference formalcalculus.com topics (external prerequisites, marked distinctly in the DAG)
 - **Draft topics:** `status: "draft"` in MDX frontmatter — excluded from routes by `src/pages/topics/[...slug].astro`'s `status === 'published'` filter. Stubs can sit on `main` without affecting production. `src/pages/paths.astro` reads from `curriculum-graph.json` (not the topic collection), so drafts are also absent from the curriculum page as long as they're not added to the graph.
-- **Topic ship sequence:** (1) flip `status: "draft"` → `"published"` and fill MDX body, (2) add node + prerequisite edges to `curriculum-graph.json`, (3) move the topic title from `track.planned[]` to `track.published[]` in `curriculum.ts`, (4) add the slug to `src/pages/paths.astro`'s `difficultyMap` and `topicDescriptions`, (5) run the connections audit (`node scripts/check-internal-links.mjs`, or add a `pnpm check:connections` alias).
+- **Topic ship sequence:** (1) flip `status: "draft"` → `"published"` and fill MDX body, (2) add node + prerequisite edges to `curriculum-graph.json`, (3) move the topic title from `track.planned[]` to `track.published[]` in `curriculum.ts`, (4) add the node id to `difficultyMap` and `topicDescriptions` in BOTH `src/pages/paths.astro` and `src/pages/topics/index.astro`, (5) run the connections audit (`node scripts/check-internal-links.mjs`, or add a `pnpm check:connections` alias).
+- **Graph ids ≠ slugs:** edges and page maps key on graph node ids (`model-selection`, `bayesian-computation`, `bayesian-foundations`, …), not MDX slugs. Grep the JSON for the real id.
 
 ### Relationship to sister sites
 
@@ -153,7 +158,7 @@ formalCalculus → formalStatistics → formalML
 - The references section lists every entry from the topic's frontmatter `references:` array, in the same order, as a numbered Markdown list.
 - Format for books: `N. Author(s). (Year). [*Title*](URL) (Edition). Publisher.`
 - Format for articles: `N. Author(s). (Year). [*Title*](URL). *Journal*, Volume(Issue), Pages.`
-- Every frontmatter reference entry MUST include a `url:` field with a working hyperlink.
+- Every frontmatter reference carries a working URL. Current convention (Topics 30+): put it at the end of `note:` as `"KEY. usage (§N.X). https://…"`, since the schema strips `url:`.
 - **Schema note:** The current `src/content.config.ts` does not declare `url`, `isbn`, `journal`, or `pages` in the references schema. These fields exist in frontmatter for data integrity but are stripped from `entry.data` by Astro content collections. When building the automated `References.astro` component, update the schema first.
 - This section is non-negotiable. A topic without visible citations does not ship.
 
@@ -206,6 +211,8 @@ For any change that affects something a browser would render — MDX topic, Reac
 - **Astro dev-server content-collection cache is sticky.** When adding a NEW MDX topic file (not editing existing), the dev server may keep 404'ing the new route even after the file lands on disk. `pnpm build` works (dist/ is correct); the dev server needs a full restart. Symptom: navigate to the new topic → "404: Not Found" with `getStaticPaths()` warnings in dev-server logs.
 - **PR auto-reviewers**: Copilot and gemini-code-assist bots open inline comments on every PR — triage normally. Expect ~1 false alarm per PR (typically "missing function" for symbols defined elsewhere in the same file — bots only see the diff). Reply in-thread via `gh api -X POST "repos/{owner}/{repo}/pulls/{pull_number}/comments/{comment_id}/replies" -f body='...'` (NOT a top-level `gh pr comment`, which orphans the discussion). The `{pull_number}` segment is required — `/pulls/comments/{id}/replies` without it returns 404.
 - **Notebook reference values are read from .ipynb cell outputs**, not from JSON exports. Some handoff briefs reference `notebooks/<topic>/data-exports/*.json` files that don't exist — extract values via `grep -B1 -A20 "T<N>\." notebooks/<topic>/<file>.ipynb` to read the printed verification cell directly.
+- **Notebook ↔ TS RNG mismatch:** NumPy PCG64 ≠ the repo's `createSeededRng` (a MINSTD LCG in `bayes.ts`), so data-dependent test pins read JSON fixtures from `viz/shared/__fixtures__/`. Never expect a seeded simulation to match across languages.
+- **Unshipped topics are plain text:** refer to planned topics by name or number ("Topic 36"), never as `/topics/…` links, which 404 and fail `check-internal-links.mjs`.
 
 ## Editorial Voice
 
