@@ -213,6 +213,8 @@ It is also worth noting that the bound $\sigma^2/(n\varepsilon^2)$ is *distribut
 
 ---
 
+<a id="section-10-3"></a>
+
 ## 10.3 WLLN for Uncorrelated Sequences
 
 The Chebyshev-based proof of Theorem 10.1 used two properties of the $X_i$: they are identically distributed (so all means and variances are equal) and independent (so the variance of the sum is the sum of the variances). Let us examine exactly where each property entered.
@@ -224,7 +226,7 @@ The "independent" assumption was used only to show that $\text{Var}(S_n) = \sum_
 This is a meaningful generalization. In many applied settings, variables are uncorrelated but not independent:
 
 - In a designed experiment with orthogonal contrasts, the contrast variables are uncorrelated by construction but may not be independent (because they are all functions of the same underlying data).
-- In time series analysis, residuals from a correctly specified linear model are uncorrelated (by the Gauss--Markov theorem) but not necessarily independent — the joint distribution may have higher-order dependencies.
+- In time series analysis, residuals from a correctly specified linear model are uncorrelated (by the Gauss--Markov theorem) but not necessarily independent — the joint distribution may have higher-order dependencies. For stationary series whose autocovariances are merely summable, the sample mean is still consistent, with variance close to $\sum_h \gamma(h)/n$ ([Topic 35, Theorem 2](/topics/stationary-time-series-and-arma#section-35-2)).
 - In random matrix theory, the entries of a Wigner matrix are uncorrelated (by the symmetric distribution assumption) but the eigenvalues are not independent.
 
 Furthermore, if the variables are not identically distributed, the sample mean $\bar{X}_n$ may not converge to a single value $\mu$ — instead, it tracks the running average of the individual means $\bar{\mu}_n = \frac{1}{n}\sum_{i=1}^n \mu_i$. The theorem says the deviation $\bar{X}_n - \bar{\mu}_n$ converges to zero — the sample mean stays close to the running population mean.

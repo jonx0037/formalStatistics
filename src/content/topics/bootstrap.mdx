@@ -115,19 +115,19 @@ references:
     year: 1994
     title: "Large Sample Confidence Regions Based on Subsamples under Minimal Assumptions"
     publisher: "The Annals of Statistics 22(4): 2031–2050"
-    note: "POL-ROM1994. Subsampling as the without-replacement alternative to the bootstrap. §31.10 Rem 22 cites this as the resample-without-replacement variant that survives heavier-tailed distributions than the standard bootstrap. https://projecteuclid.org/journals/annals-of-statistics/volume-22/issue-4/Large-Sample-Confidence-Regions-Based-on-Subsamples-Under-Minimal-Assumptions/10.1214/aos/1176325770.full"
+    note: "POL-ROM1994. Subsampling as the without-replacement alternative to the bootstrap. §31.10 Rem 18 cites this as the resample-without-replacement variant that survives heavier-tailed distributions than the standard bootstrap. https://projecteuclid.org/journals/annals-of-statistics/volume-22/issue-4/Large-Sample-Confidence-Regions-Based-on-Subsamples-Under-Minimal-Assumptions/10.1214/aos/1176325770.full"
   - type: "article"
     author: "Donald B. Rubin"
     year: 1981
     title: "The Bayesian Bootstrap"
     publisher: "The Annals of Statistics 9(1): 130–134"
-    note: "RUB1981. The Bayesian variant — replace the multinomial weights of the nonparametric bootstrap with Dirichlet weights. §31.10 Rem 21 cites this as the Track-7 connection. https://projecteuclid.org/journals/annals-of-statistics/volume-9/issue-1/The-Bayesian-Bootstrap/10.1214/aos/1176345338.full"
+    note: "RUB1981. The Bayesian variant — replace the multinomial weights of the nonparametric bootstrap with Dirichlet weights. §31.10 Rem 19 cites this as the Track-7 connection. https://projecteuclid.org/journals/annals-of-statistics/volume-9/issue-1/The-Bayesian-Bootstrap/10.1214/aos/1176345338.full"
   - type: "article"
     author: "Hans R. Künsch"
     year: 1989
     title: "The Jackknife and the Bootstrap for General Stationary Observations"
     publisher: "The Annals of Statistics 17(3): 1217–1241"
-    note: "KUN1989. The block bootstrap for dependent data. §31.10 Rem 23 cites as the dependent-observations generalization; full treatment deferred to formalml time-series chapters. https://projecteuclid.org/journals/annals-of-statistics/volume-17/issue-3/The-Jackknife-and-the-Bootstrap-for-General-Stationary-Observations/10.1214/aos/1176347265.full"
+    note: "KUN1989. The block bootstrap for dependent data. §31.10 Rem 17 cites as the dependent-observations generalization; full treatment deferred to formalml time-series chapters. https://projecteuclid.org/journals/annals-of-statistics/volume-17/issue-3/The-Jackknife-and-the-Bootstrap-for-General-Stationary-Observations/10.1214/aos/1176347265.full"
   - type: "book"
     author: "Aad W. van der Vaart"
     year: 2000
@@ -616,7 +616,7 @@ Cross-validation is known to underestimate test risk by the *optimism*: the gap 
 Five remarks close out the topic. Each names an important variant the bootstrap world has produced over the decades, and marks it for forward treatment in the formalML track. No derivations — the point is to orient.
 
 <RemarkBlock number={17} title="Out of scope: block bootstrap for dependent data">
-Künsch 1989 extended the bootstrap to stationary time-series data by resampling *blocks* of consecutive observations instead of individual points. The block length $\ell$ is a new tuning parameter — too small, autocorrelation structure is lost; too large, the number of blocks is too small for MC convergence. Variants: overlapping blocks (Künsch), moving blocks, circular blocks, stationary bootstrap (Politis–Romano). The entire family lives in the dependent-observations regime that Topic 31 excluded; formalML's time-series inference chapters will treat it in full.
+Künsch 1989 extended the bootstrap to stationary time-series data by resampling *blocks* of consecutive observations instead of individual points. The block length $\ell$ is a new tuning parameter — too small, autocorrelation structure is lost; too large, the number of blocks is too small for MC convergence. Variants: overlapping blocks (Künsch), moving blocks, circular blocks, stationary bootstrap (Politis–Romano). The entire family lives in the dependent-observations regime that Topic 31 excluded. [Topic 35 §35.6](/topics/stationary-time-series-and-arma#section-35-6) shows why i.i.d. resampling fails there: it estimates $\gamma(0)/n$ instead of the long-run variance. formalML's time-series inference chapters will treat the block bootstrap in full.
 </RemarkBlock>
 
 <RemarkBlock number={18} title="Out of scope: subsampling">

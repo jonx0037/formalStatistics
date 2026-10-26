@@ -41,7 +41,8 @@
     { "id": "bootstrap", "label": "The Bootstrap", "domain": "high-dimensional-nonparametric", "status": "published", "url": "/topics/bootstrap" },
     { "id": "empirical-processes", "label": "Empirical Processes & Uniform Convergence", "domain": "high-dimensional-nonparametric", "status": "published", "url": "/topics/empirical-processes" },
 
-    { "id": "hidden-markov-models", "label": "Hidden Markov Models", "domain": "time-series-state-space", "status": "published", "url": "/topics/hidden-markov-models" }
+    { "id": "hidden-markov-models", "label": "Hidden Markov Models", "domain": "time-series-state-space", "status": "published", "url": "/topics/hidden-markov-models" },
+    { "id": "stationary-time-series-and-arma", "label": "Stationary Time Series & ARMA", "domain": "time-series-state-space", "status": "published", "url": "/topics/stationary-time-series-and-arma" }
   ],
   "edges": [
     { "source": "sample-spaces", "target": "conditional-probability" },
@@ -184,6 +185,16 @@
     { "source": "multivariate-distributions", "target": "hidden-markov-models" },
     { "source": "maximum-likelihood", "target": "hidden-markov-models" },
     { "source": "bayesian-foundations", "target": "hidden-markov-models" },
-    { "source": "bayesian-computation", "target": "hidden-markov-models" }
+    { "source": "bayesian-computation", "target": "hidden-markov-models" },
+    { "source": "multivariate-distributions", "target": "stationary-time-series-and-arma" },
+    { "source": "modes-of-convergence", "target": "stationary-time-series-and-arma" },
+    { "source": "law-of-large-numbers", "target": "stationary-time-series-and-arma" },
+    { "source": "central-limit-theorem", "target": "stationary-time-series-and-arma" },
+    { "source": "maximum-likelihood", "target": "stationary-time-series-and-arma" },
+    { "source": "linear-regression", "target": "stationary-time-series-and-arma" },
+    { "source": "model-selection", "target": "stationary-time-series-and-arma" },
+    { "source": "bayesian-computation", "target": "stationary-time-series-and-arma" },
+    { "source": "kernel-density-estimation", "target": "stationary-time-series-and-arma" },
+    { "source": "hidden-markov-models", "target": "stationary-time-series-and-arma" }
   ]
 }

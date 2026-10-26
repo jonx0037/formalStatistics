@@ -1,14 +1,27 @@
 /**
- * Topic 34 — Hidden Markov Models: preset parameters for the four §34
- * components and the timeseries.test.ts harness.
+ * Track 9 preset parameters for the time-series components and the
+ * timeseries.test.ts harness.
  *
- * Values are locked to notebook Cell 4 / Cell 11
- * (notebooks/hidden-markov-models/34_hidden_markov_models.ipynb); see
- * handoff brief §7. Typed presets, not `as const` (readonly arrays do not
- * type-check against HMMParams — Topic 33 Appendix B.10).
+ * Topic 34 — Hidden Markov Models: values locked to notebook Cell 4 / Cell 11
+ * (notebooks/hidden-markov-models/34_hidden_markov_models.ipynb); see that
+ * handoff brief §7.
+ *
+ * Topic 35 — Stationary Time Series & ARMA: root-plane, periodogram, GARCH and
+ * Wold presets, locked to notebook Cell 4
+ * (notebooks/stationary-time-series-and-arma/35_stationary_time_series.ipynb);
+ * see docs/formalstatistics-stationary-time-series-and-arma-handoff-brief.md §7.
+ *
+ * Typed presets, not `as const` (readonly arrays do not type-check against
+ * HMMParams / ARMAParams — Topic 33 Appendix B.10).
  */
 
-import { stationaryDistribution, type HMMParams } from '../components/viz/shared/timeseries';
+import {
+  stationaryDistribution,
+  type HMMParams,
+  type ARMAParams,
+  type Complex,
+  type GarchParams,
+} from '../components/viz/shared/timeseries';
 
 const marketA = [
   [0.98, 0.02],
@@ -133,4 +146,103 @@ export const baumWelchPresets: HMMPreset[] = [
     seed: 3413,
     stateNames: ['calm', 'normal', 'crisis'],
   },
+];
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Topic 35 — Stationary Time Series & ARMA
+// ═══════════════════════════════════════════════════════════════════════════
+
+export interface ARMARootPreset {
+  id: string;
+  label: string;
+  /** Roots of φ(z); complex roots listed with their conjugates. */
+  arRoots: Complex[];
+  /** Roots of θ(z). */
+  maRoots: Complex[];
+  sigma2: number;
+  n: number;
+  seed: number;
+}
+
+const rootPreset = (id: string, label: string, arRoots: Complex[], maRoots: Complex[]): ARMARootPreset => ({
+  id,
+  label,
+  arRoots,
+  maRoots,
+  sigma2: 1,
+  n: 300,
+  seed: 3541,
+});
+
+const peakRe = Math.cos(Math.PI / 5) / 0.9;
+const peakIm = Math.sin(Math.PI / 5) / 0.9;
+const ma2Im = Math.sqrt(1.24) / 0.8;
+
+/** ARMARootExplorer presets; `ar2peak` is the default. */
+export const armaRootPresets: ARMARootPreset[] = [
+  rootPreset('ar1', 'AR(1), φ = 0.7', [{ re: 1 / 0.7, im: 0 }], []),
+  rootPreset('ar2peak', 'AR(2), spectral peak', [{ re: peakRe, im: peakIm }, { re: peakRe, im: -peakIm }], []),
+  rootPreset('ar2osc', 'AR(2), roots 1 ± i', [{ re: 1, im: 1 }, { re: 1, im: -1 }], []),
+  rootPreset('ma2', 'MA(2), θ = (0.6, 0.4)', [], [{ re: -0.75, im: ma2Im }, { re: -0.75, im: -ma2Im }]),
+  rootPreset('arma11', 'ARMA(1,1), φ = 0.7, θ = 0.4', [{ re: 1 / 0.7, im: 0 }], [{ re: -2.5, im: 0 }]),
+  rootPreset('unitroot', 'Unit root (ARIMA in disguise)', [{ re: 1, im: 0 }, { re: 5, im: 0 }], []),
+];
+
+export interface PeriodogramPreset {
+  id: string;
+  label: string;
+  kind: 'arma' | 'sunspots';
+  params?: ARMAParams;
+  n: number;
+  m: number;
+  seed: number;
+}
+
+/** PeriodogramSmoother presets; `ar2peak` is the default. */
+export const periodogramPresets: PeriodogramPreset[] = [
+  {
+    id: 'ar2peak',
+    label: 'AR(2) peak',
+    kind: 'arma',
+    params: { phi: [1.8 * Math.cos(Math.PI / 5), -0.81], theta: [], sigma2: 1 },
+    n: 1024,
+    m: 4,
+    seed: 3513,
+  },
+  { id: 'ar1', label: 'AR(1), φ = 0.9', kind: 'arma', params: { phi: [0.9], theta: [], sigma2: 1 }, n: 1024, m: 4, seed: 3513 },
+  { id: 'ma1', label: 'MA(1), θ = −0.8', kind: 'arma', params: { phi: [], theta: [-0.8], sigma2: 1 }, n: 1024, m: 4, seed: 3513 },
+  { id: 'wn', label: 'White noise', kind: 'arma', params: { phi: [], theta: [], sigma2: 1 }, n: 1024, m: 4, seed: 3513 },
+  { id: 'sunspots', label: 'Sunspots', kind: 'sunspots', n: 309, m: 2, seed: 3513 },
+];
+
+export interface GarchPreset {
+  id: string;
+  label: string;
+  /** null → simulate Topic 34's market HMM (`marketParams`). */
+  params: GarchParams | null;
+  T: number;
+  seed: number;
+}
+
+/** GarchVsHmmSimulator presets; `textbook` is the default. */
+export const garchPresets: GarchPreset[] = [
+  { id: 'textbook', label: 'Textbook (0.05, 0.1, 0.85)', params: { omega: 0.05, alpha: 0.1, beta: 0.85 }, T: 1000, seed: 3514 },
+  { id: 'fitToHmm', label: 'Fit to HMM data (0.0803, 0.2821, 0.7028)', params: { omega: 0.0803, alpha: 0.2821, beta: 0.7028 }, T: 1000, seed: 3514 },
+  { id: 'nearIgarch', label: 'Near-IGARCH (0.01, 0.09, 0.9)', params: { omega: 0.01, alpha: 0.09, beta: 0.9 }, T: 1000, seed: 3514 },
+  { id: 'hmmMarket', label: 'HMM market (Topic 34)', params: null, T: 1000, seed: 3514 },
+];
+
+export interface WoldPreset {
+  id: string;
+  label: string;
+  params: ARMAParams;
+  seed: number;
+}
+
+/** WoldPredictionProjector presets. */
+export const woldPresets: WoldPreset[] = [
+  { id: 'ar1', label: 'AR(1), φ = 0.9', params: { phi: [0.9], theta: [], sigma2: 1 }, seed: 3542 },
+  { id: 'ar2osc', label: 'AR(2), roots 1 ± i', params: { phi: [1, -0.5], theta: [], sigma2: 1 }, seed: 3542 },
+  { id: 'ma2', label: 'MA(2), θ = (0.6, 0.4)', params: { phi: [], theta: [0.6, 0.4], sigma2: 1 }, seed: 3542 },
+  { id: 'arma11', label: 'ARMA(1,1), φ = 0.7, θ = 0.4', params: { phi: [0.7], theta: [0.4], sigma2: 1 }, seed: 3542 },
 ];
