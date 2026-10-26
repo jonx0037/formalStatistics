@@ -1,0 +1,1220 @@
+---
+title: "Stationary Time Series & ARMA"
+subtitle: "One long dependent sample. The autocovariance function determines a stationary series up to second order, and it can be read in time or in frequency: the Wold decomposition writes every stationary series as a moving average of its own prediction errors, and Herglotz's theorem turns the same autocovariance into a spectral density. ARMA models are the finite-parameter family dense in both views — causality and invertibility are root conditions, and the spectrum is a ratio of distances to those roots. Nine full proofs, featuring Wold by orthogonal projection; Yule–Walker, Durbin–Levinson, the inconsistent periodogram and its smoothed repair, and GARCH as the observation-driven answer to Topic 34's hidden regimes."
+status: "published"
+difficulty: "advanced"
+prerequisites:
+  - "multivariate-distributions"
+  - "modes-of-convergence"
+  - "law-of-large-numbers"
+  - "central-limit-theorem"
+  - "maximum-likelihood"
+  - "linear-regression"
+  - "model-selection-and-information-criteria"
+  - "bayesian-computation-and-mcmc"
+  - "kernel-density-estimation"
+  - "hidden-markov-models"
+tags:
+  - "time-series"
+  - "stationarity"
+  - "autocovariance"
+  - "wold-decomposition"
+  - "arma"
+  - "arima"
+  - "causality"
+  - "invertibility"
+  - "pacf"
+  - "yule-walker"
+  - "durbin-levinson"
+  - "spectral-density"
+  - "periodogram"
+  - "spectral-smoothing"
+  - "whittle-likelihood"
+  - "garch"
+  - "long-run-variance"
+domain: "time-series-state-space"
+videoId: null
+notebookPath: "notebooks/stationary-time-series-and-arma/35_stationary_time_series.ipynb"
+githubUrl: "https://github.com/jonx0037/formalStatistics/blob/main/src/content/topics/stationary-time-series-and-arma.mdx"
+datePublished: 2026-10-26
+estimatedReadTime: 70
+abstract: >-
+  A stationary time series is one long sample of dependent observations, and its autocovariance function γ(h) determines everything second-order about it. We prove that n·Var(sample mean) converges to the long-run variance Σγ(h), which is why autocorrelated data — MCMC chains, backtested model errors — carry fewer effective observations than their length suggests. Prediction is orthogonal projection: we derive the prediction equations and the Durbin–Levinson recursion, then prove the featured Wold decomposition, which writes every stationary series as a deterministic part plus a moving average of its own one-step prediction errors. ARMA(p, q) models are the finite-parameter family behind that picture. Causality and invertibility hold exactly when the AR and MA polynomials have no roots on or inside the unit circle, and the partial autocorrelation of an AR(p) cuts off after lag p. We estimate ARMA models by Yule–Walker, conditional least squares and Gaussian likelihood, and choose the order of Yule's sunspot autoregression with AIC, BIC and HQIC. The same autocovariance read in frequency is a spectral density: for an ARMA it is a ratio of squared distances from the unit circle to the polynomial roots. The raw periodogram is asymptotically unbiased but never consistent, and smoothing it is the kernel-density bandwidth problem in a new coordinate. GARCH closes the loop with hidden Markov models, producing volatility clustering by feedback from past returns rather than a hidden regime, and the exact ARMA likelihood is left for the Kalman filter of Topic 36.
+formalcalculusPrereqs:
+  - topic: "hilbert-spaces"
+    site: "formalcalculus"
+    relationship: "Best linear prediction is orthogonal projection onto the closed linear span of the past (§35.3 Thm 3), and the Wold decomposition (Thm 4, featured) is that projection theorem applied to every past at once. The innovations are the orthogonal increments, and Bessel's inequality gives Σψ_j² < ∞."
+  - topic: "fourier-series"
+    site: "formalcalculus"
+    relationship: "The spectral density is the Fourier series of the autocovariance function, f(ω) = (1/2π)Σγ(h)e^{−ihω} (§35.7), and the periodogram's exact distribution under Gaussian white noise (§35.8 Thm 12) rests on the discrete orthogonality of sines and cosines at the Fourier frequencies."
+  - topic: "power-taylor-series"
+    site: "formalcalculus"
+    relationship: "Causality (§35.4 Thm 5) inverts the AR polynomial as a power series: 1/φ(z) factors into geometric series Σ(z/r)^j that converge absolutely exactly when every root r lies outside the unit circle, and Cauchy products keep the coefficients absolutely summable."
+  - topic: "linear-systems"
+    site: "formalcalculus"
+    relationship: "An AR(p) recursion is a linear difference equation; its homogeneous solutions decay, oscillate, or explode according to the characteristic roots, which is the unit-circle picture of §35.4 and the companion-matrix remark (Rem 10)."
+  - topic: "stability-dynamics"
+    site: "formalcalculus"
+    relationship: "Causal stationarity is stability of the AR recursion: perturbations die out geometrically when the roots of φ lie outside the unit circle (equivalently, companion-matrix eigenvalues inside it), and the unit-root boundary of §35.4 Rem 12 is marginal stability."
+  - topic: "eigenvalues-eigenvectors"
+    site: "formalcalculus"
+    relationship: "The reciprocals of the roots of φ(z) are the eigenvalues of the AR(p) companion matrix (§35.4 Rem 10), so causality is the statement that its spectral radius is below one — the form Topic 36's state-space representation uses."
+  - topic: "lp-spaces"
+    site: "formalcalculus"
+    relationship: "A linear process Σψ_jε_{t−j} is an L² limit (§35.3 Def 4), and every projection argument in §35.3 takes place in the Hilbert space L² of finite-variance random variables."
+formalmlConnections:
+  - topic: "gaussian-processes"
+    site: "formalml"
+    relationship: "Herglotz's theorem (§35.7 Thm 10) is the discrete-time Bochner theorem: a stationary GP kernel is the Fourier transform of a nonnegative spectral measure, so designing a kernel is designing a spectrum (§35.7 Rem 18)."
+  - topic: "spectral-theorem"
+    site: "formalml"
+    relationship: "The spectral representation of a stationary series diagonalizes its Toeplitz covariance operator in the Fourier basis; the periodogram ordinates are the approximate eigenvalues, which is why they are asymptotically independent (§35.8 Thm 12)."
+  - topic: "random-walks"
+    site: "formalml"
+    relationship: "A unit root turns an AR(1) into a random walk (§35.4 Ex 8, Rem 12): variance grows linearly, the ACF never decays, and none of the stationary theory of this topic applies."
+  - topic: "sequential-monte-carlo"
+    site: "formalml"
+    relationship: "ARMA models in state-space form are filtered exactly by the Kalman filter (Topic 36); particle filters extend the same predict/update recursion to nonlinear, non-Gaussian state-space models."
+  - topic: "generalized-method-of-moments"
+    site: "formalml"
+    relationship: "HAC (Newey–West) covariance estimators for GMM with dependent data estimate the long-run variance 2πf(0) of §35.2 Thm 2 by a Bartlett lag window — spectral smoothing at frequency zero (§35.8 Rem 21)."
+  - topic: "conformal-prediction"
+    site: "formalml"
+    relationship: "Conformal coverage guarantees rest on exchangeability, which a dependent series violates; §35.1's coverage collapse for naive intervals on autocorrelated data is the same failure for a simpler procedure."
+references:
+  - type: "book"
+    author: "Peter J. Brockwell and Richard A. Davis"
+    year: 1991
+    title: "Time Series: Theory and Methods"
+    publisher: "Springer (2nd ed.)"
+    note: "BRO1991. Primary graduate reference; Thms 1, 8–10, 12(iii), 13 are cited to it (Thm 1.5.1, 8.1.1, 10.8.2, 7.2.1, 4.3.1, 10.3.2, 10.4.1). https://doi.org/10.1007/978-1-4419-0320-4"
+  - type: "book"
+    author: "Robert H. Shumway and David S. Stoffer"
+    year: 2017
+    title: "Time Series Analysis and Its Applications: With R Examples"
+    publisher: "Springer (4th ed.)"
+    note: "SHU2017. Applied companion; spectral smoothing and the wavelet pointer (§35.10 Rem 27). https://doi.org/10.1007/978-3-319-52452-8"
+  - type: "book"
+    author: "James D. Hamilton"
+    year: 1994
+    title: "Time Series Analysis"
+    publisher: "Princeton University Press"
+    note: "HAM1994. Econometric treatment; VAR, cointegration, and HAC pointers (§35.10 Rem 27). https://press.princeton.edu/books/hardcover/9780691042893/time-series-analysis"
+  - type: "book"
+    author: "George E. P. Box, Gwilym M. Jenkins, Gregory C. Reinsel, and Greta M. Ljung"
+    year: 2015
+    title: "Time Series Analysis: Forecasting and Control"
+    publisher: "Wiley (5th ed.)"
+    note: "BOX2015. The Box–Jenkins identify–estimate–check loop (§35.5 Rem 13). https://www.wiley.com/en-us/Time+Series+Analysis%3A+Forecasting+and+Control%2C+5th+Edition-p-9781118675021"
+  - type: "article"
+    author: "G. Udny Yule"
+    year: 1927
+    title: "On a Method of Investigating Periodicities in Disturbed Series, with Special Reference to Wolfer's Sunspot Numbers"
+    publisher: "Philosophical Transactions of the Royal Society of London, Series A 226: 267–298"
+    note: "YUL1927. The first autoregression, fitted to sunspots (§35.6 Ex 12). https://doi.org/10.1098/rsta.1927.0007"
+  - type: "article"
+    author: "Gilbert Walker"
+    year: 1931
+    title: "On Periodicity in Series of Related Terms"
+    publisher: "Proceedings of the Royal Society of London, Series A 131(818): 518–532"
+    note: "WAL1931. Walker's extension of Yule's equations; with Yule, the Yule–Walker equations (§35.6). https://doi.org/10.1098/rspa.1931.0069"
+  - type: "book"
+    author: "Herman Wold"
+    year: 1938
+    title: "A Study in the Analysis of Stationary Time Series"
+    publisher: "Almqvist & Wiksell (Uppsala)"
+    note: "WOL1938. The Wold decomposition (§35.3 Thm 4, featured). https://archive.org/details/in.ernet.dli.2015.262214"
+  - type: "article"
+    author: "Gustav Herglotz"
+    year: 1911
+    title: "Über Potenzreihen mit positivem, reellem Teil im Einheitskreis"
+    publisher: "Berichte über die Verhandlungen der Königlich Sächsischen Gesellschaft der Wissenschaften zu Leipzig, Mathematisch-Physische Klasse 63: 501–511"
+    note: "HER1911. Herglotz's theorem on positive-definite sequences (§35.7 Thm 10). https://zbmath.org/?q=an:42.0438.02"
+  - type: "article"
+    author: "Arthur Schuster"
+    year: 1898
+    title: "On the Investigation of Hidden Periodicities with Application to a Supposed 26 Day Period of Meteorological Phenomena"
+    publisher: "Terrestrial Magnetism 3(1): 13–41"
+    note: "SCH1898. The periodogram (§35.8 Def 10). https://doi.org/10.1029/TM003i001p00013"
+  - type: "article"
+    author: "M. S. Bartlett"
+    year: 1946
+    title: "On the Theoretical Specification and Sampling Properties of Autocorrelated Time-Series"
+    publisher: "Supplement to the Journal of the Royal Statistical Society 8(1): 27–41"
+    note: "BAR1946. Bartlett's formula for the variance of sample autocorrelations (§35.6 Thm 9). https://doi.org/10.2307/2983611"
+  - type: "article"
+    author: "P. J. Daniell"
+    year: 1946
+    title: "Discussion on the Papers (Symposium on Autocorrelation in Time Series)"
+    publisher: "Supplement to the Journal of the Royal Statistical Society 8(1): 88–90"
+    note: "DAN1946. The Daniell (rectangular) spectral smoother (§35.8 Def 10, Thm 13). https://doi.org/10.1111/j.2517-617X.1946.tb00117.x"
+  - type: "article"
+    author: "Norman Levinson"
+    year: 1947
+    title: "The Wiener RMS (Root Mean Square) Error Criterion in Filter Design and Prediction"
+    publisher: "Journal of Mathematics and Physics 25: 261–278"
+    note: "LEV1947. The Levinson recursion (§35.3 Thm 3). https://doi.org/10.1002/sapm1946251261"
+  - type: "article"
+    author: "J. Durbin"
+    year: 1960
+    title: "The Fitting of Time-Series Models"
+    publisher: "Revue de l'Institut International de Statistique 28(3): 233–244"
+    note: "DUR1960. Durbin's recursion for fitting autoregressions (§35.3 Thm 3). https://doi.org/10.2307/1401322"
+  - type: "article"
+    author: "Peter Whittle"
+    year: 1953
+    title: "Estimation and Information in Stationary Time Series"
+    publisher: "Arkiv för Matematik 2(5): 423–434"
+    note: "WHI1953. Whittle's frequency-domain likelihood (§35.8 Thm 14). https://doi.org/10.1007/BF02590998"
+  - type: "article"
+    author: "Hirotugu Akaike"
+    year: 1974
+    title: "A New Look at the Statistical Model Identification"
+    publisher: "IEEE Transactions on Automatic Control 19(6): 716–723"
+    note: "AKA1974. AIC for ARMA order selection (§35.6 Ex 13). https://doi.org/10.1109/TAC.1974.1100705"
+  - type: "article"
+    author: "E. J. Hannan and B. G. Quinn"
+    year: 1979
+    title: "The Determination of the Order of an Autoregression"
+    publisher: "Journal of the Royal Statistical Society, Series B 41(2): 190–195"
+    note: "HAN1979. HQIC and strongly consistent AR order estimation (§35.6 Ex 13, Rem 16). https://doi.org/10.1111/j.2517-6161.1979.tb01072.x"
+  - type: "article"
+    author: "Whitney K. Newey and Kenneth D. West"
+    year: 1987
+    title: "A Simple, Positive Semi-Definite, Heteroskedasticity and Autocorrelation Consistent Covariance Matrix"
+    publisher: "Econometrica 55(3): 703–708"
+    note: "NEW1987. The Newey–West HAC estimator of the long-run variance (§35.2 Rem 6, §35.8 Rem 21). https://doi.org/10.2307/1913610"
+  - type: "article"
+    author: "David A. Dickey and Wayne A. Fuller"
+    year: 1979
+    title: "Distribution of the Estimators for Autoregressive Time Series with a Unit Root"
+    publisher: "Journal of the American Statistical Association 74(366a): 427–431"
+    note: "DIC1979. Unit-root testing, deferred (§35.4 Rem 12). https://doi.org/10.1080/01621459.1979.10482531"
+  - type: "article"
+    author: "Hans R. Künsch"
+    year: 1989
+    title: "The Jackknife and the Bootstrap for General Stationary Observations"
+    publisher: "Annals of Statistics 17(3): 1217–1241"
+    note: "KUN1989. Block bootstrap for dependent data (§35.6 Rem 17). https://doi.org/10.1214/aos/1176347265"
+  - type: "article"
+    author: "David J. Thomson"
+    year: 1982
+    title: "Spectrum Estimation and Harmonic Analysis"
+    publisher: "Proceedings of the IEEE 70(9): 1055–1096"
+    note: "THO1982. Multitaper spectral estimation (§35.8 Rem 20). https://doi.org/10.1109/PROC.1982.12433"
+  - type: "article"
+    author: "Robert F. Engle"
+    year: 1982
+    title: "Autoregressive Conditional Heteroscedasticity with Estimates of the Variance of United Kingdom Inflation"
+    publisher: "Econometrica 50(4): 987–1007"
+    note: "ENG1982. ARCH (§35.9 Def 11). https://doi.org/10.2307/1912773"
+  - type: "article"
+    author: "Tim Bollerslev"
+    year: 1986
+    title: "Generalized Autoregressive Conditional Heteroskedasticity"
+    publisher: "Journal of Econometrics 31(3): 307–327"
+    note: "BOL1986. GARCH (§35.9 Def 11, Thm 15). https://doi.org/10.1016/0304-4076(86)90063-1"
+  - type: "article"
+    author: "Daniel B. Nelson"
+    year: 1990
+    title: "Stationarity and Persistence in the GARCH(1,1) Model"
+    publisher: "Econometric Theory 6(3): 318–334"
+    note: "NEL1990. Strict stationarity of GARCH(1,1) and IGARCH (§35.9 Rem 23). https://doi.org/10.1017/S0266466600005296"
+  - type: "article"
+    author: "Christopher G. Lamoureux and William D. Lastrapes"
+    year: 1990
+    title: "Persistence in Variance, Structural Change, and the GARCH Model"
+    publisher: "Journal of Business & Economic Statistics 8(2): 225–234"
+    note: "LAM1990. Regime shifts bias GARCH persistence toward one (§35.9 Ex 19). https://doi.org/10.1080/07350015.1990.10509794"
+  - type: "book"
+    author: "Carl Edward Rasmussen and Christopher K. I. Williams"
+    year: 2006
+    title: "Gaussian Processes for Machine Learning"
+    publisher: "MIT Press"
+    note: "RAS2006. Bochner's theorem and stationary kernels (§35.7 Rem 18). https://gaussianprocess.org/gpml/"
+  - type: "article"
+    author: "Albert Gu, Karan Goel, and Christopher Ré"
+    year: 2022
+    title: "Efficiently Modeling Long Sequences with Structured State Spaces"
+    publisher: "International Conference on Learning Representations (ICLR 2022)"
+    note: "GU2022. S4: linear state-space layers as learned filters (§35.10 Rem 26). https://arxiv.org/abs/2111.00396"
+  - type: "article"
+    author: "Albert Gu and Tri Dao"
+    year: 2023
+    title: "Mamba: Linear-Time Sequence Modeling with Selective State Spaces"
+    publisher: "arXiv preprint arXiv:2312.00752"
+    note: "GU2023. Mamba: input-dependent state-space layers (§35.10 Rem 26). https://arxiv.org/abs/2312.00752"
+  - type: "misc"
+    author: "SILSO World Data Center, Royal Observatory of Belgium"
+    year: 1981
+    title: "SILSO Sunspot Number V1.0"
+    publisher: "Royal Observatory of Belgium [Data set]"
+    note: "SIL1981. Yearly sunspot numbers 1700–2008 (version-1 series, as bundled in statsmodels) (§35.6 Exs 12–13, §35.8 Ex 17). https://doi.org/10.24414/stcz-kc45"
+---
+
+import TheoremBlock from '../../components/ui/TheoremBlock.astro';
+import ProofBlock from '../../components/ui/ProofBlock.astro';
+import ExampleBlock from '../../components/ui/ExampleBlock.astro';
+import RemarkBlock from '../../components/ui/RemarkBlock.astro';
+import DefinitionBlock from '../../components/ui/DefinitionBlock.astro';
+import ExternalLink from '../../components/ui/ExternalLink.astro';
+
+import WoldPredictionProjector from '../../components/viz/WoldPredictionProjector.tsx';
+import ARMARootExplorer from '../../components/viz/ARMARootExplorer.tsx';
+import PeriodogramSmoother from '../../components/viz/PeriodogramSmoother.tsx';
+import GarchVsHmmSimulator from '../../components/viz/GarchVsHmmSimulator.tsx';
+
+## 35.1 Motivation: one long dependent sample
+
+Three datasets an ML practitioner meets every week: the daily validation error of a forecasting model across two years of backtests, the 5,000 draws of an MCMC chain, a sensor log sampled once a second. Each is one long sample whose observations lean on their neighbors. Almost every confidence interval we built in Tracks 4–6 divided a standard deviation by $\sqrt n$, and that division quietly assumed the $n$ observations were independent. This topic asks what survives when they aren't.
+
+The answer runs through one object. For a series whose statistical behavior doesn't drift, the covariance between two observations depends only on how far apart they are, and that function of the gap, the **autocovariance function** $\gamma(h)$, determines everything second-order. We can read it in time (prediction, the Wold decomposition, ARMA models) or in frequency (a spectral density). Both readings pay off in ML: the long-run variance behind an MCMC chain's effective sample size is the spectral density at frequency zero, and a stationary Gaussian-process kernel is a spectrum.
+
+<ExampleBlock number={1} title="A naive confidence interval on autocorrelated data">
+Simulate an autoregression with unit marginal variance, $X_t = \phi X_{t-1} + \sqrt{1 - \phi^2}\,Z_t$ with $Z_t$ i.i.d. $\mathcal{N}(0, 1)$, the parameterization of Topic 26's Example 8. Every $X_t$ is $\mathcal{N}(0, 1)$, whatever $\phi$ is; only the dependence between neighbors changes. Take $n = 200$ observations and form the textbook 95% interval for the mean, $\bar x \pm 1.96\,s/\sqrt n$, where $\bar x$ is the sample mean and $s$ the sample standard deviation. Over 4,000 replications the interval covers the true mean $\mu = 0$:
+
+- **0.946** of the time at $\phi = 0$ (independent data: the interval works);
+- **0.331** of the time at $\phi = 0.9$, against the theoretical value $2\Phi\bigl(1.96\sqrt{(1 - \phi)/(1 + \phi)}\bigr) - 1 = 0.347$, where $\Phi$ is the standard Normal CDF;
+- **0.9995** of the time at $\phi = -0.5$: negative dependence makes neighbors cancel, so the naive interval over-covers.
+
+An interval built with the true long-run variance (Theorem 2) covers **0.958** at $\phi = 0.9$. The standard econometric fix, a Newey–West interval with bandwidth $M = 4$ (Remark 6), recovers only to **0.621**. At $\phi = 0.9$ the variance of $\bar X$ is about $19/n$, not $1/n$, so 200 observations carry the information of about **10.5** independent ones.
+</ExampleBlock>
+
+![Left: 200 independent standard Normal draws in gray beside an autoregressive series with coefficient 0.9 in indigo that wanders in long excursions. Right: coverage of nominal 95 percent intervals for the mean against the coefficient; the naive interval in rose falls to about 0.3, the Newey-West interval in teal falls less, and the true long-run variance interval in indigo stays near 0.95.](/images/topics/stationary-time-series-and-arma/35-dependent-sample.png)
+
+*Figure 1. Same marginal distribution, different information. An interval that ignores autocorrelation covers the truth a third of the time when φ = 0.9.*
+
+<ExampleBlock number={2} title="Backtested model errors">
+Two forecasting models are compared on two years of daily losses. The loss difference $d_t = \ell^{(A)}_t - \ell^{(B)}_t$ is positively autocorrelated, because both models miss the same regime shifts. If the differences are as persistent as Example 1's $\phi = 0.9$ series, the naive standard error $s/\sqrt n$ of their mean is too small by a factor $\sqrt{\sigma^2_{\text{LR}}/\gamma(0)} = \sqrt{19} \approx 4.36$, where $\sigma^2_{\text{LR}}$ is Theorem 2's long-run variance. A "significant" improvement can be pure dependence; Remark 21 says how to estimate the right standard error.
+</ExampleBlock>
+
+<RemarkBlock number={1} title="Notation">
+A **time series** is a sequence of random variables $\{X_t : t \in \mathbb{Z}\}$ indexed by the integers; we call it the *process*. The data are one realization $x_1, \dots, x_n$ of $n$ consecutive values. We write $\mathbb{E}[X]$ for the expectation (the center of mass of $X$'s distribution), $\mathrm{Var}(X) = \mathbb{E}[(X - \mathbb{E}X)^2]$ for the variance, and $\mathrm{Cov}(X, Y) = \mathbb{E}[(X - \mathbb{E}X)(Y - \mathbb{E}Y)]$ for the covariance. Time is discrete: $t$ counts steps.
+</RemarkBlock>
+
+<RemarkBlock number={2} title="Two coordinates for one object">
+Everything second-order lives in $\gamma(h)$. Sections 35.2–35.6 read it in **time**: averages, prediction, Wold, ARMA, estimation. Sections 35.7–35.8 read it in **frequency**: the spectral density, the periodogram, smoothing. Section 35.9 shows what $\gamma$ cannot see: a GARCH series has the autocovariance of white noise, yet predictable volatility.
+</RemarkBlock>
+
+<a id="section-35-2"></a>
+
+## 35.2 Stationarity and the autocovariance function
+
+To learn from a single realization, the process must repeat itself statistically: days 1–100 must say something about days 101–200. Stationarity is that assumption, in two strengths.
+
+<DefinitionBlock number={1} title="Strict stationarity">
+A process $\{X_t\}$ is **strictly stationary** if shifting time leaves every finite-dimensional distribution unchanged: for every $k \ge 1$, all times $t_1, \dots, t_k$ and every shift $h$, the vector $(X_{t_1 + h}, \dots, X_{t_k + h})$ has the same joint distribution as $(X_{t_1}, \dots, X_{t_k})$.
+</DefinitionBlock>
+
+<DefinitionBlock number={2} title="Weak stationarity; autocovariance and autocorrelation functions">
+A process $\{X_t\}$ is **weakly stationary** if $\mathbb{E}X_t^2 < \infty$, the mean $\mathbb{E}X_t = \mu$ does not depend on $t$, and the covariance between two observations depends only on how far apart they are:
+
+$$
+\mathrm{Cov}(X_{t+h}, X_t) = \gamma(h) \quad \text{for all } t, h \in \mathbb{Z}.
+$$
+
+The function $\gamma$ is the **autocovariance function** (ACVF) and $\rho(h) = \gamma(h)/\gamma(0)$ is the **autocorrelation function** (ACF). Directly from the definition, $\gamma(0) = \mathrm{Var}(X_t) \ge 0$, $\gamma(-h) = \gamma(h)$, and $|\gamma(h)| \le \gamma(0)$ by the Cauchy–Schwarz inequality.
+</DefinitionBlock>
+
+<DefinitionBlock number={3} title="White noise">
+A process $\{\varepsilon_t\}$ is **white noise** with variance $\sigma^2$, written $\varepsilon_t \sim \mathrm{WN}(0, \sigma^2)$, if $\mathbb{E}\varepsilon_t = 0$, $\mathrm{Var}(\varepsilon_t) = \sigma^2$, and $\mathrm{Cov}(\varepsilon_s, \varepsilon_t) = 0$ for $s \ne t$. The stronger assumption that the $\varepsilon_t$ are independent and identically distributed is written $\mathrm{IID}(0, \sigma^2)$. White noise is uncorrelated, not necessarily independent; GARCH (§35.9) will be white noise whose squares are correlated.
+</DefinitionBlock>
+
+Which functions can be autocovariances? Not every even function: for any coefficients $a_1, \dots, a_n$ and times $t_1, \dots, t_n$,
+
+$$
+\sum_{i,j} a_i\,\gamma(t_i - t_j)\,a_j = \mathrm{Var}\Bigl(\sum_i a_iX_{t_i}\Bigr) \ge 0,
+$$
+
+so $\gamma$ must be nonnegative definite. That turns out to be the whole story.
+
+<TheoremBlock number={1} title="Characterization of autocovariance functions (stated; BRO1991 Thm 1.5.1)">
+A function $\gamma : \mathbb{Z} \to \mathbb{R}$ is the autocovariance function of a weakly stationary series if and only if it is even and nonnegative definite: $\sum_{i,j=1}^n a_i\gamma(t_i - t_j)a_j \ge 0$ for all $n$, all real $a_1, \dots, a_n$, and all integers $t_1, \dots, t_n$.
+</TheoremBlock>
+
+Necessity is the variance identity above; sufficiency builds a Gaussian process with covariance $\gamma$ by Kolmogorov's extension theorem.
+
+<ExampleBlock number={3} title="Four ACFs">
+Simulate $n = 400$ observations from four processes and compare the sample ACF (Remark 5) with the theory.
+
+- **White noise:** $\rho(h) = 0$ for every $h \ne 0$. The sample autocorrelations scatter inside the band $\pm 1.96/\sqrt n = \pm 0.098$, the approximate 95% range when the true value is zero (Theorem 9).
+- **AR(1), $\phi = \pm 0.8$:** the autoregression $X_t = \phi X_{t-1} + \varepsilon_t$ has $\rho(h) = \phi^{|h|}$, alternating in sign when $\phi < 0$ (Example 5 derives it). At $\phi = 0.8$, $\rho(5) = 0.3277$, but the sample value is **0.4053**: sample autocorrelations wander from the truth in runs (Remark 5).
+- **MA(1), $\theta = 0.8$:** the moving average $X_t = \varepsilon_t + \theta\varepsilon_{t-1}$ has $\rho(1) = \theta/(1 + \theta^2) = 0.4878$ (sample **0.4808**) and $\rho(h) = 0$ for $h \ge 2$: two observations more than one step apart share no shock. Under this MA(1) the correct band beyond lag 1 is wider than the white-noise band, $\pm 0.1185$, because Bartlett's formula (Theorem 9) adds the variance contributed by $\rho(1)$.
+</ExampleBlock>
+
+![Two-by-two grid of sample autocorrelations as gray stems against theoretical values as black bars for white noise, AR(1) with coefficients 0.8 and minus 0.8, and MA(1) with coefficient 0.8, each with a shaded band of plus or minus 1.96 over root n; the MA(1) panel adds a wider dashed amber Bartlett band.](/images/topics/stationary-time-series-and-arma/35-acf-gallery.png)
+
+*Figure 2. Four autocorrelation functions. Sample autocorrelations wander in runs, so a single lag outside the band is weak evidence.*
+
+Now the theorem behind Example 1: the variance of a mean of dependent observations picks up every pairwise covariance.
+
+<TheoremBlock number={2} title="Long-run variance">
+Let $\{X_t\}$ be weakly stationary with mean $\mu$ and autocovariance $\gamma$ satisfying $\sum_{h \in \mathbb{Z}}|\gamma(h)| < \infty$, and let $\bar X_n = n^{-1}\sum_{t=1}^n X_t$. Then
+
+$$
+n\,\mathrm{Var}(\bar X_n) = \sum_{|h| < n}\Bigl(1 - \frac{|h|}{n}\Bigr)\gamma(h) \;\longrightarrow\; \sigma^2_{\text{LR}} := \sum_{h \in \mathbb{Z}}\gamma(h).
+$$
+
+Consequently $\mathbb{E}(\bar X_n - \mu)^2 \to 0$ and $\bar X_n \xrightarrow{P} \mu$.
+</TheoremBlock>
+
+<ProofBlock number={1} title="Proof of Thm 2 (Long-run variance)">
+
+Expand the variance of the sum as a double sum of covariances:
+
+$$
+\mathrm{Var}(\bar X_n) = \frac{1}{n^2}\sum_{s=1}^n\sum_{t=1}^n \mathrm{Cov}(X_s, X_t) = \frac{1}{n^2}\sum_{s=1}^n\sum_{t=1}^n \gamma(s - t).
+$$
+
+Group the $n^2$ pairs by their lag $h = s - t$. For $|h| < n$ exactly $n - |h|$ pairs in $\{1, \dots, n\}^2$ have $s - t = h$, so
+
+$$
+n\,\mathrm{Var}(\bar X_n) = \frac{1}{n}\sum_{|h| < n}(n - |h|)\gamma(h) = \sum_{|h|<n}\Bigl(1 - \frac{|h|}{n}\Bigr)\gamma(h).
+$$
+
+Now compare with $\sigma^2_{\text{LR}}$. By the triangle inequality,
+
+$$
+\Bigl|\sigma^2_{\text{LR}} - n\,\mathrm{Var}(\bar X_n)\Bigr| \le \sum_{|h| < n}\frac{|h|}{n}|\gamma(h)| + \sum_{|h| \ge n}|\gamma(h)|.
+$$
+
+The second sum is the tail of a convergent series, so it tends to 0. For the first, fix $K$ and split at $|h| = K$: for $n > K$,
+
+$$
+\sum_{|h| < n}\frac{|h|}{n}|\gamma(h)| \le \frac{K}{n}\sum_{|h| \le K}|\gamma(h)| + \sum_{|h| > K}|\gamma(h)|.
+$$
+
+Let $n \to \infty$: the first term vanishes, so the $\limsup$ is at most $\sum_{|h|>K}|\gamma(h)|$, and letting $K \to \infty$ makes that tail 0. Hence $n\,\mathrm{Var}(\bar X_n) \to \sigma^2_{\text{LR}}$. Since $\mathbb{E}\bar X_n = \mu$, $\mathbb{E}(\bar X_n - \mu)^2 = \mathrm{Var}(\bar X_n) = (\sigma^2_{\text{LR}} + o(1))/n \to 0$, and Chebyshev's inequality gives $P(|\bar X_n - \mu| > \varepsilon) \le \mathrm{Var}(\bar X_n)/\varepsilon^2 \to 0$.
+
+$\blacksquare$ — using the triangle inequality, tails of absolutely convergent series, and Chebyshev's inequality ([Topic 10](/topics/law-of-large-numbers)).
+
+</ProofBlock>
+
+The first display is exact for every $n$, and its weights $1 - |h|/n$ are Fejér's; they reappear in the mean of the periodogram (Proof 8). The corollary is an ergodic weak law: the sample mean is consistent, at rate $\sigma_{\text{LR}}/\sqrt n$ rather than $\sigma/\sqrt n$.
+
+<ExampleBlock number={4} title="MCMC effective sample size, recovered">
+Topic 26's AR(1) chain $X_{t+1} = 0.9X_t + \sqrt{0.19}\,Z_t$ is stationary with $\gamma(0) = 1$ and $\gamma(h) = 0.9^{|h|}$. Theorem 2's long-run variance is
+
+$$
+\sum_{h \in \mathbb{Z}}\gamma(h) = 1 + 2\sum_{h \ge 1}0.9^h = \frac{1 + 0.9}{1 - 0.9} = 19,
+$$
+
+which is exactly the integrated autocorrelation time $\tau$ of [Topic 26 Def 7](/topics/bayesian-computation-and-mcmc#section-26-6). A chain of 5,000 draws is worth $N_{\text{eff}} = 5000/19 \approx 263$ independent draws, matching Topic 26 Example 8's Geyer estimate.
+</ExampleBlock>
+
+<RemarkBlock number={3} title="The ergodic WLLN extends Topic 10's uncorrelated case">
+[Topic 10 §10.3](/topics/law-of-large-numbers#section-10-3) proved the weak law for uncorrelated sequences, which is the special case $\gamma(h) = 0$ for $h \ne 0$, where $\sigma^2_{\text{LR}} = \gamma(0)$. Theorem 2 needs only summable correlations, and consistency alone needs only $\gamma(h) \to 0$, since the Cesàro average $n^{-1}\sum_{|h|<n}(1 - |h|/n)\gamma(h)$ then vanishes. Summability buys the $1/n$ rate.
+</RemarkBlock>
+
+<RemarkBlock number={4} title="Weak versus strict; Gaussian processes">
+Strict stationarity plus a finite second moment implies weak. The converse fails in general, except for a **Gaussian process**, whose finite-dimensional laws are fixed by means and covariances ([Topic 8](/topics/multivariate-distributions)). Most theorems here need only weak stationarity; Theorem 15 (GARCH) works with strict.
+</RemarkBlock>
+
+<RemarkBlock number={5} title="Why the sample ACVF divides by n">
+The **sample autocovariance** is
+
+$$
+\hat\gamma(h) = \frac{1}{n}\sum_{t=1}^{n-h}(x_{t+h} - \bar x)(x_t - \bar x), \qquad 0 \le h < n,
+$$
+
+and $\hat\rho(h) = \hat\gamma(h)/\hat\gamma(0)$ is the sample ACF. Dividing by $n$ rather than $n - h$ biases $\hat\gamma(h)$ toward zero at large lags, but makes the sample covariance matrix $\hat\Gamma_n = [\hat\gamma(i - j)]$ nonnegative definite (it equals $n^{-1}TT^\top$ for a matrix $T$ of shifted copies of the demeaned data), which Yule–Walker needs (Remark 15). Sample autocorrelations at nearby lags are strongly correlated (Theorem 9), which is why Example 3's AR(1) sample ACF stays above the theory for a run of lags.
+</RemarkBlock>
+
+<RemarkBlock number={6} title="HAC: estimating the long-run variance">
+Example 1's oracle interval used the true $\sigma^2_{\text{LR}}$. In practice we estimate it, and the plug-in $\sum_{|h| < n}\hat\gamma(h)$ is inconsistent — it equals $2\pi$ times the periodogram at frequency zero, which §35.8 shows never settles down. The **Newey–West** estimator (NEW1987) truncates and down-weights the sample autocovariances:
+
+$$
+\hat\sigma^2_{\text{LR}} = \hat\gamma(0) + 2\sum_{h=1}^{M}\Bigl(1 - \frac{h}{M+1}\Bigr)\hat\gamma(h).
+$$
+
+With the common rule $M = \lfloor 4(n/100)^{2/9}\rfloor = 4$ at $n = 200$, it lifts Example 1's coverage from 0.331 to only 0.621 at $\phi = 0.9$: the truncation lag $M$ is a bandwidth, too small for a series this persistent (Remark 21). This is the HAC covariance used in GMM with dependent data: <ExternalLink site="formalml" topic="generalized-method-of-moments" href="https://formalml.com/topics/generalized-method-of-moments" />.
+</RemarkBlock>
+
+<a id="section-35-3"></a>
+
+## 35.3 Prediction as projection and the Wold decomposition
+
+Random variables with finite variance form a vector space. Give it the inner product $\langle U, V \rangle = \mathbb{E}[UV]$ (the covariance, for zero-mean variables) and it becomes the Hilbert space $L^2$ (<ExternalLink site="formalcalculus" topic="hilbert-spaces" href="https://formalcalculus.com/topics/hilbert-spaces" />). Length is standard deviation, orthogonality is uncorrelatedness, and the mean squared error of a prediction is the squared distance between the prediction and the target.
+
+So predicting $X_{n+1}$ linearly from the past means finding the closest point to $X_{n+1}$ in the subspace spanned by the past — an orthogonal projection — and the prediction error is the part of $X_{n+1}$ orthogonal to everything we have seen. Taken to the infinite past, that picture is the Wold decomposition.
+
+<DefinitionBlock number={4} title="Linear process">
+A **linear process** is a series of the form
+
+$$
+X_t = \mu + \sum_{j=-\infty}^{\infty}\psi_j\varepsilon_{t-j}, \qquad \varepsilon_t \sim \mathrm{WN}(0, \sigma^2), \qquad \sum_j|\psi_j| < \infty.
+$$
+
+It is **causal** if $\psi_j = 0$ for $j < 0$, so that $X_t$ depends only on present and past shocks. The infinite sum converges in $L^2$ and almost surely ([Topic 9](/topics/modes-of-convergence)), and because the covariance is continuous in $L^2$ we may compute it term by term: by bilinearity and the uncorrelatedness of white noise, $\gamma(h) = \sigma^2\sum_j\psi_j\psi_{j+|h|}$.
+</DefinitionBlock>
+
+<ExampleBlock number={5} title="MA(q) and AR(1) as linear processes">
+A **moving average of order $q$**, $X_t = \varepsilon_t + \theta_1\varepsilon_{t-1} + \dots + \theta_q\varepsilon_{t-q}$, is a linear process with $\psi_0 = 1$, $\psi_j = \theta_j$ for $1 \le j \le q$, and $\psi_j = 0$ otherwise. Since $\psi_j\psi_{j+|h|} = 0$ for $|h| > q$, its autocovariance vanishes beyond lag $q$.
+
+An **AR(1)** $X_t = \phi X_{t-1} + \varepsilon_t$ with $|\phi| < 1$ becomes a linear process by substituting the equation into itself $k$ times:
+
+$$
+X_t = \sum_{j=0}^{k-1}\phi^j\varepsilon_{t-j} + \phi^kX_{t-k}.
+$$
+
+The remainder has $\mathbb{E}(\phi^kX_{t-k})^2 = \phi^{2k}\gamma(0) \to 0$, so in $L^2$, $X_t = \sum_{j \ge 0}\phi^j\varepsilon_{t-j}$: $\psi_j = \phi^j$. Definition 4's formula then gives
+
+$$
+\gamma(h) = \sigma^2\sum_{j \ge 0}\phi^j\phi^{j+|h|} = \frac{\sigma^2\phi^{|h|}}{1 - \phi^2},
+$$
+
+which discharges Example 3's promise that $\rho(h) = \phi^{|h|}$. For $\phi = 0.9$ and $\sigma^2 = 1$, $\gamma(0) = 1/0.19 = 5.263158$.
+</ExampleBlock>
+
+<DefinitionBlock number={5} title="Best linear predictor; innovations; deterministic series">
+Let $\{X_t\}$ be zero-mean and weakly stationary. Write $\mathcal{H}_n = \overline{\mathrm{sp}}\{X_s : s \le n\}$ for the closed linear span of the infinite past (all $L^2$ limits of finite linear combinations). The **best linear predictor** of $X_{n+1}$ is the projection $\hat X_{n+1} = P_{\mathcal{H}_n}X_{n+1}$, the **innovation** is $\varepsilon_{n+1} = X_{n+1} - \hat X_{n+1}$, and the one-step mean squared error is $\sigma^2 = \mathbb{E}\varepsilon_{n+1}^2$, which does not depend on $n$ by stationarity. The series is **deterministic** if $\sigma^2 = 0$ (the past predicts the future perfectly) and **purely nondeterministic** if $\bigcap_n\mathcal{H}_n = \{0\}$ (the remote past carries no information).
+
+With only finitely many observations, $P_nX_{n+1}$ denotes the projection onto $\mathrm{sp}\{X_1, \dots, X_n\}$, with mean squared error $v_n$.
+</DefinitionBlock>
+
+The finite-past projection reduces to linear algebra, and the stationarity of $\gamma$ makes that algebra recursive.
+
+<TheoremBlock number={3} title="Prediction equations and Durbin–Levinson">
+Let $\{X_t\}$ be zero-mean weakly stationary with $\gamma(0) > 0$ and $\gamma(h) \to 0$ as $h \to \infty$. Write $\Gamma_n = [\gamma(i - j)]_{i,j=1}^n$ and $\boldsymbol\gamma_n = (\gamma(1), \dots, \gamma(n))^\top$.
+
+(i) The best linear predictor of $X_{n+1}$ from $X_1, \dots, X_n$ is $P_nX_{n+1} = \sum_{j=1}^n\phi_{nj}X_{n+1-j}$, where $\boldsymbol\phi_n = (\phi_{n1}, \dots, \phi_{nn})^\top$ is the unique solution of $\Gamma_n\boldsymbol\phi_n = \boldsymbol\gamma_n$, and its mean squared error is $v_n = \gamma(0) - \boldsymbol\phi_n^\top\boldsymbol\gamma_n$.
+
+(ii) With $v_0 = \gamma(0)$ and $\phi_{11} = \gamma(1)/\gamma(0)$, for $n \ge 2$:
+
+$$
+\phi_{nn} = \frac{\gamma(n) - \sum_{j=1}^{n-1}\phi_{n-1,j}\,\gamma(n-j)}{v_{n-1}}, \qquad \phi_{nj} = \phi_{n-1,j} - \phi_{nn}\,\phi_{n-1,n-j} \;\;(1 \le j < n),
+$$
+
+$$
+v_n = v_{n-1}\bigl(1 - \phi_{nn}^2\bigr).
+$$
+</TheoremBlock>
+
+<ProofBlock number={2} title="Proof of Thm 3 (Prediction equations and Durbin–Levinson)">
+
+(i) Let $\mathcal{M} = \mathrm{sp}\{X_1, \dots, X_n\}$, a finite-dimensional, hence closed, subspace of $L^2$. By the projection theorem ([formalCalculus: Hilbert spaces](https://formalcalculus.com/topics/hilbert-spaces)), $P_nX_{n+1}$ is the unique $\hat X \in \mathcal{M}$ with $X_{n+1} - \hat X \perp X_k$ for $k = 1, \dots, n$. Write $\hat X = \sum_j\phi_{nj}X_{n+1-j}$ and impose orthogonality to $X_{n+1-i}$:
+
+$$
+0 = \mathbb{E}\Bigl[\Bigl(X_{n+1} - \sum_{j=1}^n\phi_{nj}X_{n+1-j}\Bigr)X_{n+1-i}\Bigr] = \gamma(i) - \sum_{j=1}^n\phi_{nj}\gamma(i - j), \qquad i = 1, \dots, n,
+$$
+
+which is $\Gamma_n\boldsymbol\phi_n = \boldsymbol\gamma_n$. Under $\gamma(0) > 0$ and $\gamma(h) \to 0$, $\Gamma_n$ is nonsingular for every $n$ (BRO1991 Prop. 5.1.1), so the coefficients are unique. Because the error is orthogonal to $\hat X \in \mathcal{M}$, $v_n = \mathbb{E}[(X_{n+1} - \hat X)X_{n+1}] = \gamma(0) - \sum_j\phi_{nj}\gamma(j)$.
+
+(ii) Stationarity makes prediction time-reversible: the equations for predicting $X_1$ from $X_2, \dots, X_n$ have the same Toeplitz matrix $\Gamma_{n-1}$ and right-hand side as those for predicting $X_{n+1}$ from the same variables in reverse order. So with $\mathcal{K} = \mathrm{sp}\{X_2, \dots, X_n\}$,
+
+$$
+P_{\mathcal{K}}X_{n+1} = \sum_{j=1}^{n-1}\phi_{n-1,j}X_{n+1-j}, \qquad P_{\mathcal{K}}X_1 = \sum_{j=1}^{n-1}\phi_{n-1,j}X_{1+j},
+$$
+
+and both errors have mean square $v_{n-1}$. The space $\mathcal{M}$ splits orthogonally as $\mathcal{K} \oplus \mathrm{sp}\{U\}$ with $U = X_1 - P_{\mathcal{K}}X_1$, so projecting onto each piece,
+
+$$
+P_nX_{n+1} = P_{\mathcal{K}}X_{n+1} + a\,U, \qquad a = \frac{\mathbb{E}[X_{n+1}U]}{\mathbb{E}U^2}.
+$$
+
+The denominator is $v_{n-1}$. The numerator is $\mathbb{E}[X_{n+1}X_1] - \sum_j\phi_{n-1,j}\mathbb{E}[X_{n+1}X_{1+j}] = \gamma(n) - \sum_j\phi_{n-1,j}\gamma(n-j)$, so $a$ is the claimed $\phi_{nn}$. Expanding $aU$ and collecting the coefficient of $X_{n+1-j}$ (which appears in $U$ as $X_{1+(n-j)}$) gives $\phi_{nj} = \phi_{n-1,j} - \phi_{nn}\phi_{n-1,n-j}$, and the coefficient of $X_1$ is $\phi_{nn}$. Finally, $X_{n+1} - P_nX_{n+1} = (X_{n+1} - P_{\mathcal{K}}X_{n+1}) - aU$ with $aU$ the projection of the first term onto $\mathrm{sp}\{U\}$, so by Pythagoras
+
+$$
+v_n = v_{n-1} - a^2\,\mathbb{E}U^2 = v_{n-1} - \phi_{nn}^2v_{n-1}.
+$$
+
+$\blacksquare$ — using the projection theorem, the orthogonal decomposition $\mathcal{M} = \mathcal{K} \oplus \mathrm{sp}\{U\}$, and the time-reversal symmetry of $\gamma$ (LEV1947, DUR1960).
+
+</ProofBlock>
+
+Solving $\Gamma_n\boldsymbol\phi_n = \boldsymbol\gamma_n$ directly costs $O(n^3)$; the recursion builds every predictor up to order $n$ in $O(n^2)$ and produces the partial autocorrelations $\phi_{nn}$ of §35.5 for free.
+
+<ExampleBlock number={6} title="Forecasting an AR(1), and how fast forecasts fade">
+For a causal linear process in its own innovations, the $h$-step forecast drops the shocks not yet seen, so its mean squared error is $\sigma^2\sum_{j<h}\psi_j^2$. For the AR(1), $P_nX_{n+h} = \phi^hX_n$ and the MSE is $\gamma(0)(1 - \phi^{2h})$. As a fraction of the variance $\gamma(0)$:
+
+- **AR(1), $\phi = 0.9$:** **0.19** at $h = 1$, so the past explains 81% of the variance (**0.81**); **0.651322** at $h = 5$.
+- **AR(2) with roots $1 \pm i$:** **0.416667** at $h = 1$, **0.963542** at $h = 5$.
+- **MA(2), $\theta = (0.6, 0.4)$:** **0.657895** at $h = 1$, and exactly **1** from $h = 3$ on. An MA($q$) is unpredictable beyond $q$ steps.
+</ExampleBlock>
+
+Now the featured theorem: push the projection to the infinite past and ask what is left once every innovation is projected out.
+
+<TheoremBlock number={4} title="Wold decomposition">
+Let $\{X_t\}$ be zero-mean weakly stationary, $\mathcal{H}_t = \overline{\mathrm{sp}}\{X_s : s \le t\}$, and suppose the one-step prediction error $\sigma^2 = \mathbb{E}(X_t - P_{\mathcal{H}_{t-1}}X_t)^2$ is positive. Then
+
+$$
+X_t = \sum_{j=0}^{\infty}\psi_j\varepsilon_{t-j} + V_t,
+$$
+
+where (i) $\varepsilon_t = X_t - P_{\mathcal{H}_{t-1}}X_t$ is $\mathrm{WN}(0, \sigma^2)$ and $\varepsilon_t \in \mathcal{H}_t$; (ii) $\psi_0 = 1$, $\psi_j = \mathbb{E}[X_t\varepsilon_{t-j}]/\sigma^2$ does not depend on $t$, and $\sum_j\psi_j^2 < \infty$; (iii) $\mathbb{E}[\varepsilon_sV_t] = 0$ for all $s, t$; (iv) $V_t \in \mathcal{H}_{-\infty} = \bigcap_s\mathcal{H}_s$; (v) $\{V_t\}$ is deterministic: $V_t$ lies in the closed span of $\{V_s : s < t\}$.
+</TheoremBlock>
+
+<ProofBlock number={3} title="Proof of Thm 4 (Wold decomposition)">
+
+**Step 1 (the shift is unitary).** Define $U$ on finite combinations by $U\sum_i a_iX_{t_i} = \sum_i a_iX_{t_i+1}$. Inner products depend only on lag differences, so $U$ preserves them; it extends to a unitary map of $\mathcal{H} = \overline{\mathrm{sp}}\{X_t : t \in \mathbb{Z}\}$ onto itself with $U\mathcal{H}_{t-1} = \mathcal{H}_t$. Projections commute with it: $P_{\mathcal{H}_t}X_{t+1} = UP_{\mathcal{H}_{t-1}}X_t$, hence $\varepsilon_{t+1} = U\varepsilon_t$.
+
+**Step 2 (innovations are white noise).** By the projection theorem $\varepsilon_t \perp \mathcal{H}_{t-1}$. For $s < t$, $\varepsilon_s \in \mathcal{H}_s \subseteq \mathcal{H}_{t-1}$, so $\mathbb{E}[\varepsilon_t\varepsilon_s] = 0$. By Step 1, $\mathbb{E}\varepsilon_t^2 = \mathbb{E}\varepsilon_0^2 = \sigma^2$, and $\mathbb{E}\varepsilon_t = 0$. This is (i).
+
+**Step 3 (the moving-average part).** The family $\{\varepsilon_{t-j}/\sigma\}_{j \ge 0}$ is orthonormal in $\mathcal{H}_t$. Projecting $X_t$ onto its closed span $\mathcal{M}_t$ gives the Fourier expansion
+
+$$
+P_{\mathcal{M}_t}X_t = \sum_{j=0}^{\infty}\frac{\langle X_t, \varepsilon_{t-j}\rangle}{\sigma^2}\,\varepsilon_{t-j} = \sum_{j=0}^{\infty}\psi_j\varepsilon_{t-j},
+$$
+
+which converges in $L^2$ because Bessel's inequality gives $\sigma^2\sum_j\psi_j^2 \le \mathbb{E}X_t^2$. Unitarity makes $\psi_j = \langle X_t, \varepsilon_{t-j}\rangle/\sigma^2$ independent of $t$, and $\psi_0 = \mathbb{E}[(P_{\mathcal{H}_{t-1}}X_t + \varepsilon_t)\varepsilon_t]/\sigma^2 = 1$ because $\varepsilon_t \perp \mathcal{H}_{t-1}$. This is (ii).
+
+**Step 4 (the remainder is orthogonal to every innovation).** Set $V_t = X_t - P_{\mathcal{M}_t}X_t$, so $V_t \perp \varepsilon_s$ for $s \le t$. For $s > t$, $X_t \in \mathcal{H}_{s-1}$ and $\varepsilon_s \perp \mathcal{H}_{s-1}$, while each $\varepsilon_{t-j}$ in the expansion also lies in $\mathcal{H}_{s-1}$; so $V_t \perp \varepsilon_s$ as well. This is (iii).
+
+**Step 5 (the remainder lives in the remote past).** Since $X_t = P_{\mathcal{H}_{t-1}}X_t + \varepsilon_t$, we have $\mathcal{H}_t = \mathcal{H}_{t-1} \oplus \mathrm{sp}\{\varepsilon_t\}$. Now $V_t \in \mathcal{H}_t$ and $V_t \perp \varepsilon_t$, so $V_t \in \mathcal{H}_{t-1}$. Repeating with $\mathcal{H}_{t-1} = \mathcal{H}_{t-2} \oplus \mathrm{sp}\{\varepsilon_{t-1}\}$ and $V_t \perp \varepsilon_{t-1}$ gives $V_t \in \mathcal{H}_{t-2}$, and by induction $V_t \in \mathcal{H}_{t-k}$ for every $k$. This is (iv).
+
+**Step 6 (the remainder is deterministic).** For $s \le t - 1$, $X_s = \sum_j\psi_j\varepsilon_{s-j} + V_s$ with the two parts orthogonal, so $\mathcal{H}_{t-1} = \mathcal{M}_{t-1} \oplus \mathcal{V}_{t-1}$, where $\mathcal{V}_{t-1} = \overline{\mathrm{sp}}\{V_s : s \le t-1\}$. By (iv), $V_t \in \mathcal{H}_{t-1}$, and by (iii) it is orthogonal to $\mathcal{M}_{t-1}$, so $V_t \in \mathcal{V}_{t-1}$: its own past predicts it with zero error. This is (v).
+
+$\blacksquare$ — using the projection theorem, Bessel's inequality and $L^2$ convergence of orthonormal expansions, and the unitary shift on $\mathcal{H}$ (WOL1938; BRO1991 Thm 5.7.1).
+
+</ProofBlock>
+
+So what does Wold buy us? A purely nondeterministic series ($V_t = 0$) is exactly a causal MA(∞) in its own innovations, and those innovations are its one-step forecast errors. Every forecasting model is a choice of how to approximate the infinite sequence $\psi_j$ with finitely many parameters; ARMA is the next section's answer.
+
+![Left: a shaded plane for the span of the past, a black arrow for the next observation, its indigo projection into the plane, and a dashed rose innovation at a right angle. Right: prediction mean squared error over the variance against horizon for AR(1), AR(2) and MA(2) models, all rising toward a dashed line at 1; the MA(2) curve reaches 1 at horizon 3.](/images/topics/stationary-time-series-and-arma/35-wold-projection.png)
+
+*Figure 3. Prediction is projection. The innovation is the part of tomorrow orthogonal to everything we have seen, and forecast error climbs to the full variance as the horizon grows.*
+
+Drag the forecast origin and stretch the horizon: the band widens to $\pm 1.96\sqrt{\gamma(0)}$ as the Wold weights run out, and for an AR($p$) every Durbin–Levinson bar beyond $p$ is exactly zero.
+
+<WoldPredictionProjector client:visible />
+
+<ExampleBlock number={7} title="A deterministic series">
+Let $X_t = A\cos(\lambda t) + B\sin(\lambda t)$, where $A$ and $B$ are uncorrelated with mean 0 and common variance $\sigma_A^2$, and $\lambda \in (0, \pi)$ is a fixed frequency. The angle-addition formula gives $\gamma(h) = \sigma_A^2\cos(\lambda h)$, so the series is stationary. It is also exactly predictable: the trigonometric identity $\cos(\lambda t) = 2\cos\lambda\cos(\lambda(t-1)) - \cos(\lambda(t-2))$, and the same for sines, gives
+
+$$
+X_t = 2\cos(\lambda)\,X_{t-1} - X_{t-2}
+$$
+
+with no error term, so $\sigma^2 = 0$ and Wold's $V_t$ is the whole series. Its spectrum (§35.7) is two point masses at $\pm\lambda$, a spectral distribution without a density.
+</ExampleBlock>
+
+<RemarkBlock number={7} title="Wold is about linear prediction only">
+The innovations are uncorrelated, not independent. A GARCH series (§35.9) is white noise, so its Wold representation is trivial ($\psi_0 = 1$, all other $\psi_j = 0$), yet its squared returns are predictable. Linear prediction is blind to volatility; that blindness is §35.9's subject.
+</RemarkBlock>
+
+<RemarkBlock number={8} title="The prediction-error decomposition, and Topic 36">
+For a Gaussian series the joint density of $x_1, \dots, x_n$ factors into one-step predictions:
+
+$$
+p(x_1, \dots, x_n) = \prod_{t=1}^{n}\bigl(2\pi v_{t-1}\bigr)^{-1/2}\exp\Bigl(-\frac{(x_t - \hat x_t)^2}{2v_{t-1}}\Bigr),
+$$
+
+where $\hat x_t$ is the best linear predictor of $x_t$ from $x_1, \dots, x_{t-1}$ and $v_{t-1}$ its mean squared error. The exact likelihood is a product of one-step prediction errors. Theorem 3 computes the $\hat x_t$ and $v_t$ in $O(n^2)$ operations; Topic 36 computes them in $O(n)$ with the Kalman filter, after writing an ARMA model in state-space form.
+</RemarkBlock>
+
+<RemarkBlock number={9} title="Gaussian series: linear is optimal">
+If $\{X_t\}$ is a Gaussian process, $P_nX_{n+1} = \mathbb{E}[X_{n+1} \mid X_1, \dots, X_n]$: the best linear predictor is the best predictor of any kind. This is the conditional multivariate Normal formula of [Topic 8 §8.4](/topics/multivariate-distributions#section-8-4), with $\Gamma_n$ as the conditioning covariance block. Outside the Gaussian case the conditional mean can beat every linear predictor.
+</RemarkBlock>
+
+<a id="section-35-4"></a>
+
+## 35.4 ARMA models: causality and invertibility
+
+Wold says every purely nondeterministic series is an MA(∞). An infinite sequence of weights is too many parameters, so we want $\psi_j$ generated by finitely many numbers. Ratios of polynomials do exactly that, and the theory of the family lives in where those polynomials have their roots.
+
+<DefinitionBlock number={6} title="ARMA(p, q)">
+Write $B$ for the **backshift operator**, $BX_t = X_{t-1}$, so $B^kX_t = X_{t-k}$. Define the **AR polynomial** and **MA polynomial**
+
+$$
+\phi(z) = 1 - \phi_1z - \dots - \phi_pz^p, \qquad \theta(z) = 1 + \theta_1z + \dots + \theta_qz^q.
+$$
+
+A zero-mean series $\{X_t\}$ is an **ARMA($p$, $q$)** process if it is stationary and
+
+$$
+\phi(B)X_t = \theta(B)\varepsilon_t, \qquad \varepsilon_t \sim \mathrm{WN}(0, \sigma^2),
+$$
+
+that is, $X_t - \phi_1X_{t-1} - \dots - \phi_pX_{t-p} = \varepsilon_t + \theta_1\varepsilon_{t-1} + \dots + \theta_q\varepsilon_{t-q}$. We require that $\phi$ and $\theta$ have no common zeros: a shared factor cancels from both sides and the model is over-parameterized. A series with mean $\mu$ is ARMA if $X_t - \mu$ is.
+</DefinitionBlock>
+
+<DefinitionBlock number={7} title="Causal; invertible">
+An ARMA process is **causal** if $X_t = \sum_{j \ge 0}\psi_j\varepsilon_{t-j}$ with $\sum_j|\psi_j| < \infty$: the present is built from present and past shocks only. It is **invertible** if $\varepsilon_t = \sum_{j \ge 0}\pi_jX_{t-j}$ with $\sum_j|\pi_j| < \infty$: the shocks can be recovered from present and past observations. The $\psi_j$ are the **MA(∞) weights** and the $\pi_j$ the **AR(∞) weights**.
+</DefinitionBlock>
+
+Causality is what a forecaster needs; invertibility is what an estimator needs, since the likelihood is built from shocks recovered from the data. Both are statements about the unit circle.
+
+<TheoremBlock number={5} title="Causality: AR roots outside the unit circle">
+Let $\phi(B)X_t = \theta(B)\varepsilon_t$ with $\varepsilon \sim \mathrm{WN}(0, \sigma^2)$, where $\phi$ and $\theta$ have no common zeros. A causal stationary solution $X_t = \sum_{j \ge 0}\psi_j\varepsilon_{t-j}$ with $\sum_j|\psi_j| < \infty$ exists if and only if $\phi(z) \ne 0$ for all complex $|z| \le 1$. In that case the solution is unique and $\sum_j\psi_jz^j = \theta(z)/\phi(z)$ for $|z| \le 1$.
+</TheoremBlock>
+
+<ProofBlock number={4} title="Proof of Thm 5 (Causality)">
+
+($\Leftarrow$) Factor $\phi(z) = \prod_{k=1}^p(1 - z/r_k)$ over its roots, all with $|r_k| > 1$. Each factor inverts as a geometric series,
+
+$$
+\Bigl(1 - \frac{z}{r_k}\Bigr)^{-1} = \sum_{j=0}^{\infty}r_k^{-j}z^j, \qquad \sum_{j}|r_k|^{-j} < \infty,
+$$
+
+absolutely convergent on $|z| \le 1$. The Cauchy product of finitely many absolutely summable sequences is absolutely summable (<ExternalLink site="formalcalculus" topic="power-taylor-series" href="https://formalcalculus.com/topics/power-taylor-series" />), so $1/\phi(z) = \sum_j\xi_jz^j$ with $\sum_j|\xi_j| < \infty$, and so is $\psi(z) = \xi(z)\theta(z)$. Define $X_t = \sum_j\psi_j\varepsilon_{t-j}$, a causal linear process (Def 4). Applying absolutely summable filters to a stationary sequence is legitimate, and composing two such filters multiplies their power series (absolute convergence lets us rearrange the double sum). Hence
+
+$$
+\phi(B)X_t = \phi(B)\xi(B)\theta(B)\varepsilon_t = \theta(B)\varepsilon_t,
+$$
+
+because $\phi(z)\xi(z) = 1$. For uniqueness, let $Y$ be any stationary solution and apply $\xi(B)$ to $\phi(B)Y_t = \theta(B)\varepsilon_t$: $Y_t = \xi(B)\theta(B)\varepsilon_t = X_t$.
+
+($\Rightarrow$) Suppose $X_t = \psi(B)\varepsilon_t$ with $\sum|\psi_j| < \infty$. Then $\theta(B)\varepsilon_t = \phi(B)X_t = \eta(B)\varepsilon_t$ with $\eta(z) = \phi(z)\psi(z) = \sum_j\eta_jz^j$, absolutely summable. Take the covariance of both sides with $\varepsilon_{t-j}$: white noise kills every term but one, leaving $\sigma^2\theta_j = \sigma^2\eta_j$ for every $j \ge 0$ (with $\theta_j = 0$ for $j > q$). So $\phi(z)\psi(z) = \theta(z)$ on $|z| \le 1$, where both sides converge absolutely. If $\phi(z_0) = 0$ for some $|z_0| \le 1$, then $\theta(z_0) = \phi(z_0)\psi(z_0) = 0$, a common zero — contradicting the hypothesis.
+
+$\blacksquare$ — using geometric series, absolute convergence of Cauchy products, and uncorrelatedness of white noise.
+
+</ProofBlock>
+
+No complex analysis was needed — only that $\sum_j|r|^{-j}$ converges exactly when $|r| > 1$. That single inequality is why "outside the unit circle" is the boundary.
+
+<TheoremBlock number={6} title="Invertibility: MA roots outside the unit circle">
+In the setting of Theorem 5, $\varepsilon_t = \sum_{j \ge 0}\pi_jX_{t-j}$ with $\sum_j|\pi_j| < \infty$ if and only if $\theta(z) \ne 0$ for all $|z| \le 1$, and then $\sum_j\pi_jz^j = \phi(z)/\theta(z)$ for $|z| \le 1$.
+</TheoremBlock>
+
+<ProofBlock number={5} title="Proof of Thm 6 (Invertibility)">
+
+This is Proof 4 with the roles of $\phi$ and $\theta$ exchanged. ($\Leftarrow$) Factoring $\theta$ over its roots, all outside the closed disk, gives $1/\theta(z) = \sum_j\zeta_jz^j$ with $\sum|\zeta_j| < \infty$. Applying $\zeta(B)$ to $\phi(B)X_t = \theta(B)\varepsilon_t$,
+
+$$
+\zeta(B)\phi(B)X_t = \zeta(B)\theta(B)\varepsilon_t = \varepsilon_t,
+$$
+
+so $\pi(z) = \zeta(z)\phi(z)$ works and is absolutely summable. ($\Rightarrow$) If $\varepsilon_t = \pi(B)X_t$, apply $\pi(B)$ to the ARMA equation and use that absolutely summable filters commute:
+
+$$
+\pi(B)\theta(B)\varepsilon_t = \pi(B)\phi(B)X_t = \phi(B)\pi(B)X_t = \phi(B)\varepsilon_t.
+$$
+
+Matching coefficients by covariance with $\varepsilon_{t-j}$, exactly as in Proof 4, gives $\pi(z)\theta(z) = \phi(z)$ on $|z| \le 1$. A zero of $\theta$ in the closed disk would be a zero of $\phi$ too, a common zero.
+
+$\blacksquare$ — using the argument of Proof 4 with $\phi$ and $\theta$ exchanged.
+
+</ProofBlock>
+
+<ExampleBlock number={8} title="Three AR(1)s, one innovation sequence">
+Drive three AR(1) recursions $X_t = \phi X_{t-1} + \varepsilon_t$ with the same 150 shocks, starting from $X_0 = 0$. The polynomial $1 - \phi z$ has the single root $1/\phi$.
+
+- **$\phi = 0.7$:** root $1/0.7 = 1.43$, outside the circle. Shocks are forgotten geometrically and the path hovers near zero (final value **0.984**).
+- **$\phi = 1$:** root exactly on the circle, a **unit root**. The recursion is a random walk, $X_t = X_0 + \varepsilon_1 + \dots + \varepsilon_t$, whose variance grows linearly in $t$; it wanders to **−15.0** by $t = 150$.
+- **$\phi = 1.03$:** root $0.971$, inside the circle. Shocks are amplified and the path explodes to **−614**.
+
+For $|\phi| > 1$ a stationary solution still exists, $X_t = -\sum_{j \ge 1}\phi^{-j}\varepsilon_{t+j}$, but it is built from *future* shocks: non-causal and useless for forecasting.
+</ExampleBlock>
+
+![Top row: the unit circle with its rose-shaded interior and the root of 1 minus phi z at 1.43, at 1, and at 0.971. Bottom row: three paths driven by one innovation sequence; the first hovers near zero, the second wanders like a random walk, and the third explodes.](/images/topics/stationary-time-series-and-arma/35-unit-circle-roots.png)
+
+*Figure 4. Causality is a root condition. Outside the unit circle the series forgets its shocks; on it, it wanders; inside, it explodes.*
+
+<ExampleBlock number={9} title="AR(2): complex roots, and a unit root in disguise">
+Take $\phi = (1, -0.5)$, so $\phi(z) = 1 - z + 0.5z^2$. Its roots are $1 \pm i$, of modulus $\sqrt 2 = 1.41421 > 1$: the model is causal. Complex roots at angle $\pm\pi/4$ make the solution of the recursion a damped cosine, so the ACF oscillates with period $2\pi/(\pi/4) = 8$ steps while decaying like $|r|^{-h} = 2^{-h/2}$ (Figure 5, top).
+
+Now take $\phi = (1.2, -0.2)$. Both coefficients look harmless, but $\phi(z) = 1 - 1.2z + 0.2z^2 = (1 - z)(1 - 0.2z)$ has roots **1** and **5**. The root at 1 sits on the circle, so there is no causal stationary solution. The first difference $X_t - X_{t-1}$ is a causal AR(1) with coefficient 0.2: this is an ARIMA(1, 1, 0) (Remark 12).
+</ExampleBlock>
+
+<ExampleBlock number={10} title="ψ and π weights of an ARMA(1, 1)">
+For $\phi(z) = 1 - 0.7z$ and $\theta(z) = 1 + 0.4z$, match coefficients of $z^j$ in $\phi(z)\psi(z) = \theta(z)$: $\psi_0 = 1$, $\psi_1 - 0.7\psi_0 = 0.4$, and $\psi_j - 0.7\psi_{j-1} = 0$ for $j \ge 2$. So $\psi_j = (\phi + \theta)\phi^{j-1} = 1.1 \cdot 0.7^{j-1}$ for $j \ge 1$:
+
+$$
+\psi_0, \dots, \psi_5 = 1,\ 1.1,\ 0.77,\ 0.539,\ 0.3773,\ 0.26411.
+$$
+
+Matching coefficients in $\theta(z)\pi(z) = \phi(z)$ instead gives $\pi_0 = 1$, $\pi_1 + 0.4 = -0.7$, and $\pi_j + 0.4\pi_{j-1} = 0$ for $j \ge 2$:
+
+$$
+\pi_0, \dots, \pi_5 = 1,\ -1.1,\ 0.44,\ -0.176,\ 0.0704,\ -0.02816.
+$$
+
+The $\psi_j$ decay at the rate of the AR root ($0.7 = 1/1.43$), the $\pi_j$ at the rate of the MA root ($0.4 = 1/2.5$).
+</ExampleBlock>
+
+Drag the AR roots (×) and MA roots (○) around the unit circle and watch causality, invertibility, the ACF and PACF, and the spectrum respond. The spectrum panel previews §35.7: hover over it to draw the distance from $e^{-i\omega}$ to every root; the spectrum is a ratio of those distances.
+
+<ARMARootExplorer client:visible />
+
+<RemarkBlock number={10} title="Roots, the companion matrix, and stability">
+An AR($p$) is a first-order recursion in disguise. Stack $\mathbf{Y}_t = (X_t, X_{t-1}, \dots, X_{t-p+1})^\top$; then $\mathbf{Y}_t = \Phi\mathbf{Y}_{t-1} + \mathbf{e}_t$, where the **companion matrix** $\Phi$ has $(\phi_1, \dots, \phi_p)$ as its first row and ones on the subdiagonal, and $\mathbf{e}_t = (\varepsilon_t, 0, \dots, 0)^\top$. Its eigenvalues are the reciprocals of the roots of $\phi(z)$, so causality says the spectral radius of $\Phi$ is below 1 — the stability condition of linear dynamical systems (<ExternalLink site="formalcalculus" topic="stability-dynamics" href="https://formalcalculus.com/topics/stability-dynamics" />, <ExternalLink site="formalcalculus" topic="eigenvalues-eigenvectors" href="https://formalcalculus.com/topics/eigenvalues-eigenvectors" />). This first-order vector form is exactly the state-space representation Topic 36 starts from.
+</RemarkBlock>
+
+<RemarkBlock number={11} title="Non-invertible MA models are not identifiable from γ">
+An MA(1) with parameters $(\theta, \sigma^2)$ and one with $(1/\theta, \theta^2\sigma^2)$ have the same autocovariance: both give $\gamma(0) = \sigma^2(1 + \theta^2)$ and $\gamma(1) = \sigma^2\theta$. Reflecting any MA root $r$ inside the circle to $1/\bar r$, and rescaling $\sigma^2$, leaves $\gamma$ unchanged, so we always report the invertible twin. The explorer's **Flip** button performs exactly this reflection, and the ACF panel doesn't move.
+</RemarkBlock>
+
+<RemarkBlock number={12} title="ARIMA and unit roots">
+If $\phi(z) = (1 - z)^d\phi^*(z)$ with $\phi^*$ causal, then the $d$-th difference $(1 - B)^dX_t$ is a causal ARMA, and $X_t$ is an **ARIMA($p$, $d$, $q$)** process. Differencing removes the unit root. Deciding *whether* $d = 1$ is harder: the Dickey–Fuller test (DIC1979) has nonstandard asymptotics, since in a random walk the least-squares $\hat\phi$ converges at rate $n$, not $\sqrt n$, to a non-Gaussian limit. We leave unit-root testing aside; see <ExternalLink site="formalml" topic="random-walks" href="https://formalml.com/topics/random-walks" />.
+</RemarkBlock>
+
+<a id="section-35-5"></a>
+
+## 35.5 Identification: ACF and PACF
+
+Which ARMA($p$, $q$) should we fit? An MA($q$) has an ACF that is exactly zero beyond lag $q$ (Example 5). For autoregressions a second function cuts off: the correlation between $X_t$ and $X_{t-h}$ *after* the intermediate observations have had their say.
+
+<DefinitionBlock number={8} title="Partial autocorrelation">
+The **partial autocorrelation function** (PACF) of a stationary series is $\alpha(1) = \rho(1)$ and, for $h \ge 2$, $\alpha(h) = \phi_{hh}$, the last coefficient of the best linear predictor of $X_{h+1}$ from $X_h, \dots, X_1$ (Theorem 3). Equivalently, $\alpha(h)$ is the correlation between $X_{h+1}$ and $X_1$ after both have been regressed on $X_2, \dots, X_h$ — it is the coefficient $a$ of Proof 2.
+</DefinitionBlock>
+
+Durbin–Levinson computes every $\alpha(h)$ as a by-product, and for autoregressions it delivers a cutoff.
+
+<TheoremBlock number={7} title="The AR(p) PACF cuts off after lag p">
+If $\{X_t\}$ is a causal AR($p$), $\phi(B)X_t = \varepsilon_t$ with $\phi_p \ne 0$, then $\alpha(p) = \phi_p$ and $\alpha(h) = 0$ for every $h > p$.
+</TheoremBlock>
+
+<ProofBlock number={6} title="Proof of Thm 7 (PACF cutoff)">
+
+Fix $h \ge p$ and consider the candidate predictor $\hat X = \sum_{j=1}^p\phi_jX_{h+1-j}$, which lies in $\mathrm{sp}\{X_1, \dots, X_h\}$ because $h + 1 - p \ge 1$. Its error is $X_{h+1} - \hat X = \varepsilon_{h+1}$. By causality (Theorem 5) each $X_s$ with $s \le h$ is an $L^2$ limit of combinations of $\varepsilon_r$, $r \le s \le h$, and $\varepsilon_{h+1}$ is uncorrelated with all of them. Hence
+
+$$
+\mathbb{E}\bigl[(X_{h+1} - \hat X)X_s\bigr] = \mathbb{E}[\varepsilon_{h+1}X_s] = 0, \qquad s = 1, \dots, h,
+$$
+
+so $\hat X$ satisfies the orthogonality conditions that characterize $P_hX_{h+1}$ (Theorem 3(i)). Because those conditions have a unique solution, $\phi_{hj} = \phi_j$ for $j \le p$ and $\phi_{hj} = 0$ for $p < j \le h$. Reading off the last coefficient: $\alpha(h) = \phi_{hh}$ equals $\phi_p$ when $h = p$ and $0$ when $h > p$.
+
+$\blacksquare$ — using causality (Theorem 5), the projection characterization and uniqueness in Theorem 3(i), and Definition 8.
+
+</ProofBlock>
+
+The dual statement needs no new proof: an MA($q$)'s ACF is zero beyond lag $q$ (Definition 4 with $\psi_j = 0$ for $j > q$). An ARMA with both $p, q \ge 1$ has neither cutoff, because its $\psi_j$ and $\pi_j$ are both infinite sequences.
+
+<ExampleBlock number={11} title="The identification grid">
+Theory and a simulated sample of $n = 500$ for three models:
+
+- **AR(2), $\phi = (1, -0.5)$:** $\rho(1) = \alpha(1) = 2/3 = 0.666667$, $\alpha(2) = -0.5 = \phi_2$, and $\alpha(3) = 0$, as Theorem 7 requires. The ACF is a damped cosine; $\rho(3) = -0.166667$.
+- **MA(2), $\theta = (0.6, 0.4)$:** $\rho(1) = 0.84/1.52 = 0.552632$, $\rho(2) = 0.4/1.52 = 0.263158$, and $\rho(3) = 0$. The PACF tails off instead: $-0.0608$ and $-0.1744$ at lags 2 and 3.
+- **ARMA(1, 1), $\phi = 0.7$, $\theta = 0.4$:** $\rho(1) = \alpha(1) = 0.818605$ and $\alpha(2) = -0.294314$; both functions tail off geometrically.
+</ExampleBlock>
+
+![Three-by-two grid of theoretical autocorrelations in amber and partial autocorrelations in indigo with sample dots from 500 observations, for AR(2), MA(2) and ARMA(1,1) models. The AR(2) partial autocorrelations stop after lag 2, the MA(2) autocorrelations stop after lag 2, and the ARMA panels decay in both columns.](/images/topics/stationary-time-series-and-arma/35-acf-pacf-identification.png)
+
+*Figure 5. The identification table, drawn. An AR(p) PACF stops after lag p; an MA(q) ACF stops after lag q; an ARMA tails off in both.*
+
+<RemarkBlock number={13} title="The identification table and the Box–Jenkins loop">
+| Model | ACF | PACF |
+|---|---|---|
+| AR($p$) | tails off | cuts off after lag $p$ |
+| MA($q$) | cuts off after lag $q$ | tails off |
+| ARMA($p$, $q$) | tails off | tails off |
+
+Box and Jenkins (BOX2015) built a loop around this table: *identify* an order from the sample ACF and PACF, *estimate*, *check* the residuals, repeat. Modern practice identifies with the information criteria of §35.6 and keeps the table as a sanity check.
+</RemarkBlock>
+
+<a id="section-35-6"></a>
+
+## 35.6 Estimation and order selection
+
+Three estimators cover almost all practice. **Yule–Walker** replaces $\gamma$ by $\hat\gamma$ in Theorem 3's prediction equations: solve $\hat\Gamma_p\hat{\boldsymbol\phi} = \hat{\boldsymbol\gamma}_p$, set $\hat\sigma^2 = \hat\gamma(0) - \hat{\boldsymbol\phi}^\top\hat{\boldsymbol\gamma}_p$, and compute both by Durbin–Levinson — a method-of-moments estimator. **Conditional least squares** (CSS) regresses $x_t$ on its lags as in [Topic 21](/topics/linear-regression); with MA terms it minimizes $\sum_te_t^2$ over residuals computed recursively, $e_t = x_t - \sum_j\phi_jx_{t-j} - \sum_j\theta_je_{t-j}$, starting from $e_t = 0$ ("conditional" on that start). **Gaussian maximum likelihood** maximizes Remark 8's exact likelihood ([Topic 14](/topics/maximum-likelihood)).
+
+<ExampleBlock number={12} title="Yule's sunspot autoregression, 1927">
+Yearly sunspot numbers from 1700 to 2008 ($n = 309$, the SIL1981 series) rise and fall with the roughly eleven-year solar cycle. Fitting an AR(2) by Yule–Walker gives
+
+$$
+\hat\phi = (1.375227,\ -0.676694), \qquad \hat\sigma^2 = 289.373.
+$$
+
+The roots of $\hat\phi(z)$ are complex with modulus $1.21564$, at an angle giving a quasi-period of $10.81$ years; the fitted AR(2) spectrum (§35.7) peaks at a period of $11.40$ years. Yule's argument (YUL1927) was that the cycle is not a hidden sinusoid in noise, Example 7's deterministic series, but a damped pendulum kept swinging by random shocks. That picture is the autoregressive model, and it was born here.
+</ExampleBlock>
+
+<TheoremBlock number={8} title="Asymptotics of Yule–Walker and Gaussian MLE (stated; BRO1991 Thms 8.1.1, 10.8.2)">
+(a) If $\{X_t\}$ is a causal AR($p$) driven by $\mathrm{IID}(0, \sigma^2)$ noise, the Yule–Walker estimator satisfies $\sqrt n(\hat{\boldsymbol\phi} - \boldsymbol\phi) \xrightarrow{d} \mathcal{N}(\mathbf{0}, \sigma^2\Gamma_p^{-1})$ and $\hat\sigma^2 \xrightarrow{P} \sigma^2$.
+
+(b) If $\{X_t\}$ is a causal, invertible ARMA($p$, $q$) driven by $\mathrm{IID}(0, \sigma^2)$ noise, the Gaussian MLE $\hat{\boldsymbol\beta} = (\hat{\boldsymbol\phi}, \hat{\boldsymbol\theta})$ — and the CSS and Whittle estimators — satisfy $\sqrt n(\hat{\boldsymbol\beta} - \boldsymbol\beta) \xrightarrow{d} \mathcal{N}(\mathbf{0}, V(\boldsymbol\beta))$, where $V(\boldsymbol\beta) = \sigma^2\,[\mathrm{Cov}(U_{t-1}, \dots, U_{t-p}, W_{t-1}, \dots, W_{t-q})]^{-1}$ with auxiliary autoregressions $\phi(B)U_t = \varepsilon_t$ and $\theta(B)W_t = \varepsilon_t$. Gaussianity of the noise is not required.
+</TheoremBlock>
+
+Part (a) is Topic 21's regression formula with $\Gamma_p$ as the design Gram matrix; for an AR(1), $\mathrm{Var}(\hat\phi) \approx (1 - \phi^2)/n$, and for an MA(1), $\mathrm{Var}(\hat\theta) \approx (1 - \theta^2)/n$. Part (b), the analogue of Topic 14's MLE asymptotics, says the three estimators agree to first order.
+
+<TheoremBlock number={9} title="Bartlett's formula (stated; BAR1946; BRO1991 Thm 7.2.1)">
+If $X_t = \mu + \sum_j\psi_j\varepsilon_{t-j}$ with $\varepsilon$ i.i.d., $\sum_j|\psi_j| < \infty$ and $\mathbb{E}\varepsilon^4 < \infty$, then for each $h$, $\sqrt n\bigl(\hat\rho(1) - \rho(1), \dots, \hat\rho(h) - \rho(h)\bigr) \xrightarrow{d} \mathcal{N}(\mathbf{0}, W)$ with
+
+$$
+w_{ij} = \sum_{k=1}^{\infty}\bigl[\rho(k+i) + \rho(k-i) - 2\rho(i)\rho(k)\bigr]\bigl[\rho(k+j) + \rho(k-j) - 2\rho(j)\rho(k)\bigr].
+$$
+</TheoremBlock>
+
+For i.i.d. noise $W = I$, the $\pm 1.96/\sqrt n$ band; for an MA($q$), $\mathrm{Var}\,\hat\rho(h) \approx (1 + 2\sum_{k=1}^q\rho(k)^2)/n$ for $h > q$, Example 3's wider band. The joint limit uses the Cramér–Wold device ([Topic 11 §11.8](/topics/central-limit-theorem#section-11-8)), and the off-diagonal $w_{ij}$ are why sample autocorrelations drift in runs.
+
+<ExampleBlock number={13} title="Choosing the sunspot order with AIC, BIC and HQIC">
+Fit AR($p$) models with a constant to the sunspot series by exact Gaussian MLE for $p = 0, \dots, 12$, so each model has $k = p + 2$ parameters (the coefficients, the mean, and $\sigma^2$). Writing $\hat\ell$ for the maximized log-likelihood, the criteria of [Topic 24](/topics/model-selection-and-information-criteria) are $\mathrm{AIC} = -2\hat\ell + 2k$, $\mathrm{BIC} = -2\hat\ell + k\log n$, and $\mathrm{HQIC} = -2\hat\ell + 2k\log\log n$. Selected rows:
+
+| $p$ | log-lik | AIC | BIC | HQIC |
+|---|---|---|---|---|
+| 1 | −1406.585 | 2819.17 | 2830.37 | 2823.65 |
+| 2 | −1307.319 | 2622.64 | 2637.57 | 2628.61 |
+| 3 | −1304.702 | 2619.40 | 2638.07 | 2626.87 |
+| 8 | −1284.202 | 2588.40 | 2625.74 | 2603.33 |
+| 9 | −1274.311 | **2570.62** | **2611.69** | **2587.04** |
+| 10 | −1274.311 | 2572.62 | 2617.42 | 2590.53 |
+
+All three criteria choose $p = 9$. On this sample their penalties never disagree, because the log-likelihood gain from adding lag 9 (about 10 nats) dwarfs every penalty difference. HQIC's penalty per parameter, $2\log\log 309 = 3.49$, sits between AIC's 2 and BIC's $\log 309 = 5.73$.
+
+The identification table agrees. The sample PACF lies outside the $\pm 1.96/\sqrt n = \pm 0.1115$ band at lags 1, 2, 3, 6, 7, 8 and 9 (values $0.820$, $-0.677$, $-0.147$, $0.171$, $0.209$, $0.218$, $0.246$) and inside from lag 10 on, except at lag 17 ($-0.146$). One excursion in eleven lags is about what a 95% band produces by chance, especially given Remark 5's runs.
+</ExampleBlock>
+
+![Top: yearly sunspot numbers 1700 to 2008, irregular peaks about eleven years apart. Bottom left: AIC, BIC and HQIC against autoregressive order 2 to 12, each minimized at order 9. Bottom right: the sample partial autocorrelations with a plus or minus 1.96 over root n band, large at lags 1 and 2 and mostly inside the band after lag 9.](/images/topics/stationary-time-series-and-arma/35-sunspots-order-selection.png)
+
+*Figure 6. Yule's sunspots. AIC, BIC and HQIC agree on an AR(9), and the partial autocorrelations largely go quiet after lag 9.*
+
+<ExampleBlock number={14} title="Three estimators, one answer">
+On simulated series of length $n = 1000$ with known truth:
+
+- **AR(2), truth $\phi = (1, -0.5)$:** Yule–Walker gives $(0.983465, -0.480983)$, Whittle (Theorem 14) gives $(0.983377, -0.480924)$, and the exact MLE differs from Whittle by $(-0.00065, 0.00021)$.
+- **ARMA(1, 1), truth $\phi = 0.7$, $\theta = 0.4$:** CSS gives $\hat\phi = 0.638968$, $\hat\theta = 0.402674$, $\hat\sigma^2 = 1.001488$.
+
+Theorem 8 says these estimators share one Gaussian limit; at $n = 1000$ they agree to about three decimals.
+</ExampleBlock>
+
+<RemarkBlock number={14} title="The exact likelihood is Topic 36's job">
+The exact Gaussian ARMA likelihood needs $\hat x_t$ and $v_{t-1}$ for every $t$ (Remark 8); the figures above used statsmodels, which runs a Kalman filter internally. Topic 36 derives that filter for ARMA in state-space form. Until then, the components on this page fit by Yule–Walker, CSS, and Whittle only.
+</RemarkBlock>
+
+<RemarkBlock number={15} title="Yule–Walker always returns a causal fit, and can be badly biased">
+Because $\hat\Gamma_p$ is positive definite (Remark 5), the Yule–Walker fit is always causal, which CSS does not guarantee. Near a unit root or with MA structure it is inefficient and biased toward zero; MLE or Whittle is preferred.
+</RemarkBlock>
+
+<RemarkBlock number={16} title="HQIC, completing Topic 24's Remark 28">
+[Topic 24](/topics/model-selection-and-information-criteria#section-24-10) previewed the Hannan–Quinn criterion. Its penalty $2k\log\log n$ is the slowest-growing one that still gives a strongly consistent AR order estimate (HAN1979). AIC overfits with positive probability; BIC is consistent but more conservative.
+</RemarkBlock>
+
+<RemarkBlock number={17} title="Why the i.i.d. bootstrap fails here, and the block fix">
+Resampling individual observations destroys every $\gamma(h)$ with $h \ne 0$, so the bootstrap variance of $\bar x$ estimates $\gamma(0)/n$ instead of Theorem 2's $\sigma^2_{\text{LR}}/n$ — Example 1's undercoverage again. Künsch's block bootstrap (KUN1989) resamples blocks of $\ell$ consecutive observations; the block length is once more a bandwidth. Topic 31 set this case aside in [§31.10](/topics/bootstrap#section-31-10).
+</RemarkBlock>
+
+<a id="section-35-7"></a>
+
+## 35.7 The spectral density
+
+The ACF of an oscillating series hides its period in slowly decaying ripples. The frequency view asks a cleaner question: how much of the variance lives at each frequency?
+
+<DefinitionBlock number={9} title="Spectral density">
+If $\sum_h|\gamma(h)| < \infty$, the **spectral density** of $\{X_t\}$ is
+
+$$
+f(\omega) = \frac{1}{2\pi}\sum_{h \in \mathbb{Z}}\gamma(h)e^{-ih\omega}, \qquad \omega \in [-\pi, \pi].
+$$
+
+It is real and even (because $\gamma$ is even), $2\pi$-periodic, and Fourier inversion (<ExternalLink site="formalcalculus" topic="fourier-series" href="https://formalcalculus.com/topics/fourier-series" />) recovers the autocovariance: $\gamma(h) = \int_{-\pi}^{\pi}e^{ih\omega}f(\omega)\,d\omega$. In particular $\gamma(0) = \int_{-\pi}^{\pi}f(\omega)\,d\omega$: $f$ distributes the variance over frequencies. Frequency $\omega$ is measured in radians per time step, so a component at frequency $\omega$ has period $2\pi/\omega$ steps. We keep the factor $1/2\pi$ in $f$; some texts move it elsewhere.
+</DefinitionBlock>
+
+<TheoremBlock number={10} title="Herglotz (stated; HER1911; BRO1991 Thm 4.3.1)">
+A function $\gamma : \mathbb{Z} \to \mathbb{R}$ is nonnegative definite if and only if $\gamma(h) = \int_{(-\pi, \pi]}e^{ih\nu}\,dF(\nu)$ for a unique right-continuous, nondecreasing, bounded $F$ on $[-\pi, \pi]$ with $F(-\pi) = 0$, the **spectral distribution function**. If $\sum_h|\gamma(h)| < \infty$, $F$ has the density $f$ of Definition 9, and $f \ge 0$.
+</TheoremBlock>
+
+With Theorem 1, Herglotz says autocovariances are exactly the Fourier transforms of nonnegative measures on the circle; Example 7's $F$ is two point masses. For ARMA models the density is pure geometry.
+
+<TheoremBlock number={11} title="ARMA spectral density">
+If $\{X_t\}$ is a causal ARMA($p$, $q$) with white-noise variance $\sigma^2$, then $\sum_h|\gamma(h)| < \infty$ and
+
+$$
+f(\omega) = \frac{\sigma^2}{2\pi}\,\frac{|\theta(e^{-i\omega})|^2}{|\phi(e^{-i\omega})|^2}, \qquad \omega \in [-\pi, \pi].
+$$
+</TheoremBlock>
+
+<ProofBlock number={7} title="Proof of Thm 11 (ARMA spectral density)">
+
+By Theorem 5, $X_t = \sum_{j \ge 0}\psi_j\varepsilon_{t-j}$ with $\sum|\psi_j| < \infty$. Set $\psi_j = 0$ for $j < 0$. The covariance of two $L^2$-convergent series is the double sum of covariances, and white noise keeps only matching indices:
+
+$$
+\gamma(h) = \mathbb{E}\Bigl[\sum_j\psi_j\varepsilon_{t+h-j}\sum_k\psi_k\varepsilon_{t-k}\Bigr] = \sigma^2\sum_{k \in \mathbb{Z}}\psi_k\psi_{k+h}, \qquad h \in \mathbb{Z}.
+$$
+
+Then $\sum_h|\gamma(h)| \le \sigma^2\sum_h\sum_k|\psi_k||\psi_{k+h}| = \sigma^2(\sum_j|\psi_j|)^2 < \infty$, so $f$ exists (Definition 9). Substitute and use absolute convergence to rearrange the double series, writing $m = k + h$:
+
+$$
+f(\omega) = \frac{\sigma^2}{2\pi}\sum_{h}\sum_{k}\psi_k\psi_{k+h}e^{-ih\omega} = \frac{\sigma^2}{2\pi}\Bigl(\sum_{m}\psi_me^{-im\omega}\Bigr)\Bigl(\sum_{k}\psi_ke^{ik\omega}\Bigr) = \frac{\sigma^2}{2\pi}\bigl|\psi(e^{-i\omega})\bigr|^2,
+$$
+
+since the $\psi_k$ are real, so the second factor is the complex conjugate of the first. Finally, Theorem 5 gives $\psi(z) = \theta(z)/\phi(z)$ on $|z| \le 1$, in particular at $z = e^{-i\omega}$.
+
+$\blacksquare$ — using Theorem 5, $L^2$ continuity of the inner product, and rearrangement of absolutely convergent double series.
+
+</ProofBlock>
+
+Read the formula geometrically. Factoring over the roots, $|\phi(e^{-i\omega})| = \prod_k|r_k - e^{-i\omega}|/|r_k|$, and likewise for $\theta$. So $f(\omega)$ is, up to constants, the product of squared distances from the point $e^{-i\omega}$ on the unit circle to the MA roots, divided by the same product for the AR roots. As $\omega$ runs from 0 to $\pi$ the point walks around the circle; an AR root near the circle at angle $\vartheta$ makes a **peak** near $\omega = \vartheta$, and an MA root near the circle makes a **trough**.
+
+<ExampleBlock number={15} title="Three spectra and their roots">
+- **AR(1), $\phi = 0.7$:** a real root at $1/0.7$, nearest $e^{-i\omega}$ at $\omega = 0$, so the spectrum is "red": $f(0) = 1.76839$ against $f(\pi) = 0.0550709$.
+- **AR(2) with roots $\frac{1}{0.9}e^{\pm i\pi/5}$**, that is, $\phi = (1.8\cos(\pi/5), -0.81) = (1.456231, -0.81)$: a sharp peak at $\omega = 0.6195$, just below the root angle $\pi/5 = 0.6283$. The conjugate root's pull shifts it slightly.
+- **MA(1), $\theta = -0.8$:** a root at $1.25$ puts the numerator near zero at $\omega = 0$, so the spectrum is "blue": $f(0) = 0.0063662$ against $f(\pi) = 0.515662$.
+</ExampleBlock>
+
+![Top row: AR roots as indigo crosses and MA roots as amber circles relative to the unit circle for an AR(1), an AR(2) with a complex pair near angle pi over 5, and an MA(1). Bottom row: their spectral densities on a log scale; the first decreases with frequency, the second peaks sharply near pi over 5, and the third rises from a deep trough at zero.](/images/topics/stationary-time-series-and-arma/35-arma-spectra.png)
+
+*Figure 7. The spectrum is a ratio of distances from the unit circle to the roots: AR roots near the circle make peaks, MA roots make troughs.*
+
+<ExampleBlock number={16} title="The long-run variance is 2π f(0)">
+Set $\omega = 0$ in Definition 9: $2\pi f(0) = \sum_h\gamma(h) = \sigma^2_{\text{LR}}$, Theorem 2's long-run variance. Theorem 11 then gives it in closed form, $\sigma^2_{\text{LR}} = \sigma^2\theta(1)^2/\phi(1)^2$. Topic 26's chain ($\phi = 0.9$, $\sigma^2 = 0.19$) gives $0.19/0.1^2 = 19$, Example 4's $\tau$ again. An ARMA(1, 1) with $\phi = 0.7$, $\theta = 0.4$ and $\sigma^2 = 1$ gives $1.4^2/0.3^2 = 21.7778$.
+
+So the MCMC effective sample size is $N\gamma(0)/(2\pi f(0))$: a chain is efficient when its spectrum has little mass at frequency zero.
+</ExampleBlock>
+
+<RemarkBlock number={18} title="Bochner, and Gaussian-process kernels as spectra">
+Herglotz's theorem is the discrete-time case of **Bochner's theorem**: a continuous stationary kernel $k(\tau)$ is positive definite if and only if it is the Fourier transform of a finite nonnegative measure (RAS2006 §4.2.1). Designing a GP kernel is designing a spectrum: the squared-exponential kernel has a Gaussian spectral density, the Matérn a Student-$t$-shaped one, and spectral-mixture kernels place Gaussian bumps where the periodogram peaks. See <ExternalLink site="formalml" topic="gaussian-processes" href="https://formalml.com/topics/gaussian-processes" /> and, for the operator view in which the Fourier basis diagonalizes a stationary covariance, <ExternalLink site="formalml" topic="spectral-theorem" href="https://formalml.com/topics/spectral-theorem" />.
+</RemarkBlock>
+
+<a id="section-35-8"></a>
+
+## 35.8 The periodogram and spectral smoothing
+
+Replacing $\gamma$ by $\hat\gamma$ in Definition 9 gives the periodogram, a cautionary tale.
+
+<DefinitionBlock number={10} title="Periodogram; Fourier frequencies; Daniell estimator">
+The **Fourier frequencies** of a sample of size $n$ are $\omega_j = 2\pi j/n$. The **periodogram** (SCH1898) is
+
+$$
+I_n(\omega_j) = \frac{1}{2\pi n}\Bigl|\sum_{t=1}^n x_te^{-it\omega_j}\Bigr|^2,
+$$
+
+computed on the demeaned series (for $j \ne 0$ demeaning changes nothing, as Proof 8 shows). Expanding the squared modulus as a double sum and grouping by lag gives $I_n(\omega_j) = \frac{1}{2\pi}\sum_{|h|<n}\hat\gamma(h)e^{-ih\omega_j}$ for $j \ne 0$, the sample analogue of Definition 9, and Parseval's identity reads $\frac{2\pi}{n}\sum_{j=0}^{n-1}I_n(\omega_j) = \hat\gamma(0)$. We keep the $1/2\pi$ so that $I_n$ and $f$ live on one scale; Brockwell and Davis omit it. The **Daniell estimator** (DAN1946) averages $2m + 1$ neighboring ordinates,
+
+$$
+\hat f_m(\omega_j) = \frac{1}{2m+1}\sum_{k=-m}^{m}I_n(\omega_{j+k}),
+$$
+
+with half-width $m$ and **bandwidth** $B = 2\pi(2m+1)/n$.
+</DefinitionBlock>
+
+<TheoremBlock number={12} title="The periodogram: asymptotically unbiased, never consistent">
+Let $\{X_t\}$ be weakly stationary with mean $\mu$, $\sum_h|\gamma(h)| < \infty$, and spectral density $f$. Let $\omega_j = 2\pi j/n \in (0, \pi)$.
+
+(i) $\mathbb{E}\,I_n(\omega_j) = \frac{1}{2\pi}\sum_{|h|<n}(1 - |h|/n)\gamma(h)e^{-ih\omega_j}$, and if $\omega_{j(n)} \to \omega \in (0, \pi)$ then $\mathbb{E}\,I_n(\omega_{j(n)}) \to f(\omega)$.
+
+(ii) If the $X_t$ are i.i.d. $\mathcal{N}(\mu, \sigma^2)$ (so $f \equiv \sigma^2/2\pi$), then for every $n$ the ordinates $I_n(\omega_j)$, $0 < \omega_j < \pi$, are independent and each equals $f \cdot E_j$ with $E_j \sim \mathrm{Exp}(1)$. In particular $\mathrm{Var}\,I_n(\omega_j) = f^2$ for every $n$.
+
+(iii) *(Stated; BRO1991 Thm 10.3.2.)* If $X_t = \mu + \sum_j\psi_j\varepsilon_{t-j}$ with $\varepsilon$ i.i.d., $\mathbb{E}\varepsilon^4 < \infty$, $\sum_j|\psi_j||j|^{1/2} < \infty$ and $f > 0$, then for fixed $0 < \lambda_1 < \dots < \lambda_k < \pi$ the vector $(I_n(\omega_{j_1})/f(\lambda_1), \dots, I_n(\omega_{j_k})/f(\lambda_k))$, with $\omega_{j_i} \to \lambda_i$, converges in distribution to i.i.d. $\mathrm{Exp}(1)$; and $\mathrm{Var}\,I_n(\omega_j) \to f(\omega)^2$.
+</TheoremBlock>
+
+<ProofBlock number={8} title="Proof of Thm 12 (i)–(ii) (The periodogram)">
+
+(i) For $j \not\equiv 0 \pmod n$, $\sum_{t=1}^ne^{-it\omega_j}$ is a geometric sum of $n$th roots of unity and equals 0. So subtracting $\mu$ (or $\bar x$) from every observation leaves the Fourier sum unchanged, and
+
+$$
+I_n(\omega_j) = \frac{1}{2\pi n}\sum_{s=1}^n\sum_{t=1}^n(X_s - \mu)(X_t - \mu)e^{-i(s-t)\omega_j}.
+$$
+
+Take expectations and group by $h = s - t$ exactly as in Proof 1:
+
+$$
+\mathbb{E}\,I_n(\omega_j) = \frac{1}{2\pi}\sum_{|h|<n}\Bigl(1 - \frac{|h|}{n}\Bigr)\gamma(h)e^{-ih\omega_j}.
+$$
+
+Its distance from $f(\omega_j) = \frac{1}{2\pi}\sum_h\gamma(h)e^{-ih\omega_j}$ is at most $\frac{1}{2\pi}\bigl[\sum_{|h|<n}\frac{|h|}{n}|\gamma(h)| + \sum_{|h|\ge n}|\gamma(h)|\bigr]$, which tends to 0 by Proof 1's argument, uniformly in $j$. And $f$ is continuous (a uniformly convergent series of continuous functions), so $f(\omega_{j(n)}) \to f(\omega)$.
+
+(ii) Write $Z_t = (X_t - \mu)/\sigma$, i.i.d. $\mathcal{N}(0, 1)$, and for $0 < \omega_j < \pi$ set
+
+$$
+C_j = \sqrt{2/n}\,\sum_{t=1}^nZ_t\cos(t\omega_j), \qquad S_j = \sqrt{2/n}\,\sum_{t=1}^nZ_t\sin(t\omega_j).
+$$
+
+Expanding the modulus, $I_n(\omega_j) = \frac{\sigma^2}{2\pi n}\bigl[(\sum_tZ_t\cos t\omega_j)^2 + (\sum_tZ_t\sin t\omega_j)^2\bigr] = \frac{\sigma^2}{4\pi}(C_j^2 + S_j^2)$. The $C_j, S_j$ are linear combinations of independent standard normals, hence jointly Gaussian with mean 0, and their covariances are the discrete orthogonality relations at Fourier frequencies: for $0 < \omega_j, \omega_k < \pi$,
+
+$$
+\sum_{t=1}^n\cos(t\omega_j)\cos(t\omega_k) = \sum_{t=1}^n\sin(t\omega_j)\sin(t\omega_k) = \frac{n}{2}\mathbb{1}\{j = k\}, \qquad \sum_{t=1}^n\cos(t\omega_j)\sin(t\omega_k) = 0,
+$$
+
+each following from product-to-sum identities and the vanishing of $\sum_te^{it\omega_m}$ for $m \not\equiv 0 \pmod n$ (here $m = j \pm k$, and $0 < j + k < n$). So all the $C_j, S_j$ are i.i.d. $\mathcal{N}(0, 1)$, the ordinates are independent, and $C_j^2 + S_j^2 \sim \chi^2_2$. Since $\chi^2_2/2 \sim \mathrm{Exp}(1)$,
+
+$$
+I_n(\omega_j) = \frac{\sigma^2}{2\pi}\cdot\frac{C_j^2 + S_j^2}{2} = f\cdot E_j, \qquad E_j \sim \mathrm{Exp}(1),
+$$
+
+so $\mathbb{E}\,I_n(\omega_j) = f$ and $\mathrm{Var}\,I_n(\omega_j) = f^2$, independent of $n$.
+
+$\blacksquare$ — using geometric sums of roots of unity, Proof 1's Fejér-weight bound, discrete orthogonality of the trigonometric system, and the fact that uncorrelated jointly Gaussian variables are independent ([Topic 8](/topics/multivariate-distributions)).
+
+</ProofBlock>
+
+More data buys more frequencies, not better estimates at each frequency. The periodogram uses $n$ numbers to estimate about $n/2$ ordinates, so each one rests on two degrees of freedom forever — which is exactly why smoothing across neighbors restores consistency.
+
+![Three panels of raw periodogram dots around the dashed true spectral density at sample sizes 128, 1024 and 8192; the scatter is equally wide at every size and only denser. A fourth panel shows the ratio of periodogram to true density at the largest size matching the exponential density with mean 1.](/images/topics/stationary-time-series-and-arma/35-periodogram-inconsistency.png)
+
+*Figure 8. The raw periodogram never settles. Each ordinate is the spectral density times an Exp(1) variable, at every sample size.*
+
+For Example 15's AR(2)-peak process, the pooled ratios $I_n(\omega_j)/f(\omega_j)$ at $n = 8192$ have mean **0.9988** and variance **1.0209**, an Exp(1) as Theorem 12(iii) predicts. Repeated sampling at the fixed frequency $j = n/8$ (2,000 replications) gives $\mathrm{Var}\,I/f^2 = 1.0753$ at $n = 128$ and $1.0365$ at $n = 1024$: no shrinkage.
+
+<TheoremBlock number={13} title="Consistency of the Daniell estimator (stated; BRO1991 Thm 10.4.1 and §10.4)">
+Under the conditions of Theorem 12(iii), if $m = m_n \to \infty$ and $m/n \to 0$, then for $0 < \omega < \pi$ and $\omega_{j(n)} \to \omega$: $\mathbb{E}\hat f_m(\omega_{j(n)}) \to f(\omega)$, $\mathrm{Var}\,\hat f_m(\omega_{j(n)}) \sim f(\omega)^2/(2m+1) \to 0$, hence $\hat f_m(\omega_{j(n)}) \xrightarrow{P} f(\omega)$. If $f$ is twice continuously differentiable, the bias is approximately $f''(\omega)B^2/24$, and the MSE-optimal half-width grows like $m \propto n^{4/5}$.
+</TheoremBlock>
+
+The variance is Theorem 12 again: $2m + 1$ nearly independent ordinates with variance near $f^2$ average to $f^2/(2m+1)$. The bias is one Taylor expansion: averaging $f$ over an interval of width $B$ adds $\frac{f''}{2}\cdot\frac{1}{B}\int_{-B/2}^{B/2}u^2\,du = f''B^2/24$.
+
+![Three panels at sample size 1024 showing the raw periodogram, the dashed true density, and the teal Daniell estimate for half-widths 1, 18 and 40: noisy, close, and flattened at the peak. A fourth plots relative mean squared error, variance and squared bias against half-width, with the error minimized at 18.](/images/topics/stationary-time-series-and-arma/35-daniell-bandwidth.png)
+
+*Figure 9. Smoothing the periodogram is a bandwidth problem: too little leaves noise, too much flattens the peak.*
+
+Over 200 replications at $n = 1024$, the relative mean squared error $\frac{1}{N}\sum_j((\hat f - f)/f)^2$ is **1.063** for the raw periodogram ($m = 0$), falls to its minimum **0.0425** at $m^* = 18$ (bandwidth $B^* = 0.2270$), and climbs back to **0.1469** at $m = 40$ as the peak flattens. At a flat stretch of the spectrum ($\omega \approx 2.5$), the relative variance tracks $1/(2m+1)$: **0.2081** against 0.2 at $m = 2$, **0.0894** against 0.0909 at $m = 5$, **0.0526** against 0.0476 at $m = 10$.
+
+Below, at $m = 0$, push $n$ from 128 to 8192: dots accumulate, the cloud doesn't narrow. Then raise $m$ until the estimate calms and the peak starts to sag; the bias–variance button reruns Figure 9's right panel live.
+
+<PeriodogramSmoother client:visible />
+
+<TheoremBlock number={14} title="Whittle's approximation (stated; WHI1953; BRO1991 §10.8)">
+For a causal, invertible Gaussian ARMA with spectral density $f_{\boldsymbol\beta}$, $-2/n$ times the exact log-likelihood differs by $o_P(1)$ from $\frac{2}{n}\sum_{j}\bigl[\log f_{\boldsymbol\beta}(\omega_j) + I_n(\omega_j)/f_{\boldsymbol\beta}(\omega_j)\bigr]$, summed over the Fourier frequencies in $(0, \pi)$, plus a constant. Minimizing this Whittle objective gives an estimator with the same limit as the MLE (Theorem 8(b)).
+</TheoremBlock>
+
+Writing $f_{\boldsymbol\beta} = \frac{\sigma^2}{2\pi}g_{\boldsymbol\beta}$ with $g = |\theta|^2/|\phi|^2$, the variance profiles out as $\hat\sigma^2 = \frac{2\pi}{N}\sum_jI_n(\omega_j)/g_{\boldsymbol\beta}(\omega_j)$ over the $N$ frequencies, leaving $N\log\hat\sigma^2 + \sum_j\log g_{\boldsymbol\beta}(\omega_j)$ to minimize. One FFT makes each evaluation $O(n\log n)$. Heuristically, the ordinates behave like independent $f\cdot\mathrm{Exp}(1)$ variables, whose log-likelihood is exactly this sum.
+
+<ExampleBlock number={17} title="The sunspot spectrum">
+With $n = 309$ the frequency grid has spacing $2\pi/309$. The raw periodogram of the sunspot series peaks at a period of **11.04** years ($j = 28$); the Daniell estimate with $m = 2$ peaks at **10.3** years ($j = 30$); the AR(2) spectrum of Example 12 peaks at **11.40** years. Three estimators, one solar cycle to within the grid's resolution: at this $n$ the grid, not the data, limits how finely the period can be located.
+</ExampleBlock>
+
+<RemarkBlock number={19} title="This is kernel density estimation in the frequency domain">
+Daniell is a uniform kernel smoother over frequencies, and [Topic 30](/topics/kernel-density-estimation)'s bandwidth analysis transfers: $m$ plays the bandwidth $h$ and $2m + 1$ plays $nh$. The variance $\approx f^2/(2m+1)$ matches KDE's $f(x)R(K)/(nh)$; the bias $\approx f''B^2/24$ matches $h^2f''\mu_2(K)/2$; balancing them gives an MSE-optimal $m \propto n^{4/5}$ and the familiar $n^{-4/5}$ rate. Figure 9's U-curve is Topic 30's bandwidth figure in a new coordinate.
+</RemarkBlock>
+
+<RemarkBlock number={20} title="Lag windows, tapers, and multitaper">
+Smoothing in frequency is down-weighting $\hat\gamma(h)$ in lag. The Bartlett window $w(h) = 1 - |h|/M$ has variance $\approx (2M/3n)f^2$, matching Daniell at $M = 3n/(2(2m+1))$, the smoother's toggle. Tapers reduce leakage from strong peaks; multitaper (THO1982) averages over orthogonal tapers instead of across frequencies.
+</RemarkBlock>
+
+<RemarkBlock number={21} title="HAC is spectral estimation at frequency zero">
+Newey–West (Remark 6) is a Bartlett lag-window estimate of $2\pi f(0)$, and choosing $M$ is choosing a bandwidth. Example 1's $M = 4$ is far too narrow for $\phi = 0.9$, whose spectrum is sharply peaked at zero, so the estimate is biased low — hence coverage 0.621, not 0.95. Topic 26's batch means (its Example 9) estimates the same $2\pi f(0)$.
+</RemarkBlock>
+
+<a id="section-35-9"></a>
+
+## 35.9 GARCH: volatility from feedback
+
+[Topic 34's Example 5](/topics/hidden-markov-models#section-34-3) simulated two-regime market returns whose lag-1 autocorrelation was **−0.018** but whose *squared* returns had lag-1 autocorrelation **0.206**. To Wold it is white noise (Remark 7), yet its magnitude is predictable. Two mechanisms produce this fingerprint: a hidden regime that switches the variance (Topic 34's HMM), or feedback, where a large move today raises tomorrow's variance directly.
+
+<DefinitionBlock number={11} title="ARCH(q) and GARCH(1, 1)">
+Let $z_t$ be i.i.d. with mean 0 and variance 1, and set $x_t = \sigma_tz_t$, where the **conditional variance** $\sigma_t^2$ depends on the past. In an **ARCH($q$)** model (ENG1982),
+
+$$
+\sigma_t^2 = \omega + \sum_{i=1}^q\alpha_ix_{t-i}^2,
+$$
+
+and in a **GARCH(1, 1)** model (BOL1986),
+
+$$
+\sigma_t^2 = \omega + \alpha x_{t-1}^2 + \beta\sigma_{t-1}^2, \qquad \omega > 0,\ \alpha, \beta \ge 0.
+$$
+
+(Here $\omega$ is the intercept, not a frequency; this section uses no frequencies.) The model is **observation-driven**: $\sigma_t^2$ is a function of past observations, so the likelihood is an exact recursion.
+</DefinitionBlock>
+
+<TheoremBlock number={15} title="GARCH(1, 1) covariance stationarity">
+Let $z_t$ be i.i.d. with $\mathbb{E}z_t = 0$, $\mathbb{E}z_t^2 = 1$, and $\omega > 0$, $\alpha, \beta \ge 0$. (i) If $\alpha + \beta < 1$, then
+
+$$
+\sigma_t^2 = \omega\Bigl[1 + \sum_{k=1}^{\infty}\prod_{i=1}^k(\alpha z_{t-i}^2 + \beta)\Bigr], \qquad x_t = \sigma_tz_t,
+$$
+
+defines the unique strictly stationary GARCH(1, 1) solution with $\mathbb{E}x_t^2 < \infty$ in which $\sigma_t^2$ is a function of $z_{t-1}, z_{t-2}, \dots$; it is white noise with $\mathrm{Var}(x_t) = \omega/(1 - \alpha - \beta)$. (ii) Conversely, if a stationary solution with finite $\mathbb{E}x_t^2$ exists, then $\alpha + \beta < 1$.
+</TheoremBlock>
+
+<ProofBlock number={9} title="Proof of Thm 15 (GARCH(1, 1) stationarity)">
+
+Since $x_{t-1}^2 = \sigma_{t-1}^2z_{t-1}^2$, the variance recursion is linear in $\sigma^2$ with random coefficient $A_{t-1} = \alpha z_{t-1}^2 + \beta$:
+
+$$
+\sigma_t^2 = \omega + A_{t-1}\sigma_{t-1}^2, \qquad \text{so} \qquad \sigma_t^2 = \omega\Bigl[1 + \sum_{k=1}^{K-1}\prod_{i=1}^kA_{t-i}\Bigr] + \Bigl(\prod_{i=1}^KA_{t-i}\Bigr)\sigma_{t-K}^2
+$$
+
+after iterating $K$ times. The $A_s$ are i.i.d., nonnegative, with $\mathbb{E}A_s = \alpha + \beta$.
+
+(i) Every term of the series $S_t = \omega[1 + \sum_{k \ge 1}\prod_{i=1}^kA_{t-i}]$ is nonnegative and, by independence, $\mathbb{E}\prod_{i=1}^kA_{t-i} = (\alpha+\beta)^k$. Monotone convergence gives $\mathbb{E}S_t = \omega/(1 - \alpha - \beta) < \infty$, so $S_t$ is finite almost surely. Reindexing shows $\omega + A_{t-1}S_{t-1} = S_t$, so $\sigma_t^2 = S_t$ solves the recursion. $S_t$ is one fixed measurable function of $(z_{t-1}, z_{t-2}, \dots)$, so $\{(S_t, z_t)\}$ is strictly stationary, and $S_t$ is independent of $z_t$. Hence $\mathbb{E}x_t = \mathbb{E}\sqrt{S_t}\,\mathbb{E}z_t = 0$, $\mathbb{E}x_t^2 = \mathbb{E}S_t\,\mathbb{E}z_t^2 = \omega/(1-\alpha-\beta)$, and for $h > 0$, $\mathbb{E}[x_tx_{t+h}] = \mathbb{E}[x_t\sqrt{S_{t+h}}]\,\mathbb{E}z_{t+h} = 0$, since $z_{t+h}$ is independent of everything dated earlier: white noise. For uniqueness, if $\tilde\sigma_t^2$ is another such solution, then subtracting the iterated recursions,
+
+$$
+\mathbb{E}\bigl|\tilde\sigma_t^2 - S_t\bigr| = \mathbb{E}\Bigl[\prod_{i=1}^KA_{t-i}\Bigr]\,\mathbb{E}\bigl|\tilde\sigma_{t-K}^2 - S_{t-K}\bigr| \le (\alpha+\beta)^K\cdot 2\,\mathbb{E}S_0 \;\longrightarrow\; 0,
+$$
+
+using that $\prod_{i \le K}A_{t-i}$ depends on $z_{t-1}, \dots, z_{t-K}$ while the second factor depends only on earlier $z$'s; so $\tilde\sigma_t^2 = S_t$ almost surely.
+
+(ii) If $v = \mathbb{E}x_t^2 < \infty$ for a stationary solution, then $\mathbb{E}\sigma_t^2 = v$ too ($\sigma_t$ is independent of $z_t$). Taking expectations in $\sigma_t^2 = \omega + A_{t-1}\sigma_{t-1}^2$, with $A_{t-1}$ independent of $\sigma_{t-1}^2$,
+
+$$
+v = \omega + (\alpha + \beta)v, \qquad \text{so} \qquad v(1 - \alpha - \beta) = \omega > 0,
+$$
+
+which forces $\alpha + \beta < 1$.
+
+$\blacksquare$ — using the iterated recursion, independence of the $z_t$, and monotone convergence (BOL1986; NEL1990).
+
+</ProofBlock>
+
+<ExampleBlock number={18} title="Squared GARCH returns are an ARMA(1, 1)">
+Let $\nu_t = x_t^2 - \sigma_t^2$, a martingale difference: $\mathbb{E}[\nu_t \mid \text{past}] = \sigma_t^2\,\mathbb{E}[z_t^2 - 1] = 0$. Substituting $\sigma_t^2 = x_t^2 - \nu_t$ into the GARCH recursion gives
+
+$$
+x_t^2 = \omega + (\alpha + \beta)x_{t-1}^2 + \nu_t - \beta\nu_{t-1},
+$$
+
+an ARMA(1, 1) in $x_t^2$ with AR coefficient $\alpha + \beta$ and MA coefficient $-\beta$. When $\mathbb{E}x_t^4 < \infty$ — for Gaussian $z_t$, exactly when $3\alpha^2 + 2\alpha\beta + \beta^2 < 1$ — its ACF is
+
+$$
+\rho_{x^2}(1) = \frac{\alpha(1 - \alpha\beta - \beta^2)}{1 - 2\alpha\beta - \beta^2}, \qquad \rho_{x^2}(h) = \rho_{x^2}(1)(\alpha + \beta)^{h-1}.
+$$
+
+For the textbook values $(\omega, \alpha, \beta) = (0.05, 0.1, 0.85)$: $\mathrm{Var}(x_t) = 1$, $\rho_{x^2}(1) = 0.17907$, and $\rho_{x^2}(5) = 0.145853$. Topic 34's HMM had squared-return autocorrelations decaying like $\lambda^h$; GARCH replaces that with $(\alpha + \beta)^{h-1}$.
+</ExampleBlock>
+
+<ExampleBlock number={19} title="Fitting GARCH to hidden-regime data">
+Fit Gaussian GARCH(1, 1) by quasi-maximum likelihood to Topic 34's 1,000-day market fixture, which was simulated from the two-state HMM. The estimates are $\hat\omega = 0.0803$, $\hat\alpha = 0.2821$, $\hat\beta = 0.7028$ (the `arch` package agrees to six decimals), so the persistence is $\hat\alpha + \hat\beta = 0.9848$ and the implied volatility half-life $\log 0.5/\log(\hat\alpha + \hat\beta)$ is **45.4** days. The process that generated the data has a regime half-life of $\log 0.5/\log 0.93 = $ **9.55** days.
+
+Its unconditional variance $\hat\omega/(1 - \hat\alpha - \hat\beta) = 5.30$ is three times the sample variance **1.78**, and $3\hat\alpha^2 + 2\hat\alpha\hat\beta + \hat\beta^2 = 1.129 > 1$, so the fitted model has an infinite fourth moment and no squared-return ACF at all. The sample squared-return ACF at lags 1, 5 and 20 (**0.206, 0.124, 0.043**) tracks the HMM's $\lambda^h$ theory (**0.1947, 0.1457, 0.0490**). GARCH's decay rate, scaled to the lag-1 value, would give **0.206, 0.194, 0.154** — far too slow. This is Lamoureux and Lastrapes's lesson (LAM1990): regime shifts masquerade as near-integrated GARCH persistence.
+</ExampleBlock>
+
+![Top: Topic 34's market returns with turbulent days shaded rose and the fitted GARCH volatility band in violet. Middle: a GARCH path simulated at the fitted parameters. Bottom: sample autocorrelations of squared returns against lag with the HMM theory decaying like 0.93 to the power h and a much slower dashed GARCH decay; half-lives 9.6 and 45.4 days.](/images/topics/stationary-time-series-and-arma/35-garch-vs-hmm.png)
+
+*Figure 10. GARCH fit to hidden-regime data. The fitted volatility persists far longer than the regimes that generated it.*
+
+Both models below give near-zero return autocorrelations and positive squared-return autocorrelations; they differ in the decay. Fit GARCH to an HMM path and watch $\hat\alpha + \hat\beta$ land near 1.
+
+<GarchVsHmmSimulator client:visible />
+
+<RemarkBlock number={22} title="Observation-driven versus latent-state">
+GARCH's variance is a function of past data, so its likelihood is an exact recursion; the HMM's depends on a hidden state, so its likelihood needs the forward algorithm ([Topic 34 §34.4](/topics/hidden-markov-models#section-34-4)). They differ in how volatility persists — geometric decay at rate $\alpha + \beta$ versus regime-length sojourns — and in reacting to one large shock: GARCH raises tomorrow's variance at once, while the HMM waits for evidence of a switch.
+</RemarkBlock>
+
+<RemarkBlock number={23} title="Strict stationarity and IGARCH">
+Nelson (NEL1990) showed that GARCH(1, 1) has a unique strictly stationary solution if and only if $\mathbb{E}\log(\alpha z_t^2 + \beta) < 0$. By Jensen's inequality this is weaker than $\alpha + \beta < 1$, and it allows the integrated case $\alpha + \beta = 1$ (IGARCH): strictly stationary, with infinite variance. Theorem 15's condition is the stronger requirement that the variance be finite.
+</RemarkBlock>
+
+<a id="section-35-10"></a>
+
+## 35.10 Connections and the road to Topic 36
+
+<RemarkBlock number={24} title="MCMC diagnostics are spectral estimation">
+ESS is $N\gamma(0)/(2\pi f(0))$ (Example 16); batch means, Geyer's estimator, and spectral-variance estimators ([Topic 26 §26.7](/topics/bayesian-computation-and-mcmc#section-26-7)) estimate $2\pi f(0)$ with three implicit bandwidths.
+</RemarkBlock>
+
+<RemarkBlock number={25} title="Dependent validation errors and time-series cross-validation">
+Backtest metrics and regret curves are dependent series: report HAC or block-bootstrap intervals (Remarks 6, 17), and use blocked or rolling-origin cross-validation so folds don't interleave in time. Conformal guarantees need exchangeability that a series lacks; see <ExternalLink site="formalml" topic="conformal-prediction" href="https://formalml.com/topics/conformal-prediction" />.
+</RemarkBlock>
+
+<RemarkBlock number={26} title="Linear state-space layers are learned ARMA filters">
+S4 (GU2022) and Mamba (GU2023) layers are discretized linear state-space models: their input–output map is a convolution with a rational transfer function — an ARMA-type filter — whose stability is a root condition (poles inside the unit circle in the $z$-transform convention, the reciprocal of §35.4's). Mamba's input-dependent coefficients break stationarity on purpose.
+</RemarkBlock>
+
+<RemarkBlock number={27} title="What we left out">
+VAR models, Granger causality and cointegration (HAM1994 Chs. 11, 19); long memory, where $f(\omega) \to \infty$ at 0 (ARFIMA); nonlinear autoregressions; continuous-time CARMA; wavelets for nonstationary spectra (SHU2017 Ch. 4).
+</RemarkBlock>
+
+<RemarkBlock number={28} title="The road to Topic 36">
+Topic 36 writes an ARMA($p$, $q$) in state-space form (Remark 10's companion form) and runs the Kalman filter of [Topic 34 §34.9](/topics/hidden-markov-models#section-34-9) to get $\hat x_t$ and $v_{t-1}$, evaluating Remark 8's exact likelihood in $O(n)$ and handling missing data for free; Kalman smoothing and EM follow. The notation here — $\phi$, $\theta$, $\sigma^2$, $\gamma$, $f$, $v_n$ — carries over unchanged.
+</RemarkBlock>
+
+---
+
+### References
+
+1. Brockwell, Peter J., and Richard A. Davis. (1991). [*Time Series: Theory and Methods*](https://doi.org/10.1007/978-1-4419-0320-4) (2nd ed.). Springer.
+2. Shumway, Robert H., and David S. Stoffer. (2017). [*Time Series Analysis and Its Applications: With R Examples*](https://doi.org/10.1007/978-3-319-52452-8) (4th ed.). Springer.
+3. Hamilton, James D. (1994). [*Time Series Analysis*](https://press.princeton.edu/books/hardcover/9780691042893/time-series-analysis). Princeton University Press.
+4. Box, George E. P., Gwilym M. Jenkins, Gregory C. Reinsel, and Greta M. Ljung. (2015). [*Time Series Analysis: Forecasting and Control*](https://www.wiley.com/en-us/Time+Series+Analysis%3A+Forecasting+and+Control%2C+5th+Edition-p-9781118675021) (5th ed.). Wiley.
+5. Yule, G. Udny. (1927). [*On a Method of Investigating Periodicities in Disturbed Series, with Special Reference to Wolfer's Sunspot Numbers*](https://doi.org/10.1098/rsta.1927.0007). *Philosophical Transactions of the Royal Society of London, Series A*, 226, 267–298.
+6. Walker, Gilbert. (1931). [*On Periodicity in Series of Related Terms*](https://doi.org/10.1098/rspa.1931.0069). *Proceedings of the Royal Society of London, Series A*, 131(818), 518–532.
+7. Wold, Herman. (1938). [*A Study in the Analysis of Stationary Time Series*](https://archive.org/details/in.ernet.dli.2015.262214). Almqvist & Wiksell.
+8. Herglotz, Gustav. (1911). [*Über Potenzreihen mit positivem, reellem Teil im Einheitskreis*](https://zbmath.org/?q=an:42.0438.02). *Berichte über die Verhandlungen der Königlich Sächsischen Gesellschaft der Wissenschaften zu Leipzig, Mathematisch-Physische Klasse*, 63, 501–511.
+9. Schuster, Arthur. (1898). [*On the Investigation of Hidden Periodicities with Application to a Supposed 26 Day Period of Meteorological Phenomena*](https://doi.org/10.1029/TM003i001p00013). *Terrestrial Magnetism*, 3(1), 13–41.
+10. Bartlett, M. S. (1946). [*On the Theoretical Specification and Sampling Properties of Autocorrelated Time-Series*](https://doi.org/10.2307/2983611). *Supplement to the Journal of the Royal Statistical Society*, 8(1), 27–41.
+11. Daniell, P. J. (1946). [*Discussion on the Papers (Symposium on Autocorrelation in Time Series)*](https://doi.org/10.1111/j.2517-617X.1946.tb00117.x). *Supplement to the Journal of the Royal Statistical Society*, 8(1), 88–90.
+12. Levinson, Norman. (1947). [*The Wiener RMS (Root Mean Square) Error Criterion in Filter Design and Prediction*](https://doi.org/10.1002/sapm1946251261). *Journal of Mathematics and Physics*, 25, 261–278.
+13. Durbin, J. (1960). [*The Fitting of Time-Series Models*](https://doi.org/10.2307/1401322). *Revue de l'Institut International de Statistique*, 28(3), 233–244.
+14. Whittle, Peter. (1953). [*Estimation and Information in Stationary Time Series*](https://doi.org/10.1007/BF02590998). *Arkiv för Matematik*, 2(5), 423–434.
+15. Akaike, Hirotugu. (1974). [*A New Look at the Statistical Model Identification*](https://doi.org/10.1109/TAC.1974.1100705). *IEEE Transactions on Automatic Control*, 19(6), 716–723.
+16. Hannan, E. J., and B. G. Quinn. (1979). [*The Determination of the Order of an Autoregression*](https://doi.org/10.1111/j.2517-6161.1979.tb01072.x). *Journal of the Royal Statistical Society, Series B*, 41(2), 190–195.
+17. Newey, Whitney K., and Kenneth D. West. (1987). [*A Simple, Positive Semi-Definite, Heteroskedasticity and Autocorrelation Consistent Covariance Matrix*](https://doi.org/10.2307/1913610). *Econometrica*, 55(3), 703–708.
+18. Dickey, David A., and Wayne A. Fuller. (1979). [*Distribution of the Estimators for Autoregressive Time Series with a Unit Root*](https://doi.org/10.1080/01621459.1979.10482531). *Journal of the American Statistical Association*, 74(366a), 427–431.
+19. Künsch, Hans R. (1989). [*The Jackknife and the Bootstrap for General Stationary Observations*](https://doi.org/10.1214/aos/1176347265). *Annals of Statistics*, 17(3), 1217–1241.
+20. Thomson, David J. (1982). [*Spectrum Estimation and Harmonic Analysis*](https://doi.org/10.1109/PROC.1982.12433). *Proceedings of the IEEE*, 70(9), 1055–1096.
+21. Engle, Robert F. (1982). [*Autoregressive Conditional Heteroscedasticity with Estimates of the Variance of United Kingdom Inflation*](https://doi.org/10.2307/1912773). *Econometrica*, 50(4), 987–1007.
+22. Bollerslev, Tim. (1986). [*Generalized Autoregressive Conditional Heteroskedasticity*](https://doi.org/10.1016/0304-4076(86)90063-1). *Journal of Econometrics*, 31(3), 307–327.
+23. Nelson, Daniel B. (1990). [*Stationarity and Persistence in the GARCH(1,1) Model*](https://doi.org/10.1017/S0266466600005296). *Econometric Theory*, 6(3), 318–334.
+24. Lamoureux, Christopher G., and William D. Lastrapes. (1990). [*Persistence in Variance, Structural Change, and the GARCH Model*](https://doi.org/10.1080/07350015.1990.10509794). *Journal of Business & Economic Statistics*, 8(2), 225–234.
+25. Rasmussen, Carl Edward, and Christopher K. I. Williams. (2006). [*Gaussian Processes for Machine Learning*](https://gaussianprocess.org/gpml/). MIT Press.
+26. Gu, Albert, Karan Goel, and Christopher Ré. (2022). [*Efficiently Modeling Long Sequences with Structured State Spaces*](https://arxiv.org/abs/2111.00396). *International Conference on Learning Representations* (ICLR 2022).
+27. Gu, Albert, and Tri Dao. (2023). [*Mamba: Linear-Time Sequence Modeling with Selective State Spaces*](https://arxiv.org/abs/2312.00752). arXiv preprint arXiv:2312.00752.
+28. SILSO World Data Center, Royal Observatory of Belgium. (1981). [*SILSO Sunspot Number V1.0*](https://doi.org/10.24414/stcz-kc45) [Data set].

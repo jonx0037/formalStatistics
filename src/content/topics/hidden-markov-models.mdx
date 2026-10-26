@@ -490,7 +490,7 @@ $$
 \mathrm{Cov}(X_t^2, X_{t+h}^2) = \pi_1\pi_2(s_1 - s_2)^2\,\lambda^h.
 $$
 
-In the market model the means barely differ (0.05 vs −0.10), so returns are nearly uncorrelated: the theoretical lag-1 autocorrelation is **0.0029**. The second moments differ a lot ($s_1 = 0.49$, $s_2 = 4.01$), so *squared* returns are strongly autocorrelated, decaying like $0.93^h$. At lags $h = 1, 5, 20$ the theory gives **0.1947, 0.1457, 0.0490**; a 200,000-day simulation gives **0.1893, 0.1450, 0.0471**, and the 1,000-day series of Example 1 gives **0.206, 0.124, 0.043**. That is volatility clustering, produced by nothing more than a persistent hidden state. The model has no feedback from past returns to future variance; GARCH builds that feedback in directly.
+In the market model the means barely differ (0.05 vs −0.10), so returns are nearly uncorrelated: the theoretical lag-1 autocorrelation is **0.0029**. The second moments differ a lot ($s_1 = 0.49$, $s_2 = 4.01$), so *squared* returns are strongly autocorrelated, decaying like $0.93^h$. At lags $h = 1, 5, 20$ the theory gives **0.1947, 0.1457, 0.0490**; a 200,000-day simulation gives **0.1893, 0.1450, 0.0471**, and the 1,000-day series of Example 1 gives **0.206, 0.124, 0.043**. That is volatility clustering, produced by nothing more than a persistent hidden state. The model has no feedback from past returns to future variance; [GARCH](/topics/stationary-time-series-and-arma#section-35-9) builds that feedback in directly, and Topic 35 fits it to this same data.
 </ExampleBlock>
 
 ![Two panels. Left: the HMM as a directed graph, a row of five hidden-state circles Z1 to Z5 joined left to right by arrows labeled with transition probabilities, each with an arrow down to a shaded observation circle X1 to X5 labeled with emission probabilities. Right: autocorrelation of squared returns from a 200,000-step simulation as gray bars at lags 1 to 40, with the closed-form theory curve in rose passing through them and decaying geometrically, and the near-zero theory curve for the returns themselves dashed along the bottom.](/images/topics/hidden-markov-models/34-hmm-structure.png)
@@ -1120,7 +1120,7 @@ Modern linear state-space layers such as S4 (GU2022) and Mamba (GU2023) run the 
 </RemarkBlock>
 
 <RemarkBlock number={26} title="Where Track 9 goes next">
-This topic opens the time-series track with the latent-state view. Future Track 9 topics build out from here: Kalman *smoothing* and EM for linear-Gaussian models (the continuous-state counterparts of §34.5 and §34.7), autoregressive and ARIMA models and the Wold decomposition, conditional heteroskedasticity (GARCH) as the observation-driven alternative to Example 5's state-driven volatility, and spectral methods for stationary series.
+This topic opens the time-series track with the latent-state view. Future Track 9 topics build out from here: Kalman *smoothing* and EM for linear-Gaussian models (the continuous-state counterparts of §34.5 and §34.7), [autoregressive and ARIMA models](/topics/stationary-time-series-and-arma#section-35-4) and [the Wold decomposition](/topics/stationary-time-series-and-arma#section-35-3), [conditional heteroskedasticity (GARCH)](/topics/stationary-time-series-and-arma#section-35-9) as the observation-driven alternative to Example 5's state-driven volatility, and [spectral methods for stationary series](/topics/stationary-time-series-and-arma#section-35-7).
 </RemarkBlock>
 
 ---

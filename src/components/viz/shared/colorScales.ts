@@ -394,6 +394,16 @@ export type EmpiricalProcessColorKey = keyof typeof empiricalProcessColors;
  *   viterbi   gray-900   — Viterbi (MAP) path; gray-200 in dark mode
  *   neutral   slate-600  — observations, reference curves
  *
+ * Topic 35 extends the palette (ARMA roots, spectra, GARCH):
+ *
+ *   ar                indigo-600 — AR roots (×), PACF stems
+ *   ma                amber-600  — MA roots (○), ACF stems
+ *   truth             gray-900   — theoretical curves, always dashed
+ *   raw               slate-400  — raw periodogram / sample values (slate-500 dark)
+ *   smoothedSpectrum  teal-600   — smoothed spectral estimates
+ *   garch             violet-600 — GARCH volatility
+ *   warn              rose-600   — non-causal region, failure badges
+ *
  * `truthAlpha` is the fill opacity for true-state shading behind a plot.
  * Filtered vs smoothed always differ in dash style too (redundant encoding).
  */
@@ -404,4 +414,11 @@ export const timeSeriesColors = {
   viterbi: 'var(--color-ts-viterbi)',
   neutral: 'var(--color-ts-neutral)',
   truthAlpha: 0.15,
+  ar: 'var(--color-ts-ar)',
+  ma: 'var(--color-ts-ma)',
+  truth: 'var(--color-ts-truth)',
+  raw: 'var(--color-ts-raw)',
+  smoothedSpectrum: 'var(--color-ts-smoothed-spectrum)',
+  garch: 'var(--color-ts-garch)',
+  warn: 'var(--color-ts-warn)',
 } as const;

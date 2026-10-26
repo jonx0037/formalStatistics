@@ -2,6 +2,12 @@
  * timeseries.test.ts — Console-log verification for the Topic-34 test pins
  * T34.1–T34.20 and S34.A–S34.C specified in the handoff brief §6.2.
  *
+ * Topic 35 appends T35.1–T35.24 and S35.A–S35.C (stationary-time-series-
+ * and-arma brief §6.2; values from notebook Cell 15 of
+ * notebooks/stationary-time-series-and-arma/35_stationary_time_series.ipynb).
+ * Data-dependent T35 pins read __fixtures__/arma_fixture.json (Cell 4), the
+ * market fixture, or src/data/sunspots.ts.
+ *
  * Run via: pnpm test:timeseries  (invokes tsx on this file)
  *
  * Matches the tsx + check()/approx() harness of bayes.test.ts and
@@ -40,7 +46,37 @@ import {
   bruteForceMAP,
   bruteForceMarginals,
   type HMMParams,
+  arPoly,
+  polyRoots,
+  rootsToAR,
+  isCausal,
+  isInvertible,
+  psiWeights,
+  piWeights,
+  armaACVF,
+  armaACF,
+  durbinLevinson,
+  armaPACF,
+  armaSpectrum,
+  armaLongRunVariance,
+  hacLongRunVariance,
+  fft,
+  periodogram,
+  smoothPeriodogram,
+  sampleACVF,
+  sampleACF,
+  bartlettSE,
+  yuleWalker,
+  armaCSS,
+  whittleFit,
+  armaIC,
+  simulateARMA,
+  garchQMLE,
+  garchSqACF,
+  garchFourthMomentFinite,
+  type Complex,
 } from './timeseries';
+import { sunspotValues } from '../../../data/sunspots';
 import {
   casinoParams,
   marketParams,
@@ -242,6 +278,232 @@ console.log('\nTopic 34 — Hidden Markov Models');
   });
   const dnm = maxAbsDiff(forwardBackward(pnm, xs).gamma, resp);
   check('S34.C no-memory HMM: gamma = mixture responsibilities', dnm < 1e-12, dnm.toExponential(1), '< 1e-12');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Topic 35 — Stationary Time Series & ARMA (T35.1–T35.24, S35.A–S35.C)
+// ═══════════════════════════════════════════════════════════════════════════
+{
+  console.log('\nTopic 35 — Stationary Time Series & ARMA');
+  const arma: { ar1: number[]; ar2: number[]; arma11: number[]; ar2peak: number[] } = JSON.parse(
+    readFileSync(new URL('./__fixtures__/arma_fixture.json', import.meta.url), 'utf8'),
+  );
+  const cplx = (r: Complex) => `${r.re.toFixed(6)}${r.im >= 0 ? '+' : '-'}${Math.abs(r.im).toFixed(6)}i`;
+  const polar = (mod: number, ang: number): Complex => ({ re: mod * Math.cos(ang), im: mod * Math.sin(ang) });
+
+  // T35.1 — Durand–Kerner roots of 1 − z + 0.5z²
+  const r1 = polyRoots([1, -1, 0.5]);
+  check(
+    'T35.1 polyRoots([1, -1, 0.5]) = {1 - i, 1 + i}',
+    r1.length === 2 && approx(r1[0].re, 1, 1e-10) && approx(r1[0].im, -1, 1e-10) &&
+      approx(r1[1].re, 1, 1e-10) && approx(r1[1].im, 1, 1e-10),
+    r1.map(cplx).join(', '),
+    '1-1i, 1+1i',
+  );
+
+  // T35.2 — roots (1/0.9)e^{±iπ/5} → φ = (1.8 cos π/5, −0.81)
+  const phiPeak = rootsToAR([polar(1 / 0.9, Math.PI / 5), polar(1 / 0.9, -Math.PI / 5)]);
+  check('T35.2 rootsToAR peak roots', allApprox(phiPeak, [1.456230589875, -0.81], 1e-12), phiPeak, [1.456230589875, -0.81]);
+
+  // T35.3 — causality / invertibility
+  const t3 = [isCausal([0.5, 0.3]), isCausal([1.2, -0.2]), isCausal([1.03]), isInvertible([0.8]), isInvertible([2])];
+  check('T35.3 isCausal / isInvertible', t3.join() === [true, false, false, true, false].join(), t3, [true, false, false, true, false], 'unit-root case has roots 1 and 5');
+
+  // T35.4–T35.5 — ψ and π weights of ARMA(1,1)
+  const psi = psiWeights([0.7], [0.4], 6);
+  check('T35.4 psiWeights([0.7],[0.4],6)', allApprox(psi, [1, 1.1, 0.77, 0.539, 0.3773, 0.26411], 1e-12), psi, '[1, 1.1, 0.77, 0.539, 0.3773, 0.26411]');
+  const piw = piWeights([0.7], [0.4], 6);
+  check('T35.5 piWeights([0.7],[0.4],6)', allApprox(piw, [1, -1.1, 0.44, -0.176, 0.0704, -0.02816], 1e-12), piw, '[1, -1.1, 0.44, -0.176, 0.0704, -0.02816]');
+
+  // T35.6 — exact AR(1) autocovariance
+  const g6 = armaACVF({ phi: [0.9], theta: [], sigma2: 1 }, 5);
+  check(
+    'T35.6 armaACVF AR(1) 0.9',
+    allApprox(g6, [5.263157895, 4.736842105, 4.263157895, 3.836842105, 3.453157895, 3.107842105], 1e-9) && approx(g6[0], 1 / 0.19, 1e-12),
+    g6,
+    'γ(0) = 1/0.19',
+  );
+
+  // T35.7–T35.8 — ACF of ARMA(2,2) and MA(2)
+  const a7 = armaACF([0.5, 0.2], [0.4, -0.3], 10);
+  check(
+    'T35.7 armaACF([0.5,0.2],[0.4,-0.3],10)',
+    allApprox(a7, [1, 0.698549, 0.413491, 0.346456, 0.255926, 0.197254, 0.149812, 0.114357, 0.087141, 0.066442, 0.050649], 1e-6),
+    a7.map((v) => v.toFixed(6)),
+    'statsmodels arma_acf (6 dp)',
+  );
+  const a8 = armaACF([], [0.6, 0.4], 5);
+  check(
+    'T35.8 armaACF MA(2) cuts off after lag 2',
+    approx(a8[1], 0.84 / 1.52, 1e-12) && approx(a8[2], 0.4 / 1.52, 1e-12) && a8.slice(3).every((v) => Math.abs(v) <= 1e-15),
+    a8,
+    'ρ1 = 0.84/1.52, ρ2 = 0.4/1.52, ρ≥3 = 0',
+  );
+
+  // T35.9 — Durbin–Levinson on AR(2) roots 1 ± i (Thms 3, 7)
+  const dl9 = durbinLevinson(armaACVF({ phi: [1, -0.5], theta: [], sigma2: 1 }, 6));
+  check(
+    'T35.9 durbinLevinson AR(2): PACF cutoff, φ row, v6',
+    allApprox(dl9.pacf, [2 / 3, -0.5, 0, 0, 0, 0], 1e-12) && allApprox(dl9.phi, [1, -0.5, 0, 0, 0, 0], 1e-12) && approx(dl9.v[6], 1, 1e-12),
+    `pacf ${dl9.pacf.map((v) => v.toFixed(6))}; v6 ${dl9.v[6]}`,
+    'pacf [2/3, −0.5, 0…]; v6 = 1',
+  );
+
+  // T35.10 — PACF of ARMA(1,1)
+  const p10 = armaPACF([0.7], [0.4], 10);
+  check(
+    'T35.10 armaPACF([0.7],[0.4],10)',
+    allApprox(p10, [0.818605, -0.294314, 0.11585, -0.046222, 0.018481, -0.007392, 0.002957, -0.001183, 0.000473, -0.000189], 1e-6),
+    p10.map((v) => v.toFixed(6)),
+    'statsmodels arma_pacf',
+  );
+
+  // T35.11 — AR(1) spectrum at 0 and ∫f = γ(0)
+  const ar09 = { phi: [0.9], theta: [], sigma2: 1 };
+  const f0 = armaSpectrum(ar09, [0])[0];
+  const NG = 200001;
+  const grid = Array.from({ length: NG }, (_, i) => -Math.PI + (2 * Math.PI * i) / (NG - 1));
+  const fg = armaSpectrum(ar09, grid);
+  const dw = (2 * Math.PI) / (NG - 1);
+  const integral = fg.reduce((s, v, i) => s + (i === 0 || i === NG - 1 ? v / 2 : v), 0) * dw;
+  check(
+    'T35.11 armaSpectrum AR(1) 0.9: f(0) and ∫f = γ(0)',
+    approx(f0, 15.915494309, 1e-9) && approx(integral, 5.263157895, 1e-6),
+    `${f0}, ${integral}`,
+    '15.915494309, 5.263157895',
+  );
+
+  // T35.12 — long-run variance σ²θ(1)²/φ(1)²
+  const lr1 = armaLongRunVariance({ phi: [0.9], theta: [], sigma2: 0.19 });
+  const lr2 = armaLongRunVariance({ phi: [0.7], theta: [0.4], sigma2: 1 });
+  check('T35.12 armaLongRunVariance', approx(lr1, 19, 1e-12) && approx(lr2, 21.777777777778, 1e-12), `${lr1}, ${lr2}`, '19, 21.777777777778');
+
+  // T35.13 — periodogram on fixture.ar2 (direct-DFT path, n = 1000)
+  const pg = periodogram(arma.ar2);
+  check('T35.13 periodogram(fixture.ar2).f[1..3]', allApprox(pg.f.slice(1, 4), [0.622576, 1.124598, 0.102019], 1e-6), pg.f.slice(1, 4), '[0.622576, 1.124598, 0.102019]');
+
+  // T35.14 — Parseval: (2π/n) Σ_{j=0}^{n−1} I(ω_j) = γ̂(0)
+  {
+    const n = arma.ar2.length;
+    const mean = arma.ar2.reduce((s, v) => s + v, 0) / n;
+    const X = fft(arma.ar2.map((v) => v - mean));
+    let tot = 0;
+    for (let j = 0; j < n; j++) tot += (X.re[j] ** 2 + X.im[j] ** 2) / (2 * Math.PI * n);
+    const lhs = ((2 * Math.PI) / n) * tot;
+    const g0 = sampleACVF(arma.ar2, 0)[0];
+    check('T35.14 Parseval on fixture.ar2', approx(lhs, 2.254405348, 1e-9) && approx(g0, 2.254405348, 1e-9), `${lhs}, ${g0}`, '2.254405348');
+  }
+
+  // T35.15 — smoothers on fixture.ar2peak (n = 512, M = 110 for the lag window)
+  {
+    const x = arma.ar2peak;
+    const at = (f: number[]) => [f[0], f[25], f[50]];
+    const d = at(smoothPeriodogram(x, 3, 'daniell').f);
+    const md = at(smoothPeriodogram(x, 3, 'modifiedDaniell').f);
+    const bl = at(smoothPeriodogram(x, 3, 'bartlettLag').f);
+    const raw = periodogram(x).f.slice(1);
+    const m0 = smoothPeriodogram(x, 0).f;
+    check(
+      'T35.15 smoothPeriodogram daniell / modifiedDaniell / bartlettLag (m = 3)',
+      allApprox(d, [0.266389, 1.537472, 6.566088], 1e-6) &&
+        allApprox(md, [0.233187, 1.469154, 7.148838], 1e-6) &&
+        allApprox(bl, [0.299809, 1.689696, 6.423934], 1e-6) &&
+        m0.length === raw.length && m0.every((v, i) => v === raw[i]),
+      `D ${d.map((v) => v.toFixed(6))}; MD ${md.map((v) => v.toFixed(6))}; BL ${bl.map((v) => v.toFixed(6))}`,
+      'D [0.266389, 1.537472, 6.566088]; MD [0.233187, 1.469154, 7.148838]; BL [0.299809, 1.689696, 6.423934]; m=0 ≡ raw',
+    );
+  }
+
+  // T35.16 — sample ACVF on fixture.ar1
+  const g16 = sampleACVF(arma.ar1, 5);
+  check('T35.16 sampleACVF(fixture.ar1, 5)', allApprox(g16, [4.468839, 3.962818, 3.540452, 3.155558, 2.796726, 2.514322], 1e-6), g16.map((v) => v.toFixed(6)), 'statsmodels acovf');
+
+  // T35.17 — Bartlett SEs on fixture.arma11
+  const rho17 = sampleACF(arma.arma11, 3);
+  const se1 = bartlettSE(rho17, 1000, 1);
+  const se3 = bartlettSE(rho17, 1000, 3);
+  check('T35.17 bartlettSE h = 1, 3', approx(se1, 0.031622777, 1e-8) && approx(se3, 0.052335077, 1e-8), `${se1}, ${se3}`, '0.031622777, 0.052335077');
+
+  // T35.18 — Yule–Walker on fixture.ar2
+  const yw = yuleWalker(arma.ar2, 2);
+  check('T35.18 yuleWalker(fixture.ar2, 2)', allApprox(yw.phi, [0.983465, -0.480983], 1e-6) && approx(yw.sigma2, 0.968706, 1e-6), `${yw.phi}, ${yw.sigma2}`, '[0.983465, −0.480983], 0.968706');
+
+  // T35.19 — CSS on fixture.arma11
+  const css = armaCSS(arma.arma11, 1, 1);
+  check(
+    'T35.19 armaCSS(fixture.arma11, 1, 1)',
+    approx(css.phi[0], 0.638968, 1e-4) && approx(css.theta[0], 0.402674, 1e-4) && approx(css.sigma2, 1.001488, 1e-4),
+    `${css.phi}, ${css.theta}, ${css.sigma2}`,
+    '0.638968, 0.402674, 1.001488',
+  );
+
+  // T35.20 — Whittle on fixture.ar2
+  const wh = whittleFit(arma.ar2, 2, 0);
+  check('T35.20 whittleFit(fixture.ar2, 2, 0)', allApprox(wh.phi, [0.983377, -0.480924], 1e-4) && approx(wh.sigma2, 0.970452, 1e-4), `${wh.phi}, ${wh.sigma2}`, '[0.983377, −0.480924], 0.970452');
+
+  // T35.21 — GARCH(1,1) QMLE on Topic 34's market fixture
+  const gq = garchQMLE(fixture.obs);
+  check(
+    'T35.21 garchQMLE(marketFixture.obs)',
+    approx(gq.omega, 0.080256, 1e-3) && approx(gq.alpha, 0.28207, 1e-3) && approx(gq.beta, 0.702774, 1e-3) && approx(gq.loglik, -1557.0093, 1e-3),
+    `ω ${gq.omega.toFixed(6)}, α ${gq.alpha.toFixed(6)}, β ${gq.beta.toFixed(6)}, ℓ ${gq.loglik.toFixed(4)}`,
+    'ω 0.080256, α 0.282070, β 0.702774, ℓ −1557.0093',
+  );
+
+  // T35.22 — squared-return ACF and fourth-moment condition (Ex 18)
+  const sq = garchSqACF(0.1, 0.85, 5);
+  const uv = 0.05 / (1 - 0.1 - 0.85);
+  check(
+    'T35.22 garchSqACF / unconditional variance / fourth moment',
+    approx(sq[1], 0.17907, 1e-6) && approx(sq[5], 0.145853, 1e-6) && approx(uv, 1, 1e-12) &&
+      garchFourthMomentFinite(0.1, 0.85) && !garchFourthMomentFinite(0.28207, 0.702774),
+    `ρ1 ${sq[1]}, ρ5 ${sq[5]}, Var ${uv}`,
+    'ρ1 0.17907, ρ5 0.145853, Var 1',
+  );
+
+  // T35.23 — Newey–West on fixture.ar1
+  const hac = hacLongRunVariance(arma.ar1, 20);
+  check('T35.23 hacLongRunVariance(fixture.ar1, 20)', approx(hac, 51.737313, 1e-5), hac, 51.737313);
+
+  // T35.24 — information criteria for the sunspot AR(2)
+  const ic = armaIC(-1307.318547, 4, sunspotValues.length);
+  check(
+    'T35.24 armaIC(−1307.318547, 4, 309)',
+    sunspotValues.length === 309 && approx(ic.aic, 2622.637093, 1e-5) && approx(ic.bic, 2637.570458, 1e-5) && approx(ic.hqic, 2628.607481, 1e-5),
+    `${ic.aic}, ${ic.bic}, ${ic.hqic}`,
+    '2622.637093, 2637.570458, 2628.607481',
+  );
+
+  // S35.A — simulated AR(2) lag-1 autocorrelation near 2/3 (TS RNG)
+  const sim = simulateARMA({ phi: [1, -0.5], theta: [], sigma2: 1 }, 20000, createSeededRng(3530));
+  const rhoSim = sampleACF(sim, 1)[1];
+  check('S35.A simulateARMA AR(2): ρ̂(1) ≈ 2/3', Math.abs(rhoSim - 2 / 3) < 0.02, rhoSim.toFixed(4), '2/3 ± 0.02');
+
+  // S35.B — direct-DFT path vs a naive DFT
+  {
+    const x = arma.ar1.slice(0, 97);
+    const n = x.length;
+    const X = fft(x);
+    let err = 0;
+    for (let j = 0; j < n; j++) {
+      let re = 0;
+      let im = 0;
+      for (let t = 0; t < n; t++) {
+        re += x[t] * Math.cos((2 * Math.PI * j * t) / n);
+        im -= x[t] * Math.sin((2 * Math.PI * j * t) / n);
+      }
+      err = Math.max(err, Math.abs(X.re[j] - re), Math.abs(X.im[j] - im));
+    }
+    check('S35.B fft direct path (n = 97) vs naive DFT', err < 1e-9, err.toExponential(1), '< 1e-9');
+  }
+
+  // S35.C — roots → AR → roots round trip
+  {
+    const r = [polar(1.3, 0.7), polar(1.3, -0.7), polar(2.1, 2.2), polar(2.1, -2.2)];
+    const back = polyRoots(arPoly(rootsToAR(r)));
+    const err = Math.max(...r.map((z) => Math.min(...back.map((w) => Math.hypot(w.re - z.re, w.im - z.im)))));
+    check('S35.C polyRoots(arPoly(rootsToAR(r))) round trip', back.length === 4 && err < 1e-9, err.toExponential(1), '< 1e-9');
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

@@ -915,10 +915,7 @@ Three Bayesian analogs of AIC have emerged. **DIC** (Spiegelhalter et al. 2002) 
 </RemarkBlock>
 
 <RemarkBlock number={28} title="Time-series + graphical-model selection (one-sentences each)">
-{/* TODO Task 7: 2–3 sentences. HQIC for time series (Hannan-Quinn 1979).
-    BIC + tree priors for DAG selection (Heckerman-Geiger-Chickering 1995).
-    Both are domain-specific extensions; main framework still applies. */}
-Two domain-specific extensions: **HQIC** (Hannan–Quinn 1979) replaces $\log n$ with $2\log\log n$ for time-series model selection, giving a penalty that grows slower than BIC's but faster than AIC's. **Graphical-model / DAG selection** uses BIC with tree-structured priors over DAGs (Heckerman–Geiger–Chickering 1995); for protein-network and gene-regulatory inference, a substantial methodology has emerged on top of this core idea.
+Two domain-specific extensions: **HQIC** (Hannan–Quinn 1979) replaces $\log n$ with $2\log\log n$ for time-series model selection ([Topic 35 §35.6](/topics/stationary-time-series-and-arma#section-35-6) uses it to choose the order of a sunspot autoregression), giving a penalty that grows slower than BIC's but faster than AIC's. **Graphical-model / DAG selection** uses BIC with tree-structured priors over DAGs (Heckerman–Geiger–Chickering 1995); for protein-network and gene-regulatory inference, a substantial methodology has emerged on top of this core idea.
 </RemarkBlock>
 
 <RemarkBlock number={29} title="High-dimensional IC: Extended BIC, stability selection, knockoffs">
