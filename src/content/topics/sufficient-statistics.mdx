@@ -300,7 +300,9 @@ which is the desired factorization.
 <ExampleBlock number={4} title="Normal(μ, σ²): two-line factorization">
 For $X_1, \ldots, X_n$ iid $\mathcal{N}(\mu, \sigma^2)$ with both parameters unknown, the joint density expands to
 
-$$f(x; \mu, \sigma^2) \;=\; (2\pi\sigma^2)^{-n/2}\exp\!\left(-\tfrac{1}{2\sigma^2}\sum x_i^2 \;+\; \tfrac{\mu}{\sigma^2}\sum x_i \;-\; \tfrac{n\mu^2}{2\sigma^2}\right).$$
+$$
+f(x; \mu, \sigma^2) \;=\; (2\pi\sigma^2)^{-n/2}\exp\!\left(-\tfrac{1}{2\sigma^2}\sum x_i^2 \;+\; \tfrac{\mu}{\sigma^2}\sum x_i \;-\; \tfrac{n\mu^2}{2\sigma^2}\right).
+$$
 
 Setting $T_1 = \sum x_i$ and $T_2 = \sum x_i^2$, the parameter-dependent factor is $g(T_1, T_2; \mu, \sigma^2) = (2\pi\sigma^2)^{-n/2}\exp(\mu T_1/\sigma^2 - T_2/(2\sigma^2) - n\mu^2/(2\sigma^2))$ and the data-only factor is $h(x) = 1$. Hence $T = (\sum X_i, \sum X_i^2)$ is jointly sufficient — a 2-vector matching the parameter dimension.
 </ExampleBlock>

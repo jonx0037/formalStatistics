@@ -163,8 +163,9 @@ export default function HamiltonianTrajectoryAnimator() {
     setCurrentStep(0);
   }, []);
 
-  // Panel sizing
-  const totalW = (width ?? 960) - 16;
+  // Panel sizing. `width` is 0 until the ResizeObserver first fires (and
+  // during SSR), so the panels below render only once it's positive.
+  const totalW = Math.max(0, width - 16);
   const mainW = isMobile ? totalW : Math.min(560, totalW * 0.6);
   const sideW = isMobile ? totalW : Math.min(360, totalW * 0.4);
   const mainH = isMobile ? 280 : 360;
@@ -504,20 +505,20 @@ export default function HamiltonianTrajectoryAnimator() {
           <div className="mb-1 text-xs font-medium text-gray-600 dark:text-gray-400">
             (1) phase space — target + trajectory + momentum arrow
           </div>
-          {mainPanel}
+          {width > 0 && mainPanel}
         </div>
         <div className="flex flex-col gap-3">
           <div>
             <div className="mb-1 text-xs font-medium text-gray-600 dark:text-gray-400">
               (2) momentum (p_x, p_y)
             </div>
-            {momentumPanel}
+            {width > 0 && momentumPanel}
           </div>
           <div>
             <div className="mb-1 text-xs font-medium text-gray-600 dark:text-gray-400">
               (3) H(q, p) over step
             </div>
-            {hmlPanel}
+            {width > 0 && hmlPanel}
           </div>
         </div>
       </div>

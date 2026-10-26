@@ -1,5 +1,12 @@
 ---
 const currentPath = Astro.url.pathname;
+
+const links = [
+  { href: '/topics', label: 'Topics', active: currentPath.startsWith('/topics') },
+  { href: '/paths', label: 'Curriculum', active: currentPath === '/paths' },
+  { href: 'https://formalcalculus.com', label: '← formalCalculus', external: true },
+  { href: 'https://formalml.com', label: 'formalML →', external: true },
+];
 ---
 
 <nav
@@ -17,36 +24,19 @@ const currentPath = Astro.url.pathname;
       </span>
     </a>
 
-    <!-- Links -->
-    <div class="flex items-center gap-6">
-      <a
-        href="/topics"
-        class={`text-sm font-medium transition-colors ${currentPath.startsWith('/topics') ? 'text-[var(--color-primary)]' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
-      >
-        Topics
-      </a>
-      <a
-        href="/paths"
-        class={`text-sm font-medium transition-colors ${currentPath === '/paths' ? 'text-[var(--color-primary)]' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
-      >
-        Curriculum
-      </a>
-      <a
-        href="https://formalcalculus.com"
-        target="_blank"
-        rel="noopener"
-        class="text-sm font-medium text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors"
-      >
-        &larr; formalCalculus
-      </a>
-      <a
-        href="https://formalml.com"
-        target="_blank"
-        rel="noopener"
-        class="text-sm font-medium text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors"
-      >
-        formalML &rarr;
-      </a>
+    <div class="flex items-center gap-2 md:gap-6">
+      <!-- Links (inline from md up; in the toggle panel below on mobile) -->
+      <div class="hidden md:flex items-center gap-6">
+        {links.map((link) => (
+          <a
+            href={link.href}
+            {...(link.external ? { target: '_blank', rel: 'noopener' } : {})}
+            class={`text-sm font-medium transition-colors ${link.active ? 'text-[var(--color-primary)]' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
+          >
+            {link.label}
+          </a>
+        ))}
+      </div>
 
       <!-- Theme toggle -->
       <button
@@ -61,6 +51,37 @@ const currentPath = Astro.url.pathname;
           <path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
         </svg>
       </button>
+
+      <!-- Mobile menu toggle -->
+      <button
+        id="nav-menu-toggle"
+        class="md:hidden p-2 rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:bg-[var(--color-surface-alt)] transition-colors"
+        aria-label="Open menu"
+        aria-expanded="false"
+        aria-controls="nav-menu"
+      >
+        <svg class="w-5 h-5 menu-open-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+        <svg class="w-5 h-5 menu-close-icon hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Mobile menu panel -->
+  <div id="nav-menu" class="md:hidden hidden border-t" style="border-color: var(--color-border);">
+    <div class="max-w-6xl mx-auto px-4 py-2 flex flex-col">
+      {links.map((link) => (
+        <a
+          href={link.href}
+          {...(link.external ? { target: '_blank', rel: 'noopener' } : {})}
+          class={`py-2 text-sm font-medium transition-colors ${link.active ? 'text-[var(--color-primary)]' : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'}`}
+        >
+          {link.label}
+        </a>
+      ))}
     </div>
   </div>
 </nav>
@@ -89,5 +110,27 @@ const currentPath = Astro.url.pathname;
     document.documentElement.setAttribute('data-theme', next);
     localStorage.setItem('theme', next);
     updateIcons();
+  });
+
+  const menuToggle = document.getElementById('nav-menu-toggle');
+  const menu = document.getElementById('nav-menu');
+
+  function setMenuOpen(open) {
+    menu?.classList.toggle('hidden', !open);
+    menuToggle?.setAttribute('aria-expanded', String(open));
+    menuToggle?.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
+    menuToggle?.querySelector('.menu-open-icon')?.classList.toggle('hidden', open);
+    menuToggle?.querySelector('.menu-close-icon')?.classList.toggle('hidden', !open);
+  }
+
+  menuToggle?.addEventListener('click', () => {
+    setMenuOpen(menuToggle.getAttribute('aria-expanded') !== 'true');
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && menuToggle?.getAttribute('aria-expanded') === 'true') {
+      setMenuOpen(false);
+      menuToggle.focus();
+    }
   });
 </script>

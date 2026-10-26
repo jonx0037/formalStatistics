@@ -231,6 +231,29 @@ h1, h2, h3, h4, h5, h6 {
   border: 1px solid var(--color-border);
 }
 
+/* Wide tables scroll inside their own box instead of widening the page */
+.topic-content table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+/* Long identifiers (e.g. sklearn.linear_model.…) may break on narrow screens */
+.topic-content :not(pre) > code {
+  overflow-wrap: anywhere;
+}
+
+/* Viz preset dropdowns with long option labels shrink to their container */
+.topic-content select,
+.topic-content label:has(select) {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.topic-content select {
+  text-overflow: ellipsis;
+}
+
 /* ============================================================
    KaTeX overrides
    ============================================================ */
