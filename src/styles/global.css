@@ -85,6 +85,15 @@
   --color-f-model: #0284C7;  /* sky-600  */
   --color-g-model: #0D9488;  /* teal-600 */
 
+  /* Topic 34 — hidden Markov model palette (light) */
+  --color-ts-state1:   #0284C7;  /* sky-600    */
+  --color-ts-state2:   #E11D48;  /* rose-600   */
+  --color-ts-state3:   #D97706;  /* amber-600  */
+  --color-ts-filtered: #4F46E5;  /* indigo-600 */
+  --color-ts-smoothed: #0D9488;  /* teal-600   */
+  --color-ts-viterbi:  #111827;  /* gray-900   */
+  --color-ts-neutral:  #475569;  /* slate-600  */
+
   /* Chain-accent palette (Topic 26, Track 7) — four Tableau-10 hues for
      Gelman–Rubin multi-chain diagnostics and HMC/Gibbs trace overlays.
      Inherited by Topics 27–28. Always paired with linestyle redundancy
@@ -135,6 +144,15 @@
     --color-oracle:  #E5E7EB;  /* gray-200 */
     --color-f-model: #38BDF8;  /* sky-400  */
     --color-g-model: #2DD4BF;  /* teal-400 */
+
+    /* Topic 34 dark */
+    --color-ts-state1:   #38BDF8;  /* sky-400    */
+    --color-ts-state2:   #FB7185;  /* rose-400   */
+    --color-ts-state3:   #FBBF24;  /* amber-400  */
+    --color-ts-filtered: #818CF8;  /* indigo-400 */
+    --color-ts-smoothed: #2DD4BF;  /* teal-400   */
+    --color-ts-viterbi:  #E5E7EB;  /* gray-200   */
+    --color-ts-neutral:  #94A3B8;  /* slate-400  */
   }
 }
 
@@ -172,6 +190,15 @@
   --color-oracle:  #E5E7EB;  /* gray-200 */
   --color-f-model: #38BDF8;  /* sky-400  */
   --color-g-model: #2DD4BF;  /* teal-400 */
+
+  /* Topic 34 dark — matches @media block above */
+  --color-ts-state1:   #38BDF8;  /* sky-400    */
+  --color-ts-state2:   #FB7185;  /* rose-400   */
+  --color-ts-state3:   #FBBF24;  /* amber-400  */
+  --color-ts-filtered: #818CF8;  /* indigo-400 */
+  --color-ts-smoothed: #2DD4BF;  /* teal-400   */
+  --color-ts-viterbi:  #E5E7EB;  /* gray-200   */
+  --color-ts-neutral:  #94A3B8;  /* slate-400  */
 }
 
 /* ============================================================

@@ -1,34 +1,1155 @@
 ---
 title: "Hidden Markov Models"
-subtitle: "Foundations of state-space inference — forward-backward, Viterbi, Baum-Welch (broader time-series deferred to future T9 topics)"
-status: "draft"
+subtitle: "Foundations of state-space inference. A finite Markov chain we never see drives every observation we do; one conditional-independence structure turns three exponential-time problems — likelihood, decoding, and learning — into linear-time passes over a trellis. Ten full proofs, featuring forward–backward smoothing; Viterbi decoding, Baum–Welch as EM with its ascent property proved, and the Kalman filter as the linear-Gaussian case. Market regimes and the dishonest casino as spine examples; speech, sequence labeling, and particle filters as the ML payoff. Track 9 opens here."
+status: "published"
 difficulty: "intermediate"
-domain: "time-series-state-space"
 prerequisites:
-  - "bayesian-foundations-and-prior-selection"
-  - "maximum-likelihood"
+  - "conditional-probability"
   - "discrete-distributions"
+  - "multivariate-distributions"
+  - "maximum-likelihood"
+  - "bayesian-foundations-and-prior-selection"
+  - "bayesian-computation-and-mcmc"
 tags:
   - "hmm"
+  - "markov-chains"
   - "state-space"
+  - "latent-state"
+  - "forward-algorithm"
   - "forward-backward"
   - "viterbi"
   - "baum-welch"
   - "em-algorithm"
+  - "filtering"
+  - "smoothing"
+  - "kalman-filter"
+  - "regime-switching"
   - "time-series"
-  - "latent-state"
+domain: "time-series-state-space"
+videoId: null
 notebookPath: "notebooks/hidden-markov-models/34_hidden_markov_models.ipynb"
-datePublished: 2026-05-20
-estimatedReadTime: 0
+githubUrl: "https://github.com/jonx0037/formalStatistics/blob/main/src/content/topics/hidden-markov-models.mdx"
+datePublished: 2026-10-25
+estimatedReadTime: 70
 abstract: >-
-  Hidden Markov Models are the canonical latent-state probability model — a discrete Markov chain over hidden states emits observations through a state-conditional distribution. This topic develops the three classical HMM problems: likelihood evaluation (forward algorithm), state decoding (Viterbi), and parameter learning (Baum-Welch / EM). Continuous-time HMMs (Markov-modulated processes) and bioinformatics applications close out the treatment. Framed deliberately as "foundations of state-space inference" — the broader time-series content (Kalman filtering, ARIMA, GARCH) is reserved for future T9 topics that build on this foundation.
+  A hidden Markov model pairs a finite Markov chain Z_1, Z_2, ... that we never observe with observations X_t that depend only on the current state. That single conditional-independence structure is what makes sequence inference tractable. We build it from finite Markov chains (Chapman–Kolmogorov, stationary distributions, and the geometric sojourn times that are the model's defining assumption), prove the joint factorization, and derive the HMM's autocovariance to show where volatility clustering comes from. Then we solve Rabiner's three problems. The forward algorithm computes the likelihood in O(TK^2) time instead of K^T; its normalized form is exactly the filtering distribution, and its scale factors multiply to the likelihood. Forward–backward smoothing, the featured theorem, gives every posterior state marginal in two passes. Viterbi's max-product recursion returns the single most probable path, which can differ sharply from the sequence of pointwise posterior modes; we show a case where the pointwise path is impossible. Baum–Welch learns the parameters as an EM algorithm; we prove EM's ascent property and the closed-form M-step. Identifiability holds only up to relabeling the states, and BIC chooses the number of states. Replacing the finite state space with a Gaussian vector turns the forward pass into the Kalman filter, which we derive from the conditional multivariate Normal, and replacing exact sums with weighted samples gives the particle filters of sequential Monte Carlo.
 formalcalculusPrereqs:
+  - topic: "eigenvalues-eigenvectors"
+    site: "formalcalculus"
+    relationship: "A stationary distribution is a left eigenvector of the transition matrix with eigenvalue 1, and the rate at which a chain forgets its starting state is set by the second-largest eigenvalue modulus. The two-state calculation in §34.2 diagonalizes the transition matrix explicitly: eigenvalues 1 and 1 − p − q."
   - topic: "gradient"
     site: "formalcalculus"
-    relationship: "Baum-Welch is EM for HMM parameter estimation; the M-step optimizes the expected complete-data log-likelihood by gradient ascent or closed-form maximization. Smoothed-state posteriors from the forward-backward recursion feed the gradient computation in the E-step."
+    relationship: "The Baum–Welch M-step (§34.7 Thm 10) maximizes the expected complete-data log-likelihood subject to each row of the transition matrix summing to one; the closed-form solution comes from setting the gradient of the Lagrangian to zero, one multiplier per row."
+  - topic: "first-order-odes"
+    site: "formalcalculus"
+    relationship: "A continuous-time Markov chain's transition matrix P(t) solves the linear system of first-order ODEs P'(t) = P(t)Q (the Kolmogorov forward equation) with P(0) = I, giving P(t) = exp(tQ). §34.9 uses this for the Markov-modulated Poisson process."
 formalmlConnections:
   - topic: "sequential-monte-carlo"
     site: "formalml"
-    relationship: "Bootstrap particle filtering generalizes the HMM forward-backward recursion to non-linear / non-Gaussian state-space models. SMC samplers handle HMM-style latent-state inference as the discrete-state special case — exact filtering (forward-backward) replaces approximate particle weighting when the state space is finite and the dynamics are tractable."
-references: []
+    relationship: "The bootstrap particle filter replaces the exact sum over states in the forward recursion (§34.4 Thm 5, in the predict/update form of Thm 6) with a weighted sample, extending HMM filtering to non-linear and non-Gaussian state spaces. The Kalman filter (§34.9 Thm 12) is the linear-Gaussian case where the exact recursion stays closed-form; formalML's §6 cites it from here."
+  - topic: "random-walks"
+    site: "formalml"
+    relationship: "How fast the hidden chain forgets its starting state is a mixing-time question. §34.2's two-state eigenvalue calculation is the simplest case of the spectral-gap bounds developed there."
+  - topic: "clustering"
+    site: "formalml"
+    relationship: "A Gaussian mixture is an HMM whose transition matrix has identical rows, so the hidden labels are i.i.d. Baum–Welch reduces to the mixture EM there; the HMM adds temporal persistence to the cluster labels (§34.3 Rem 5)."
+  - topic: "probabilistic-programming"
+    site: "formalml"
+    relationship: "Stan and PyMC fit HMMs by marginalizing the discrete states with exactly the forward algorithm of §34.4, because gradient-based samplers cannot move on discrete latent variables."
+references:
+  - type: "article"
+    author: "Lawrence R. Rabiner"
+    year: 1989
+    title: "A Tutorial on Hidden Markov Models and Selected Applications in Speech Recognition"
+    publisher: "Proceedings of the IEEE 77(2): 257–286"
+    note: "RAB1989. The three-problems framing (§34.1 Rem 2) and the scaling recursion (§34.4). https://doi.org/10.1109/5.18626"
+  - type: "article"
+    author: "Leonard E. Baum and Ted Petrie"
+    year: 1966
+    title: "Statistical Inference for Probabilistic Functions of Finite State Markov Chains"
+    publisher: "Annals of Mathematical Statistics 37(6): 1554–1563"
+    note: "BAU1966. The founding paper on HMM inference. https://doi.org/10.1214/aoms/1177699147"
+  - type: "article"
+    author: "Leonard E. Baum, Ted Petrie, George Soules, and Norman Weiss"
+    year: 1970
+    title: "A Maximization Technique Occurring in the Statistical Analysis of Probabilistic Functions of Markov Chains"
+    publisher: "Annals of Mathematical Statistics 41(1): 164–171"
+    note: "BAU1970. The Baum–Welch algorithm and its monotonicity, seven years before EM was named (§34.7 Thm 10, Rem 15). https://doi.org/10.1214/aoms/1177697196"
+  - type: "article"
+    author: "Andrew J. Viterbi"
+    year: 1967
+    title: "Error Bounds for Convolutional Codes and an Asymptotically Optimum Decoding Algorithm"
+    publisher: "IEEE Transactions on Information Theory 13(2): 260–269"
+    note: "VIT1967. The max-product decoding recursion (§34.6 Thm 8). https://doi.org/10.1109/TIT.1967.1054010"
+  - type: "article"
+    author: "G. David Forney Jr."
+    year: 1973
+    title: "The Viterbi Algorithm"
+    publisher: "Proceedings of the IEEE 61(3): 268–278"
+    note: "FOR1973. The trellis and shortest-path reading of Viterbi (§34.6 Rem 11). https://doi.org/10.1109/PROC.1973.9030"
+  - type: "article"
+    author: "A. P. Dempster, N. M. Laird, and D. B. Rubin"
+    year: 1977
+    title: "Maximum Likelihood from Incomplete Data via the EM Algorithm"
+    publisher: "Journal of the Royal Statistical Society, Series B 39(1): 1–22"
+    note: "DEM1977. The general EM algorithm and its ascent property (§34.7 Thm 9). https://doi.org/10.1111/j.2517-6161.1977.tb01600.x"
+  - type: "article"
+    author: "C. F. Jeff Wu"
+    year: 1983
+    title: "On the Convergence Properties of the EM Algorithm"
+    publisher: "Annals of Statistics 11(1): 95–103"
+    note: "WU1983. Conditions under which EM iterates converge to stationary points (§34.7, after Thm 9). https://doi.org/10.1214/aos/1176346060"
+  - type: "article"
+    author: "Ted Petrie"
+    year: 1969
+    title: "Probabilistic Functions of Finite State Markov Chains"
+    publisher: "Annals of Mathematical Statistics 40(1): 97–115"
+    note: "PET1969. Identifiability of HMMs with a finite emission alphabet (§34.8). https://doi.org/10.1214/aoms/1177697807"
+  - type: "article"
+    author: "Elizabeth S. Allman, Catherine Matias, and John A. Rhodes"
+    year: 2009
+    title: "Identifiability of Parameters in Latent Structure Models with Many Observed Variables"
+    publisher: "Annals of Statistics 37(6A): 3099–3132"
+    note: "ALL2009. Generic identifiability of latent-structure models, HMMs included, via Kruskal's theorem (§34.8). https://doi.org/10.1214/09-AOS689"
+  - type: "article"
+    author: "Elisabeth Gassiat, Alice Cleynen, and Stéphane Robin"
+    year: 2016
+    title: "Inference in Finite State Space Non Parametric Hidden Markov Models and Applications"
+    publisher: "Statistics and Computing 26(1–2): 61–71"
+    note: "GAS2016. Identifiability up to relabeling from three consecutive observations under full-rank transitions and linearly independent emissions (§34.8 Thm 11). https://doi.org/10.1007/s11222-014-9523-8"
+  - type: "article"
+    author: "Peter J. Bickel, Ya'acov Ritov, and Tobias Rydén"
+    year: 1998
+    title: "Asymptotic Normality of the Maximum-Likelihood Estimator for General Hidden Markov Models"
+    publisher: "Annals of Statistics 26(4): 1614–1635"
+    note: "BIC1998. Consistency and asymptotic normality of the HMM MLE (§34.8 Rem 19). https://doi.org/10.1214/aos/1024691255"
+  - type: "article"
+    author: "Rudolph E. Kalman"
+    year: 1960
+    title: "A New Approach to Linear Filtering and Prediction Problems"
+    publisher: "Journal of Basic Engineering 82(1): 35–45"
+    note: "KAL1960. The Kalman filter (§34.9 Thm 12). https://doi.org/10.1115/1.3662552"
+  - type: "article"
+    author: "James D. Hamilton"
+    year: 1989
+    title: "A New Approach to the Economic Analysis of Nonstationary Time Series and the Business Cycle"
+    publisher: "Econometrica 57(2): 357–384"
+    note: "HAM1989. Markov-switching regressions; the HMM as an econometric time-series model (§34.10 Rem 25). https://doi.org/10.2307/1912559"
+  - type: "book"
+    author: "Olivier Cappé, Eric Moulines, and Tobias Rydén"
+    year: 2005
+    title: "Inference in Hidden Markov Models"
+    publisher: "Springer"
+    note: "CAP2005. The standard graduate reference for HMM inference and its asymptotics. https://doi.org/10.1007/0-387-28982-8"
+  - type: "book"
+    author: "Walter Zucchini, Iain L. MacDonald, and Roland Langrock"
+    year: 2016
+    title: "Hidden Markov Models for Time Series: An Introduction Using R"
+    publisher: "Chapman & Hall/CRC (2nd ed.)"
+    note: "ZUC2016. Applied HMMs for time series; scaling, decoding, and model selection in practice. https://doi.org/10.1201/b20790"
+  - type: "book"
+    author: "Richard Durbin, Sean R. Eddy, Anders Krogh, and Graeme Mitchison"
+    year: 1998
+    title: "Biological Sequence Analysis: Probabilistic Models of Proteins and Nucleic Acids"
+    publisher: "Cambridge University Press"
+    note: "DUR1998. The dishonest casino (§34.1 Ex 2), CpG islands and profile HMMs (§34.10 Rem 24). https://doi.org/10.1017/CBO9780511790492"
+  - type: "book"
+    author: "J. R. Norris"
+    year: 1997
+    title: "Markov Chains"
+    publisher: "Cambridge University Press"
+    note: "NOR1997. Convergence to stationarity for finite chains (§34.2 Thm 2) and continuous-time chains (§34.9). https://doi.org/10.1017/CBO9780511810633"
+  - type: "book"
+    author: "Simo Särkkä"
+    year: 2013
+    title: "Bayesian Filtering and Smoothing"
+    publisher: "Cambridge University Press"
+    note: "SAR2013. The Kalman filter as Gaussian conditioning (§34.9 Thm 12). https://doi.org/10.1017/CBO9781139344203"
+  - type: "book"
+    author: "Christopher M. Bishop"
+    year: 2006
+    title: "Pattern Recognition and Machine Learning"
+    publisher: "Springer"
+    note: "BIS2006. Chapter 13, sequential data: HMMs and linear dynamical systems. https://www.microsoft.com/en-us/research/people/cmbishop/prml-book/"
+  - type: "article"
+    author: "Steven L. Scott"
+    year: 2002
+    title: "Bayesian Methods for Hidden Markov Models: Recursive Computing in the 21st Century"
+    publisher: "Journal of the American Statistical Association 97(457): 337–351"
+    note: "SCO2002. Forward-filtering backward-sampling for Bayesian HMMs (§34.7 Rem 17). https://doi.org/10.1198/016214502753479464"
+  - type: "article"
+    author: "Wolfgang Fischer and Kathleen Meier-Hellstern"
+    year: 1993
+    title: "The Markov-Modulated Poisson Process (MMPP) Cookbook"
+    publisher: "Performance Evaluation 18(2): 149–171"
+    note: "FIS1993. The Markov-modulated Poisson process (§34.9 Def 9). https://doi.org/10.1016/0166-5316(93)90035-S"
+  - type: "article"
+    author: "Shun-Zheng Yu"
+    year: 2010
+    title: "Hidden Semi-Markov Models"
+    publisher: "Artificial Intelligence 174(2): 215–243"
+    note: "YU2010. Explicit-duration HMMs, the fix for geometric sojourns (§34.9 Rem 21). https://doi.org/10.1016/j.artint.2009.11.011"
+  - type: "article"
+    author: "John Lafferty, Andrew McCallum, and Fernando C. N. Pereira"
+    year: 2001
+    title: "Conditional Random Fields: Probabilistic Models for Segmenting and Labeling Sequence Data"
+    publisher: "Proceedings of the 18th International Conference on Machine Learning (ICML 2001): 282–289"
+    note: "LAF2001. The linear-chain CRF, the discriminative successor of the HMM for sequence labeling (§34.10 Rem 23). https://repository.upenn.edu/cis_papers/159/"
+  - type: "article"
+    author: "Alex Graves, Santiago Fernández, Faustino Gomez, and Jürgen Schmidhuber"
+    year: 2006
+    title: "Connectionist Temporal Classification: Labelling Unsegmented Sequence Data with Recurrent Neural Networks"
+    publisher: "Proceedings of the 23rd International Conference on Machine Learning (ICML 2006): 369–376"
+    note: "GRA2006. CTC, whose training loss is a forward–backward sum over alignments (§34.6 Rem 12). https://doi.org/10.1145/1143844.1143891"
+  - type: "article"
+    author: "Albert Gu, Karan Goel, and Christopher Ré"
+    year: 2022
+    title: "Efficiently Modeling Long Sequences with Structured State Spaces"
+    publisher: "International Conference on Learning Representations (ICLR 2022)"
+    note: "GU2022. S4, a linear state-space layer for deep sequence models (§34.10 Rem 25). https://arxiv.org/abs/2111.00396"
+  - type: "article"
+    author: "Albert Gu and Tri Dao"
+    year: 2023
+    title: "Mamba: Linear-Time Sequence Modeling with Selective State Spaces"
+    publisher: "arXiv preprint arXiv:2312.00752"
+    note: "GU2023. Selective (input-dependent) linear state-space layers (§34.10 Rem 25). https://arxiv.org/abs/2312.00752"
 ---
+
+import TheoremBlock from '../../components/ui/TheoremBlock.astro';
+import ProofBlock from '../../components/ui/ProofBlock.astro';
+import ExampleBlock from '../../components/ui/ExampleBlock.astro';
+import RemarkBlock from '../../components/ui/RemarkBlock.astro';
+import DefinitionBlock from '../../components/ui/DefinitionBlock.astro';
+import ExternalLink from '../../components/ui/ExternalLink.astro';
+
+import HMMRegimeSimulator from '../../components/viz/HMMRegimeSimulator.tsx';
+import ForwardBackwardExplorer from '../../components/viz/ForwardBackwardExplorer.tsx';
+import ViterbiDecoder from '../../components/viz/ViterbiDecoder.tsx';
+import BaumWelchFitter from '../../components/viz/BaumWelchFitter.tsx';
+
+## 34.1 Motivation: regimes we cannot see
+
+Look at a year or two of daily returns for almost any asset and the same pattern shows up: long, quiet stretches, then sudden bursts where every day moves a lot, then quiet again. A histogram of the returns throws that pattern away. It shows one distribution with fatter tails than a Normal, and it can't tell us that the big moves *cluster*. The time order is the information. The question an ML system actually faces is a sequential one: given everything observed so far, which regime are we in today, and how sure are we?
+
+The model this topic builds says there's a hidden state, the market's **regime**, that evolves on its own, and each day's return is drawn from a distribution that depends only on the regime that day. We never observe the regime. We observe only its consequences. That is a **hidden Markov model** (HMM), and the same structure describes a speaker moving through phonemes, a genome moving between coding and non-coding stretches, a user moving between browsing and buying, or a server moving between healthy and degraded.
+
+<ExampleBlock number={1} title="Two-regime market">
+Take two regimes, **calm** and **turbulent**. On a calm day the return (in percent) is drawn from $\mathcal{N}(0.05, 0.7^2)$, a Normal distribution with mean 0.05 and standard deviation 0.7; on a turbulent day from $\mathcal{N}(-0.10, 2.0^2)$. A calm day is followed by another calm day with probability 0.98, and a turbulent day by another turbulent day with probability 0.95. Simulating $T = 1000$ days:
+
+- The series is turbulent on a fraction **0.362** of days. The long-run value is $0.02/(0.02 + 0.05) = 0.2857$ (Example 3 derives it), but the regimes are so persistent that 1,000 days contain only 37 switches, and the sample fraction wanders.
+- The returns have sample excess kurtosis **2.77**: fat tails, from a mixture of two thin-tailed Normals.
+- The lag-1 autocorrelation of the returns is **−0.018**, essentially zero. The lag-1 autocorrelation of the *squared* returns is **0.206**.
+
+That last pair is the fingerprint. Returns look unpredictable, and their magnitudes are strongly predictable. Example 5 derives this in closed form.
+</ExampleBlock>
+
+![Three panels. Top: 1,000 simulated daily returns over time with the turbulent days shaded in rose; the shaded stretches are visibly more volatile. Bottom left: a histogram of the returns with the two weighted Normal emission densities, calm in sky blue and narrow, turbulent in rose and wide, and their sum dashed. Bottom right: autocorrelations at lags 1 to 40, near zero for the returns and clearly positive and slowly decaying for the squared returns.](/images/topics/hidden-markov-models/34-regime-returns.png)
+
+*Figure 1. Two hidden regimes produce one fat-tailed histogram. The time order is the evidence: squared returns are autocorrelated even though returns are not.*
+
+<ExampleBlock number={2} title="The dishonest casino (DUR1998 §3.1)">
+A casino rolls one of two dice: a fair die and a loaded die that shows a six with probability 0.5 and each other face with probability 0.1. Between rolls it switches from the fair die to the loaded one with probability 0.05, and back with probability 0.10. We see only the 300 rolls. Which stretches were rolled with the loaded die?
+
+We return to this example throughout §34.4–§34.6. Its emissions are dice, so every posterior probability in it has a concrete reading: "how likely is it that *this* roll came from the loaded die?"
+</ExampleBlock>
+
+<RemarkBlock number={1} title="Notation, and what is hidden">
+We write $Z_t \in \{1, \dots, K\}$ for the hidden state at time $t$ and $X_t$ for the observation, with lowercase $x_t$ for an observed value. This matches the EM appendix of [Topic 14](/topics/maximum-likelihood#appendix-em), where $Z$ was the latent label and $X$ the data. formalML's sequential Monte Carlo page writes $x_t$ for the hidden state and $y_t$ for the observation; when crossing between the sites, swap the letters. We write $x_{s:t} = (x_s, \dots, x_t)$ for a block of consecutive observations.
+</RemarkBlock>
+
+<RemarkBlock number={2} title="Rabiner's three problems (RAB1989)">
+Every use of an HMM reduces to one of three computations:
+
+1. **Evaluate:** compute the likelihood $p(x_{1:T})$ of an observed sequence (§34.4).
+2. **Decode:** recover the hidden states, either one time at a time (§34.5) or as a single best path (§34.6).
+3. **Learn:** estimate the parameters from data (§34.7).
+
+Each has a brute-force solution that costs $K^T$ operations, exponential in the sequence length. The point of this topic is that the HMM's structure brings each one down to $O(TK^2)$. The picture to hold on to is the **trellis**: a $K \times T$ grid with one node per (state, time) pair and edges between consecutive columns. Every algorithm here is one dynamic-programming sweep across that grid, and the only thing that changes between them is whether we *sum* over incoming edges or *maximize* over them.
+</RemarkBlock>
+
+<a id="section-34-2"></a>
+
+## 34.2 Finite Markov chains
+
+The hidden part of an HMM is a Markov chain, so we start there, but only with what HMMs need. Topic 26 developed Markov chains on general state spaces as the engine of MCMC ([§26.2](/topics/bayesian-computation-and-mcmc#section-26-2), [§26.7](/topics/bayesian-computation-and-mcmc#section-26-7)); here the state space is finite and everything becomes a matrix.
+
+<DefinitionBlock number={1} title="Finite Markov chain; transition matrix">
+A sequence $Z_1, Z_2, \dots$ taking values in $\{1, \dots, K\}$ is a (time-homogeneous) **Markov chain** if the next state depends on the past only through the present:
+
+$$
+P(Z_{t+1} = k \mid Z_t = j, Z_{1:t-1}) = P(Z_{t+1} = k \mid Z_t = j) = a_{jk}.
+$$
+
+The **transition matrix** $A = (a_{jk})$ has nonnegative entries and rows that sum to 1 (it is *row-stochastic*): row $j$ is the distribution of the next state given the current state $j$. The **initial distribution** is the row vector $\nu$ with $\nu_k = P(Z_1 = k)$. This is Topic 26's transition kernel (§26.2 Def 1) on a finite state space.
+</DefinitionBlock>
+
+The first fact is that multi-step behavior is matrix multiplication.
+
+<TheoremBlock number={1} title="Chapman–Kolmogorov; marginal law">
+For a finite Markov chain with transition matrix $A$ and initial distribution $\nu$:
+
+(i) $P(Z_{t+n} = k \mid Z_t = j) = (A^n)_{jk}$ for all $t, n \ge 1$;
+
+(ii) $A^{m+n} = A^m A^n$, that is, $(A^{m+n})_{jk} = \sum_l (A^m)_{jl}(A^n)_{lk}$;
+
+(iii) the marginal law of $Z_t$ is the row vector $\nu A^{t-1}$.
+</TheoremBlock>
+
+<ProofBlock number={1} title="Proof of Thm 1 (Chapman–Kolmogorov)">
+
+(i) By induction on $n$. For $n = 1$ it is Definition 1. Suppose it holds for $n$. Condition on $Z_{t+n}$ with the law of total probability ([Topic 2](/topics/conditional-probability)):
+
+$$
+P(Z_{t+n+1} = k \mid Z_t = j) = \sum_{l} P(Z_{t+n+1} = k \mid Z_{t+n} = l, Z_t = j)\, P(Z_{t+n} = l \mid Z_t = j).
+$$
+
+By the Markov property the first factor is $P(Z_{t+n+1} = k \mid Z_{t+n} = l) = a_{lk}$, and by the induction hypothesis the second is $(A^n)_{jl}$. So the sum is $\sum_l (A^n)_{jl} a_{lk} = (A^{n+1})_{jk}$.
+
+(ii) is associativity of matrix multiplication, and (i) gives it a probabilistic reading: to go from $j$ to $k$ in $m + n$ steps, the chain passes through some state $l$ at step $m$.
+
+(iii) By total probability over $Z_1$ and (i) with $n = t - 1$:
+
+$$
+P(Z_t = k) = \sum_j \nu_j\, P(Z_t = k \mid Z_1 = j) = \sum_j \nu_j (A^{t-1})_{jk} = (\nu A^{t-1})_k.
+$$
+
+$\blacksquare$ — using the law of total probability and the Markov property (Definition 1).
+
+</ProofBlock>
+
+The second fact is that a well-behaved chain forgets where it started.
+
+<DefinitionBlock number={2} title="Stationary distribution; irreducible; aperiodic">
+A distribution $\pi$ on $\{1, \dots, K\}$ is **stationary** for $A$ if $\pi A = \pi$: starting the chain from $\pi$, every $Z_t$ has law $\pi$. Geometrically, $\pi$ is a left eigenvector of $A$ with eigenvalue 1 (<ExternalLink site="formalcalculus" topic="Eigenvalues & Eigenvectors" href="https://formalcalculus.com/topics/eigenvalues-eigenvectors" />). The chain is **irreducible** if every state can be reached from every other, and **aperiodic** if for each state $k$ the return times $\{n : (A^n)_{kk} > 0\}$ have greatest common divisor 1.
+</DefinitionBlock>
+
+<TheoremBlock number={2} title="Convergence to stationarity (stated; NOR1997 Thms 1.7.7, 1.8.3)">
+Let $A$ be the transition matrix of a finite, irreducible, aperiodic chain. Then (a) there is a unique stationary distribution $\pi$, and $\pi_k > 0$ for every $k$; (b) there are constants $C < \infty$ and $\rho \in (0, 1)$ such that $\max_k |(\nu A^n)_k - \pi_k| \le C\rho^n$ for every initial distribution $\nu$; (c) $\pi_k = 1/E[\tau_k \mid Z_1 = k]$, where $\tau_k$ is the time the chain takes to return to $k$.
+</TheoremBlock>
+
+We state Theorem 2 rather than prove it: the proof is Perron–Frobenius theory for nonnegative matrices, and Topic 26 already proved the general-state ergodic theorem it specializes ([§26.7 Thm 5](/topics/bayesian-computation-and-mcmc#section-26-7)). For two states we can do everything by hand, and the hand calculation is what we'll actually use.
+
+<ExampleBlock number={3} title="The two-state chain, solved">
+Write the two-state transition matrix as
+
+$$
+A = \begin{pmatrix} 1-p & p \\ q & 1-q \end{pmatrix},
+$$
+
+so $p$ is the probability of leaving state 1 and $q$ the probability of leaving state 2. Multiplying out shows that $\pi = (q, p)/(p + q)$ satisfies $\pi A = \pi$. The eigenvalues of $A$ are 1 and $\lambda = 1 - p - q$.
+
+To see how fast the chain forgets its start, let $\mu_n = \nu A^n$ and track its first coordinate. By Theorem 1,
+
+$$
+\mu_{n+1,1} = \mu_{n,1}(1 - p) + (1 - \mu_{n,1})\,q = q + \lambda\,\mu_{n,1}.
+$$
+
+The stationary value satisfies the same equation, $\pi_1 = q + \lambda\pi_1$. Subtracting,
+
+$$
+\mu_{n+1,1} - \pi_1 = \lambda\,(\mu_{n,1} - \pi_1),
+$$
+
+and induction gives $(\nu A^n)_1 - \pi_1 = (\nu_1 - \pi_1)\lambda^n$. The distance to stationarity shrinks by the factor $\lambda$ every step. Starting from a known state $j$ (so $\nu$ puts mass 1 on $j$), the same identity in each coordinate gives the $h$-step transition probabilities we will need in Example 5:
+
+$$
+P(Z_{t+h} = k \mid Z_t = j) = \pi_k + (\mathbf{1}\{j = k\} - \pi_k)\,\lambda^h,
+$$
+
+where $\mathbf{1}\{j = k\}$ is 1 if $j = k$ and 0 otherwise.
+
+For the market chain, $p = 0.02$ and $q = 0.05$, so $\pi = (0.7143, 0.2857)$ and $\lambda = 0.93$. The influence of the starting regime halves every $\log 2/(-\log 0.93) \approx 9.55$ days.
+</ExampleBlock>
+
+The third fact is the one that defines what an HMM can and can't express.
+
+<TheoremBlock number={3} title="Sojourn times are geometric">
+Suppose the chain enters state $k$ at time $s$ (that is, $Z_s = k$, and either $s = 1$ or $Z_{s-1} \ne k$), and let $D = \min\{d \ge 1 : Z_{s+d} \ne k\}$ be the number of consecutive steps it spends in $k$. If $a_{kk} < 1$, then
+
+$$
+P(D = d) = a_{kk}^{\,d-1}(1 - a_{kk}), \qquad d = 1, 2, \dots,
+$$
+
+so $D \sim \mathrm{Geometric}(1 - a_{kk})$ and $E[D] = 1/(1 - a_{kk})$.
+</TheoremBlock>
+
+<ProofBlock number={2} title="Proof of Thm 3 (geometric sojourns)">
+
+The event $\{D = d\}$ is $\{Z_{s+1} = k, \dots, Z_{s+d-1} = k, Z_{s+d} \ne k\}$. Condition on $Z_s = k$ and on the history before $s$. By the chain rule and the Markov property, each factor depends only on the previous state:
+
+$$
+P(D = d \mid Z_s = k, Z_{1:s-1}) = \Big(\prod_{i=1}^{d-1} P(Z_{s+i} = k \mid Z_{s+i-1} = k)\Big)\, P(Z_{s+d} \ne k \mid Z_{s+d-1} = k).
+$$
+
+Each factor in the product is $a_{kk}$. The last factor is $\sum_{l \ne k} a_{kl} = 1 - a_{kk}$, because row $k$ sums to 1. The right side doesn't depend on the history, so it is also the unconditional probability given entry at time $s$. That is the Geometric pmf with success probability $1 - a_{kk}$ from [Topic 5](/topics/discrete-distributions) (§5.4), whose mean is $1/(1 - a_{kk})$. $\blacksquare$ — using the chain rule, the Markov property, and the geometric mean (Topic 5).
+
+</ProofBlock>
+
+For the market chain the mean calm spell lasts $1/0.02 = 50$ days and the mean turbulent spell $1/0.05 = 20$ days. A 200,000-step simulation gives empirical means of **50.91** and **20.38** over 2,803 and 2,804 completed spells.
+
+![Two panels. Left: the probability of being turbulent after n steps, starting from calm (rising from 0) and from turbulent (falling from 1), both converging to the dashed stationary value 0.2857; an inset on a log scale shows the gap to stationarity shrinking along a straight line, the geometric rate 0.93 to the n. Right: on a log scale, empirical sojourn-length frequencies from a 200,000-step simulation for the calm and turbulent states, each following a straight line given by its geometric probability mass function, with means 50 and 20 days.](/images/topics/hidden-markov-models/34-two-state-chain.png)
+
+*Figure 2. A two-state chain forgets its starting point at rate λ = 1 − p − q, and the time it spends in each state is geometric.*
+
+<RemarkBlock number={3} title="The spectral gap sets the memory">
+With $K > 2$ states, the second-largest eigenvalue modulus $|\lambda_2|$ of $A$ plays the role of $\lambda$: the chain forgets its starting point at roughly the rate $|\lambda_2|^n$, and $1 - |\lambda_2|$ is called the **spectral gap**. That is the finite-state face of a mixing-time bound, developed in <ExternalLink site="formalml" topic="random-walks" href="https://formalml.com/topics/random-walks" />. We won't need more than the two-state case.
+</RemarkBlock>
+
+<RemarkBlock number={4} title="The Markov property is a modeling choice">
+Requiring the next state to depend only on the current one costs less generality than it seems. A chain where the next state depends on the last $m$ states is a first-order chain on the $K^m$ possible blocks of $m$ states, so "first order" restricts only how big the state space is. The genuine restriction is Theorem 3: *every* state's dwell time is geometric, so the most likely duration is always 1, whatever the mean. Regimes that tend to last about a month, or phonemes with a typical length, violate that. §34.9 Remark 21 gives the fix.
+</RemarkBlock>
+
+<a id="section-34-3"></a>
+
+## 34.3 The hidden Markov model
+
+Now we hide the chain and let it emit.
+
+<DefinitionBlock number={3} title="Hidden Markov model">
+A **hidden Markov model** with $K$ states has parameters $\theta = (\nu, A, \{b_k\})$ and satisfies:
+
+(i) $Z_{1:T}$ is a Markov chain with initial distribution $\nu$ and transition matrix $A$;
+
+(ii) given the whole state sequence $Z_{1:T}$, the observations $X_1, \dots, X_T$ are independent, and $X_t$ has distribution $b_{Z_t}$, which depends only on the current state.
+
+Here $b_k$ is a pmf or density, the **emission distribution** of state $k$. In words: the state walks; at every step it emits one observation from its own distribution and otherwise leaves no trace. **Categorical emissions** have $b_k(v) = B_{kv}$ for symbols $v$ in a finite alphabet (the casino). **Gaussian emissions** have $b_k = \mathcal{N}(\mu_k, \sigma_k^2)$ (the market).
+</DefinitionBlock>
+
+Everything that follows rests on one theorem: the joint distribution factors along the chain, and the factorization makes the past and the future conditionally independent given the present state.
+
+<TheoremBlock number={4} title="Factorization and conditional independence">
+Under Definition 3, for every $T$ and every $(z_{1:T}, x_{1:T})$:
+
+(i) the joint probability factors along the chain,
+
+$$
+p(z_{1:T}, x_{1:T}) = \nu_{z_1} b_{z_1}(x_1) \prod_{t=2}^T a_{z_{t-1}z_t}\, b_{z_t}(x_t);
+$$
+
+(ii) for each $t$, the past block $(Z_{1:t-1}, X_{1:t})$ and the future block $(Z_{t+1:T}, X_{t+1:T})$ are conditionally independent given $Z_t$; in particular $p(x_{t+1:T} \mid z_t, z_{1:t-1}, x_{1:t}) = p(x_{t+1:T} \mid z_t)$;
+
+(iii) $p(x_t \mid z_t, z_{1:t-1}, x_{1:t-1}) = b_{z_t}(x_t)$ and $p(z_{t+1} \mid z_{1:t}, x_{1:t}) = a_{z_t z_{t+1}}$.
+</TheoremBlock>
+
+<ProofBlock number={3} title="Proof of Thm 4 (factorization and conditional independence)">
+
+(i) Write $p(z_{1:T}, x_{1:T}) = p(z_{1:T})\, p(x_{1:T} \mid z_{1:T})$. The first factor is $\nu_{z_1}\prod_{t \ge 2} a_{z_{t-1}z_t}$ by the chain rule and the Markov property. The second is $\prod_t b_{z_t}(x_t)$ by Definition 3(ii).
+
+(ii) Group the factors of (i) by whether their indices are at most $t$ or greater than $t$. Define
+
+$$
+f(z_{1:t}, x_{1:t}) = \nu_{z_1}b_{z_1}(x_1)\prod_{s=2}^{t} a_{z_{s-1}z_s}\,b_{z_s}(x_s),
+$$
+
+$$
+g(z_t, z_{t+1:T}, x_{t+1:T}) = \prod_{s=t+1}^{T} a_{z_{s-1}z_s}\,b_{z_s}(x_s),
+$$
+
+so that $p(z_{1:T}, x_{1:T}) = f \cdot g$. The function $g$ touches the past only through $z_t$. Fix $z_t$ and divide by $p(z_t)$, the sum of $f\,g$ over every other variable. The conditional joint density of the two blocks given $Z_t = z_t$ is then a function of the past block times a function of the future block. A joint density that factors this way is the product of its conditional marginals (Topic 2's characterization of conditional independence, applied to densities), which is the claimed independence. The "in particular" statement applies it to the $X$ part of the future block.
+
+(iii) Summing the future factors of (i) over $z_{t+1:T}$ and $x_{t+1:T}$ gives 1, so the joint of the prefix $(z_{1:t}, x_{1:t})$ is the product (i) truncated at $t$. Divide that truncated product by the same product with $x_t$ summed or integrated out. Every factor cancels except $b_{z_t}(x_t)$, because $\sum_{x_t} b_{z_t}(x_t) = 1$. The same argument at horizon $t + 1$, with $x_{t+1}$ summed out, leaves $a_{z_t z_{t+1}}$. $\blacksquare$ — using the chain rule, the Markov property, and the factorization criterion for conditional independence.
+
+</ProofBlock>
+
+Part (ii) is the remark [Topic 2](/topics/conditional-probability) made in passing ("in hidden Markov models, observations are conditionally independent given the hidden state"), now proved. It's the only property of the model the algorithms will use: the current state screens off the past from the future.
+
+<ExampleBlock number={4} title="A joint probability by hand">
+In the casino, start the chain at its stationary distribution $\nu = \pi = (2/3, 1/3)$ (fair, loaded). Take the rolls $x_{1:3} = (6, 6, 1)$ and the path $z_{1:3} = (\mathrm{L}, \mathrm{L}, \mathrm{F})$. Theorem 4(i) multiplies one factor per edge and node of the path:
+
+$$
+p(z_{1:3}, x_{1:3}) = \underbrace{\tfrac13}_{\nu_{\mathrm{L}}} \cdot \underbrace{0.5}_{b_{\mathrm{L}}(6)} \cdot \underbrace{0.90}_{a_{\mathrm{LL}}} \cdot \underbrace{0.5}_{b_{\mathrm{L}}(6)} \cdot \underbrace{0.10}_{a_{\mathrm{LF}}} \cdot \underbrace{\tfrac16}_{b_{\mathrm{F}}(1)} = 0.00125.
+$$
+
+Summing this product over all $2^3 = 8$ paths gives the likelihood of the rolls, $p(x_{1:3}) = 0.0116235$. That 8-term sum is the brute-force computation §34.4 replaces.
+</ExampleBlock>
+
+The factorization also tells us what an HMM's observations look like *marginally*: what statistics they have once we sum the hidden states out.
+
+<ExampleBlock number={5} title="Where volatility clustering comes from">
+Take a two-state HMM started at stationarity with Gaussian emissions, and write $\mu_k$ and $\sigma_k^2$ for the mean and variance of state $k$. Fix a lag $h \ge 1$. Given the whole state path, $X_t$ and $X_{t+h}$ are independent (Theorem 4), so their covariance comes entirely from the states. Conditioning on the path and using the tower property,
+
+$$
+\mathrm{Cov}(X_t, X_{t+h}) = \mathrm{Cov}\big(E[X_t \mid Z], E[X_{t+h} \mid Z]\big) = \mathrm{Cov}(\mu_{Z_t}, \mu_{Z_{t+h}}).
+$$
+
+Now use the $h$-step formula from Example 3:
+
+$$
+E[\mu_{Z_t}\mu_{Z_{t+h}}] = \sum_{j,k}\pi_j\,\mu_j\mu_k\big[\pi_k + (\mathbf{1}\{j = k\} - \pi_k)\lambda^h\big] = (\pi\cdot\mu)^2 + \lambda^h\Big(\sum_j \pi_j\mu_j^2 - (\pi\cdot\mu)^2\Big).
+$$
+
+Subtracting $E[\mu_{Z_t}]E[\mu_{Z_{t+h}}] = (\pi\cdot\mu)^2$ leaves $\lambda^h$ times the variance of $\mu_Z$. For two states that variance is $\pi_1\pi_2(\mu_1 - \mu_2)^2$, so
+
+$$
+\mathrm{Cov}(X_t, X_{t+h}) = \pi_1\pi_2(\mu_1 - \mu_2)^2\,\lambda^h.
+$$
+
+The same argument applied to $X_t^2$, with $s_k = E[X_t^2 \mid Z_t = k] = \mu_k^2 + \sigma_k^2$ in place of $\mu_k$, gives
+
+$$
+\mathrm{Cov}(X_t^2, X_{t+h}^2) = \pi_1\pi_2(s_1 - s_2)^2\,\lambda^h.
+$$
+
+In the market model the means barely differ (0.05 vs −0.10), so returns are nearly uncorrelated: the theoretical lag-1 autocorrelation is **0.0029**. The second moments differ a lot ($s_1 = 0.49$, $s_2 = 4.01$), so *squared* returns are strongly autocorrelated, decaying like $0.93^h$. At lags $h = 1, 5, 20$ the theory gives **0.1947, 0.1457, 0.0490**; a 200,000-day simulation gives **0.1893, 0.1450, 0.0471**, and the 1,000-day series of Example 1 gives **0.206, 0.124, 0.043**. That is volatility clustering, produced by nothing more than a persistent hidden state. The model has no feedback from past returns to future variance; GARCH builds that feedback in directly.
+</ExampleBlock>
+
+![Two panels. Left: the HMM as a directed graph, a row of five hidden-state circles Z1 to Z5 joined left to right by arrows labeled with transition probabilities, each with an arrow down to a shaded observation circle X1 to X5 labeled with emission probabilities. Right: autocorrelation of squared returns from a 200,000-step simulation as gray bars at lags 1 to 40, with the closed-form theory curve in rose passing through them and decaying geometrically, and the near-zero theory curve for the returns themselves dashed along the bottom.](/images/topics/hidden-markov-models/34-hmm-structure.png)
+
+*Figure 3. The HMM's graph, and the volatility clustering it implies: the autocorrelation of squared observations decays like λ^h.*
+
+<RemarkBlock number={5} title="A Gaussian mixture is an HMM with no memory">
+If every row of $A$ equals $\pi$, the next state ignores the current one, the labels $Z_t$ are i.i.d. draws from $\pi$, and the HMM is exactly the Gaussian mixture of [Topic 14's EM appendix](/topics/maximum-likelihood#appendix-em). Then $\lambda = 0$ and every autocovariance in Example 5 vanishes. The HMM's extra content over a mixture is *persistence*: the cluster label at time $t$ predicts the label at time $t + 1$. The "No memory" preset in the simulator below makes this concrete. Mixtures and their EM are developed in <ExternalLink site="formalml" topic="clustering" href="https://formalml.com/topics/clustering" />.
+</RemarkBlock>
+
+<RemarkBlock number={6} title="The graph is the model">
+Figure 3's directed graph encodes Theorem 4 by itself. Conditional independence (ii) is d-separation: every path from the past to the future passes through $Z_t$, and observing $Z_t$ blocks it. Naive Bayes reads the same picture one time step at a time: one hidden class, many conditionally independent features. The HMM strings naive-Bayes models together along a Markov chain.
+</RemarkBlock>
+
+Try the generative model yourself. Raise the stay probabilities and the regimes lengthen, the sojourn histograms flatten into longer geometric tails, and the autocorrelation of the squared observations decays more slowly, along Example 5's curve. The "No memory" preset keeps the marginal distribution and destroys the time structure.
+
+<HMMRegimeSimulator client:visible />
+
+<a id="section-34-4"></a>
+
+## 34.4 Likelihood: the forward algorithm
+
+The first of Rabiner's problems is to compute $p(x_{1:T})$: how probable is the observed sequence under the model? We need it to compare models, to fit them by maximum likelihood, and to flag anomalous sequences. By total probability over the hidden path,
+
+$$
+p(x_{1:T}) = \sum_{z_{1:T}} p(z_{1:T}, x_{1:T}),
+$$
+
+a sum of $K^T$ terms, each a product from Theorem 4(i). For the 300 casino rolls that is $2^{300} \approx 2 \times 10^{90}$ paths. The sum is correct and useless. The way out is to organize it along time.
+
+<DefinitionBlock number={4} title="Forward variables; filtering distribution">
+The **forward variable** is the joint probability of the observations so far and the current state,
+
+$$
+\alpha_t(k) = p(x_{1:t}, Z_t = k).
+$$
+
+The **filtering distribution** is $P(Z_t = k \mid x_{1:t})$: what we believe about the state now, having seen everything up to now and nothing after.
+</DefinitionBlock>
+
+<TheoremBlock number={5} title="Forward recursion">
+The forward variables satisfy $\alpha_1(k) = \nu_k b_k(x_1)$ and, for $t \ge 2$,
+
+$$
+\alpha_t(k) = b_k(x_t)\sum_{j=1}^K \alpha_{t-1}(j)\,a_{jk}.
+$$
+
+Consequently $p(x_{1:T}) = \sum_k \alpha_T(k)$, and computing it takes $O(TK^2)$ operations.
+</TheoremBlock>
+
+<ProofBlock number={4} title="Proof of Thm 5 (forward recursion)">
+
+The base case is Theorem 4(i) with $T = 1$. For $t \ge 2$, marginalize $Z_{t-1}$ and apply the chain rule:
+
+$$
+\alpha_t(k) = \sum_j p(x_{1:t-1}, Z_{t-1} = j)\; p(Z_t = k \mid Z_{t-1} = j, x_{1:t-1})\; p(x_t \mid Z_t = k, Z_{t-1} = j, x_{1:t-1}).
+$$
+
+The first factor is $\alpha_{t-1}(j)$. By Theorem 4(iii) the second is $a_{jk}$ and the third is $b_k(x_t)$. Pull $b_k(x_t)$ out of the sum. The likelihood is total probability over $Z_T$. For the cost, each of the $T - 1$ steps computes $K$ sums of $K$ products. $\blacksquare$ — using the chain rule and Theorem 4(iii).
+
+</ProofBlock>
+
+The trellis makes the recursion visible. Each node $(k, t)$ holds $\alpha_t(k)$, computed from the $K$ nodes of the previous column along the $K$ incoming edges. Every path through the trellis is still counted, but the paths that share a prefix share its arithmetic.
+
+<ExampleBlock number={6} title="Counting operations">
+The forward algorithm costs about $2K^2(T - 1) + 2K$ multiply-adds: **2,396** for the 300 casino rolls. Brute force costs about $TK^T \approx$ **6.1 × 10⁹²**. Both compute the same number. For the first 10 casino rolls (faces 1, 2, 5, 6, 4, 4, 2, 2, 1, 4), forward and brute-force enumeration of all $2^{10}$ paths both give $\log p(x_{1:10}) =$ **−18.488737947800**, identical to double precision.
+</ExampleBlock>
+
+![Two panels. Left: a two-state trellis over six time steps, nodes in two rows joined by every possible edge between consecutive columns, with the two edges entering state 1 at time 4 highlighted in indigo and the annotation alpha 4 of 1 equals b1 of x4 times the sum over j of alpha 3 of j times a j1. Right: log base 10 of the operation count against sequence length T up to 60, with brute force rising in straight lines for K equals 2 and 3 and the forward algorithm staying nearly flat.](/images/topics/hidden-markov-models/34-forward-trellis.png)
+
+*Figure 4. The forward algorithm reuses each column of the trellis instead of enumerating every path — linear in T instead of exponential.*
+
+There's a numerical catch. Every $\alpha_t(k)$ is a probability of $t$ specific observations, so it shrinks geometrically in $t$ and soon falls below the smallest positive double. The fix normalizes each column, and the normalized column turns out to be exactly the quantity we wanted anyway.
+
+<TheoremBlock number={6} title="Scaling equals filtering">
+Define $\hat\alpha_1(k) = \nu_k b_k(x_1)/c_1$ with $c_1 = \sum_k \nu_k b_k(x_1)$, and for $t \ge 2$
+
+$$
+\tilde\alpha_t(k) = b_k(x_t)\sum_j \hat\alpha_{t-1}(j)\,a_{jk}, \qquad c_t = \sum_k \tilde\alpha_t(k), \qquad \hat\alpha_t(k) = \tilde\alpha_t(k)/c_t.
+$$
+
+Then:
+
+(i) $c_t = p(x_t \mid x_{1:t-1})$, with $c_1 = p(x_1)$;
+
+(ii) $\hat\alpha_t(k) = \alpha_t(k)/p(x_{1:t}) = P(Z_t = k \mid x_{1:t})$;
+
+(iii) $\log p(x_{1:T}) = \sum_{t=1}^T \log c_t$.
+
+Every normalized quantity lies in $[0, 1]$, so nothing underflows.
+</TheoremBlock>
+
+<ProofBlock number={5} title="Proof of Thm 6 (scaling equals filtering)">
+
+We prove (i) and (ii) together by induction on $t$. At $t = 1$, $c_1 = \sum_k \alpha_1(k) = p(x_1)$ and $\hat\alpha_1 = \alpha_1/p(x_1)$. Suppose $\hat\alpha_{t-1} = \alpha_{t-1}/p(x_{1:t-1})$. Substitute it into $\tilde\alpha_t$ and use Theorem 5:
+
+$$
+\tilde\alpha_t(k) = \frac{b_k(x_t)\sum_j \alpha_{t-1}(j)a_{jk}}{p(x_{1:t-1})} = \frac{\alpha_t(k)}{p(x_{1:t-1})}.
+$$
+
+Summing over $k$, $c_t = p(x_{1:t})/p(x_{1:t-1}) = p(x_t \mid x_{1:t-1})$, which is (i). Dividing, $\hat\alpha_t(k) = \alpha_t(k)/p(x_{1:t})$, which is (ii); its second equality is the definition of conditional probability. For (iii), the chain rule gives $p(x_{1:T}) = p(x_1)\prod_{t \ge 2} p(x_t \mid x_{1:t-1}) = \prod_t c_t$. $\blacksquare$ — using Theorem 5 and the definition of conditional probability.
+
+</ProofBlock>
+
+Read the two lines of the recursion as two steps. The sum $\sum_j \hat\alpha_{t-1}(j)a_{jk} = P(Z_t = k \mid x_{1:t-1})$ is the **prediction**: where the state will be next, before seeing $x_t$. Multiplying by $b_k(x_t)$ and normalizing is the **update**: Bayes' theorem with the new observation as data. The normalizer $c_t$ is how surprising $x_t$ was, and the log-likelihood is the total surprise.
+
+<ExampleBlock number={7} title="Underflow is not hypothetical">
+Run the unscaled recursion of Theorem 5 on the 1,000-day market series in double precision. The raw $\alpha_t$ becomes exactly 0 at **t = 542**; after that the "likelihood" is $\log 0$. The scaled recursion runs to the end without trouble and gives $\log p(x_{1:1000}) =$ **−1522.1208729**, which matches an independent log-sum-exp implementation to **1.4 × 10⁻¹²** (about 15 significant digits). Figure 5's right panel is the filter itself: $\hat\alpha_t(\text{turbulent})$, jumping toward 1 at the first large return of each turbulent stretch.
+</ExampleBlock>
+
+![Two panels. Left: log base 10 of the largest unscaled forward variable falling in a straight line until it hits the double-precision floor and underflows at t equals 542, with the scaled running sum of log c dashed on top of it and continuing to t equals 1000. Right: the filtered probability of the turbulent regime over the 1,000 days, mostly near 0 with abrupt rises to near 1 inside the shaded true turbulent stretches.](/images/topics/hidden-markov-models/34-filtering.png)
+
+*Figure 5. Unscaled forward variables underflow within a few hundred steps; the scaled recursion is the filter itself, and its scale factors multiply to the likelihood.*
+
+<RemarkBlock number={7} title="Two ways to stay finite">
+Scaling (Theorem 6) is one fix; the other is to run the recursion on log probabilities, replacing each sum with log-sum-exp, $\log\sum_j e^{u_j} = m + \log\sum_j e^{u_j - m}$ with $m = \max_j u_j$. Both are exact. The site's implementation uses scaling, because it produces the filtering distribution for free and keeps the backward pass of §34.5 in the same units.
+</RemarkBlock>
+
+<RemarkBlock number={8} title="The forward pass is a filter, and the particle filter approximates it">
+Predict, then update: this is the same two-step recursion formalML's sequential Monte Carlo page writes for general state spaces, with integrals over a continuous state in place of our sums over $K$ states. When the state is continuous and the model non-linear, those integrals have no closed form, and the **bootstrap particle filter** replaces the exact sum with a weighted sample of states (<ExternalLink site="formalml" topic="sequential-monte-carlo" href="https://formalml.com/topics/sequential-monte-carlo" />). The finite-state forward pass is the exact case it approximates. The same recursion appears in probabilistic programming: Stan and PyMC can't sample discrete hidden states with gradient-based samplers, so they marginalize them out with exactly this forward pass (<ExternalLink site="formalml" topic="probabilistic-programming" href="https://formalml.com/topics/probabilistic-programming" />).
+</RemarkBlock>
+
+<a id="section-34-5"></a>
+
+## 34.5 Smoothing: forward–backward (featured)
+
+The filter answers "what is the state now, given the past?" Often the whole sequence is already in hand — a recorded utterance, a finished trading year, a sequenced genome — and the better question is "what was the state at time $t$, given *everything*?" The answer conditions on the future too, and the future can only sharpen it.
+
+<DefinitionBlock number={5} title="Backward variables; smoothing marginals">
+The **backward variable** is the probability of the future observations given the current state,
+
+$$
+\beta_t(k) = p(x_{t+1:T} \mid Z_t = k), \qquad \beta_T(k) = 1.
+$$
+
+The **smoothing marginals** are $\gamma_t(k) = P(Z_t = k \mid x_{1:T})$, the posterior probability of state $k$ at time $t$ given all the data, and $\xi_t(j,k) = P(Z_t = j, Z_{t+1} = k \mid x_{1:T})$, the posterior probability that the transition from $t$ to $t + 1$ was $j \to k$.
+</DefinitionBlock>
+
+<TheoremBlock number={7} title="Forward–backward smoothing (featured)">
+The backward variables satisfy $\beta_T(j) = 1$ and, for $t < T$,
+
+$$
+\beta_t(j) = \sum_{k=1}^K a_{jk}\, b_k(x_{t+1})\, \beta_{t+1}(k).
+$$
+
+For every $t$:
+
+(i) $\alpha_t(k)\beta_t(k) = p(x_{1:T}, Z_t = k)$, hence $\sum_k \alpha_t(k)\beta_t(k) = p(x_{1:T})$ for every $t$;
+
+(ii) $\gamma_t(k) = \alpha_t(k)\beta_t(k)/p(x_{1:T})$;
+
+(iii) $\xi_t(j,k) = \alpha_t(j)\,a_{jk}\,b_k(x_{t+1})\,\beta_{t+1}(k)/p(x_{1:T})$ for $t < T$.
+
+With the scaled forward variables of Theorem 6 and $\hat\beta_t = \beta_t/\prod_{s > t} c_s$, the same formulas hold with $\hat\alpha, \hat\beta$ in place of $\alpha, \beta$: the denominator $p(x_{1:T})$ disappears from (ii), so $\gamma_t = \hat\alpha_t \odot \hat\beta_t$ (elementwise product), and $1/c_{t+1}$ replaces $1/p(x_{1:T})$ in (iii).
+</TheoremBlock>
+
+<ProofBlock number={6} title="Proof of Thm 7 (forward–backward)">
+
+*Backward recursion.* $\beta_T = 1$ by convention: an empty block of future observations has probability 1. For $t < T$, marginalize $Z_{t+1}$:
+
+$$
+\beta_t(j) = \sum_k p(Z_{t+1} = k \mid Z_t = j)\; p(x_{t+1} \mid Z_{t+1} = k, Z_t = j)\; p(x_{t+2:T} \mid x_{t+1}, Z_{t+1} = k, Z_t = j).
+$$
+
+The first factor is $a_{jk}$, and the second is $b_k(x_{t+1})$ by Theorem 4(iii). For the third, Theorem 4(ii) at time $t + 1$ says $X_{t+2:T}$ is conditionally independent of $(Z_t, X_{t+1})$ given $Z_{t+1}$, so the factor is $\beta_{t+1}(k)$.
+
+*(i).* By the chain rule,
+
+$$
+p(x_{1:T}, Z_t = k) = p(x_{1:t}, Z_t = k)\;p(x_{t+1:T} \mid Z_t = k, x_{1:t}).
+$$
+
+The first factor is $\alpha_t(k)$. By Theorem 4(ii) the conditioning on $x_{1:t}$ can be dropped from the second, leaving $\beta_t(k)$. Summing over $k$ gives the second claim, which is a free consistency check: the product summed over states is the same number at every $t$.
+
+*(ii)* is (i) divided by $p(x_{1:T})$, by the definition of conditional probability.
+
+*(iii).* Expand the joint with the chain rule in time order:
+
+$$
+p(x_{1:T}, Z_t = j, Z_{t+1} = k) = p(x_{1:t}, Z_t = j)\; a_{jk}\; b_k(x_{t+1})\; p(x_{t+2:T} \mid Z_{t+1} = k).
+$$
+
+Each conditional factor is simplified by Theorem 4(ii)–(iii) exactly as in the backward step: the next state depends only on $Z_t$, the emission only on $Z_{t+1}$, and the future block only on $Z_{t+1}$. The factors are $\alpha_t(j)$, $a_{jk}$, $b_k(x_{t+1})$ and $\beta_{t+1}(k)$; divide by $p(x_{1:T})$.
+
+*Scaled version.* By Theorem 6(ii), $\hat\alpha_t = \alpha_t/\prod_{s \le t}c_s$, and by definition $\hat\beta_t = \beta_t/\prod_{s > t}c_s$. So
+
+$$
+\hat\alpha_t(k)\hat\beta_t(k) = \frac{\alpha_t(k)\beta_t(k)}{\prod_{s=1}^T c_s} = \gamma_t(k),
+$$
+
+by Theorem 6(iii) and (ii) above. In (iii), the scale factors in the denominators of $\hat\alpha_t$ and $\hat\beta_{t+1}$ multiply to $\prod_{s \ne t+1}c_s = p(x_{1:T})/c_{t+1}$, which gives the stated $1/c_{t+1}$. The scaled backward recursion is $\hat\beta_t(j) = \sum_k a_{jk}b_k(x_{t+1})\hat\beta_{t+1}(k)/c_{t+1}$. $\blacksquare$ — using the chain rule, Theorem 4(ii)–(iii), and Theorem 6.
+
+</ProofBlock>
+
+Geometrically, the forward pass carries evidence across the trellis from left to right and the backward pass carries it from right to left. At each column they meet, and the posterior is their elementwise product. Two passes of $O(TK^2)$ each give all $TK$ marginals and all the pairwise transition marginals, which is exactly what learning will need (§34.7).
+
+![Three stacked panels over 300 casino rolls. Top: the rolls as tick marks, sixes tall and red, with the true loaded-die stretches shaded. Middle: the filtered probability that the die is loaded, jagged and quick to spike on single sixes, with an annotation that it crosses 0.5 at roll 91 in the loaded run starting at roll 85. Bottom: the smoothed probability, smoother and more decisive, rising earlier in each loaded stretch and crossing 0.5 at roll 88 in the same run, with the filtered curve faint behind it.](/images/topics/hidden-markov-models/34-forward-backward-casino.png)
+
+*Figure 6. Forward–backward on the dishonest casino. The smoother sees the end of each loaded run and reacts before the filter can.*
+
+The explorer below runs both passes on a simulated sequence. The three heatmap rows are $\hat\alpha_t$ (the filter), $\hat\beta_t$ (rescaled per column for display), and their product $\gamma_t$. Move the cursor to the start of a loaded run and watch the backward message arrive before the forward message has caught on. The readout confirms Theorem 7(i) at every step: $\sum_k \hat\alpha_t(k)\hat\beta_t(k) = 1$. The switching-rate slider changes only the transition matrix used for *inference*: tell the model to expect fewer switches and smoothing borrows evidence from farther away.
+
+<ForwardBackwardExplorer client:visible />
+
+<ExampleBlock number={8} title="Catching the loaded die">
+On the 300 casino rolls (loaded 40.7% of the time), threshold each posterior at 0.5 and compare with the truth. The filter labels **75.7%** of rolls correctly and the smoother **85.0%**. The mean log-loss of the probabilities against the true states falls from **0.478** to **0.354**. At the loaded run that starts at roll 85, the smoother crosses 0.5 at roll **88** and the filter only at roll **91**: the smoother has already seen the run of sixes that follows. The filter also raises more false alarms. A cluster of sixes near roll 38 pushes the filtered probability to 0.75, and the smoother, seeing the fair rolls that come after, holds it to 0.58.
+</ExampleBlock>
+
+<ExampleBlock number={9} title="Dating the regime changes">
+On the 1,000-day market series, the true regime path switches **37** times. Thresholding the filtered probability of turbulence at 0.5 switches **53** times: the filter flickers whenever a single large calm-day return looks turbulent. The smoother switches **29** times. Its accuracy is **94.8%** against the filter's **89.6%**.
+
+The ML reading is a warning. A backtest that conditions trading decisions on *smoothed* regimes uses information from the future: at day $t$ the smoother has seen days $t + 1, \dots, T$. A live system gets only the filter. Using $\gamma_t$ where $\hat\alpha_t$ belongs is a textbook leakage bug, and the 5-point accuracy gap above is roughly how much it can flatter a backtest.
+</ExampleBlock>
+
+<RemarkBlock number={9} title="Filter, smoother, and the fixed-lag compromise">
+The filter is online and the smoother is offline. In between is the **fixed-lag smoother** $P(Z_t \mid x_{1:t+L})$: wait $L$ steps, then commit to a belief about time $t$. It costs a delay of $L$ and recovers most of the smoother's accuracy when $L$ is a few multiples of the typical regime length. Which one to use is a latency decision, not a statistical one.
+</RemarkBlock>
+
+<RemarkBlock number={10} title="Sum-product on a chain">
+Forward–backward is **belief propagation** on the HMM's chain-shaped graph. The forward variables are messages passed left to right and the backward variables are messages passed right to left. On any tree-shaped graph the same messages give exact marginals. On graphs with loops, running them anyway gives "loopy" belief propagation, an approximation that works surprisingly well in practice. The chain is the cleanest case: every message is exact and the whole computation is two sweeps.
+</RemarkBlock>
+
+<a id="section-34-6"></a>
+
+## 34.6 Decoding: the Viterbi algorithm
+
+Smoothing gives a probability for each state at each time. Often we need a single answer: one label per time step, a transcription, a segmentation, a gene annotation. There are two natural ways to get one, and they answer different questions.
+
+<DefinitionBlock number={6} title="MAP path; posterior decoding">
+The **MAP path** is the single most probable hidden path,
+
+$$
+z^* = \arg\max_{z_{1:T}}\, p(z_{1:T} \mid x_{1:T}).
+$$
+
+**Posterior (pointwise) decoding** picks the most probable state at each time separately: $\hat z_t = \arg\max_k \gamma_t(k)$. The first is "the single most probable story"; the second is "the most probable state at each moment, considered one moment at a time."
+</DefinitionBlock>
+
+Posterior decoding is a byproduct of forward–backward. The MAP path needs one more recursion: the forward recursion with the sum replaced by a maximum.
+
+<TheoremBlock number={8} title="Viterbi decoding (VIT1967; FOR1973)">
+Let $\delta_t(k) = \max_{z_{1:t-1}} p(z_{1:t-1}, Z_t = k, x_{1:t})$, the probability of the best path that ends in state $k$ at time $t$, with $\delta_1(k) = \nu_k b_k(x_1)$. Then for $t \ge 2$
+
+$$
+\delta_t(k) = b_k(x_t)\,\max_j\, \delta_{t-1}(j)\,a_{jk}, \qquad \psi_t(k) \in \arg\max_j\, \delta_{t-1}(j)\,a_{jk}.
+$$
+
+Set $z^*_T \in \arg\max_k \delta_T(k)$ and backtrack with $z^*_t = \psi_{t+1}(z^*_{t+1})$ for $t = T-1, \dots, 1$. Then $z^*_{1:T}$ maximizes $p(z_{1:T} \mid x_{1:T})$ over all $K^T$ paths, and $\max_z p(z_{1:T}, x_{1:T}) = \max_k \delta_T(k)$. The cost is $O(TK^2)$ time and $O(TK)$ memory for the back-pointers $\psi$.
+</TheoremBlock>
+
+<ProofBlock number={7} title="Proof of Thm 8 (Viterbi)">
+
+*Recursion.* By Theorem 4(i), the joint probability of a prefix factors as
+
+$$
+p(z_{1:t-1}, Z_t = k, x_{1:t}) = p(z_{1:t-2}, z_{t-1}, x_{1:t-1})\; a_{z_{t-1}k}\; b_k(x_t).
+$$
+
+Maximize over $z_{1:t-1}$ in two stages: first over $z_{1:t-2}$ with $z_{t-1} = j$ held fixed, then over $j$. In the first stage the factor $a_{jk}b_k(x_t) \ge 0$ doesn't depend on $z_{1:t-2}$, and for a nonnegative constant $c$, $\max_u c\,f(u) = c\max_u f(u)$. So the inner maximum is $\delta_{t-1}(j)\,a_{jk}\,b_k(x_t)$, and maximizing over $j$ gives the recursion. The maximizing $j$ is the back-pointer $\psi_t(k)$.
+
+*Backtracking.* Define, for every state $k$ and time $t$, the backtracked path ending in $k$: $w^{(t,k)}_t = k$ and $w^{(t,k)}_{s} = \psi_{s+1}(w^{(t,k)}_{s+1})$ for $s < t$. We show by induction on $t$ that this path attains $\delta_t(k)$, meaning $p(w^{(t,k)}_{1:t-1}, Z_t = k, x_{1:t}) = \delta_t(k)$, for *every* $k$. At $t = 1$ it is the definition. Suppose it holds at $t - 1$ for every state. With $j = \psi_t(k)$, the path $w^{(t,k)}$ is $w^{(t-1,j)}$ followed by $k$, so by the factorization above and the induction hypothesis for $j$,
+
+$$
+p(w^{(t,k)}_{1:t}, x_{1:t}) = \delta_{t-1}(j)\,a_{jk}\,b_k(x_t) = \delta_t(k),
+$$
+
+the last step being the definition of $\psi_t(k)$. At $t = T$, the backtracked path from $z^*_T$ is exactly $z^*$, and $z^*_T$ maximizes $\delta_T$, so $p(z^*_{1:T}, x_{1:T}) = \max_k \delta_T(k) = \max_z p(z_{1:T}, x_{1:T})$. Finally, $p(z \mid x) = p(z, x)/p(x)$ and $p(x)$ doesn't depend on $z$, so $z^*$ also maximizes the posterior. $\blacksquare$ — using Theorem 4(i) and the fact that maximization commutes with multiplication by a nonnegative constant (Bellman's principle of optimality).
+
+</ProofBlock>
+
+The two decoders usually agree. They can disagree sharply, and the disagreement can be disqualifying.
+
+<ExampleBlock number={10} title="Posterior decoding can be impossible">
+Take three states with two structural zeros, $a_{13} = a_{31} = 0$: the chain can't jump between states 1 and 3 without passing through 2. Let
+
+$$
+A = \begin{pmatrix} 0.9 & 0.1 & 0 \\ 0.5 & 0.2 & 0.3 \\ 0 & 0.2 & 0.8 \end{pmatrix},
+$$
+
+with a uniform starting distribution and binary emissions, $P(x = 1 \mid Z = k) = 0.1, 0.2, 0.1$ for $k = 1, 2, 3$. Observe $x_{1:5} = (0, 1, 1, 1, 0)$. Forward–backward gives these smoothed marginals (rows are times; the largest entry in each row is in bold):
+
+| $t$ | $\gamma_t(1)$ | $\gamma_t(2)$ | $\gamma_t(3)$ |
+|---|---|---|---|
+| 1 | 0.307 | 0.316 | **0.377** |
+| 2 | **0.367** | 0.294 | 0.339 |
+| 3 | **0.413** | 0.286 | 0.301 |
+| 4 | **0.458** | 0.270 | 0.272 |
+| 5 | **0.555** | 0.140 | 0.305 |
+
+Posterior decoding reads off $\hat z = (3, 1, 1, 1, 1)$, and its first step is the forbidden transition $3 \to 1$. So $p(\hat z \mid x) = 0$: the "most probable state at each time" assembles into a path the model says cannot happen. Viterbi returns $z^* = (1, 1, 1, 1, 1)$, with posterior probability **0.148**. Enumerating all $3^5 = 243$ paths confirms both answers.
+
+The lesson: when the transition structure carries hard constraints — a gene grammar where exons and introns alternate, a phoneme graph that fixes the order of sounds in a word, a protocol state machine — decode with Viterbi. Pointwise decoding optimizes each label without checking that the labels fit together.
+</ExampleBlock>
+
+<ExampleBlock number={11} title="Casino: two decoders, two error profiles">
+The two decoders optimize different losses. Posterior decoding maximizes the *expected number* of correctly labeled rolls under the model; Viterbi maximizes the probability of getting the *whole path* right. On the 300 casino rolls, the model's own expected accuracy (the average of $\gamma_t$ at the decoded state) is **0.800** for posterior decoding and **0.777** for Viterbi, as the theory says it must be.
+
+On this particular realization the *realized* accuracies flip: Viterbi labels **88.7%** of rolls correctly and posterior decoding **85.0%**. That isn't a contradiction. An expectation guarantee is a statement about the average over sequences the model could have produced, not a promise about every sequence.
+
+Where the decoders differ reliably is segment structure. The true path switches dice **11** times. Viterbi's path switches **6** times; it merges short excursions into the surrounding segment because a switch costs a factor of $0.05$ or $0.10$ in path probability. Posterior decoding switches **24** times, flickering wherever $\gamma_t$ hovers near 0.5. As a whole path, Viterbi's has $\log p(z^* \mid x) =$ **−21.07**, against **−55.03** for the posterior-decoded path.
+</ExampleBlock>
+
+![Two panels. Top: three horizontal ribbons over 300 rolls, the truth, the Viterbi path, and the posterior-decoded path, colored blue for fair and red for loaded, with small triangles marking decoding errors; the posterior ribbon breaks into many short segments. Bottom: the three-state, five-step trellis of Example 10, each node labeled with its smoothed probability, with the Viterbi path running along state 1 and the posterior-decoded path drawn dashed, its first edge from state 3 to state 1 in red because that transition has probability zero.](/images/topics/hidden-markov-models/34-viterbi-vs-posterior.png)
+
+*Figure 7. Viterbi's single best path versus the sequence of most probable states. The second can be a path the model forbids.*
+
+In the decoder below, click any roll to cycle its face. Engineer a run of sixes and watch both decoders respond: posterior decoding flips the affected rolls one at a time, while Viterbi waits until the run is long enough to pay for two switches. The second scenario is Example 10.
+
+<ViterbiDecoder client:visible />
+
+<RemarkBlock number={11} title="Same trellis, different semiring">
+The forward algorithm combines edges with $(+, \times)$: multiply along a path, add across paths. Viterbi uses $(\max, \times)$. In log space Viterbi becomes $(\max, +)$: each edge has a length $-\log a_{jk} - \log b_k(x_t)$, and $z^*$ is the **shortest path** through the trellis (FOR1973). That is Bellman's dynamic programming, and it's why Viterbi in log space never needs scaling: sums of logs don't underflow.
+</RemarkBlock>
+
+<RemarkBlock number={12} title="Decoding in speech and sequence models">
+For three decades, speech recognizers were HMMs: one small chain per phoneme, phoneme chains joined into word chains by a pronunciation dictionary, and Viterbi over the resulting graph to transcribe audio. Beam search in modern sequence models is Viterbi made approximate: the state space (every possible prefix) is too large to sweep exactly, so the search keeps only the best few partial paths. And the CTC loss used to train speech and handwriting recognizers (GRA2006) is a forward–backward sum over all alignments of a label sequence to an input sequence.
+</RemarkBlock>
+
+<a id="section-34-7"></a>
+
+## 34.7 Learning: Baum–Welch as EM
+
+So far the parameters were known. In practice we have only observations, and must learn $\theta = (\nu, A, \{b_k\})$ from them. Maximum likelihood is the natural target, and §34.4 computes the likelihood, but maximizing it directly is awkward: $\log p(x_{1:T}; \theta)$ is a log of a sum over $K^T$ paths. [Topic 14's EM appendix](/topics/maximum-likelihood#appendix-em) previewed the general strategy for likelihoods with latent variables: alternate between guessing the latent variables and maximizing as if the guesses were data. It stated without proof that each iteration increases the likelihood. Here we prove it, then work out what EM does for an HMM.
+
+<DefinitionBlock number={7} title="Complete-data log-likelihood; the Q function">
+The **complete-data log-likelihood** is the log-likelihood we would have if the hidden path were observed,
+
+$$
+\ell_c(\theta'; z, x) = \log p(z_{1:T}, x_{1:T}; \theta').
+$$
+
+The **EM objective** averages it over the posterior of the path under the current parameter $\theta$:
+
+$$
+Q(\theta' \mid \theta) = E_{Z \sim p(\cdot \mid x;\, \theta)}\big[\ell_c(\theta'; Z, x)\big].
+$$
+
+The **E-step** computes $Q(\cdot \mid \theta^{(s)})$ (in practice, the posterior expectations it needs), and the **M-step** sets $\theta^{(s+1)} = \arg\max_{\theta'} Q(\theta' \mid \theta^{(s)})$.
+</DefinitionBlock>
+
+<TheoremBlock number={9} title="EM never decreases the likelihood (DEM1977)">
+Let $\ell(\theta) = \log p(x; \theta)$ for observed $x$ and latent $z$ (finitely many values, or densities), with $p(z \mid x; \theta) > 0$ wherever $p(z, x; \theta') > 0$. For any $\theta, \theta'$:
+
+$$
+\ell(\theta') - \ell(\theta) \;\ge\; Q(\theta' \mid \theta) - Q(\theta \mid \theta).
+$$
+
+Hence if $\theta^{(s+1)}$ maximizes $Q(\cdot \mid \theta^{(s)})$, or merely increases it, then $\ell(\theta^{(s+1)}) \ge \ell(\theta^{(s)})$.
+</TheoremBlock>
+
+<ProofBlock number={8} title="Proof of Thm 9 (EM ascent)">
+
+For any $z$ with $p(z \mid x; \theta) > 0$, Bayes' theorem gives $\log p(x; \theta') = \log p(z, x; \theta') - \log p(z \mid x; \theta')$. The left side doesn't depend on $z$, so average both sides over $z \sim p(\cdot \mid x; \theta)$:
+
+$$
+\ell(\theta') = Q(\theta' \mid \theta) - H(\theta' \mid \theta), \qquad H(\theta' \mid \theta) = E_{z \sim p(\cdot \mid x;\theta)}\big[\log p(z \mid x; \theta')\big].
+$$
+
+The same identity holds at $\theta' = \theta$. Subtracting the two,
+
+$$
+\ell(\theta') - \ell(\theta) = \big[Q(\theta' \mid \theta) - Q(\theta \mid \theta)\big] + \big[H(\theta \mid \theta) - H(\theta' \mid \theta)\big].
+$$
+
+The second bracket is $E_{z \sim p(\cdot\mid x;\theta)}\big[\log \tfrac{p(z \mid x; \theta)}{p(z \mid x; \theta')}\big] = D_{\mathrm{KL}}\big(p(\cdot \mid x;\theta)\,\|\,p(\cdot \mid x;\theta')\big)$, the Kullback–Leibler divergence between the two posteriors over paths ([Topic 24 §24.3](/topics/model-selection-and-information-criteria#section-24-3)). It is nonnegative by Jensen's inequality applied to the concave $\log$, with all expectations over $z \sim p(\cdot \mid x; \theta)$:
+
+$$
+-D_{\mathrm{KL}} = E\Big[\log \frac{p(z \mid x;\theta')}{p(z \mid x;\theta)}\Big] \le \log E\Big[\frac{p(z \mid x;\theta')}{p(z \mid x;\theta)}\Big] = \log \sum_{z:\,p(z\mid x;\theta)>0} p(z \mid x;\theta') \le \log 1 = 0.
+$$
+
+Dropping the nonnegative second bracket gives the inequality. If the M-step makes the first bracket nonnegative, the likelihood doesn't decrease. $\blacksquare$ — using Bayes' theorem, Jensen's inequality, and the nonnegativity of KL divergence.
+
+</ProofBlock>
+
+The proof also shows when EM stops. Equality forces both brackets to zero, so at a fixed point $\theta$ maximizes $Q(\cdot \mid \theta)$, and if $Q$ is differentiable then $\nabla_{\theta'}Q(\theta' \mid \theta) = 0$ at $\theta' = \theta$. Since $\ell(\theta') - Q(\theta' \mid \theta)$ is minimized at $\theta' = \theta$, the gradients match there, so $\nabla\ell(\theta) = 0$ too. WU1983 gives the conditions under which the iterates actually converge to such stationary points. That is the "equality only at a stationary point" clause in Topic 14's appendix. A stationary point need not be the global maximum, and for HMMs it often isn't (Example 13).
+
+For an HMM, the M-step has a closed form, and the E-step is forward–backward.
+
+<TheoremBlock number={10} title="Baum–Welch M-step (BAU1970)">
+Let $\gamma_t$ and $\xi_t$ be the smoothing marginals computed by Theorem 7 under $\theta$. Then $Q(\cdot \mid \theta)$ is maximized over $\theta' = (\nu', A', \{b'_k\})$ by
+
+$$
+\nu'_k = \gamma_1(k), \qquad a'_{jk} = \frac{\sum_{t=1}^{T-1}\xi_t(j,k)}{\sum_{t=1}^{T-1}\gamma_t(j)},
+$$
+
+and, for categorical emissions, $b'_k(v) = \sum_t \gamma_t(k)\mathbf{1}\{x_t = v\} \big/ \sum_t \gamma_t(k)$; for Gaussian emissions,
+
+$$
+\mu'_k = \frac{\sum_t \gamma_t(k)\,x_t}{\sum_t \gamma_t(k)}, \qquad \sigma'^2_k = \frac{\sum_t \gamma_t(k)\,(x_t - \mu'_k)^2}{\sum_t \gamma_t(k)}.
+$$
+</TheoremBlock>
+
+<ProofBlock number={9} title="Proof of Thm 10 (Baum–Welch M-step)">
+
+*Decomposing Q.* Take the log of Theorem 4(i) at $\theta'$ and write each term with indicators:
+
+$$
+\ell_c(\theta'; z, x) = \sum_k \mathbf{1}\{z_1 = k\}\log\nu'_k + \sum_{t=1}^{T-1}\sum_{j,k}\mathbf{1}\{z_t = j, z_{t+1} = k\}\log a'_{jk} + \sum_{t=1}^T\sum_k \mathbf{1}\{z_t = k\}\log b'_k(x_t).
+$$
+
+Take the expectation over $z \sim p(\cdot \mid x; \theta)$. The expected indicators are exactly $\gamma_1(k)$, $\xi_t(j,k)$ and $\gamma_t(k)$:
+
+$$
+Q(\theta' \mid \theta) = \sum_k \gamma_1(k)\log\nu'_k + \sum_{j,k}\Big(\sum_{t<T}\xi_t(j,k)\Big)\log a'_{jk} + \sum_k\sum_t \gamma_t(k)\log b'_k(x_t).
+$$
+
+The three groups involve disjoint parameters, so we maximize each one separately.
+
+*A weighted-log lemma.* For weights $w_k \ge 0$ with $W = \sum_k w_k > 0$, the maximum of $\sum_k w_k\log p_k$ over probability vectors $p$ is attained at $p_k = w_k/W$. To see it, form the Lagrangian $\sum_k w_k\log p_k - \lambda(\sum_k p_k - 1)$ (<ExternalLink site="formalcalculus" topic="The Gradient" href="https://formalcalculus.com/topics/gradient" />). Setting $\partial/\partial p_k = w_k/p_k - \lambda = 0$ gives $p_k = w_k/\lambda$, and the constraint gives $\lambda = W$. The objective is concave (a nonnegative combination of the concave functions $\log p_k$) on the convex set of probability vectors, so this stationary point is the global maximum.
+
+*Initial distribution:* the lemma with $w_k = \gamma_1(k)$ and $W = 1$.
+
+*Transitions:* the entries $a'_{jk}$ for different $j$ sit in separate terms and are constrained separately (each row sums to 1), so apply the lemma row by row with $w_k = \sum_t \xi_t(j,k)$. Its total is $\sum_t\sum_k\xi_t(j,k) = \sum_{t<T}\gamma_t(j)$, because summing the pairwise marginal over the second state gives the single marginal.
+
+*Categorical emissions:* the lemma for row $k$ with $w_v = \sum_t \gamma_t(k)\mathbf{1}\{x_t = v\}$.
+
+*Gaussian emissions:* for each $k$, $\sum_t \gamma_t(k)\log\varphi(x_t; \mu_k, \sigma_k^2)$ is a Normal log-likelihood with weights $\gamma_t(k)$, where $\varphi(\cdot\,; \mu, \sigma^2)$ is the Normal density. Setting the $\mu_k$-derivative $\sum_t \gamma_t(k)(x_t - \mu_k)/\sigma_k^2$ to zero gives the weighted mean. Setting the $\sigma_k^2$-derivative $\sum_t\gamma_t(k)\big[-\tfrac{1}{2\sigma_k^2} + \tfrac{(x_t-\mu_k)^2}{2\sigma_k^4}\big]$ to zero at $\mu_k = \mu'_k$ gives the weighted variance. This is Topic 14's Normal MLE with weights, and the same concavity argument, in the parameters $(\mu, 1/\sigma^2)$, makes it the maximum. $\blacksquare$ — using Theorem 4(i), Theorem 7, Lagrange multipliers, and the Normal MLE (Topic 14).
+
+</ProofBlock>
+
+The updates have an intuitive reading. The new transition probability $a'_{jk}$ is the expected number of $j \to k$ transitions divided by the expected number of visits to $j$, with expectations under the current posterior. The new emission parameters are the usual estimates, each observation weighted by how likely it is to have come from that state. If we could see the path, these would be counts. EM uses expected counts instead.
+
+<ExampleBlock number={12} title="Fitting the market model">
+Fit a two-state Gaussian HMM to the 1,000-day market series (rounded to 6 decimals, the fixture the site's tests use). Initialize deterministically with one-dimensional k-means: centers −1.049 and 0.843, SDs 0.996 and 0.911, so neither starting state looks like either true regime. Baum–Welch converges ($|\Delta\ell| < 10^{-8}$) in **25** iterations, and every iteration increases the log-likelihood; the smallest increase is $2.7 \times 10^{-9} > 0$. Fitted against true values (calm, turbulent):
+
+- standard deviations **0.711, 2.073** (true 0.7, 2.0);
+- stay probabilities **0.9717, 0.9415** (true 0.98, 0.95);
+- means **0.036, −0.040** (true 0.05, −0.10).
+
+The fitted log-likelihood **−1519.40** exceeds the true parameters' **−1522.12**, as a maximum-likelihood fit should in-sample. The means are the weakest estimates: 1,000 days barely pin down a 0.15-point gap in means under this much noise, while the volatilities and persistences are well identified. One more detail: $\hat\nu$ collapses onto the state of day 1. A single sequence contains a single draw of $Z_1$, so the initial distribution is essentially unestimable without several sequences.
+</ExampleBlock>
+
+<ExampleBlock number={13} title="Local optima are real">
+Now take a three-state market (calm, normal, crisis: means 0.06, 0, −0.3 and SDs 0.5, 1.0, 3.0), simulate 1,500 days, and run Baum–Welch from 50 random starting points. Each start draws its transition rows from a Dirichlet(1) distribution (uniform over probability vectors), its means from the data, and its SDs between 0.5 and 1.5 times the sample SD. The runs end at **6** distinct optima, separated by more than 0.1 in log-likelihood. The best, **−1951.52**, is reached by **88%** of the starts; the worst is **−1992.86**. The true parameters score −1956.31, below the best fit (in-sample again). Every run climbs monotonically, as Theorem 9 guarantees, but they climb different hills.
+</ExampleBlock>
+
+![Three panels. Left: log-likelihood against Baum–Welch iteration for the two-state market fit, rising steeply and then flattening just above the dashed log-likelihood of the true parameters. Center: the fitted standard deviations and stay probabilities of both states converging over about ten iterations to near their dotted true values. Right: a histogram of final log-likelihoods from 50 random restarts of a three-state fit, most piled at the best value near minus 1952 and a few stuck near minus 1990, with the true-parameter log-likelihood dashed between them.](/images/topics/hidden-markov-models/34-baum-welch.png)
+
+*Figure 8. Baum–Welch never decreases the likelihood, but where it stops depends on where it starts.*
+
+The fitter below runs EM step by step. Watch the trace climb and the fitted densities settle onto the histogram. Then fit with more states than the truth, or press "New random init" a few times and run each to convergence: the restart tally collects the final log-likelihoods and reproduces Example 13's spread. A red badge would appear if the log-likelihood ever decreased. It shouldn't, and that is Theorem 9 checked live.
+
+<BaumWelchFitter client:visible />
+
+<RemarkBlock number={13} title="Label switching">
+Permuting the state labels of $\theta$ — swapping which state we call "1" and which "2", and permuting $\nu$, the rows and columns of $A$, and the emissions to match — gives exactly the same likelihood. So the likelihood has at least $K!$ equivalent maxima, and the labels in a fit mean nothing until we fix a convention after fitting, such as sorting the states by emission mean or by variance. For a single maximum-likelihood fit that's a cosmetic step. For Bayesian HMMs, whose posterior is multimodal by this symmetry, it's a real problem for MCMC summaries.
+</RemarkBlock>
+
+<RemarkBlock number={14} title="Degenerate Gaussian emissions">
+As with Gaussian mixtures, the HMM likelihood is unbounded: put one state's mean exactly on one observation and let its variance shrink to zero, and that observation's density, and with it the likelihood, goes to infinity. EM can drift toward such a degenerate solution on small data. The standard defenses are a variance floor (the site's implementation floors each variance at $10^{-6}$ times the sample variance) or a prior on the variances, which turns the fit into MAP estimation.
+</RemarkBlock>
+
+<RemarkBlock number={15} title="Baum–Welch is EM before EM">
+Baum and colleagues proved the monotonicity of this algorithm for HMMs in 1970 (BAU1970), seven years before Dempster, Laird and Rubin named the general EM algorithm and proved Theorem 9 in general (DEM1977). The NPMLE grid algorithm of [Topic 33 §33.6](/topics/empirical-bayes#section-33-6) is another instance, with the prior's weights in the role of $\nu$.
+</RemarkBlock>
+
+<RemarkBlock number={16} title="Gradients without the M-step">
+Fisher's identity says the gradient of the log-likelihood is the posterior expectation of the complete-data gradient: $\nabla_\theta \ell(\theta) = E_{Z \sim p(\cdot \mid x;\theta)}[\nabla_\theta \ell_c(\theta; Z, x)]$. Equivalently, automatic differentiation through the scaled forward pass of Theorem 6 gives the exact gradient of $\log p(x_{1:T})$. That's how HMM layers sit inside neural networks and get trained by stochastic gradient descent along with everything else, with no M-step at all.
+</RemarkBlock>
+
+<RemarkBlock number={17} title="Bayesian HMMs">
+Put priors on $\nu$, the rows of $A$ (Dirichlet), and the emission parameters (Normal–inverse-gamma, say), and sample the posterior by Gibbs sampling ([Topic 26 §26.3](/topics/bayesian-computation-and-mcmc#section-26-3)), alternating two blocks. Given $\theta$, draw the whole path $Z_{1:T}$ at once by **forward-filtering backward-sampling**: run the filter, sample $Z_T$ from $\hat\alpha_T$, then sample each earlier state given the one after it (SCO2002). Given the path, draw $\theta$ from its conjugate full conditionals ([Topic 25](/topics/bayesian-foundations-and-prior-selection#section-25-4)), which use the same counts as the M-step, now as data in a conjugate update.
+</RemarkBlock>
+
+<a id="section-34-8"></a>
+
+## 34.8 Identifiability and choosing the number of states
+
+Two questions remain before an HMM fit can be trusted: are the parameters determined by the data at all, and how many states should the model have?
+
+<TheoremBlock number={11} title="Identifiability up to relabeling (stated; GAS2016, ALL2009)">
+Suppose the hidden chain is stationary, irreducible and aperiodic, the transition matrix $A$ has full rank, and the emission distributions $b_1, \dots, b_K$ are linearly independent. If two parameter values $\theta$ and $\tilde\theta$ induce the same distribution of $(X_1, X_2, X_3)$, then $\tilde\theta$ is obtained from $\theta$ by a permutation of the state labels.
+</TheoremBlock>
+
+So label switching (Remark 13) is the *only* ambiguity, and three consecutive observations already carry all the information about $\theta$. The proof (GAS2016, building on Kruskal's uniqueness theorem for three-way arrays, as ALL2009 does for finite emission alphabets; PET1969 is the classical finite-alphabet result) is outside our spine. Notice what the conditions exclude: two states with the same emission distribution, or a transition matrix with linearly dependent rows (the "no memory" case of Remark 5 has rank 1), break identifiability.
+
+<ExampleBlock number={14} title="BIC over K">
+Simulate 2,000 days from the three-state market of Example 13 and fit $K = 1, \dots, 5$ states, keeping the best of 10 starts (one k-means and nine random) for each $K$. A Gaussian HMM with $K$ states has $d_K = (K - 1) + K(K - 1) + 2K$ free parameters: the initial distribution, the transition rows, and a mean and variance per state. The criteria from [Topic 24](/topics/model-selection-and-information-criteria#section-24-4) are $\mathrm{BIC} = -2\hat\ell + d_K\log T$ and $\mathrm{AIC} = -2\hat\ell + 2d_K$:
+
+| $K$ | $\hat\ell$ | $d_K$ | BIC | AIC |
+|---|---|---|---|---|
+| 1 | −3312.57 | 2 | 6640.34 | 6629.13 |
+| 2 | −2437.92 | 7 | 4929.05 | 4889.84 |
+| 3 | −2388.79 | 14 | **4884.00** | **4805.59** |
+| 4 | −2384.22 | 23 | 4943.26 | 4814.44 |
+| 5 | −2380.09 | 34 | 5018.61 | 4828.18 |
+
+Both criteria pick **K = 3**, the truth. AIC's curve is much flatter beyond the truth (+9 at $K = 4$, against +59 for BIC), the familiar pattern of AIC's lighter penalty overfitting more readily.
+</ExampleBlock>
+
+![A line chart of BIC and AIC against the number of hidden states K from 1 to 5. Both fall steeply from K equals 1, off the top of the scale, to K equals 2, reach their minimum at K equals 3, circled, and rise afterwards, BIC more steeply than AIC.](/images/topics/hidden-markov-models/34-order-selection.png)
+
+*Figure 9. Information criteria over the number of hidden states.*
+
+<RemarkBlock number={18} title="Why BIC's justification fails here, and what to do about it">
+BIC's derivation ([Topic 24 §24.4](/topics/model-selection-and-information-criteria#section-24-4)) is a Laplace approximation that needs a regular model: an interior maximum and an invertible Fisher information. An HMM with more states than the truth is not regular. The extra states can duplicate a true state or go unused, the parameters are non-identifiable (Theorem 11's conditions fail), and the Fisher information is singular. In practice BIC still tends to choose well, as in Example 14, but the guarantee is gone. The robust alternative is held-out predictive log-likelihood on **contiguous blocks** of the sequence. Randomly scattered held-out points leak information through the Markov dependence, because their neighbors are in the training set.
+</RemarkBlock>
+
+<RemarkBlock number={19} title="Asymptotics of the HMM maximum-likelihood estimator">
+Under regularity conditions, the HMM MLE is consistent and asymptotically Normal, with a Fisher information defined through the stationary chain (BIC1998). It's the time-series analogue of the i.i.d. result in [Topic 14 §14.5](/topics/maximum-likelihood#section-14-5). The proof needs the forgetting property of Theorem 2, applied to the filter rather than the chain.
+</RemarkBlock>
+
+<a id="section-34-9"></a>
+
+## 34.9 Beyond finite states: the Kalman filter and continuous time
+
+Nothing in Theorem 4 needed the state space to be finite. Replace sums over states by integrals and every recursion in this topic still holds; the problem is that the integrals rarely have closed forms. There is one great exception.
+
+<DefinitionBlock number={8} title="Linear-Gaussian state-space model">
+A **linear-Gaussian state-space model** has a vector-valued hidden state and vector observations,
+
+$$
+Z_t = F Z_{t-1} + W_t, \qquad X_t = H Z_t + V_t,
+$$
+
+with state noise $W_t \sim \mathcal{N}(0, Q)$, observation noise $V_t \sim \mathcal{N}(0, R)$, and initial state $Z_1 \sim \mathcal{N}(m_1, P_1)$, all mutually independent. The matrix $F$ moves the state forward, $H$ maps the state to what we observe, and $Q, R$ are the noise covariance matrices. It's an HMM with a continuous state: Definition 3 with a Gaussian transition kernel and Gaussian emissions, and Theorem 4's factorization holds verbatim with densities.
+</DefinitionBlock>
+
+The miracle of this model is that every filtering distribution stays Gaussian, so the filter only has to track a mean and a covariance.
+
+<TheoremBlock number={12} title="Kalman filter (KAL1960)">
+Under Definition 8, suppose $Z_{t-1} \mid x_{1:t-1} \sim \mathcal{N}(m_{t-1}, P_{t-1})$. Then:
+
+*Predict.* $Z_t \mid x_{1:t-1} \sim \mathcal{N}(m^-_t, P^-_t)$, with $m^-_t = F m_{t-1}$ and $P^-_t = F P_{t-1} F^\top + Q$.
+
+*Update.* With innovation $e_t = x_t - H m^-_t$, innovation covariance $S_t = H P^-_t H^\top + R$, and gain $K_t = P^-_t H^\top S_t^{-1}$,
+
+$$
+Z_t \mid x_{1:t} \sim \mathcal{N}(m_t, P_t), \qquad m_t = m^-_t + K_t e_t, \qquad P_t = P^-_t - K_t S_t K_t^\top.
+$$
+
+*Likelihood.* $X_t \mid x_{1:t-1} \sim \mathcal{N}(Hm^-_t, S_t)$, so $\log p(x_{1:T}) = \sum_t \log\varphi(x_t; Hm^-_t, S_t)$, where $\varphi$ is the multivariate Normal density: the continuous-state analogue of Theorem 6(iii).
+
+Starting from $Z_1 \sim \mathcal{N}(m_1, P_1)$ (take $m^-_1 = m_1$, $P^-_1 = P_1$), induction makes every filtering distribution Gaussian with these moments.
+</TheoremBlock>
+
+<ProofBlock number={10} title="Proof of Thm 12 (Kalman filter)">
+
+*Predict.* $Z_t = FZ_{t-1} + W_t$, and $W_t$ is independent of $(Z_{t-1}, X_{1:t-1})$ by Definition 8's independence assumptions and Theorem 4(ii), whose proof applies verbatim to densities. So, conditionally on $x_{1:t-1}$, $Z_t$ is an affine map of a Gaussian vector plus an independent Gaussian vector, hence Gaussian ([Topic 8](/topics/multivariate-distributions), §8.3: affine maps and sums of independent Normals stay Normal). Its mean is $Fm_{t-1}$ and its covariance $FP_{t-1}F^\top + Q$, by the covariance rules for affine maps and independent sums.
+
+*Joint of state and observation.* $X_t = HZ_t + V_t$ with $V_t$ independent of $(Z_t, X_{1:t-1})$. So, conditionally on $x_{1:t-1}$, the pair $(Z_t, X_t)$ is jointly Gaussian with means $(m^-_t, Hm^-_t)$ and covariance blocks
+
+$$
+\mathrm{Cov}(Z_t) = P^-_t, \qquad \mathrm{Cov}(Z_t, X_t) = P^-_tH^\top, \qquad \mathrm{Cov}(X_t) = HP^-_tH^\top + R = S_t.
+$$
+
+The cross-covariance uses $\mathrm{Cov}(Z_t, HZ_t + V_t) = \mathrm{Cov}(Z_t)H^\top + 0$. The marginal of $X_t$ given the past is the likelihood claim.
+
+*Update.* Apply the conditional MVN formula ([Topic 8 §8.4 Thm 3](/topics/multivariate-distributions#section-8-4)): for a jointly Gaussian pair, $\mu_{1|2} = \mu_1 + \Sigma_{12}\Sigma_{22}^{-1}(x_2 - \mu_2)$ and $\Sigma_{1|2} = \Sigma_{11} - \Sigma_{12}\Sigma_{22}^{-1}\Sigma_{21}$. Take block 1 to be $Z_t$ and block 2 to be $X_t$:
+
+$$
+m_t = m^-_t + P^-_tH^\top S_t^{-1}(x_t - Hm^-_t) = m^-_t + K_te_t,
+$$
+
+$$
+P_t = P^-_t - P^-_tH^\top S_t^{-1}HP^-_t = P^-_t - K_tS_tK_t^\top,
+$$
+
+where the last step uses $K_tS_tK_t^\top = P^-_tH^\top S_t^{-1}S_tS_t^{-1}HP^-_t$. $\blacksquare$ — using Topic 8 §8.3 (affine maps of Normals), §8.4 Thm 3 (conditional MVN), and Theorem 4(ii) for densities.
+
+</ProofBlock>
+
+The structure is Theorem 6's, line for line. The predict step pushes the belief through the dynamics, and the update step conditions on the new observation. The gain $K_t$ decides how far the new observation moves the estimate: close to 1 when the prediction is uncertain relative to the observation noise, close to 0 when the observation is the noisy one. (The subscript always distinguishes the gain $K_t$ from the number of states $K$.)
+
+<ExampleBlock number={15} title="Local level: the Kalman filter is exponential smoothing">
+The simplest state-space model is a random walk observed with noise: $F = H = 1$, state-noise variance $q$, observation-noise variance $r$. The scalar Kalman recursions are
+
+$$
+P^-_t = P_{t-1} + q, \qquad K_t = \frac{P^-_t}{P^-_t + r}, \qquad P_t = (1 - K_t)P^-_t.
+$$
+
+Combining them gives a recursion for the predicted variance alone (the **Riccati recursion**):
+
+$$
+P^-_{t+1} = \frac{P^-_t\,r}{P^-_t + r} + q.
+$$
+
+It converges to a fixed point $P^-_\infty$, which solves $P(P + r) = Pr + q(P + r)$, that is, $(P^-)^2 - qP^- - qr = 0$:
+
+$$
+P^-_\infty = \frac{q + \sqrt{q^2 + 4qr}}{2}, \qquad K_\infty = \frac{P^-_\infty}{P^-_\infty + r}.
+$$
+
+Once the gain has settled, the filter is $m_t = m_{t-1} + K_\infty(x_t - m_{t-1})$: an **exponentially weighted moving average** with smoothing weight $K_\infty$. The weight that practitioners usually tune by hand is *derived* here from the signal-to-noise ratio $q/r$.
+
+With $q = 0.1$ and $r = 1$: $P^-_\infty =$ **0.370156** and $K_\infty =$ **0.270156**. Starting from a vague prior $P_1 = 10$ (so $K_1 = 0.909$), the gain is within $10^{-6}$ of $K_\infty$ from step **22** on, and after step 20 the exponential smoother and the Kalman mean never differ by more than **3.1 × 10⁻⁴**. The filter tracks the hidden level with error **0.515** (root mean square), against **0.997** for the raw observations.
+</ExampleBlock>
+
+![Two panels. Left: 200 noisy observations of a random-walk level as gray dots, the true latent level as a dark line, the Kalman filtered mean as an indigo line with a shaded band of plus and minus two standard deviations, and an exponentially weighted moving average using the steady-state gain drawn dashed in amber on top of the Kalman mean, indistinguishable after the first few steps. Right: the Kalman gain over the first 40 steps falling from 0.91 and settling onto the dashed steady-state value 0.2702.](/images/topics/hidden-markov-models/34-kalman-local-level.png)
+
+*Figure 10. The Kalman filter for a local-level model. Its gain settles to a constant, and the filter becomes an exponentially weighted moving average.*
+
+Time itself can be made continuous too.
+
+<DefinitionBlock number={9} title="Continuous-time Markov chain; Markov-modulated Poisson process">
+A **continuous-time Markov chain** on $\{1, \dots, K\}$ is governed by a **generator** matrix $\mathcal{Q}$ whose off-diagonal entries $q_{jk} \ge 0$ are jump rates and whose rows sum to 0. Its transition matrices are $P(t) = e^{t\mathcal{Q}}$, the matrix exponential, and the time it stays in state $k$ is $\mathrm{Exponential}(-q_{kk})$: the continuous twin of Theorem 3. A **Markov-modulated Poisson process** (MMPP; FIS1993) is an HMM in continuous time: events arrive as a Poisson process whose rate $\lambda_{Z(t)}$ is set by the hidden chain.
+</DefinitionBlock>
+
+<RemarkBlock number={20} title="Kolmogorov's forward equation">
+The transition matrices of a continuous-time chain solve $P'(t) = P(t)\mathcal{Q}$ with $P(0) = I$, a linear system of first-order ODEs (<ExternalLink site="formalcalculus" topic="First-Order ODEs & Existence Theorems" href="https://formalcalculus.com/topics/first-order-odes" />), whose solution is $e^{t\mathcal{Q}}$. Sampling a continuous-time chain every $\Delta$ time units gives a discrete-time chain with $A = e^{\Delta\mathcal{Q}}$, which is how irregularly timed data enter the discrete framework: each gap gets its own transition matrix. In ML systems an MMPP is a natural model for bursty event streams, such as requests to a service, clicks in a session, or trades in a book, where the arrival rate itself switches between regimes.
+</RemarkBlock>
+
+<RemarkBlock number={21} title="When geometric durations are wrong: semi-Markov models">
+Theorem 3 and Remark 4 flagged the HMM's built-in assumption that every state's duration is geometric. **Hidden semi-Markov models** (YU2010) give each state an explicit duration distribution (Poisson, negative binomial, or anything else) and let the chain jump only when the duration expires. The forward recursion gains a sum over durations, costing $O(TK^2D)$ for maximum duration $D$, and segment lengths stop being forced to have their mode at 1.
+</RemarkBlock>
+
+<RemarkBlock number={22} title="Nonlinear and non-Gaussian states">
+The Kalman update is exact only because Gaussian conditioning has a closed form. With nonlinear dynamics or observations, the extended Kalman filter linearizes the model around the current estimate and the unscented filter propagates a few carefully chosen points. Particle filters give up on closed forms entirely and approximate the filtering distribution by weighted samples (formalML's <ExternalLink site="formalml" topic="sequential-monte-carlo" href="https://formalml.com/topics/sequential-monte-carlo" />, §6). That page cites the Kalman filter of Theorem 12 as the exact baseline its particle filter generalizes.
+</RemarkBlock>
+
+<a id="section-34-10"></a>
+
+## 34.10 Connections to ML and the road ahead
+
+One structure did all the work in this topic: a hidden Markov chain with observations that depend only on the current state (Theorem 4). It turned three exponential problems into linear-time sweeps over one trellis. Summing over the trellis gives the likelihood and the filter (§34.4); summing forward and backward gives the smoother (§34.5); maximizing gives Viterbi (§34.6); and iterating smoothing with expected-count updates gives Baum–Welch (§34.7). The same recursion with a Gaussian state is the Kalman filter (§34.9), and with weighted samples in place of sums it's the particle filter. Four places where this machinery runs in practice:
+
+<RemarkBlock number={23} title="Speech and sequence labeling">
+GMM-HMM acoustic models, with a Gaussian mixture as each state's emission distribution, were the core of speech recognition for decades. Hybrid systems replaced the emission model with a neural network that outputs state posteriors and kept the HMM for the time structure. In language, HMM part-of-speech taggers gave way to the **linear-chain conditional random field** (LAF2001). The CRF models $p(z_{1:T} \mid x_{1:T})$ directly instead of modeling how the words were generated, but keeps the chain structure, so its marginals and its best path come from exactly the forward–backward and Viterbi recursions of §34.5–§34.6. A CRF layer on top of a neural encoder is still a standard choice for named-entity recognition.
+</RemarkBlock>
+
+<RemarkBlock number={24} title="Biological sequences">
+The casino is a cartoon of a real problem. **CpG islands** are stretches of DNA where the dinucleotide CG is unusually frequent, and a two-state HMM over the four-letter alphabet finds them exactly as Example 8 finds the loaded die (DUR1998 §3.3). Gene finders use HMMs whose states encode exons, introns and the boundaries between them, a transition structure with hard constraints of the kind Example 10 warns about. **Profile HMMs** model protein families with one match, insert and delete state per alignment column; database searches for distant relatives of a protein run the forward algorithm against thousands of them.
+</RemarkBlock>
+
+<RemarkBlock number={25} title="State-space layers in deep sequence models, and regime models in finance">
+Modern linear state-space layers such as S4 (GU2022) and Mamba (GU2023) run the recurrence $h_t = \bar A h_{t-1} + \bar B x_t$: Definition 8's state equation with learned matrices and no noise model. They aren't probabilistic filters, since nothing is conditioned on, but they share the linear-in-$T$ scan structure that made Theorem 5 practical, and their designers lean on the same linear-systems theory as the Kalman filter. In econometrics, Hamilton's Markov-switching model (HAM1989) uses the HMM directly as a time-series model: a regression whose coefficients switch with a hidden business-cycle regime, fit by exactly the filter of Theorem 6.
+</RemarkBlock>
+
+<RemarkBlock number={26} title="Where Track 9 goes next">
+This topic opens the time-series track with the latent-state view. Future Track 9 topics build out from here: Kalman *smoothing* and EM for linear-Gaussian models (the continuous-state counterparts of §34.5 and §34.7), autoregressive and ARIMA models and the Wold decomposition, conditional heteroskedasticity (GARCH) as the observation-driven alternative to Example 5's state-driven volatility, and spectral methods for stationary series.
+</RemarkBlock>
+
+---
+
+### References
+
+1. Rabiner, Lawrence R. (1989). [*A Tutorial on Hidden Markov Models and Selected Applications in Speech Recognition*](https://doi.org/10.1109/5.18626). *Proceedings of the IEEE*, 77(2), 257–286.
+2. Baum, Leonard E., and Ted Petrie. (1966). [*Statistical Inference for Probabilistic Functions of Finite State Markov Chains*](https://doi.org/10.1214/aoms/1177699147). *Annals of Mathematical Statistics*, 37(6), 1554–1563.
+3. Baum, Leonard E., Ted Petrie, George Soules, and Norman Weiss. (1970). [*A Maximization Technique Occurring in the Statistical Analysis of Probabilistic Functions of Markov Chains*](https://doi.org/10.1214/aoms/1177697196). *Annals of Mathematical Statistics*, 41(1), 164–171.
+4. Viterbi, Andrew J. (1967). [*Error Bounds for Convolutional Codes and an Asymptotically Optimum Decoding Algorithm*](https://doi.org/10.1109/TIT.1967.1054010). *IEEE Transactions on Information Theory*, 13(2), 260–269.
+5. Forney, G. David, Jr. (1973). [*The Viterbi Algorithm*](https://doi.org/10.1109/PROC.1973.9030). *Proceedings of the IEEE*, 61(3), 268–278.
+6. Dempster, A. P., N. M. Laird, and D. B. Rubin. (1977). [*Maximum Likelihood from Incomplete Data via the EM Algorithm*](https://doi.org/10.1111/j.2517-6161.1977.tb01600.x). *Journal of the Royal Statistical Society, Series B*, 39(1), 1–22.
+7. Wu, C. F. Jeff. (1983). [*On the Convergence Properties of the EM Algorithm*](https://doi.org/10.1214/aos/1176346060). *Annals of Statistics*, 11(1), 95–103.
+8. Petrie, Ted. (1969). [*Probabilistic Functions of Finite State Markov Chains*](https://doi.org/10.1214/aoms/1177697807). *Annals of Mathematical Statistics*, 40(1), 97–115.
+9. Allman, Elizabeth S., Catherine Matias, and John A. Rhodes. (2009). [*Identifiability of Parameters in Latent Structure Models with Many Observed Variables*](https://doi.org/10.1214/09-AOS689). *Annals of Statistics*, 37(6A), 3099–3132.
+10. Gassiat, Elisabeth, Alice Cleynen, and Stéphane Robin. (2016). [*Inference in Finite State Space Non Parametric Hidden Markov Models and Applications*](https://doi.org/10.1007/s11222-014-9523-8). *Statistics and Computing*, 26(1–2), 61–71.
+11. Bickel, Peter J., Ya'acov Ritov, and Tobias Rydén. (1998). [*Asymptotic Normality of the Maximum-Likelihood Estimator for General Hidden Markov Models*](https://doi.org/10.1214/aos/1024691255). *Annals of Statistics*, 26(4), 1614–1635.
+12. Kalman, Rudolph E. (1960). [*A New Approach to Linear Filtering and Prediction Problems*](https://doi.org/10.1115/1.3662552). *Journal of Basic Engineering*, 82(1), 35–45.
+13. Hamilton, James D. (1989). [*A New Approach to the Economic Analysis of Nonstationary Time Series and the Business Cycle*](https://doi.org/10.2307/1912559). *Econometrica*, 57(2), 357–384.
+14. Cappé, Olivier, Eric Moulines, and Tobias Rydén. (2005). [*Inference in Hidden Markov Models*](https://doi.org/10.1007/0-387-28982-8). Springer.
+15. Zucchini, Walter, Iain L. MacDonald, and Roland Langrock. (2016). [*Hidden Markov Models for Time Series: An Introduction Using R*](https://doi.org/10.1201/b20790) (2nd ed.). Chapman & Hall/CRC.
+16. Durbin, Richard, Sean R. Eddy, Anders Krogh, and Graeme Mitchison. (1998). [*Biological Sequence Analysis: Probabilistic Models of Proteins and Nucleic Acids*](https://doi.org/10.1017/CBO9780511790492). Cambridge University Press.
+17. Norris, J. R. (1997). [*Markov Chains*](https://doi.org/10.1017/CBO9780511810633). Cambridge University Press.
+18. Särkkä, Simo. (2013). [*Bayesian Filtering and Smoothing*](https://doi.org/10.1017/CBO9781139344203). Cambridge University Press.
+19. Bishop, Christopher M. (2006). [*Pattern Recognition and Machine Learning*](https://www.microsoft.com/en-us/research/people/cmbishop/prml-book/). Springer.
+20. Scott, Steven L. (2002). [*Bayesian Methods for Hidden Markov Models: Recursive Computing in the 21st Century*](https://doi.org/10.1198/016214502753479464). *Journal of the American Statistical Association*, 97(457), 337–351.
+21. Fischer, Wolfgang, and Kathleen Meier-Hellstern. (1993). [*The Markov-Modulated Poisson Process (MMPP) Cookbook*](https://doi.org/10.1016/0166-5316(93)90035-S). *Performance Evaluation*, 18(2), 149–171.
+22. Yu, Shun-Zheng. (2010). [*Hidden Semi-Markov Models*](https://doi.org/10.1016/j.artint.2009.11.011). *Artificial Intelligence*, 174(2), 215–243.
+23. Lafferty, John, Andrew McCallum, and Fernando C. N. Pereira. (2001). [*Conditional Random Fields: Probabilistic Models for Segmenting and Labeling Sequence Data*](https://repository.upenn.edu/cis_papers/159/). In *Proceedings of the 18th International Conference on Machine Learning* (ICML 2001), 282–289.
+24. Graves, Alex, Santiago Fernández, Faustino Gomez, and Jürgen Schmidhuber. (2006). [*Connectionist Temporal Classification: Labelling Unsegmented Sequence Data with Recurrent Neural Networks*](https://doi.org/10.1145/1143844.1143891). In *Proceedings of the 23rd International Conference on Machine Learning* (ICML 2006), 369–376.
+25. Gu, Albert, Karan Goel, and Christopher Ré. (2022). [*Efficiently Modeling Long Sequences with Structured State Spaces*](https://arxiv.org/abs/2111.00396). *International Conference on Learning Representations* (ICLR 2022).
+26. Gu, Albert, and Tri Dao. (2023). [*Mamba: Linear-Time Sequence Modeling with Selective State Spaces*](https://arxiv.org/abs/2312.00752). arXiv preprint arXiv:2312.00752.

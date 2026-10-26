@@ -26,6 +26,7 @@ const DOMAIN_ORDER = [
   'regression-linear-models',
   'bayesian-statistics',
   'high-dimensional-nonparametric',
+  'time-series-state-space',
 ];
 
 const DOMAIN_LABELS: Record<string, string> = {
@@ -37,6 +38,7 @@ const DOMAIN_LABELS: Record<string, string> = {
   'regression-linear-models': 'Regression',
   'bayesian-statistics': 'Bayesian',
   'high-dimensional-nonparametric': 'Nonparametric',
+  'time-series-state-space': 'Time Series',
 };
 
 export default function CurriculumGraph() {

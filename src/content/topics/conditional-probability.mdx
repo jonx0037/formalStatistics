@@ -462,7 +462,7 @@ Concrete example: A fire alarm ($C$) can be triggered by a fire ($A$) or by cook
 Conditional independence is the language of graphical models:
 - In a **Bayesian network** (directed graph), $A \perp\!\!\!\perp B \mid C$ is encoded by the graph structure (d-separation).
 - The **naive Bayes** classifier assumes all features are conditionally independent given the class label: $P(X_1, \ldots, X_d \mid Y) = \prod_{j=1}^d P(X_j \mid Y)$.
-- In **hidden Markov models**, observations are conditionally independent given the hidden state.
+- In [**hidden Markov models**](/topics/hidden-markov-models#section-34-3), observations are conditionally independent given the hidden state (proved in Topic 34, Theorem 4).
 
 These assumptions are rarely *exactly* true, but they make inference tractable. The art of probabilistic modeling is choosing which conditional independencies to assume.
 </RemarkBlock>

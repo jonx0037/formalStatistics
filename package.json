@@ -15,7 +15,8 @@
     "test:testing": "tsx src/components/viz/shared/testing.test.ts",
     "test:regression": "tsx src/components/viz/shared/regression.test.ts",
     "test:bayes": "tsx src/components/viz/shared/bayes.test.ts",
-    "test:nonparametric": "tsx src/components/viz/shared/nonparametric.test.ts"
+    "test:nonparametric": "tsx src/components/viz/shared/nonparametric.test.ts",
+    "test:timeseries": "tsx src/components/viz/shared/timeseries.test.ts"
   },
   "dependencies": {
     "@astrojs/mdx": "^5.0.0",
