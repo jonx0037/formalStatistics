@@ -129,7 +129,10 @@ export const tracks: Track[] = [
     description: 'Hidden Markov models, state-space inference, and the foundations of time-series statistics',
     domain: 'time-series-state-space',
     published: ['Hidden Markov Models'],
-    planned: [],
+    planned: [
+      'Stationary Time Series & ARMA',
+      'State-Space Models & Kalman Smoothing',
+    ],
   },
 ];
 
