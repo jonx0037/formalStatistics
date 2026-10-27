@@ -104,6 +104,10 @@
   --color-ts-forecast:  #D97706;  /* amber-600 */
   --color-ts-seasonal:  #0284C7;  /* sky-600 */
 
+  /* formalNLP sister-site badge — oxblood, matching formalNLP's accent */
+  --color-formalnlp:    #9F1D35;
+  --color-formalnlp-bg: #FFF1F2;
+
   /* Chain-accent palette (Topic 26, Track 7) — four Tableau-10 hues for
      Gelman–Rubin multi-chain diagnostics and HMC/Gibbs trace overlays.
      Inherited by Topics 27–28. Always paired with linestyle redundancy
@@ -173,6 +177,10 @@
     --color-ts-predicted: #A78BFA;  /* violet-400 */
     --color-ts-forecast:  #FBBF24;  /* amber-400 */
     --color-ts-seasonal:  #38BDF8;  /* sky-400 */
+
+    /* formalNLP badge dark — lightened oxblood keeps AA at the badge's 0.8 opacity */
+    --color-formalnlp:    #EA8595;
+    --color-formalnlp-bg: #2A1418;
   }
 }
 
@@ -229,6 +237,10 @@
   --color-ts-predicted: #A78BFA;  /* violet-400 */
   --color-ts-forecast:  #FBBF24;  /* amber-400 */
   --color-ts-seasonal:  #38BDF8;  /* sky-400 */
+
+  /* formalNLP badge dark — matches @media block above */
+  --color-formalnlp:    #EA8595;
+  --color-formalnlp-bg: #2A1418;
 }
 
 /* ============================================================
@@ -400,4 +412,32 @@ h1, h2, h3, h4, h5, h6 {
 
 .formalrag-badge::before {
   content: '\2192';
+}
+
+.formalnlp-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-formalnlp);
+  background-color: var(--color-formalnlp-bg);
+  padding: 0.125rem 0.5rem;
+  border-radius: 9999px;
+  text-decoration: none;
+  border: 1px solid var(--color-formalnlp);
+  opacity: 0.8;
+  transition: opacity 0.2s;
+}
+
+.formalnlp-badge:hover {
+  opacity: 1;
+}
+
+.formalnlp-badge::before {
+  content: '\2192';
+}
+
+.formalnlp-badge.badge-prereq::before {
+  content: '\2190';
 }

@@ -1,21 +1,29 @@
 ---
 interface Props {
   href: string;
-  site: 'formalcalculus' | 'formalml' | 'formalrag';
+  site: 'formalcalculus' | 'formalml' | 'formalrag' | 'formalnlp';
   topic: string;
+  // Sites linked in both directions flip the badge arrow for prerequisites.
+  direction?: 'prereq' | 'connection';
 }
 
-const { href, site, topic } = Astro.props;
+const { href, site, topic, direction = 'connection' } = Astro.props;
 
 const labels: Record<Props['site'], string> = {
   formalcalculus: 'formalCalculus',
   formalml: 'formalML',
   formalrag: 'formalRAG',
+  formalnlp: 'formalNLP',
 };
 const badgeClass = `${site}-badge`;
 const label = labels[site];
 ---
 
-<a href={href} class={badgeClass} target="_blank" rel="noopener noreferrer">
+<a
+  href={href}
+  class:list={[badgeClass, { 'badge-prereq': direction === 'prereq' }]}
+  target="_blank"
+  rel="noopener noreferrer"
+>
   {label}: {topic}
 </a>

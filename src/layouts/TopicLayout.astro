@@ -14,6 +14,8 @@ interface Props {
   formalcalculusPrereqs?: { topic: string; site: string; relationship: string }[];
   formalmlConnections?: { topic: string; site: string; relationship: string }[];
   formalragConnections?: { topic: string; site: string; relationship: string }[];
+  formalnlpPrereqs?: { topic: string; site: string; relationship: string }[];
+  formalnlpConnections?: { topic: string; site: string; relationship: string }[];
   connections?: { topic: string; relationship: string }[];
 }
 
@@ -26,6 +28,8 @@ const {
   formalcalculusPrereqs = [],
   formalmlConnections = [],
   formalragConnections = [],
+  formalnlpPrereqs = [],
+  formalnlpConnections = [],
   connections = [],
 } = Astro.props;
 
@@ -87,12 +91,24 @@ for (const node of graphData.nodes) {
       </p>
 
       <!-- Cross-site links -->
-      {(formalcalculusPrereqs.length > 0 || formalmlConnections.length > 0 || formalragConnections.length > 0) && (
+      {(formalcalculusPrereqs.length > 0 ||
+        formalnlpPrereqs.length > 0 ||
+        formalmlConnections.length > 0 ||
+        formalragConnections.length > 0 ||
+        formalnlpConnections.length > 0) && (
         <div class="flex flex-wrap gap-2 mt-4">
           {formalcalculusPrereqs.map((prereq) => (
             <ExternalLink
               href={`https://formalcalculus.com/topics/${prereq.topic}`}
               site="formalcalculus"
+              topic={prereq.topic.replace(/-/g, ' ')}
+            />
+          ))}
+          {formalnlpPrereqs.map((prereq) => (
+            <ExternalLink
+              href={`https://www.formalnlp.com/topics/${prereq.topic}`}
+              site="formalnlp"
+              direction="prereq"
               topic={prereq.topic.replace(/-/g, ' ')}
             />
           ))}
@@ -107,6 +123,13 @@ for (const node of graphData.nodes) {
             <ExternalLink
               href={`https://formalrag.com/topics/${conn.topic}`}
               site="formalrag"
+              topic={conn.topic.replace(/-/g, ' ')}
+            />
+          ))}
+          {formalnlpConnections.map((conn) => (
+            <ExternalLink
+              href={`https://www.formalnlp.com/topics/${conn.topic}`}
+              site="formalnlp"
               topic={conn.topic.replace(/-/g, ' ')}
             />
           ))}

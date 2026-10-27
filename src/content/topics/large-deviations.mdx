@@ -58,6 +58,17 @@ formalmlConnections:
   - topic: "vc-dimension"
     site: "formalml"
     relationship: "Hoeffding's inequality and the Chernoff bound from large-deviation theory supply the concentration substrate that, combined with VC dimension's polynomial growth function via the union bound, produces the agnostic PAC bound in §6."
+formalnlpPrereqs:
+  - topic: "perplexity-cross-entropy"
+    site: "formalnlp"
+    relationship: "formalNLP proves the asymptotic equipartition property with Chebyshev's polynomial bound; Cramér's theorem here sharpens the typical set's concentration to an exponential rate."
+  - topic: "sampling-temperature-nucleus"
+    site: "formalnlp"
+    relationship: "The Azuma–Hoeffding inequality here makes a sampled sequence's negative log-likelihood concentrate around its path entropy, via the bounded-increment martingale formalNLP builds for decoding."
+formalnlpConnections:
+  - topic: "lexicon-sentiment-loughran-mcdonald"
+    site: "formalnlp"
+    relationship: "Cramér's theorem for sample means supplies the matching lower bound that makes the exponent in formalNLP's lexicon-sentiment error analysis exact rather than only an upper bound."
 connections:
   - topic: "expectation-moments"
     relationship: "Topic 4 proved Markov (Theorem 11), Chebyshev (Theorem 12), and Jensen (Theorem 13) — the starting point. Markov is the engine of the Chernoff technique; Jensen enters the Hoeffding lemma; MGF machinery (Theorems 15–17) powers all exponential bounds."

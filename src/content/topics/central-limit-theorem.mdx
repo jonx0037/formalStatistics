@@ -60,6 +60,16 @@ formalmlConnections:
   - topic: "stochastic-gradient-mcmc"
     site: "formalml"
     relationship: "§12's head-to-head benchmark uses Bayesian logistic regression with asymptotically-Gaussian posterior by Bernstein–von Mises; CLT is the underlying mechanism for that asymptotic Gaussianity."
+formalnlpConnections:
+  - topic: "perplexity-cross-entropy"
+    site: "formalnlp"
+    relationship: "The CLT, with the delta method on a ratio of sentence-level means, gives held-out perplexity its standard error, treating sentences rather than tokens as the independent units."
+  - topic: "positional-encodings-geometry"
+    site: "formalnlp"
+    relationship: "The characteristic-function machinery behind the CLT reappears in sinusoidal positional encodings, whose normalized kernel is a characteristic function with a weak limit as the embedding dimension grows."
+  - topic: "significance-testing-for-nlp"
+    site: "formalnlp"
+    relationship: "The multivariate CLT and delta method here start formalNLP's asymptotic analysis of corpus BLEU's ten statistics, and the brevity penalty's kink shows exactly where the delta method breaks."
 connections:
   - topic: "modes-of-convergence"
     relationship: "Topic 9 defined convergence in distribution, proved Lévy's continuity theorem (via MGFs), Slutsky's theorem, the delta method, and proved the Poisson limit theorem. The CLT proof follows the identical structure as the Poisson limit proof."

@@ -65,6 +65,20 @@ formalmlConnections:
   - topic: "structural-risk-minimization"
     site: "formalml"
     relationship: "Tikhonov, ridge, and lasso are concrete instances of the soft-SRM rule (Definition 4) with capacity functionals $\\|\\theta\\|_2^2$ and $\\|\\theta\\|_1$ respectively. The implicit nested family is the parameter-space norm ball, indexed by the penalty parameter $\\lambda$."
+formalnlpPrereqs:
+  - topic: "glove-embedding-geometry"
+    site: "formalnlp"
+    relationship: "In GloVe, a ridge penalty on word and context vectors makes every stationary point balanced and centered, an NLP example of a penalty selecting the geometry the loss leaves free."
+  - topic: "linear-text-classifiers"
+    site: "formalnlp"
+    relationship: "Weighting text features by naive Bayes log-count ratios is a ridge penalty with a different prior variance for every word, a worked instance of the Gaussian-prior reading of ridge here."
+formalnlpConnections:
+  - topic: "fine-tuning-low-rank-adaptation"
+    site: "formalnlp"
+    relationship: "The penalty–prior correspondence makes L2-SP fine-tuning a Gaussian prior centered at the pretrained weights, and ridge shrinkage along singular vectors explains how the fine-tuning displacement shrinks."
+  - topic: "lexicon-sentiment-loughran-mcdonald"
+    site: "formalnlp"
+    relationship: "Ridge shrinkage toward a nonzero prior mean, rather than toward zero, lets a logistic sentiment model shrink toward the Loughran–McDonald dictionary's subspace."
 connections:
   - topic: "linear-regression"
     relationship: "Topic 21 established the matrix notation, OLS objective, and normal equations. §23.1 Ex 1 opens with the §21.5 multicollinearity remark failing on the prostate-cancer design — the VIF diagnostic Topic 21 prescribed motivates ridge. §23.10 Rem 25 closes by pointing back to Topic 24 for the model-selection extension. The §21.10 Rem 23 Topic-23 preview is the single most-load-bearing predecessor remark."

@@ -58,6 +58,10 @@ formalmlConnections:
   - topic: "structural-risk-minimization"
     site: "formalml"
     relationship: "Vapnik's SRM generalizes information criteria to function classes via VC dimension or Rademacher complexity. §24.10 Rem 26."
+formalnlpPrereqs:
+  - topic: "perplexity-cross-entropy"
+    site: "formalnlp"
+    relationship: "Held-out perplexity and AIC estimate the same quantity, expected out-of-sample cross-entropy: formalNLP's evaluation by holding data out is the empirical twin of the in-sample correction here."
 connections:
   - topic: "linear-regression"
     relationship: "Topic 21 established OLS, residual sum of squares, and the hat matrix $\\mathbf{H} = \\mathbf{X}(\\mathbf{X}^\\top\\mathbf{X})^{-1}\\mathbf{X}^\\top$. Topic 24 §24.2 Mallows' $C_p$ and §24.5 Stone's proof both rely on RSS and leverage $h_{ii}$; §24.8 effective-DOF for ridge is $\\operatorname{tr}(\\mathbf{H}_\\lambda)$. Topic 21 §21.10 Rem 24 forward-promised this entire framework — discharged by §24.2/§24.3/§24.4/§24.5/§24.6."
