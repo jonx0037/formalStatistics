@@ -53,6 +53,17 @@ formalmlConnections:
   - topic: "online-fdr"
     site: "formalml"
     relationship: "The streaming generalization of BH — Javanmard–Montanari 2018 Online-BH and Ramdas et al. 2018 SAFFRON / LORD — allows hypotheses to arrive sequentially with FDR control at each time. §20.10 Rem 27 points forward to the full treatment."
+formalnlpPrereqs:
+  - topic: "distributional-semantics-ppmi-svd"
+    site: "formalnlp"
+    relationship: "Positive PMI implicitly tests every word pair against independence at once, and its false positives on rare pairs are a large-scale multiple-testing problem of the kind this topic controls."
+formalnlpConnections:
+  - topic: "collocations-keyword-extraction"
+    site: "formalnlp"
+    relationship: "The Bonferroni and Benjamini–Hochberg corrections here are applied to financial bigram collocations, once over the observed pairs and once over all candidate pairs."
+  - topic: "significance-testing-for-nlp"
+    site: "formalnlp"
+    relationship: "The Bonferroni, Holm, and Benjamini–Hochberg guarantees here control error rates when many NLP systems are compared at once, and guard against shopping for a favorable metric."
 connections:
   - topic: "hypothesis-testing"
     relationship: "Direct continuation. Every reference to 'multiple testing,' 'Bonferroni,' 'FDR,' or 'Benjamini–Hochberg' in §17 is fulfilled here. §17.12 Rem 16 and Rem 19 specifically defer to this topic."

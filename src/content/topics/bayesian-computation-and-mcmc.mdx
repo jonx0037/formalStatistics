@@ -85,6 +85,14 @@ formalmlConnections:
   - topic: "variational-bayes-for-model-selection"
     site: "formalml"
     relationship: "§9's annealed importance sampling in variational-bayes-for-model-selection is MCMC machinery — AIS uses Metropolis–Hastings transitions between intermediate distributions, and the schedule-length convergence argument depends on the MCMC ergodicity vocabulary developed in this topic."
+formalnlpPrereqs:
+  - topic: "contextual-embeddings-masked-lm"
+    site: "formalnlp"
+    relationship: "A masked language model's conditionals need not come from any single joint distribution, a concrete failure case for the Gibbs sampler here, whose invariance guarantee assumes compatible full conditionals."
+formalnlpConnections:
+  - topic: "topic-models-lda"
+    site: "formalnlp"
+    relationship: "Collapsed Gibbs sampling for LDA is this topic's Gibbs-as-always-accepting-Metropolis–Hastings result at work: integrating out the Dirichlet parameters leaves a per-token topic conditional that formalNLP derives in full."
 connections:
   - topic: "law-of-large-numbers"
     relationship: "Topic 10 Thm 10.5 (Kolmogorov/Etemadi SLLN) for iid sequences generalizes to §26.7 Thm 5 for Markov chains under irreducibility + aperiodicity + positive recurrence. The Etemadi block-sum proof structure reappears inside Proof 4 Step 3."

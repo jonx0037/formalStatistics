@@ -62,6 +62,16 @@ formalmlConnections:
   - topic: "statistical-depth"
     site: "formalml"
     relationship: "Statistical-depth §3.1's Mahalanobis-depth construction and §5.1's DD-classifier optimality theorem both rest on the elliptical-symmetry framework articulated here. The depth-of-a-density connection — that depth functions reach their maximum at the density mode for elliptical distributions — is a direct corollary of §7's geometric picture."
+formalnlpConnections:
+  - topic: "linear-text-classifiers"
+    site: "formalnlp"
+    relationship: "Dirichlet–multinomial conjugacy makes add-α smoothing in naive Bayes text classifiers a posterior mean, whose effect on rare words formalNLP bounds."
+  - topic: "sequence-labeling-hmm-crf"
+    site: "formalnlp"
+    relationship: "Dirichlet–multinomial conjugacy makes an HMM tagger's add-α transition and emission counts the posterior mean under a Dirichlet prior on each row."
+  - topic: "topic-models-lda"
+    site: "formalnlp"
+    relationship: "The Dirichlet moments and Dirichlet–multinomial conjugacy here are the building blocks of latent Dirichlet allocation, from the topic–topic moment matrix E[θθᵀ] to its posterior means."
 connections:
   - topic: "random-variables"
     relationship: "Topic 3 introduced joint/marginal/conditional distributions for the bivariate case (Definitions 8–14). This topic generalizes to p dimensions. The JointDistributionExplorer in Topic 3 visualized bivariate distributions; this topic's components visualize p-dimensional structure."

@@ -76,6 +76,20 @@ formalmlConnections:
   - topic: "structural-risk-minimization"
     site: "formalml"
     relationship: "Parametric substrate for SRM's polynomial-regression worked example. The bias-variance decomposition and Gauss–Markov variance bound are used by name — the U-shape of MSE-versus-capacity is read off the parametric variance term $\\sigma^2(k+1)/n$ from this topic's least-squares analysis."
+formalnlpPrereqs:
+  - topic: "zipf-heaps-vocabulary-statistics"
+    site: "formalnlp"
+    relationship: "The classical log–log least-squares fit of Zipf's exponent is a regression whose assumptions the rank plot violates, a worked example of the bias that misapplied OLS produces."
+formalnlpConnections:
+  - topic: "glove-embedding-geometry"
+    site: "formalnlp"
+    relationship: "Alternating least squares fits GloVe one block at a time, solving for each word's vector and bias through the normal equations of a weighted ridge regression."
+  - topic: "scaling-laws"
+    site: "formalnlp"
+    relationship: "Neural scaling-law exponents are ordinary least-squares slopes on log–log axes or vertices of least-squares quadratics, the fits whose assumptions and uncertainty this topic examines."
+  - topic: "transformer-block-residual-stream"
+    site: "formalnlp"
+    relationship: "OLS as orthogonal projection explains LayerNorm's centering step, the projection off the intercept column, which is half of the geometry of the transformer's residual stream."
 connections:
   - topic: "likelihood-ratio-tests-and-np"
     relationship: "Topic 18 Thm 4 (Wilks, §18.6) is the asymptotic engine of §21.8's F-test. The §18.10 Track 6 promise that 'linear regression's F-test is exactly Wilks' theorem specialized to nested linear models' is the load-bearing forward-pointer this topic discharges: §21.8 Thm 9 states and proves the exact $F_{k, n-p-1}$ distribution under Normal errors as the finite-sample sharpening of Topic 18's $\\chi^2_k$ limit."

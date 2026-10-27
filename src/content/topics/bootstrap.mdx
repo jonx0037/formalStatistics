@@ -54,6 +54,17 @@ formalmlConnections:
   - topic: "rank-tests"
     site: "formalml"
     relationship: "Bootstrap and permutation are both resampling-based approaches to inference but differ in their null-hypothesis treatment. Bootstrap resamples with replacement under the empirical distribution (no symmetry assumption); permutation resamples without replacement under exchangeability. §31.10 Rem 24 contrasts the two; rank-tests develops the permutation side."
+formalnlpPrereqs:
+  - topic: "scaling-laws"
+    site: "formalnlp"
+    relationship: "Neural scaling-law exponents are reported with bootstrap percentile intervals and standard errors that a replication found too narrow, a cautionary case study for the interval constructions developed here."
+formalnlpConnections:
+  - topic: "capstone-earnings-call-nlp"
+    site: "formalnlp"
+    relationship: "Bootstrap consistency justifies the earnings-call capstone's cluster bootstrap, which resamples companies rather than sentences to put intervals on Shapley shares of the pipeline's F1."
+  - topic: "significance-testing-for-nlp"
+    site: "formalnlp"
+    relationship: "Bootstrap consistency for a scalar mean extends to corpus BLEU, a smooth function of ten pooled means, giving the paired bootstrap that NLP benchmarks use to compare two systems."
 connections:
   - topic: "order-statistics-and-quantiles"
     relationship: "§29.2 introduced the ECDF $F_n$ — the plug-in estimator Topic 31 resamples from. §29.6 Rem 12–13 forward-promised the bootstrap as the density-at-quantile workaround and the bootstrap-CI validity as a Bahadur-style linearization; §31.3's proof structure and §31.8's smooth bootstrap discharge both promises."
