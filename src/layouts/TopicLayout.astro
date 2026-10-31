@@ -1,5 +1,6 @@
 ---
 import BaseLayout from './BaseLayout.astro';
+import TopicVideos from '../components/ui/TopicVideos.astro';
 import ExternalLink from '../components/ui/ExternalLink.astro';
 import graphData from '../data/curriculum-graph.json';
 
@@ -11,6 +12,7 @@ interface Props {
   estimatedReadTime?: number;
   datePublished?: Date;
   abstract?: string;
+  videoId?: string | string[] | null;
   formalcalculusPrereqs?: { topic: string; site: string; relationship: string }[];
   formalmlConnections?: { topic: string; site: string; relationship: string }[];
   formalragConnections?: { topic: string; site: string; relationship: string }[];
@@ -25,6 +27,7 @@ const {
   difficulty,
   estimatedReadTime,
   datePublished,
+  videoId,
   formalcalculusPrereqs = [],
   formalmlConnections = [],
   formalragConnections = [],
@@ -138,6 +141,9 @@ for (const node of graphData.nodes) {
     </header>
 
     <!-- Content -->
+    <!-- Video embeds (conditional, one per part) -->
+    <TopicVideos videoId={videoId} title={title} />
+
     <div class="topic-content">
       <slot />
     </div>
