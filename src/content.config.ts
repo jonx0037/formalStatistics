@@ -12,7 +12,7 @@ const topics = defineCollection({
     prerequisites: z.array(z.string()).default([]),
     tags: z.array(z.string()).default([]),
     domain: z.string(),
-    videoId: z.string().nullable().default(null),
+    videoId: z.union([z.string(), z.array(z.string())]).nullable().default(null),
     notebookPath: z.string().optional(),
     githubUrl: z.string().optional(),
     datePublished: z.coerce.date().optional(),
