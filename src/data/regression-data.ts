@@ -526,7 +526,8 @@ function buildOverdispersedPoisson(
   for (let i = 0; i < n; i++) {
     X[i] = [1, normalSample(0, 1, rng)];
   }
-  const betaTrue = [-0.3, 0.9];
+  // Matches §22.9 Ex 12 and the notebook coverage table: β₀ = (−0.3, 0.8).
+  const betaTrue = [-0.3, 0.8];
   const y = simulateOverdispersedPoisson(X, betaTrue, dispersionRatio, seed + 1);
   return { X, y, betaTrue, dispersionRatio };
 }

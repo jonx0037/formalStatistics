@@ -247,8 +247,8 @@ $$P_p(X = x \mid T = t) \;=\; \frac{p^t(1-p)^{n-t}}{\binom{n}{t}p^t(1-p)^{n-t}} 
 uniform over the $\binom{n}{t}$ vectors in the level set. The conditional is parameter-free — $T$ is sufficient.
 </ExampleBlock>
 
-<ExampleBlock number={3} title="Sample size n is trivially sufficient — but useless">
-The constant statistic $T(X) = n$ is trivially sufficient: the "conditional distribution of $X$ given $T = n$" is just the marginal joint distribution of $X$, which depends on $\theta$ in general — so this is *not* a counterexample, just a degenerate case of the definition. The genuinely degenerate sufficient statistic is the identity, $T(X) = X$ itself, which is sufficient because conditioning on the full data leaves nothing to vary. Both extremes — too coarse to compress, too fine to compress — motivate **minimal sufficiency** (§16.4): the coarsest sufficient statistic that still captures everything.
+<ExampleBlock number={3} title="Two degenerate extremes: the constant n and the identity">
+The constant statistic $T(X) = n$ is *not* sufficient in general: the "conditional distribution of $X$ given $T = n$" is just the marginal joint distribution of $X$, which depends on $\theta$ — a constant discards all the evidence. At the other extreme sits the identity, $T(X) = X$ itself, which is always sufficient because conditioning on the full data leaves nothing to vary — but it compresses nothing. Both extremes — too coarse to compress, too fine to compress — motivate **minimal sufficiency** (§16.4): the coarsest sufficient statistic that still captures everything.
 </ExampleBlock>
 
 ![Sufficient-statistic diagram. Left: raw sample space partitioned by level sets of T. Center: the statistic map T : Xⁿ → T. Right: the conditional distribution X | T = t with annotation "parameter-free by sufficiency". Bernoulli (T = ΣXᵢ, partition by count) and Normal (partition by (X̄, S²)) examples are overlaid.](/images/topics/sufficient-statistics/sufficient-statistic-diagram.png)
@@ -788,7 +788,7 @@ This is the example that fulfills the [`method-of-moments.mdx:1062`](/topics/met
 
 $$\hat\beta_{\text{UMVUE}} \;=\; \frac{n\alpha - 1}{\sum X_i},$$
 
-while the MLE and MoM both equal $\hat\beta_{\text{MLE/MoM}} = \alpha/\bar X = n\alpha/\sum X_i$. The bias-correction factor is exactly $(n\alpha - 1)/(n\alpha)$ — a clean instance of the structural pattern: when the parameter is *not* the natural one (here $\beta$ rather than $-\beta$ as the natural parameter), MLE/MoM and UMVUE differ in finite samples but agree asymptotically. The UMVUEComparator's Gamma preset at $\alpha = 3$, $\beta = 2$, $n = 50$ shows the gap clearly: UMVUE bias $\approx 0$, MLE/MoM bias $> 0$, MSE close but UMVUE marginally better.
+while the MLE and MoM both equal $\hat\beta_{\text{MLE/MoM}} = \alpha/\bar X = n\alpha/\sum X_i$. The bias-correction factor is exactly $(n\alpha - 1)/(n\alpha)$ — a clean instance of the structural pattern: when the parameter is *not* the natural one (here $\beta$ rather than $-\beta$ as the natural parameter), MLE/MoM and UMVUE differ in finite samples but agree asymptotically. The UMVUEComparator's Gamma preset at $\alpha = 3$, $\beta = 2$, $n = 50$ makes the gap visible: UMVUE bias $\approx 0$, MLE/MoM bias $> 0$, MSE close but UMVUE marginally better.
 </ExampleBlock>
 
 <ExampleBlock number={26} title="Normal σ² (with μ unknown) revisited — featured triple comparison">

@@ -63,7 +63,10 @@ export const conditionalIndependencePresets = [
     description:
       'A and B are both caused by C — marginally dependent but conditionally independent given C',
     // P(A=a, B=b, C=c) for (a,b,c) in {0,1}³, ordered as 000,001,010,011,100,101,110,111
-    jointProbs: [0.36, 0.04, 0.04, 0.16, 0.04, 0.16, 0.16, 0.04],
+    // Common cause: C ~ Bern(0.5); given C, A and B are independent with
+    // P(A=1|C)=P(B=1|C)=0.2 (C=0) or 0.8 (C=1). So A⊥B | C holds exactly, while
+    // P(A=1,B=1)=0.34 ≠ P(A=1)P(B=1)=0.25 (marginally dependent).
+    jointProbs: [0.32, 0.02, 0.08, 0.08, 0.08, 0.08, 0.02, 0.32],
   },
   {
     name: 'Explaining Away (Marg. Indep., Cond. Dep.)',

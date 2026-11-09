@@ -599,13 +599,13 @@ $$
 \mu_1 \;=\; 0, \qquad \mu_2 \;=\; \tfrac{1}{2}(1 + \sigma^2), \qquad \mu_3 \;=\; 0.
 $$
 
-Only the *second* moment depends on $\sigma^2$. The first moment is identically zero (by symmetry), and the third moment is identically zero (by symmetry of each Normal component). So the moment map $g(\sigma^2) = (\mu_1, \mu_2, \mu_3) = (0, (1 + \sigma^2)/2, 0)$ is invertible *only* if we use the second moment — and it has dimension 1 in moment space, embedded in 3-dimensional moment space. With three moments and one parameter, MoM is over-determined; with one moment and one parameter, MoM works trivially.
+Only the *second* moment depends on $\sigma^2$. The first moment is identically zero (by symmetry), and the third moment is identically zero (by symmetry of each Normal component). So the moment map $g(\sigma^2) = (\mu_1, \mu_2, \mu_3) = (0, (1 + \sigma^2)/2, 0)$ is invertible *only* if we use the second moment — and it has dimension 1 in moment space, embedded in 3-dimensional moment space. With three moments and one parameter, MoM is over-determined; with one moment and one parameter, MoM works directly.
 
 The deeper issue surfaces when we try to estimate *more* parameters in the mixture — say, both variances and the mixing weight. With two distinct components having equal means, the moment system collapses: the same set of population moments is consistent with a continuum of parameter combinations. The moment map is not invertible. MoM fails because the model is *not identifiable from moments alone*. The MLE faces the same issue — but the MLE has access to the full likelihood, which uses the *shape* of each observation's contribution and can identify the components even when their moments coincide.
 </ExampleBlock>
 
 <RemarkBlock number={6} title="Absurd estimates in practice">
-The pattern in Examples 10–12 is general. When MoM fails, it fails *visibly*: an undefined limit, an estimate outside the parameter space, or a system that simply has no unique solution. This is, perversely, a strength — MoM tells you when it has failed, often more loudly than the MLE does. If $\hat{\sigma}^2_{\text{MoM}} < 0$ or $\hat{p}_{\text{MoM}} > 1$ on real data, the appropriate response is not to project the estimate onto the constraint set but to ask whether the model is right.
+The pattern in Examples 10–12 is general. When MoM fails, it fails *visibly*: an undefined limit, an estimate outside the parameter space, or a system that has no unique solution. This is, perversely, a strength — MoM tells you when it has failed, often more loudly than the MLE does. If $\hat{\sigma}^2_{\text{MoM}} < 0$ or $\hat{p}_{\text{MoM}} > 1$ on real data, the appropriate response is not to project the estimate onto the constraint set but to ask whether the model is right.
 </RemarkBlock>
 
 <CauchyPathologyExplorer client:visible />
