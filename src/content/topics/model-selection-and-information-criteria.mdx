@@ -636,7 +636,7 @@ Proof: Yang 2005 §2–3, via a minimax lower-bound argument outside the scope o
 The Yang race compares procedures across two DGP regimes:
 
 - **Tab A — well-specified.** Truth is a degree-3 polynomial; candidate set $d \in [0, 8]$ contains the truth. As $n$ grows, BIC's selection frequency at $d = 3$ tends to $1$ (consistency); AIC's selection frequency at $d \geq 4$ persists at $\sim 25\%$ (asymptotic over-fit). Prediction risks are similar at any finite $n$.
-- **Tab B — misspecified.** Truth is $\sin(2\pi x)$; candidate set is polynomials $d \in [0, 12]$ (truth not in the candidate set). AIC's minimax-optimal selection adapts $d$ to $n$; BIC's $\log n$ penalty over-shrinks toward sparsity, giving worse prediction risk on the polynomial scale of the truth's smoothness. The risks diverge in $n$.
+- **Tab B — misspecified.** Truth is $\sin(2\pi x)$; candidate set is polynomials $d \in [0, 12]$ (truth not in the candidate set). This is the regime where Yang's theorem favors AIC: its minimax-rate selection adapts $d$ to $n$, while a consistent procedure like BIC can over-shrink toward sparsity. In this simulation, though, the gap does not appear: all three risks fall with $n$, AIC's is highest at small $n$, and BIC tracks the oracle closely from $n \approx 500$ on. Yang's incompatibility is a worst-case (minimax) statement over truths, and a single smooth truth like $\sin(2\pi x)$ need not be a hard case for BIC.
 
 Figure 6 plots both regimes side by side.
 </ExampleBlock>

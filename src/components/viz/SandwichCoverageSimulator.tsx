@@ -3,6 +3,7 @@ import * as d3 from 'd3';
 import { useResizeObserver } from './shared/useResizeObserver';
 import {
   FAMILIES,
+  LINKS,
   glmFit,
   sandwichSE,
   simulateGLM,
@@ -35,7 +36,7 @@ const PRESET_FOR_FAMILY: Record<FamilyKey, PresetKey> = {
 
 const FAMILY_LABEL: Record<FamilyKey, string> = {
   poisson: 'Poisson (overdispersion)',
-  gamma: 'Gamma (variance misspec)',
+  gamma: 'Gamma (dispersion rescaled)',
   bernoulli: 'Bernoulli (clustered)',
 };
 
@@ -61,7 +62,10 @@ export default function SandwichCoverageSimulator() {
   const runRef = useRef<{ cancelled: boolean }>({ cancelled: false });
 
   const family: GLMFamily = FAMILIES[familyKey];
-  const link: LinkFunction = family.canonicalLink;
+  // Gamma uses the log link: the misspecifiedGamma preset's β_true (1.0, 0.5)
+  // is a log-link design (Ex 8); the canonical inverse link makes η < 0 for
+  // some rows and every fit diverges.
+  const link: LinkFunction = familyKey === 'gamma' ? LINKS.log : family.canonicalLink;
 
   // Build a fixed design (and true β) for each family.
   const design = useMemo(() => {
@@ -467,8 +471,9 @@ export default function SandwichCoverageSimulator() {
             </div>
           </div>
           <p className="text-[11px] leading-snug text-slate-600">
-            Naive Wald undercovers under variance misspecification; HC3 sandwich
-            recovers nominal coverage (Topic 22 §22.9 Rem 19).
+            Naive Wald undercovers under variance misspecification (Poisson,
+            Bernoulli); HC3 sandwich recovers nominal coverage. Gamma: rescaling φ
+            is absorbed by φ̂, so both stay near nominal (§22.9 Ex 13).
           </p>
         </div>
       </div>

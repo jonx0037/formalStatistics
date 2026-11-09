@@ -13,8 +13,9 @@
  *
  *   • Tab B (misspecified): truth = sin(2πx); candidate set is polynomials
  *     d ∈ [0, 12] (truth NOT in the candidate set). Mean prediction risk
- *     vs n. AIC and CV adapt the chosen degree to n (minimax-rate optimal);
- *     BIC over-shrinks toward sparser models, sustaining higher risk.
+ *     vs n. Theory (Yang 2005) favors AIC/CV here, but on this smooth truth
+ *     the precomputed risks show no BIC penalty: BIC is lower at small n and
+ *     level with AIC after (Topic 24 Ex 7 Tab B).
  *
  * Tab UI uses role="tablist" + role="tab" + aria-selected per WAI-ARIA.
  *
@@ -318,7 +319,7 @@ export default function ConsistencyEfficiencyRace() {
         <div className="text-xs text-gray-600">
           {tab === 'wellSpecified'
             ? 'Truth is a degree-3 polynomial; the candidate set contains the truth. Selection frequency at the correct d climbs toward 1 for BIC as n grows; AIC and CV keep selecting d ≥ 4 a persistent fraction of the time (asymptotic over-fit).'
-            : 'Truth is sin(2πx); candidate set is polynomials d ∈ [0, 12] (truth NOT in the candidate set). Mean test-MSE vs n: AIC and CV adapt the selected degree to n (minimax-rate optimal); BIC over-shrinks toward sparser models, sustaining higher risk.'}
+            : 'Truth is sin(2πx); candidate set is polynomials d ∈ [0, 12] (truth NOT in the candidate set). Mean test-MSE vs n: all risks fall with n; BIC is well below AIC at the smallest n and level with it after. Yang’s AIC advantage is a worst-case (minimax) guarantee; this smooth truth is not a hard case for BIC.'}
         </div>
       </div>
 

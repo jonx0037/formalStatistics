@@ -120,7 +120,7 @@ references:
     year: 1987
     title: "The Bootstrap: To Smooth or Not to Smooth?"
     publisher: "Biometrika 74(3): 469–479"
-    note: "SIL-YOU1987. The smooth-bootstrap foundational paper. §31.8's definition and the kernel-jitter resampler match this paper's construction. Shows smooth bootstrap dominates naïve for the sample median in small-$n$ regimes. https://doi.org/10.1093/biomet/74.3.469"
+    note: "SIL-YOU1987. The smooth-bootstrap foundational paper. §31.8's definition and the kernel-jitter resampler match this paper's construction. Analyzes when smoothing helps the bootstrap and when it does not (e.g. for the sample median at small $n$). https://doi.org/10.1093/biomet/74.3.469"
   - type: "article"
     author: "Dimitris N. Politis and Joseph P. Romano"
     year: 1994
@@ -416,9 +416,9 @@ The percentile and basic CIs follow directly from Theorem 3: the bootstrap empir
 $\blacksquare$ — using Theorem 3, the continuous mapping theorem, and Lehmann 1998 §7.3 for the studentized upgrade.
 </ProofBlock>
 
-![Coverage and length of five 95% confidence interval methods across sample sizes n in 20, 50, 100, 200, 500. Two rows: row one for sample mean of Normal(0,1); row two for sample mean of Student-t with 3 degrees of freedom. Five curves per panel: percentile, basic, BCa, studentized, and Wald-t. On the Normal row all methods sit within a few points of the nominal 95%. On the t-3 row the Wald-t and basic curves stay at or above 95%, while the percentile and BCa curves fall a few points short.](/images/topics/bootstrap/31-ci-comparison.png)
+![Coverage and length of five 95% confidence interval methods across sample sizes n in 20, 50, 100, 200 (2,000 replications per point). Two rows: row one for sample mean of Normal(0,1); row two for sample mean of Student-t with 3 degrees of freedom. Five curves per panel: percentile, basic, BCa, studentized, and Wald-t. On the Normal row all methods sit within a few points of the nominal 95%. On the t-3 row the Wald-t curve stays at or above 95%, the basic and studentized curves sit within about half a point of it, and the percentile (0.91–0.94) and BCa (0.89–0.93) curves fall a few points short.](/images/topics/bootstrap/31-ci-comparison.png)
 
-*Figure 4. Five CI methods compared across sample sizes. Top row: Normal$(0, 1)$ — all methods sit within a few points of nominal coverage. Bottom row: Student-$t_3$ — the $t_3$ mean still has finite variance, so the CLT carries the Wald-$t$ interval: it stays at or above nominal (the $t$-interval is conservative for symmetric heavy tails), as do the basic and studentized intervals, while the percentile and BCa intervals under-cover by a few points. Heavy tails alone do not break the Wald interval for a mean; the bootstrap's payoff is for statistics without a usable analytic standard error. The point-to-point wiggles are Monte-Carlo noise.*
+*Figure 4. Five CI methods compared across sample sizes. Top row: Normal$(0, 1)$ — all methods sit within a few points of nominal coverage. Bottom row: Student-$t_3$ — the $t_3$ mean still has finite variance, so the CLT carries the Wald-$t$ interval: it stays at or above nominal (the $t$-interval is conservative for symmetric heavy tails), the basic and studentized intervals sit within about half a point of nominal, and the percentile and BCa intervals under-cover by a few points. Heavy tails alone do not break the Wald interval for a mean; the bootstrap's payoff is for statistics without a usable analytic standard error. Each point averages 2,000 replications (Monte-Carlo SE ≈ 0.005).*
 
 <BootstrapCIComparator client:visible />
 
@@ -453,7 +453,7 @@ Topic 19 §19.7 established the CI↔test duality: inverting a family of level-$
 Theorem 4 says all four CIs cover asymptotically. But how *fast*? The question matters in practice — a CI with $O(n^{-1/2})$ coverage error can be off by 5–10 percentage points at $n = 50$, while one with $O(n^{-1})$ error is typically off by under 1. Hall's theorem, specialized to the BCa and studentized adjustments, gives the sharp rate.
 
 <TheoremBlock number={5} title="Hall 1992 second-order accuracy">
-Under smooth-functional regularity (two-term Edgeworth expansion valid for $T_n$ and its studentized version), the percentile and basic bootstrap CIs have coverage error $O(n^{-1/2})$, while the BCa and studentized CIs achieve coverage error $O(n^{-1})$.
+Under smooth-functional regularity (one-term Edgeworth expansion, with $O(n^{-1})$ remainder, valid for $T_n$ and its studentized version), the percentile and basic bootstrap CIs have coverage error $O(n^{-1/2})$ in each tail, while the BCa and studentized CIs achieve coverage error $O(n^{-1})$ in each tail. (In a two-sided equal-tailed interval the percentile's two $n^{-1/2}$ tail errors have opposite signs and cancel, so the separation shows tail by tail.)
 </TheoremBlock>
 
 <ProofBlock number={4} title="sketch">
@@ -476,9 +476,9 @@ The percentile CI inverts the wrong pivot — the raw $\sqrt{n}(T_n - \theta)$ r
 $\blacksquare$ — using Hall 1992 Thm 3.2, Singh 1981, and the Edgeworth machinery of Topic 11 §11.7.
 </ProofBlock>
 
-![Log-log plot of coverage error versus sample size n in 20, 50, 100, 200, 500, 1000 for two CI methods. Percentile curve declines with slope approximately minus one half. BCa curve declines with slope approximately minus one. Statistic is sample mean on a right-skewed exponential-translated distribution.](/images/topics/bootstrap/31-bca-accuracy.png)
+![Log-log plot of tail-wise coverage error versus sample size n in 20, 50, 100, 200, 500 for two CI methods, 50,000 replications per point. Percentile curve declines along the slope −1/2 reference, from about 0.064 to 0.011. BCa curve sits two to three times lower, from about 0.038 to 0.004, and falls more steeply (slope near −0.8 up to n = 200) before flattening toward the Monte-Carlo floor. Statistic is the sample mean of an Exponential(1) distribution.](/images/topics/bootstrap/31-bca-accuracy.png)
 
-*Figure 5. Numerical verification of Theorem 5. Log-log plot of coverage error vs. $n$ for the percentile CI (slope $\approx -1/2$) and BCa CI (slope $\approx -1$) on a sample-mean statistic from a right-skewed exponential-translated distribution. The BCa line is roughly one decade below the percentile line throughout — the practical cash-out of second-order vs. first-order accuracy.*
+*Figure 5. Numerical check of Theorem 5 on the sample mean of a right-skewed Exponential$(1)$ distribution, $50{,}000$ replications per $n$. The error plotted is tail-wise, $|P(\theta < \mathrm{lo}) - \alpha/2| + |P(\theta > \mathrm{hi}) - \alpha/2|$. The percentile CI follows the slope $-1/2$ reference. The BCa CI sits two to three times lower at every $n$ and falls more steeply (slope about $-0.8$ through $n = 200$), approaching the $-1$ rate before Monte-Carlo noise flattens it at $n = 500$. That gap is the practical cash-out of second-order vs. first-order accuracy.*
 
 <a id="section-31-6"></a>
 
@@ -557,7 +557,7 @@ The $J_i$ pick a sample point and the Gaussian $h Z_i$ adds a small kernel-shape
 </DefinitionBlock>
 
 <TheoremBlock number={8} title="Smooth-bootstrap consistency (stated)">
-Under the regularity of Topic 30 Thm 6 (pointwise KDE consistency) plus Theorem 3's moment condition, the smooth-bootstrap sampling distribution converges to the true sampling distribution in Kolmogorov distance, at the same $O(n^{-1/2})$ rate as the nonparametric bootstrap. For density-functional statistics (median, quantiles, integrals of $f$), smooth bootstrap strictly dominates: its MC variance is smaller at every $B$, and the $O(n^{-1/2})$ rate constant is smaller too.
+Under the regularity of Topic 30 Thm 6 (pointwise KDE consistency) plus Theorem 3's moment condition, the smooth-bootstrap sampling distribution converges to the true sampling distribution in Kolmogorov distance, at the same $O(n^{-1/2})$ rate as the nonparametric bootstrap. For density-functional statistics (median, quantiles, integrals of $f$), its advantage is shape, not guaranteed precision: the smooth-bootstrap distribution is continuous rather than a lattice on the sample points (Figure 7), though its SE is not uniformly smaller than the naïve one.
 </TheoremBlock>
 
 ![Two histograms of B = 2000 bootstrap medians on the same Normal(0,1) sample of size n = 50. The naive histogram (resampling from F_n) is a spiky lattice at and between the original sample points; the smooth histogram is continuous. True sampling-distribution reference curve (from high-precision Monte Carlo) overlaid on both; smooth histogram matches the reference closely, naive histogram approximates it piecewise.](/images/topics/bootstrap/31-smooth-bootstrap.png)
