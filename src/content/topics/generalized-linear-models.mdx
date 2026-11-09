@@ -821,14 +821,14 @@ each converge in distribution to $\chi^2_1$ as $n \to \infty$, and pairwise diff
 The proof is a direct specialization of Topic 18 §18.7's general statement to the GLM setting; we omit the restatement.
 
 <ExampleBlock number={10} title="Wald-z vs profile-LRT CI for a near-separation logistic">
-A logistic regression on $n = 80$ near-separation data ($\boldsymbol\beta_0 = (0, 4)$ — strong slope) produces $\hat{\boldsymbol\beta} \approx (0.3, 4.1)$ with substantial coefficient uncertainty due to the weak signal-to-noise at the boundary. The two CIs for $\beta_1$:
+A logistic regression on $n = 80$ near-separation data ($x_i \sim \mathcal{N}(0, 2^2)$, $\boldsymbol\beta_0 = (0, 4)$ — a strong slope, so the two classes overlap only in a narrow band around $x = 0$) produces $\hat{\boldsymbol\beta} \approx (0.29, 4.14)$ with $\widehat{\text{SE}}(\hat\beta_1) \approx 1.39$ — substantial uncertainty, because only the few points in that band carry information about how steep the boundary is. (The companion notebook draws this dataset with seed $14992$.) The two 95% CIs for $\beta_1$:
 
 | CI flavor | Lower | Upper | Width | Asymmetry |
 |---|---|---|---|---|
-| Wald-z (95%) | $1.4$ | $6.9$ | $5.5$ | symmetric |
-| Profile-LRT (95%) | $1.6$ | $9.8$ | $8.2$ | upper half $\approx 2.3\times$ lower half |
+| Wald-z (95%) | $1.42$ | $6.86$ | $5.44$ | symmetric about $\hat\beta_1 = 4.14$ |
+| Profile-LRT (95%) | $2.16$ | $7.79$ | $5.63$ | upper half $3.66 \approx 1.85\times$ lower half $1.98$ |
 
-The profile-LRT CI is **wider and asymmetric**, with most of the extra width pushed to the right (large positive $\beta_1$ values). This is the correct picture: near separation, the log-likelihood is much flatter on the "more positive" side of $\hat\beta_1$ than on the "less positive" side, so a $\chi^2_1$-cutoff slice of the likelihood profile gives an asymmetric region. The Wald-z CI's symmetric form artificially compresses the upper bound, undercovering the truth on the high side. This is the "Wald boundary pathology" Topic 18 Rem 16 already named; the profile-LRT CI is the production-standard fix.
+The two intervals have nearly the same width, but they sit in different places: the profile-LRT CI is **shifted right and asymmetric**. It drops the low values Wald admits — every $\beta_1^0$ between $1.42$ and $2.16$ is inside the Wald interval yet fails the deviance test — and reaches out to $7.79$ on the high side. This is the correct picture: near separation, the log-likelihood is much flatter on the "more positive" side of $\hat\beta_1$ than on the "less positive" side (a steeper slope only sharpens fitted probabilities that are already near $0$ or $1$), so a $\chi^2_1$-cutoff slice of the likelihood profile gives an asymmetric region. The Wald-z CI, built from the curvature at $\hat\beta_1$ alone, is symmetric by construction, so it misplaces the interval — too long on the low side, too short on the high side. This is the "Wald boundary pathology" Topic 18 Rem 16 already named; the profile-LRT CI is the production-standard fix.
 </ExampleBlock>
 
 <ExampleBlock number={11} title="Wald is link-dependent; LRT barely moves (logit vs probit)">

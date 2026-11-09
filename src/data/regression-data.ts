@@ -496,21 +496,6 @@ function buildNestedPoisson(
   return { Xfull, Xreduced, y, offset, betaTrue };
 }
 
-function buildNearSeparationLogistic(
-  seed: number,
-  n: number,
-): GLMDataset {
-  // Quasi-complete separation: very strong slope, moderate sample.
-  const rng = seededRandom(seed);
-  const X: number[][] = new Array(n);
-  for (let i = 0; i < n; i++) {
-    X[i] = [1, normalSample(0, 1, rng)];
-  }
-  const betaTrue = [0.0, 5.0];
-  const y = simulateGLM(X, betaTrue, FAMILIES.bernoulli, LINKS.logit, seed + 1);
-  return { X, y, betaTrue };
-}
-
 function buildOverdispersedPoisson(
   seed: number,
   n: number,
@@ -558,10 +543,47 @@ export const EXAMPLE_8_GLM_DATA = buildGammaInsuranceAmount(2224, 250);
 export const EXAMPLE_9_GLM_DATA = buildNestedPoisson(2225, 150);
 
 /**
- * Example 10 (§22.8): near-separation logistic (n=80) where Wald-z fails and
- * profile-LRT recovers an asymmetric, conservative CI.
+ * Example 10 (§22.8): near-separation logistic, n = 80, x ~ N(0, 2²),
+ * β_true = (0, 4). The literal draw from the companion notebook's Example 10
+ * cell: numpy `default_rng(14992)`, x first, then y ~ Bernoulli(expit(4x)).
+ * Stored verbatim because numpy's PCG64 stream can't be replayed here.
+ * β̂ = (0.293, 4.136); 95% CIs for β₁: Wald-z [1.416, 6.856], profile-LRT
+ * [2.160, 7.793] (upper half ≈ 1.85× lower half) — T8.15b checks all three.
  */
-export const EXAMPLE_10_GLM_DATA = buildNearSeparationLogistic(2226, 80);
+const EXAMPLE_10_X: number[] = [
+  -1.1742625951829107, -2.0158260391698608, +0.894137232833631, -2.5607130426286466,
+  -1.5656423233191374, +0.27785691629007592, -0.4141551015106314, +0.089992657396867917,
+  -1.2656865389578096, +0.94048825648901291, -4.1744993212750652, -0.52160907403047474,
+  +2.8624168105124994, +0.18478170606918445, -0.29241187423065029, -2.8702280622792471,
+  -0.13911329865950917, -3.4882628415826917, -2.4778836822856589, +2.0699565791288523,
+  +4.25775646909418, -1.4341800432804095, -4.5268529173924819, -1.204311161354666,
+  -2.3295498127636978, -2.8529031291648757, -4.0938024333350995, +1.7006450169893743,
+  -0.016569000866683187, +0.81343193436574868, +2.2697489909488575, -2.3701519188346354,
+  -2.0709848603412793, -0.2946549733638727, +0.49443271593507654, +1.0228655749612412,
+  -0.12582196997527839, -2.8484650358753147, +1.2199256413785753, -2.5448164652251872,
+  +0.27030449914450938, +1.1630468377193066, -1.2296182931942514, -2.4753733796352111,
+  -2.0297087751136891, -1.6533124538586026, +2.5371697216180911, -0.5336641083776833,
+  +0.89391146719862502, -0.96483491113223141, -1.8938206884100695, +1.6494784773927922,
+  +0.040435903498982691, +2.5474670928117664, -0.74022856391028435, -0.18482477685949253,
+  -0.17230211717074756, +1.8011137153198584, +2.9918882927321304, +1.0910333403006343,
+  -2.3929948367301095, -0.44242675757505567, -1.1419019668546915, +0.89076270569728133,
+  +0.13916644875761233, -0.79880612524559369, -1.5658457308872269, -0.37399784325130658,
+  -4.9190605883381409, +2.207971425694208, -1.9036884144886144, +3.7600883117739792,
+  -0.018302733462510729, -2.062733492279186, +1.3467847685498882, -1.7406492702019005,
+  -1.7851375254288979, -5.1245869026035962, +2.6375763855045817, -0.066021974964439151,
+];
+const EXAMPLE_10_Y: number[] = [
+  0, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 1, 1, 1, 0, 0, 0, 0, 1,
+  1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 0, 1, 0,
+  0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1,
+  0, 0, 0, 1, 1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 1, 1,
+];
+
+export const EXAMPLE_10_GLM_DATA: GLMDataset = {
+  X: EXAMPLE_10_X.map((xi) => [1, xi]),
+  y: EXAMPLE_10_Y,
+  betaTrue: [0.0, 4.0],
+};
 
 /**
  * Example 12 (§22.9): overdispersed-Poisson DGP (Var/E ≈ 1.8) for the
