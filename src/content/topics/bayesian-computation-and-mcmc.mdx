@@ -56,7 +56,7 @@ formalcalculusPrereqs:
     relationship: "The leapfrog integrator in HMC is a second-order symplectic numerical ODE scheme. Its volume-preservation and reversibility are exactly the properties that make HMC's Metropolis–Hastings correction a Bernoulli variable with computable acceptance probability; step-size tuning is the bias–cost tradeoff familiar from numerical ODE analysis."
   - topic: "riemann-integral"
     site: "formalcalculus"
-    relationship: "The posterior $p(\\theta \\mid x) = p(x \\mid \\theta)\\pi(\\theta) / \\int p(x \\mid \\theta)\\pi(\\theta)\\,d\\theta$ has an integral normalizing constant; Bayesian estimators, credible intervals, and posterior predictives are all posterior expectations — hence integrals. MCMC is fundamentally an integral-approximation method; §26.7 frames ergodic averages as Cesàro time-averaging of the invariant-measure integral, and the Kac formula (Proof 4 Step 3) is a stopping-time integration argument."
+    relationship: "The posterior $p(\\theta \\mid x) = p(x \\mid \\theta)\\pi(\\theta) / \\int p(x \\mid \\theta)\\pi(\\theta)\\,d\\theta$ has an integral normalizing constant; Bayesian estimators, credible intervals, and posterior predictives are all posterior expectations — hence integrals. MCMC is fundamentally an integral-approximation method; §26.7 frames ergodic averages as Cesàro time-averaging of the invariant-measure integral, and the Kac formula (Proof 4 Step 2) is a stopping-time integration argument."
   - topic: "stability-dynamics"
     site: "formalcalculus"
     relationship: "Ergodicity of a Markov chain — convergence of the chain to its stationary distribution regardless of starting point — is the discrete-time analog of global stability of a dynamical system. Spectral-gap analysis (second-largest eigenvalue of the transition operator) mirrors linear stability analysis of ODE equilibria."
@@ -659,7 +659,7 @@ This is the canonical caution in §26.6 Rem 16: low $\hat R$ is not a proof of c
 </ExampleBlock>
 
 <img src="/images/topics/bayesian-computation-and-mcmc/26-8-stuck-chain-multimodal.png"
-     alt="Two-panel failure-mode figure. Left: trace plots of four MH chains, two stuck in the left mode around x = -3 and two stuck in the right mode around x = +3. Right: pooled posterior histogram compared with the true bimodal density; the valley between the modes is completely missing from the pooled sample."
+     alt="Two-panel failure-mode figure. Left: trace plots of four MH chains, all started near x = +3 and all stuck in the right mode; the title reports R̂ = 1.002, a misleading pass. Right: pooled posterior histogram compared with the true bimodal density; the left mode at x = -3 is completely missing from the pooled sample."
      class="w-full rounded-lg border my-6"
      style="border-color: var(--color-border);" />
 

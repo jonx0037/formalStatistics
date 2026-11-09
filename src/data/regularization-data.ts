@@ -122,7 +122,7 @@ export function polynomialFeatures(
 /**
  * Credit-default logistic regression (Topic 22 §7.C EXAMPLE_6_GLM_DATA) with
  * a degree-3 polynomial expansion of its predictors. Used by §23.9 Ex 15
- * (lasso Poisson high-dim demo) and the `CrossValidationExplorer`'s
+ * (lasso-logistic demo; 9 polynomial features) and the `CrossValidationExplorer`'s
  * "credit-default" toggle. Drops the leading intercept column from
  * EXAMPLE_6's X (which is `[1, age_z, income_z]`) before expansion so the
  * polynomial features are purely on the two predictors.

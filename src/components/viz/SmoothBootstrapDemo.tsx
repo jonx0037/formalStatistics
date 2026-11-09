@@ -1,10 +1,12 @@
 /**
  * SmoothBootstrapDemo — Topic 31 §31.8.
  *
- * The motivating case for smooth bootstrap: median of a resample must equal
- * one of the original sample points, so the NAIVE bootstrap distribution of
- * the median is supported on at most n atoms — visible as "spikes" in the
- * histogram. Smooth bootstrap jitters each resampled point by a small
+ * The motivating case for smooth bootstrap: for odd n the median of a
+ * resample equals one of the original sample points (at most n atoms); for
+ * even n (every option in NS, including the default 50) it is a sample point
+ * or the midpoint of two, so still finitely many atoms. Either way the NAIVE
+ * bootstrap distribution of the median is a lattice — visible as "spikes"
+ * in the histogram. Smooth bootstrap jitters each resampled point by a small
  * Gaussian (bandwidth h via R's bw.nrd0 rule), so the bootstrap distribution
  * becomes genuinely continuous.
  *

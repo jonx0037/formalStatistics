@@ -790,8 +790,9 @@ export function bernoulliKL(p: number, q: number): number {
  * projection from ℝᵈ to ℝᵏ approximately preserves pairwise distances
  * among n points within factor (1 ± ε) with probability ≥ 1 − δ.
  * Formula (sub-Gaussian concentration + union bound over (n choose 2)
- * pairs): k ≥ 8·ln(n / δ̃) / ε², with δ̃ = δ/(n choose 2). We use the
- * conservative textbook bound k ≥ 8·ln(n²/δ) / ε² ≈ 8·(2 ln n − ln δ)/ε².
+ * pairs, per-pair failure 2e^{−kε²/8}): k ≥ 8·ln(n(n−1)/δ) / ε² (MDX §12.8
+ * Ex 9). We use the slightly conservative k ≥ 8·ln(n²/δ) / ε²
+ * = 8·(2 ln n − ln δ)/ε².
  * @param n — number of points to embed
  * @param epsilon — distortion tolerance
  * @param delta — failure probability

@@ -459,17 +459,18 @@ console.log('========================================\n');
 }
 
 // ── 31. localPower('normal-mean-known-sigma', 0, 2, 0.05, 1) ≈ 0.516 ──────
-// h=2, σ=1 ⇒ non-centrality 4. scipy: 1 − ncx2.cdf(3.84, 1, 4) ≈ 0.515.
+// h=2, σ=1 ⇒ non-centrality 4. scipy: 1 − ncx2.cdf(3.84, 1, 4) ≈ 0.516.
 {
   const v = localPower('normal-mean-known-sigma', 0, 2, 0.05, 1);
   check('31. localPower(normal, h=2, σ=1)', approx(v, 0.516, 5e-3), v, 0.516, 'tol 5e-3 vs scipy');
 }
 
-// ── 32. localPower('bernoulli', 0.5, 2, 0.05) ≈ 0.977 ─────────────────────
+// ── 32. localPower('bernoulli', 0.5, 2, 0.05) ≈ 0.979 ─────────────────────
 // I(0.5)=4, h=2 ⇒ non-centrality 16. Very high power at this alternative.
+// scipy: 1 − ncx2.cdf(3.84, 1, 16) ≈ 0.979.
 {
   const v = localPower('bernoulli', 0.5, 2, 0.05);
-  check('32. localPower(bernoulli, θ₀=0.5, h=2)', approx(v, 0.977, 1e-2), v, 0.977, 'tol 1e-2; nc=16');
+  check('32. localPower(bernoulli, θ₀=0.5, h=2)', approx(v, 0.979, 1e-2), v, 0.979, 'tol 1e-2; nc=16');
 }
 
 // ── 33. nonCentralChiSquaredCDF stability at large λ (PR #20 Gemini review) ──
@@ -609,7 +610,8 @@ console.log('========================================\n');
 }
 
 // ── 19D. Actual coverage at n = 20, p = 0.1, α = 0.05 ─────────────────────
-// Wald: ≈ 0.878 (under-covers); Wilson: ≈ 0.961; CP: ≈ 0.997. BRO2001 Table 1.
+// Wald: ≈ 0.876 (under-covers); Wilson: ≈ 0.957; CP: ≈ 0.989. Exact binomial sums
+// Σ_x 1{p ∈ CI(x)}·Bin(x; 20, 0.1) (scipy), not values read from BRO2001.
 {
   const coverWald = actualCoverageBinomial(
     (x, n, alpha) => waldCI('bernoulli', Array(n).fill(0).map((_, i) => (i < x ? 1 : 0)), alpha),
@@ -620,21 +622,21 @@ console.log('========================================\n');
   const coverWilson = actualCoverageBinomial(wilsonInterval, 20, 0.05, [0.1])[0];
   const coverCP = actualCoverageBinomial(clopperPearsonInterval, 20, 0.05, [0.1])[0];
   check(
-    `44. Test 19D — Wald coverage(n=20, p=0.1) ≈ 0.878 (got ${coverWald.toFixed(4)})`,
-    approx(coverWald, 0.878, 0.02),
+    `44. Test 19D — Wald coverage(n=20, p=0.1) ≈ 0.876 (got ${coverWald.toFixed(4)})`,
+    approx(coverWald, 0.876, 0.02),
     coverWald,
-    0.878,
-    'tol 0.02; BRO2001 Table 1',
+    0.876,
+    'tol 0.02; exact binomial sum',
   );
   check(
-    `45. Test 19D — Wilson coverage(n=20, p=0.1) ≈ 0.961 (got ${coverWilson.toFixed(4)})`,
-    approx(coverWilson, 0.961, 0.02),
+    `45. Test 19D — Wilson coverage(n=20, p=0.1) ≈ 0.957 (got ${coverWilson.toFixed(4)})`,
+    approx(coverWilson, 0.957, 0.02),
     coverWilson,
-    0.961,
-    'tol 0.02; BRO2001 Table 1',
+    0.957,
+    'tol 0.02; exact binomial sum',
   );
   check(
-    `46. Test 19D — CP coverage(n=20, p=0.1) ≈ 0.997 (got ${coverCP.toFixed(4)})`,
+    `46. Test 19D — CP coverage(n=20, p=0.1) ≈ 0.989 (got ${coverCP.toFixed(4)})`,
     coverCP >= 0.95 && coverCP <= 1.0,
     coverCP,
     '≥ 0.95',
