@@ -837,7 +837,7 @@ Then $\mathcal{F}$ is $P$-Donsker: $\mathbb{G}_n \rightsquigarrow \mathbb{G}_P$ 
 
 ![Two-panel bracketing-number visualisation. Left: $\mathcal{F}_{\mathrm{cdf}}$ under Uniform(0, 1) covered by $\lceil \varepsilon^{-2} \rceil$ brackets at $\varepsilon \in \{0.1, 0.05, 0.02\}$, shown as horizontal stacked bars. Right: log-log plot of $\log N_{[\,]}(\varepsilon)$ vs $\log(1/\varepsilon)$ with slope-2 reference line overlaid, verifying $N_{[\,]} \sim \varepsilon^{-2}$.](/images/topics/empirical-processes/32-bracketing-vs-covering.png)
 
-*Figure 5. Bracketing geometry for $\mathcal{F}_{\mathrm{cdf}}$. Left: brackets at three resolutions; the number grows like $\varepsilon^{-2}$ (each refinement halves $\varepsilon$ and quadruples the count). Right: log-log confirmation of the slope-2 scaling. The bracketing integral $\int_0^1 \sqrt{\log(\varepsilon^{-2})}\,d\varepsilon$ is finite, so $\mathcal{F}_{\mathrm{cdf}}$ is Donsker — the calculation §32.5 Step 3 used inline.*
+*Figure 5. Bracketing geometry for $\mathcal{F}_{\mathrm{cdf}}$. Left: brackets at three resolutions; the number grows like $\lceil \varepsilon^{-2} \rceil$ — halving $\varepsilon$ from 0.1 to 0.05 quadruples the count (100 → 400), and refining from 0.05 to 0.02 multiplies it by 6.25 (400 → 2500). Right: log-log confirmation of the slope-2 scaling. The bracketing integral $\int_0^1 \sqrt{\log(\varepsilon^{-2})}\,d\varepsilon$ is finite, so $\mathcal{F}_{\mathrm{cdf}}$ is Donsker — the calculation §32.5 Step 3 used inline.*
 
 <ExampleBlock number={11} title="Bracketing number for Lipschitz functions on $[0, 1]$">
 
@@ -1046,7 +1046,7 @@ $$
 W^2_n \;\xrightarrow{d}\; W^2 \;:=\; \int_0^1 \mathbb{B}^\circ(u)^2\,du \;\stackrel{d}{=}\; \sum_{k \ge 1} \frac{\chi^2_{1, k}}{(k \pi)^2},
 $$
 
-a weighted-$\chi^2$ distribution where $\chi^2_{1, k}$ are iid chi-squared-1 random variables. Proof: apply CMT to the continuous functional $\phi(z) = \int z^2\,dF$ on $\ell^\infty(\mathbb{R})$; Donsker gives $\mathbb{G}_n \rightsquigarrow \mathbb{B}_F$, so $\phi(\mathbb{G}_n) = W^2_n \rightsquigarrow \phi(\mathbb{B}_F) = \int \mathbb{B}_F(t)^2 dF(t) = \int_0^1 \mathbb{B}^\circ(u)^2 du$ by substitution. The $\chi^2$ decomposition comes from a Karhunen–Loève expansion of $\mathbb{B}^\circ$. Critical values are tabulated; CvM is more sensitive than KS to tail discrepancies (the integrated-squared statistic emphasises bulk over extremes).
+a weighted-$\chi^2$ distribution where $\chi^2_{1, k}$ are iid chi-squared-1 random variables. Proof: apply CMT to the continuous functional $\phi(z) = \int z^2\,dF$ on $\ell^\infty(\mathbb{R})$; Donsker gives $\mathbb{G}_n \rightsquigarrow \mathbb{B}_F$, so $\phi(\mathbb{G}_n) = W^2_n \rightsquigarrow \phi(\mathbb{B}_F) = \int \mathbb{B}_F(t)^2 dF(t) = \int_0^1 \mathbb{B}^\circ(u)^2 du$ by substitution. The $\chi^2$ decomposition comes from a Karhunen–Loève expansion of $\mathbb{B}^\circ$. Critical values are tabulated; because CvM weights every point by $dF$, the integrated-squared statistic emphasizes the bulk over the extremes, so it is not a tail-sensitive test — the tail-weighted fix is Anderson–Darling, below.
 
 </TheoremBlock>
 

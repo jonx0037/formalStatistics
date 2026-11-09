@@ -220,7 +220,7 @@ The first pillar fails any time the response is bounded, discrete, or skewed. Bi
 The fix is not to abandon the linear-predictor structure that made Topic 21 work — it is to compose that structure with a **link function** $g(\mu) = \mathbf{x}^\top\boldsymbol\beta$ that maps the response's natural scale (e.g. probability, rate, mean) into $\mathbb{R}$, and to swap the Normal response for whatever exponential-family distribution the data actually lives in. That single modification — link function plus exponential-family response — is the **generalized linear model**.
 
 <ExampleBlock number={1} title="OLS on binary data: when the line escapes [0, 1]">
-Generate $n = 80$ predictor values $x_i \sim \mathcal{N}(0, 1)$ and binary responses $y_i \sim \text{Bernoulli}(\sigma(0.5 + 1.8 x_i))$ where $\sigma$ is the logistic sigmoid. Fit OLS: $\hat y_i = \hat\beta_0 + \hat\beta_1 x_i$. The fitted line is approximately $\hat y \approx 0.5 + 0.30 x$, which crosses zero at $x \approx -1.7$ and exceeds one at $x \approx 1.7$. Roughly 12 of the 80 fitted values are negative; roughly 14 exceed unity. The model is internally inconsistent: it predicts probabilities outside $[0, 1]$, and any decision rule built on $\hat y$ either has to clip those values or admit the model is wrong about its own outputs.
+Generate $n = 80$ predictor values $x_i \sim \mathcal{N}(0, 1)$ and binary responses $y_i \sim \text{Bernoulli}(\sigma(0.5 + 1.8 x_i))$ where $\sigma$ is the logistic sigmoid. Fit OLS: $\hat y_i = \hat\beta_0 + \hat\beta_1 x_i$. The fitted line is approximately $\hat y \approx 0.5 + 0.30 x$, which crosses zero at $x \approx -1.7$ and exceeds one at $x \approx 1.7$. Roughly 5 of the 80 fitted values are negative; roughly 6 exceed unity. The model is internally inconsistent: it predicts probabilities outside $[0, 1]$, and any decision rule built on $\hat y$ either has to clip those values or admit the model is wrong about its own outputs.
 
 The same data fit by **logistic regression** with the logit link $g(p) = \log(p/(1-p))$ produces $\hat\beta_0 \approx 0.51, \hat\beta_1 \approx 1.94$ on the latent scale, with $\hat p_i = \sigma(\hat\beta_0 + \hat\beta_1 x_i) \in (0, 1)$ for every $i$. The probabilities are bounded by construction; coefficient interpretation shifts from "additive on $y$" to "additive on $\log\text{odds}(y=1)$."
 </ExampleBlock>
@@ -460,7 +460,7 @@ The boxed update in Step 4 is what `IRLSVisualizer` animates one iteration at a 
 <IRLSVisualizer client:visible />
 
 <img src="/images/topics/generalized-linear-models/22-irls-trajectory.png"
-     alt="Two-panel figure. Left: 2D contour map of the logistic log-likelihood ℓ(β₀, β₁) over a toy n=60 dataset; iterates β⁽⁰⁾ = (0,0), β⁽¹⁾, …, β⁽⁷⁾ plotted as arrows converging to the MLE β̂ near (-0.4, 1.9). Right: convergence plot of ‖β⁽ᵗ⁺¹⁾ − β⁽ᵗ⁾‖ on log scale vs iteration t — nearly straight with slope ≈ 2 in log-log coordinates, illustrating the quadratic convergence of Newton's method near the optimum."
+     alt="Two-panel figure. Left: 2D contour map of the logistic log-likelihood ℓ(β₀, β₁) over a toy n=60 dataset; iterates β⁽⁰⁾ = (0,0), β⁽¹⁾, …, β⁽⁷⁾ plotted as arrows converging to the MLE β̂ near (0.1, 1.9) (a separate toy dataset from Example 5, with true β = (−0.8, 1.8)). Right: convergence plot of ‖β⁽ᵗ⁺¹⁾ − β⁽ᵗ⁾‖ on log scale vs iteration t — slow for the first few steps, then plunging ever faster once near the optimum, the signature of Newton's quadratic convergence."
      class="w-full rounded-lg border my-6"
      style="border-color: var(--color-border);" />
 
@@ -678,7 +678,7 @@ Estimated dispersion $\hat\phi = 0.444$ (true 0.5; recovery within sampling erro
 <RemarkBlock number={14} title="Canonical inverse link vs practical log link">
 The Gamma's canonical link is the inverse: $g(\mu) = 1/\mu$, so $\eta_i = 1/\mu_i$. Under the inverse link the score identity Thm 1 applies cleanly — $\nabla\ell = \mathbf{X}^\top(\mathbf{y} - \boldsymbol\mu)$ — but coefficient interpretation is awkward: $\beta_j$ is the additive change in $1/\mu$ per unit change in $x_j$, which has no natural domain meaning ("additive on the reciprocal of expected claim amount"). Worse, the inverse link requires $\mathbf{x}^\top\boldsymbol\beta > 0$ to keep $\mu > 0$, and IRLS does not enforce this — the fit can stray into negative territory and crash.
 
-The log link $g(\mu) = \log\mu$ is non-canonical for Gamma but solves both problems: $\mu = \exp(\mathbf{x}^\top\boldsymbol\beta)$ is automatically positive, and $\hat\beta_j$ has a clean multiplicative interpretation ($e^{\hat\beta_j}$ is the multiplicative change in expected claim amount per unit change in $x_j$). The cost is that IRLS uses different weights $W_{ii} = 1/[V(\mu_i)(g'(\mu_i))^2] = \mu_i^2 \cdot \mu_i^{-2} = 1$ wait — let me recompute: with $g(\mu) = \log\mu$ we have $g'(\mu) = 1/\mu$ and $V(\mu) = \mu^2$, so $W_{ii} = 1/[\mu^2 \cdot \mu^{-2}] = 1$. Wait, that gives $W = I$ which is suspicious. Actually the weights for non-canonical links use $W_{ii} = 1/[V(\mu_i)(g'(\mu_i))^2]$ in the *Fisher scoring* form, and $1/[\mu_i^2 \cdot \mu_i^{-2}] = 1$ is correct: under log-link Gamma, the IRLS weights are constant. The score equation acquires an extra Jacobian factor (the score is no longer $\mathbf{X}^\top(\mathbf{y} - \boldsymbol\mu)$ exactly), but IRLS still converges and the asymptotic theory still applies. In practice, log-link Gamma is the default in R's `glm(family=Gamma(link="log"))` and is what insurance, finance, and biostatistics applications use.
+The log link $g(\mu) = \log\mu$ is non-canonical for Gamma but solves both problems: $\mu = \exp(\mathbf{x}^\top\boldsymbol\beta)$ is automatically positive, and $\hat\beta_j$ has a clean multiplicative interpretation ($e^{\hat\beta_j}$ is the multiplicative change in expected claim amount per unit change in $x_j$). The cost is in the IRLS weights. For a non-canonical link the *Fisher-scoring* weights are $W_{ii} = 1/[V(\mu_i)(g'(\mu_i))^2]$; with $g(\mu) = \log\mu$ we have $g'(\mu) = 1/\mu$ and $V(\mu) = \mu^2$, so $W_{ii} = 1/[\mu_i^2 \cdot \mu_i^{-2}] = 1$: under log-link Gamma, the IRLS weights are constant. The score equation acquires an extra Jacobian factor (the score is no longer $\mathbf{X}^\top(\mathbf{y} - \boldsymbol\mu)$ exactly), but IRLS still converges and the asymptotic theory still applies. In practice, log-link Gamma is the default in R's `glm(family=Gamma(link="log"))` and is what insurance, finance, and biostatistics applications use.
 </RemarkBlock>
 
 <RemarkBlock number={15} title="Gamma dispersion — estimated, not fixed">
@@ -756,7 +756,7 @@ For fixed-$\phi$ families (Bernoulli, Poisson) the $\phi = 1$ asymptotic applies
 **Step 5 (Decision rule).** At significance level $\alpha$, reject $H_0$ when $D(\mathcal{M}_0) - D(\mathcal{M}_1) > \phi \chi^2_{k, 1-\alpha}$. For estimated $\phi$, divide by $\hat\phi$ and reject when the quotient exceeds $\chi^2_{k, 1-\alpha}/k = F_{k, n-p-1, 1-\alpha}$ asymptotically. $\square$ — using Topic 18 Thm 4 (Wilks).
 </ProofBlock>
 
-The entire proof is six steps of book-keeping — the substance lives in Topic 18 Thm 4. The deviance test *is* Wilks; we just renamed $-2\log\Lambda_n$ to $D_0 - D_1$ to match GLM software output. R's `anova(fit0, fit1, test="Chisq")` and Python's `glm1.compare_lr_test(glm0)` both compute exactly $D(\mathcal{M}_0) - D(\mathcal{M}_1)$ and reference it to $\chi^2_k$.
+The entire proof is five steps of book-keeping — the substance lives in Topic 18 Thm 4. The deviance test *is* Wilks; we just renamed $-2\log\Lambda_n$ to $D_0 - D_1$ to match GLM software output. R's `anova(fit0, fit1, test="Chisq")` and Python's `glm1.compare_lr_test(glm0)` both compute exactly $D(\mathcal{M}_0) - D(\mathcal{M}_1)$ and reference it to $\chi^2_k$.
 
 <ExampleBlock number={9} title="Nested-Poisson deviance test">
 Continuing the §22.5 insurance-frequency setup: fit a full Poisson model with intercept + 3 predictors + log-offset on $n = 150$ observations, and a reduced model with intercept + 1 predictor + log-offset (dropping the second and third predictors, $k = 2$ restrictions). On the synthetic dataset with true $\boldsymbol\beta = (-1.0, 0.5, 0.7, 0.3)$:
@@ -826,27 +826,27 @@ A logistic regression on $n = 80$ near-separation data ($\boldsymbol\beta_0 = (0
 | CI flavor | Lower | Upper | Width | Asymmetry |
 |---|---|---|---|---|
 | Wald-z (95%) | $1.4$ | $6.9$ | $5.5$ | symmetric |
-| Profile-LRT (95%) | $1.6$ | $9.8$ | $8.2$ | upper half $\approx 2.7\times$ lower half |
+| Profile-LRT (95%) | $1.6$ | $9.8$ | $8.2$ | upper half $\approx 2.3\times$ lower half |
 
 The profile-LRT CI is **wider and asymmetric**, with most of the extra width pushed to the right (large positive $\beta_1$ values). This is the correct picture: near separation, the log-likelihood is much flatter on the "more positive" side of $\hat\beta_1$ than on the "less positive" side, so a $\chi^2_1$-cutoff slice of the likelihood profile gives an asymmetric region. The Wald-z CI's symmetric form artificially compresses the upper bound, undercovering the truth on the high side. This is the "Wald boundary pathology" Topic 18 Rem 16 already named; the profile-LRT CI is the production-standard fix.
 </ExampleBlock>
 
-<ExampleBlock number={11} title="Wald is link-dependent; LRT is not (logit vs probit)">
+<ExampleBlock number={11} title="Wald is link-dependent; LRT barely moves (logit vs probit)">
 Take a single binary dataset and fit it under both the logit link (canonical) and the probit link (non-canonical). Each link gives a different $\hat\beta_1$ on its own scale (logit gives log-odds units; probit gives latent-Normal-z units), so the Wald-z $p$-value for $H_0: \beta_1 = 0$ depends on which scale you fit:
 
 | Link | $\hat\beta_1$ | Wald-z | $p$-value |
 |---|---|---|---|
 | logit | $0.38$ | $2.16$ | $0.031$ |
 | probit | $0.21$ | $1.99$ | $0.047$ |
-| LRT (deviance difference) | — | — | $0.028$ (both links) |
+| LRT (deviance difference) | — | — | $\approx 0.028$ (both links, nearly equal) |
 
-The Wald-z $p$-values disagree across links ($0.031$ vs $0.047$) — a worrying $50\%$ relative difference for a finding that hovers near the $0.05$ threshold. The LRT $p$-value is link-invariant: $D(\hat{\boldsymbol\beta}_0) - D(\hat{\boldsymbol\beta}_1)$ is the same regardless of which link parameterization you fit, because the deviance difference depends only on the maximum likelihoods, which are identical across smooth reparameterizations (Topic 18 Thm 6). This is exactly the "GLM software defaults to LRT for nested-model comparisons" rationale that Topic 18 Rem 17 named — and it is one of the strongest practical reasons to prefer LRT over Wald when the choice is available.
+The Wald-z $p$-values disagree across links ($0.031$ vs $0.047$) — a worrying $50\%$ relative difference for a finding that hovers near the $0.05$ threshold. The LRT $p$-value is nearly link-invariant: the null (intercept-only) fit is identical under every link, and the full logit and probit fits typically reach almost the same maximized likelihood, so $D(\hat{\boldsymbol\beta}_0) - D(\hat{\boldsymbol\beta}_1)$ barely moves. The agreement is close, not exact — logit and probit are different models, not reparameterizations of one model, so Topic 18 Thm 6's exact invariance (which covers smooth reparameterizations of the *same* model) does not apply here. This is exactly the "GLM software defaults to LRT for nested-model comparisons" rationale that Topic 18 Rem 17 named — and it is one of the strongest practical reasons to prefer LRT over Wald when the choice is available.
 </ExampleBlock>
 
 <RemarkBlock number={17} title="Profile-LRT is the GLM default — discharging Topic 19 §19.6">
 Topic 19 §19.6 forward-promised that **profile-likelihood CIs are the workhorse for GLM coefficients in production software** — R's `confint()` on a `glm` object defaults to the profile-LRT, computed by refitting the model with $\beta_j$ fixed at a grid of values and tracing the deviance drop until the $\chi^2_{1, 0.95} = 3.84$ threshold is crossed. Three reasons:
 
-1. **Reparameterization invariance** (Topic 18 Thm 6, Topic 19 Rem 8): the LRT $p$-value is invariant under smooth reparameterization, including the link function (Ex 11 above). Wald-z fails this invariance.
+1. **Reparameterization invariance** (Topic 18 Thm 6, Topic 19 Rem 8): the LRT $p$-value is invariant under smooth reparameterization of a model, and nearly unchanged even across a change of link (Ex 11 above). Wald-z fails this invariance.
 2. **Asymptotic efficiency via Wilks** (Topic 18 Thm 4, Topic 19 §19.6): all three CIs (Wald, Score, LRT) are first-order asymptotically efficient, but LRT has better higher-order properties — Bartlett correction, refined coverage in moderate samples.
 3. **Correct coverage at boundaries** (Ex 10 above): near separation, near-zero variance components, and other boundary cases, profile-LRT respects the likelihood's curvature; Wald-z does not.
 
@@ -894,7 +894,7 @@ The four empirical sandwich estimators (HC0, HC1, HC2, HC3) differ only in finit
 In production, HC1 and HC3 are the most-used variants; HC0 is the asymptotic-limit version used in derivations.
 
 <ExampleBlock number={12} title="Sandwich coverage on overdispersed Poisson (n_sim = 200)">
-Generate $n = 200$ overdispersed-Poisson responses with true $\boldsymbol\beta_0 = (-0.3, 0.9)$ and dispersion ratio $r = \text{Var}/E = 1.8$ (so the Poisson model is correct on the mean but wrong on the variance by a factor of $1.8$). Repeat $200$ times, refit each replication with `glmFit(X, y, FAMILIES.poisson)`, and compute both the naive Wald CI and the HC3 sandwich CI for $\beta_1$ at the $95\%$ level:
+Generate $n = 200$ overdispersed-Poisson responses with true $\boldsymbol\beta_0 = (-0.3, 0.8)$ and dispersion ratio $r = \text{Var}/E = 1.8$ (so the Poisson model is correct on the mean but wrong on the variance by a factor of $1.8$). Repeat $200$ times, refit each replication with `glmFit(X, y, FAMILIES.poisson)`, and compute both the naive Wald CI and the HC3 sandwich CI for $\beta_1$ at the $95\%$ level:
 
 | CI | Empirical coverage | Target | Gap |
 |---|---|---|---|

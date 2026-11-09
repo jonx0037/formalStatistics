@@ -333,11 +333,11 @@ First-order vanishes (stationarity of $\mathrm{EL}$); second-order negative sinc
 
 **Step 5 — Take expectations under $f_0^n$.** Using Step 3 + asymptotic covariance:
 
-$$\mathbb{E}[\hat\ell(\hat\theta)] = n\cdot\mathrm{EL}(\theta_0) + \tfrac12\mathbb{E}\!\left[(\hat\theta - \theta_0)^\top \nabla^2\hat\ell(\theta_0)(\hat\theta - \theta_0)\right] + o(1).$$
+$$\mathbb{E}[\hat\ell(\hat\theta)] = n\cdot\mathrm{EL}(\theta_0) + \mathbb{E}\!\left[(\hat\theta - \theta_0)^\top \nabla\hat\ell(\theta_0)\right] + \tfrac12\mathbb{E}\!\left[(\hat\theta - \theta_0)^\top \nabla^2\hat\ell(\theta_0)(\hat\theta - \theta_0)\right] + o(1).$$
 
-With $n^{-1}\nabla^2\hat\ell(\theta_0) \to -\mathcal{K}(\theta_0)$ and $\operatorname{Cov}(\sqrt n(\hat\theta - \theta_0)) \to \mathcal{K}^{-1}\mathcal{J}\mathcal{K}^{-1}$:
+The linear term does *not* vanish in expectation: the score has mean zero, but $\hat\theta$ is built from that same score, $\hat\theta - \theta_0 \approx \mathcal{K}^{-1}\nabla\hat\ell(\theta_0)/n$, and $\operatorname{Var}(\nabla\hat\ell(\theta_0)) = n\mathcal{J}$, so the linear term tends to $\operatorname{tr}(\mathcal{K}^{-1}\mathcal{J})$. With $n^{-1}\nabla^2\hat\ell(\theta_0) \to -\mathcal{K}(\theta_0)$ and $\operatorname{Cov}(\sqrt n(\hat\theta - \theta_0)) \to \mathcal{K}^{-1}\mathcal{J}\mathcal{K}^{-1}$, the quadratic term tends to $-\tfrac12\operatorname{tr}(\mathcal{K}^{-1}\mathcal{J})$. Together:
 
-$$\mathbb{E}[\hat\ell(\hat\theta)] = n\cdot\mathrm{EL}(\theta_0) - \tfrac12\operatorname{tr}(\mathcal{K}^{-1}\mathcal{J}) + o(1).$$
+$$\mathbb{E}[\hat\ell(\hat\theta)] = n\cdot\mathrm{EL}(\theta_0) + \tfrac12\operatorname{tr}(\mathcal{K}^{-1}\mathcal{J}) + o(1).$$
 
 Similarly from Step 4:
 
@@ -529,9 +529,9 @@ The shortcut requires $h_{ii} < 1$ for all $i$; `looCV` in `regression.ts` throw
 <TheoremBlock number={4} title="Stone's CV ≡ AIC equivalence (Stone 1977)">
 Consider the Gaussian linear model $\mathbf{y} = \mathbf{X}\boldsymbol\beta + \boldsymbol\varepsilon$ with $\boldsymbol\varepsilon \sim \mathcal{N}_n(\mathbf{0}, \sigma^2\mathbf{I})$ and a fixed full-rank design $\mathbf{X}$. Under regularity (balanced design, fixed $p$, $\max h_{ii} = O(\log n / n)$),
 
-$$n\log\mathrm{LOO\text{-}CV} \;=\; \mathrm{AIC}^* + O_p(n^{-1}),$$
+$$n\log\mathrm{LOO\text{-}CV} \;=\; \mathrm{AIC}^* - 2 + O_p(n^{-1}),$$
 
-where $\mathrm{AIC}^* := n\log(\mathrm{RSS}/n) + 2k$ is AIC up to model-invariant additive constants. Consequently,
+where $\mathrm{AIC}^* := n\log(\mathrm{RSS}/n) + 2k$ (with $k = p + 2$) is AIC up to model-invariant additive constants, and the $-2$ is likewise model-invariant. Consequently,
 
 $$\arg\min_{\mathcal{M}} \mathrm{LOO\text{-}CV}(\mathcal{M}) \;=\; \arg\min_{\mathcal{M}} \mathrm{AIC}(\mathcal{M}) + o_p(1).$$
 
@@ -566,7 +566,7 @@ with $\hat\sigma^2_{\text{MLE}} = \mathrm{RSS}/n$.
 
 $$\mathrm{AIC}^* = n\log\hat\sigma^2_{\text{MLE}} + 2(p+2) = n\log\hat\sigma^2_{\text{MLE}} + 2k.$$
 
-Using $\log(\hat\sigma^2(1 + 2k/n)) = \log\hat\sigma^2 + 2k/n + O(n^{-2})$:
+Using $\log(\hat\sigma^2(1 + 2(p+1)/n)) = \log\hat\sigma^2 + 2(p+1)/n + O(n^{-2})$:
 
 $$n\log\mathrm{LOO\text{-}CV} = n\log\hat\sigma^2_{\text{MLE}} + 2(p+1) + O(n^{-1}) = \mathrm{AIC}^* - 2 + O(n^{-1}),$$
 
@@ -642,7 +642,7 @@ Figure 6 plots both regimes side by side.
 </ExampleBlock>
 
 <img src="/images/topics/model-selection-and-information-criteria/24-yang-race.png"
-     alt="Two-panel race figure. Left (Tab A, truth = polynomial-d3): selection frequency of BIC at d=3 climbs from ~80% at n=50 to ~99% at n=5000, AIC plateaus at ~75% (with persistent tail at d≥4). Right (Tab B, truth = sin, polynomial-misspecified): prediction risk vs n for BIC, AIC, and 10-fold CV — BIC plateaus higher than AIC and CV, the gap widening with n. Title: 'Selection consistency and prediction efficiency are incompatible (Yang 2005)'."
+     alt="Two-panel race figure. Top (Panel A, truth = polynomial-d3): selection-frequency histogram over d = 0..8 at n = 5000 (500 trials) — BIC picks d=3 about 93% of the time (the rest at d=2), AIC about 73%, with a persistent ~26% tail at d≥4. Bottom (Panel B, truth = sin, polynomial-misspecified): mean prediction risk vs n (log-log) for AIC-selected, BIC-selected, and oracle models — all three fall with n; AIC's risk is highest at small n, and BIC tracks the oracle closely from n ≈ 500 on. Title: 'Selection consistency and prediction efficiency are incompatible (Yang 2005)'."
      class="w-full rounded-lg border my-6"
      style="border-color: var(--color-border);" />
 
@@ -775,7 +775,7 @@ For the poly $d = 10$ design on $x \sim \mathcal{U}(0,1)$ at $n = 80$ (the canon
 | $10.0$ | $1.961883$ | T10.24 |
 | $100.0$ | $0.851771$ | T10.25 |
 
-At $\lambda = 0$, $\mathrm{df} = 11$ exactly (intercept + 10 polynomial coefficients). Even modest regularization ($\lambda = 0.01$) drops the effective DOF by more than half — the high-order polynomial columns have small singular values and shrink rapidly under the ridge penalty.
+These pinned values use the raw (uncentered) design with all 11 columns — intercept included — inside the penalty, which is why $\mathrm{df}(100) < 1$; under Thm 7's centered convention with an unpenalized intercept, the total would be $1$ plus the slope-only sum, never below $1$. At $\lambda = 0$, $\mathrm{df} = 11$ exactly (intercept + 10 polynomial coefficients). Even modest regularization ($\lambda = 0.01$) drops the effective DOF by more than half — the high-order polynomial columns have small singular values and shrink rapidly under the ridge penalty.
 </ExampleBlock>
 
 <ExampleBlock number={10} title="AIC/BIC overlay on the prostate-cancer lasso path (discharges R2)">

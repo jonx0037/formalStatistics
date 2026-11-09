@@ -253,13 +253,13 @@ $$
 e^{t^*} \;=\; \frac{(1+\delta)(1-p)}{1 - p(1+\delta)}.
 $$
 
-Substituting back, the Chernoff bound for the upper tail of a sum of iid Bernoullis is
+Substituting $t^*$ back gives the optimal Chernoff bound $e^{-n I(p(1+\delta))}$ (the rate function of Remark 1 below). A simpler closed form, slightly weaker, comes from taking $e^t = 1 + \delta$ instead and using $1 - p + p e^t = 1 + p\delta \leq e^{p\delta}$:
 
 $$
 P(S_n \geq np(1+\delta)) \;\leq\; \left(\frac{e^{\delta}}{(1+\delta)^{1+\delta}}\right)^{np}.
 $$
 
-For $p = 0.3, n = 100, \delta = 0.5$ (so threshold $= 45$), this gives a bound of about $0.0117$. The exact probability from the Binomial CDF is about $0.0068$ — the Chernoff bound is loose by less than a factor of two, while Chebyshev for the same event gives a bound of $\sigma^2 / (n (p\delta)^2) = (0.21/100) / (0.15)^2 \approx 0.093$, almost $14\times$ worse.
+For $p = 0.3, n = 100, \delta = 0.5$ (so threshold $= 45$), the closed form gives a bound of about $0.039$, and the optimal Chernoff bound (with $e^{t^*} \approx 1.91$) gives about $0.0069$. The exact probability from the Binomial CDF is about $0.0011$, so even the optimized Chernoff bound is loose by a factor of about six. Chebyshev for the same event gives a bound of $\sigma^2 / (n (p\delta)^2) = (0.21/100) / (0.15)^2 \approx 0.093$, almost $14\times$ worse than the optimal Chernoff bound and more than $80\times$ the exact value. The factor of six is not a defect of the method: Cramér's theorem (§12.6) says the exponent $I(a)$ is the right one, and the slack sits in a sub-exponential prefactor.
 </ExampleBlock>
 
 <RemarkBlock number={1} title="The optimal t and the rate function">
@@ -326,7 +326,7 @@ $$
 \varphi''(u) \;=\; \frac{pq(b-a)^2 \, e^{u(a+b)}}{(q \, e^{ua} + p \, e^{ub})^2}.
 $$
 
-By the arithmetic–geometric mean inequality, $q e^{ua} + p e^{ub} \geq e^{u(qa + pb)}$... actually, a cleaner bound comes from the identity $4pq \leq 1$ for $p, q \geq 0, p + q = 1$ combined with $q e^{ua} + p e^{ub} \geq 2\sqrt{pq} \, e^{u(a+b)/2}$ (AM-GM). Squaring:
+By the arithmetic–geometric mean inequality, $q e^{ua} + p e^{ub} \geq 2\sqrt{pq} \, e^{u(a+b)/2}$. Squaring:
 
 $$
 (q e^{ua} + p e^{ub})^2 \;\geq\; 4pq \, e^{u(a+b)}.
@@ -489,7 +489,7 @@ $$
 \mathbb{E}[e^{tY_i}] \;\leq\; 1 + \sigma^2 \sum_{k=2}^{\infty} \frac{t^k M^{k-2}}{k!} \;=\; 1 + \frac{\sigma^2}{M^2}\left(e^{tM} - 1 - tM\right).
 $$
 
-Using the Taylor expansion $e^u - 1 - u = u^2/2 + u^3/6 + \cdots \leq (u^2/2) \cdot e^{\max(u, 0)/3}$... a cleaner route: for $|tM| < 3$, the inequality $e^{tM} - 1 - tM \leq \frac{(tM)^2}{2(1 - tM/3)}$ holds (verify by expanding both sides as series). Using $\log(1 + x) \leq x$:
+For $0 < tM < 3$, compare the two sides as series: since $k! \geq 2 \cdot 3^{k-2}$ for every $k \geq 2$, we get $e^{tM} - 1 - tM = \sum_{k \geq 2} (tM)^k / k! \leq \frac{(tM)^2}{2} \sum_{j \geq 0} (tM/3)^j = \frac{(tM)^2}{2(1 - tM/3)}$. Using $\log(1 + x) \leq x$:
 
 $$
 \log \mathbb{E}[e^{tY_i}] \;\leq\; \frac{\sigma^2 t^2 / 2}{1 - tM/3}, \qquad 0 < t < 3/M.
@@ -536,7 +536,7 @@ Now the comparison between Chebyshev, Hoeffding, Bernstein, sub-Gaussian, and th
 Take $X_i \sim$ Bernoulli$(0.01)$, iid, $n = 1000$. Then $\mu = 0.01$, $\sigma^2 = 0.0099$, $M = 0.99$ (the deviation $|X_i - \mu|$ is at most $1 - 0.01 = 0.99$), $b - a = 1$. For $\varepsilon = 0.01$:
 
 - **Hoeffding:** $2 \exp(-2 \cdot 1000 \cdot 0.0001 / 1) = 2 e^{-0.2} \approx 1.64$ — clamped to $1$; useless.
-- **Bernstein:** $2 \exp\!\big(-\frac{1000 \cdot 0.0001}{2 \cdot 0.0099 + 2 \cdot 0.99 \cdot 0.01 / 3}\big) = 2 \exp(-0.1 / 0.02585) \approx 2 e^{-3.87} \approx 0.042$.
+- **Bernstein:** $2 \exp\!\big(-\frac{1000 \cdot 0.0001}{2 \cdot 0.0099 + 2 \cdot 0.99 \cdot 0.01 / 3}\big) = 2 \exp(-0.1 / 0.0264) \approx 2 e^{-3.79} \approx 0.045$.
 
 Bernstein gives a useful bound while Hoeffding gives nothing. The reason is the variance: when $p$ is small, $\sigma^2 = p(1-p) \approx p$ is much smaller than $(b-a)^2/4 = 0.25$. Bernstein exploits this; Hoeffding cannot.
 </ExampleBlock>
@@ -827,12 +827,12 @@ Let $\hat{h}_n = \arg\min_{h \in \mathcal{H}} \hat{R}_n(h)$ be the empirical ris
 Given $n$ points in $\mathbb{R}^d$, project them into $\mathbb{R}^k$ using a random Gaussian matrix $A \in \mathbb{R}^{k \times d}$ with iid $\mathcal{N}(0, 1/k)$ entries. The Johnson–Lindenstrauss lemma says that if
 
 $$
-k \;\geq\; \frac{8 \ln(n / \delta)}{\varepsilon^2},
+k \;\geq\; \frac{8 \ln\!\big(n(n-1) / \delta\big)}{\varepsilon^2},
 $$
 
 then with probability at least $1 - \delta$, every pairwise distance $\|x_i - x_j\|$ is preserved within a factor of $(1 \pm \varepsilon)$ after projection: $\|A(x_i - x_j)\|^2 \in [(1-\varepsilon), (1+\varepsilon)] \|x_i - x_j\|^2$.
 
-The proof: fix a single pair $x, y$ and their difference $v = x - y$. The random variable $\|Av\|^2 / \|v\|^2$ is a scaled chi-squared (a sum of $k$ squared Gaussians, divided by $k$), and concentration of sub-exponential random variables (Bernstein's inequality applied to a chi-squared, or direct MGF calculations) gives $P(\|Av\|^2 / \|v\|^2 \notin [1 - \varepsilon, 1 + \varepsilon]) \leq 2 e^{-k\varepsilon^2/8}$. Union-bounding over all $\binom{n}{2}$ pairs gives the claimed target dimension.
+The proof: fix a single pair $x, y$ and their difference $v = x - y$. The random variable $\|Av\|^2 / \|v\|^2$ is a scaled chi-squared (a sum of $k$ squared Gaussians, divided by $k$), and concentration of sub-exponential random variables (Bernstein's inequality applied to a chi-squared, or direct MGF calculations) gives $P(\|Av\|^2 / \|v\|^2 \notin [1 - \varepsilon, 1 + \varepsilon]) \leq 2 e^{-k\varepsilon^2/8}$. Union-bounding over all $\binom{n}{2}$ pairs gives a total failure probability of at most $n(n-1)\, e^{-k\varepsilon^2/8}$, which is at most $\delta$ exactly when $k$ meets the target dimension above. (For $\delta \leq 1$ this is at most $16 \ln(n/\delta)/\varepsilon^2$.)
 
 The punchline: $k = O(\varepsilon^{-2} \log n)$ dimensions suffice — *independent of the original dimension $d$*. This is the entire theoretical foundation of dimensionality reduction by random projection, which underlies sketching algorithms, fast nearest-neighbor search, and compressed sensing.
 </ExampleBlock>
@@ -846,7 +846,7 @@ $$
 \sigma \;=\; \frac{\Delta_f \sqrt{2 \ln(1.25 / \delta)}}{\varepsilon}
 $$
 
-is sufficient. The derivation: the privacy loss random variable $\log(P_D(o) / P_{D'}(o))$ is sub-Gaussian with parameter $\Delta_f/\sigma$, and the $(\varepsilon, \delta)$-privacy condition $P(\log(P_D/P_{D'}) > \varepsilon) \leq \delta$ becomes $2 \exp(-\varepsilon^2 \sigma^2 / (2 \Delta_f^2)) \leq \delta$, which inverts to the $\sigma$ formula above. This is why every differentially private algorithm uses Gaussian or Laplace noise calibrated to a tail-bound quantity — the concentration machinery *is* the privacy machinery.
+is sufficient when $\varepsilon < 1$. The idea: the privacy loss random variable $\log(P_D(o) / P_{D'}(o))$ is Gaussian with standard deviation $\Delta_f/\sigma$ (so sub-Gaussian with that parameter) and a small positive mean $\Delta_f^2/(2\sigma^2)$, and the $(\varepsilon, \delta)$-privacy condition asks that $P(\log(P_D/P_{D'}) > \varepsilon) \leq \delta$. Ignoring the mean, the sub-Gaussian tail bound $2 \exp(-\varepsilon^2 \sigma^2 / (2 \Delta_f^2)) \leq \delta$ inverts to $\sigma \geq \Delta_f \sqrt{2 \ln(2/\delta)}/\varepsilon$ — the same shape. Handling the mean exactly is what produces the constant $1.25$ and the restriction $\varepsilon < 1$ in the formula above (Dwork and Roth, 2014, Theorem A.1). This is why every differentially private algorithm uses Gaussian or Laplace noise calibrated to a tail-bound quantity — the concentration machinery *is* the privacy machinery.
 </RemarkBlock>
 
 ## 12.9 Connections to Machine Learning

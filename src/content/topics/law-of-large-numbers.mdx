@@ -546,9 +546,9 @@ This factor-of-$n$ savings is exactly what allows the Borel--Cantelli argument i
 <ExampleBlock number={3} title="Random Walk: the Gap Between max|S_k| and |S_n|">
 Let $X_1, \ldots, X_n$ be iid $N(0, 1)$, so $S_k = X_1 + \cdots + X_k$ is a random walk. The terminal value $|S_n|$ has the same distribution as $\sqrt{n} \cdot |Z|$ for $Z \sim N(0,1)$, with typical magnitude $\sqrt{n}$. But the running maximum $\max_{k \leq n} |S_k|$ is typically *larger* — the path might wander far from zero at some intermediate time and then return.
 
-The reflection principle from probability theory gives $E[\max_{k \leq n} |S_k|] \approx \sqrt{2n/\pi}$ (slightly larger than $E[|S_n|] = \sqrt{2n/\pi}$ by a constant factor). Yet Kolmogorov's inequality tells us that the *tail probability* $P(\max_{k \leq n} |S_k| \geq \varepsilon)$ satisfies the same bound as $P(|S_n| \geq \varepsilon)$: both are at most $n/\varepsilon^2$. Controlling the maximum path is no harder than controlling the endpoint, at least in terms of the Chebyshev-type bound.
+The reflection principle from probability theory gives $E[\max_{k \leq n} |S_k|] \approx \sqrt{\pi n/2}$ (larger than $E[|S_n|] = \sqrt{2n/\pi}$ by the constant factor $\pi/2 \approx 1.57$). Yet Kolmogorov's inequality tells us that the *tail probability* $P(\max_{k \leq n} |S_k| \geq \varepsilon)$ satisfies the same bound as $P(|S_n| \geq \varepsilon)$: both are at most $n/\varepsilon^2$. Controlling the maximum path is no harder than controlling the endpoint, at least in terms of the Chebyshev-type bound.
 
-For $n = 1000$ steps, a typical random walk has $|S_{1000}| \approx 32$ (since $\sqrt{1000} \approx 32$) but $\max_{k \leq 1000} |S_k| \approx 50$ or more. The Kolmogorov bound says $P(\max_{k \leq 1000} |S_k| \geq 100) \leq 1000/10000 = 0.1$ — the same bound we would get from Chebyshev for $P(|S_{1000}| \geq 100)$.
+For $n = 1000$ steps, a typical random walk has $|S_{1000}| \approx 32$ (since $\sqrt{1000} \approx 32$) but $\max_{k \leq 1000} |S_k| \approx 40$ on average (since $\sqrt{\pi \cdot 1000/2} \approx 40$). The Kolmogorov bound says $P(\max_{k \leq 1000} |S_k| \geq 100) \leq 1000/10000 = 0.1$ — the same bound we would get from Chebyshev for $P(|S_{1000}| \geq 100)$.
 
 The interactive explorer below shows sample paths of the random walk with both $|S_n|$ (the endpoint) and $\max_{k \leq n} |S_k|$ (the running maximum) highlighted. Notice how the running maximum can be substantially larger than the endpoint, yet the Kolmogorov bound still holds.
 </ExampleBlock>
@@ -575,7 +575,7 @@ We are now ready for the main event. The Strong Law of Large Numbers says that t
 
 This distinction is not academic. When you run a Monte Carlo simulation to estimate an integral, you run *one* simulation and observe *one* trajectory of running averages. You need that trajectory to converge — not just that most trajectories converge, but that yours does. The SLLN says: with probability 1, yours does. When you train a neural network with SGD, you run *one* training trajectory. The SLLN (and its martingale generalizations) says that trajectory converges. When you evaluate a model on a test set, you compute *one* empirical risk. The SLLN says it converges to the true risk. Almost sure convergence is what makes single-run inference valid.
 
-We follow the proof of Etemadi (1981), which is remarkable in two respects. First, it requires only *pairwise* independence — not the full mutual independence that most proofs assume. Second, it is genuinely elementary: the only tools are the Kolmogorov maximal inequality (Theorem 10.4), the first Borel--Cantelli lemma (from [Modes of Convergence](/topics/modes-of-convergence)), and the dominated convergence theorem (<ExternalLink href="https://formalcalculus.com/topics/riemann-integral" site="formalcalculus" topic="The Riemann Integral & FTC" />). No characteristic functions, no martingale theory, no measure-theoretic heavy machinery. Etemadi's original paper (1981) is three pages long — one of the shortest proofs of a fundamental theorem in all of probability. Before Etemadi, the standard proof (due to Kolmogorov) required full mutual independence and used the Kolmogorov three-series theorem, which itself requires significant machinery. Etemadi's contribution was to show that pairwise independence suffices, using only the tools we have developed here.
+We follow the proof of Etemadi (1981), which is remarkable in two respects. First, it requires only *pairwise* independence — not the full mutual independence that most proofs assume. Second, it is genuinely elementary: the only tools are Chebyshev's inequality at the endpoints of a geometric subsequence (the endpoint case of Kolmogorov's maximal inequality, Theorem 10.4), the first Borel--Cantelli lemma (from [Modes of Convergence](/topics/modes-of-convergence)), and the dominated convergence theorem (<ExternalLink href="https://formalcalculus.com/topics/riemann-integral" site="formalcalculus" topic="The Riemann Integral & FTC" />). No characteristic functions, no martingale theory, no measure-theoretic heavy machinery. Etemadi's original paper (1981) is three pages long — one of the shortest proofs of a fundamental theorem in all of probability. Before Etemadi, the standard proof (due to Kolmogorov) required full mutual independence and used the Kolmogorov three-series theorem, which itself requires significant machinery. Etemadi's contribution was to show that pairwise independence suffices, using only the tools we have developed here.
 
 <TheoremBlock number={5} title="Theorem 10.5 (Strong Law of Large Numbers — Kolmogorov/Etemadi)">
 Let $X_1, X_2, \ldots$ be pairwise independent, identically distributed random variables with $E[|X_1|] < \infty$. Then
@@ -610,7 +610,7 @@ So without loss of generality, assume $X_i \geq 0$ for the remainder of the proo
 
 **Stage 2: Truncate and prove convergence along a geometric subsequence.**
 
-Fix an integer $\alpha \geq 2$ (the standard choice is $\alpha = 2$, but any integer $\geq 2$ works). Define the geometric subsequence $n_k = \alpha^k$ for $k = 0, 1, 2, \ldots$ The key insight is to first establish convergence along this *sparse* subsequence — which is easier because the gaps between terms grow geometrically, making certain series converge — and then fill in the gaps using monotonicity.
+Fix a real number $\alpha > 1$ and define the geometric subsequence $n_k = \lfloor \alpha^k \rfloor$ for $k = 0, 1, 2, \ldots$ (for $\alpha = 2$ this is $n_k = 2^k$; Stage 3 needs $\alpha$ arbitrarily close to 1, which is why $\alpha$ is not restricted to integers). The key insight is to first establish convergence along this *sparse* subsequence — which is easier because the gaps between terms grow geometrically, making certain series converge — and then fill in the gaps using monotonicity.
 
 The plan: prove $S_{n_k}/n_k \to \mu$ almost surely (the hard part, Steps 2a--2e), then show $S_n/n \to \mu$ for all $n$ between consecutive subsequence terms (Stage 3, using monotonicity from Stage 1).
 
@@ -656,13 +656,15 @@ $$
 
 This is where $E[|X_1|] < \infty$ (equivalently $E[X_1] < \infty$ since $X_1 \geq 0$) is used — and it is the *only* place in the proof where the finite-mean assumption enters in an essential way. If $E[X_1] = \infty$, the series would diverge, and the entire argument would collapse.
 
-**Step 2d: Apply Kolmogorov's maximal inequality along the subsequence.** This is the step where Kolmogorov's inequality (Theorem 10.4) enters. For each $k$, consider the centered truncated partial sums $\sum_{i=1}^{n_k} Z_i$. The $Z_i$ are pairwise independent (since each $Z_i = Y_i - E[Y_i]$ is a function of $X_i$ alone, and the $X_i$ are pairwise independent) with $E[Z_i] = 0$. By Kolmogorov's maximal inequality, for any $\delta > 0$:
+**Step 2d: Apply Chebyshev's inequality along the subsequence.** For each $k$, consider the centered truncated partial sums $\sum_{i=1}^{n_k} Z_i$. The $Z_i$ are pairwise independent (since each $Z_i = Y_i - E[Y_i]$ is a function of $X_i$ alone, and the $X_i$ are pairwise independent) with $E[Z_i] = 0$. Pairwise independence makes them uncorrelated, so $\text{Var}\big(\sum_{i=1}^{n_k} Z_i\big) = \sum_{i=1}^{n_k} \text{Var}(Y_i)$, and Chebyshev's inequality gives, for any $\delta > 0$:
 
 $$
-P\!\left(\max_{1 \leq j \leq n_k} \left|\sum_{i=1}^{j} Z_i\right| > \delta n_k\right) \leq \frac{\sum_{i=1}^{n_k} \text{Var}(Y_i)}{\delta^2 n_k^2}
+P\!\left(\left|\sum_{i=1}^{n_k} Z_i\right| > \delta n_k\right) \leq \frac{\sum_{i=1}^{n_k} \text{Var}(Y_i)}{\delta^2 n_k^2}
 $$
 
-We need $\sum_{k=1}^{\infty}$ of the right-hand side to converge (so Borel--Cantelli applies). Since $n_k = \alpha^k$:
+This is the endpoint case of Kolmogorov's maximal inequality (Theorem 10.4). Under full mutual independence, Theorem 10.4 gives the same bound for the whole running maximum $\max_{j \leq n_k} \lvert \sum_{i=1}^{j} Z_i \rvert$, but its proof needs the future increment to be independent of the past, which pairwise independence does not supply. Etemadi's argument never needs the maximum: it uses only the endpoints $j = n_k$, and Stage 3's monotonicity handles every $n$ in between.
+
+We need $\sum_{k=1}^{\infty}$ of the right-hand side to converge (so Borel--Cantelli applies). Since $n_k = \lfloor \alpha^k \rfloor \geq \alpha^k/2$:
 
 $$
 \sum_{k=1}^{\infty} \frac{\sum_{i=1}^{n_k} \text{Var}(Y_i)}{\delta^2 n_k^2} \leq \frac{1}{\delta^2} \sum_{k=1}^{\infty} \frac{1}{n_k^2} \sum_{i=1}^{n_k} E[Y_i^2]
@@ -674,15 +676,15 @@ $$
 = \frac{1}{\delta^2} \sum_{i=1}^{\infty} E[Y_i^2] \sum_{k : n_k \geq i} \frac{1}{n_k^2} \leq \frac{1}{\delta^2} \sum_{i=1}^{\infty} \frac{E[Y_i^2]}{i^2} \cdot C_\alpha
 $$
 
-where $C_\alpha = \sum_{j=0}^{\infty} \alpha^{-2j} = \alpha^2/(\alpha^2 - 1) < \infty$ is a geometric series constant (for $\alpha = 2$, this is $4/3$). Since $\sum E[Y_i^2]/i^2 < \infty$ (Step 2c), the entire sum converges. This is where the geometric spacing of the subsequence is essential: with equally spaced terms ($n_k = k$), the sum would not converge.
+where $C_\alpha = 4\sum_{j=0}^{\infty} \alpha^{-2j} = 4\alpha^2/(\alpha^2 - 1) < \infty$ is a geometric series constant (the factor 4 absorbs the floor, via $\lfloor x \rfloor \geq x/2$ for $x \geq 1$; for $\alpha = 2$ the floor is exact and the constant is $4/3$). Since $\sum E[Y_i^2]/i^2 < \infty$ (Step 2c), the entire sum converges. This is where the geometric spacing of the subsequence is essential: with equally spaced terms ($n_k = k$), the sum would not converge.
 
 By the first Borel--Cantelli lemma (<ExternalLink href="https://formalcalculus.com/topics/series-convergence" site="formalcalculus" topic="Series Convergence" />): since $\sum_k P(\ldots) < \infty$, the probability that the event occurs for infinitely many $k$ is zero. That is:
 
 $$
-P\!\left(\max_{j \leq n_k} \left|\frac{1}{n_k}\sum_{i=1}^{j} Z_i\right| > \delta \text{ infinitely often in } k\right) = 0
+P\!\left(\left|\frac{1}{n_k}\sum_{i=1}^{n_k} Z_i\right| > \delta \text{ infinitely often in } k\right) = 0
 $$
 
-In particular, taking $j = n_k$:
+Since this holds for every $\delta = 1/m$, $m = 1, 2, \ldots$ (a countable intersection of probability-one events):
 
 $$
 \frac{1}{n_k}\sum_{i=1}^{n_k} Z_i \to 0 \quad \text{almost surely}
@@ -706,7 +708,7 @@ By Step 2b, $X_i = Y_i$ for all sufficiently large $i$ (almost surely). This mea
 
 **Stage 3: Fill in the gaps between subsequence terms.**
 
-For $n_k \leq n < n_{k+1} = \alpha \cdot n_k$, we use the non-negativity of the $X_i$ to squeeze the sample mean. Let $S_m = \sum_{i=1}^m X_i$. Since each $X_i \geq 0$, the partial sums are non-decreasing: $S_{n_k} \leq S_n \leq S_{n_{k+1}}$. Therefore:
+For $n_k \leq n < n_{k+1}$, we use the non-negativity of the $X_i$ to squeeze the sample mean. Let $S_m = \sum_{i=1}^m X_i$. Since each $X_i \geq 0$, the partial sums are non-decreasing: $S_{n_k} \leq S_n \leq S_{n_{k+1}}$. Therefore:
 
 $$
 \frac{S_{n_k}}{n_{k+1}} \leq \frac{S_n}{n} \leq \frac{S_{n_{k+1}}}{n_k}
@@ -714,33 +716,27 @@ $$
 
 The left inequality holds because $S_{n_k} \leq S_n$ (adding more non-negative terms can only increase the sum) and $n \leq n_{k+1}$ (dividing by a larger denominator makes the fraction smaller), so $S_{n_k}/n_{k+1} \leq S_n/n_{k+1} \leq S_n/n$. The right inequality holds because $S_n \leq S_{n_{k+1}}$ (the sum of more terms is larger) and $n \geq n_k$ (dividing by a smaller denominator makes the fraction larger), so $S_n/n \leq S_{n_{k+1}}/n \leq S_{n_{k+1}}/n_k$.
 
-Now we evaluate the bounds as $k \to \infty$. The lower bound:
+Now we evaluate the bounds as $k \to \infty$, using $n_{k+1}/n_k = \lfloor \alpha^{k+1} \rfloor / \lfloor \alpha^k \rfloor \to \alpha$. The lower bound:
 
 $$
-\frac{S_{n_k}}{n_{k+1}} = \frac{S_{n_k}}{n_k} \cdot \frac{n_k}{n_{k+1}} = \frac{S_{n_k}}{n_k} \cdot \frac{1}{\alpha} \xrightarrow{\text{a.s.}} \frac{\mu}{\alpha}
+\frac{S_{n_k}}{n_{k+1}} = \frac{S_{n_k}}{n_k} \cdot \frac{n_k}{n_{k+1}} \xrightarrow{\text{a.s.}} \mu \cdot \frac{1}{\alpha} = \frac{\mu}{\alpha}
 $$
 
 The upper bound:
 
 $$
-\frac{S_{n_{k+1}}}{n_k} = \frac{S_{n_{k+1}}}{n_{k+1}} \cdot \frac{n_{k+1}}{n_k} = \frac{S_{n_{k+1}}}{n_{k+1}} \cdot \alpha \xrightarrow{\text{a.s.}} \alpha \mu
+\frac{S_{n_{k+1}}}{n_k} = \frac{S_{n_{k+1}}}{n_{k+1}} \cdot \frac{n_{k+1}}{n_k} \xrightarrow{\text{a.s.}} \mu \cdot \alpha = \alpha \mu
 $$
 
 So for every $n$ between $n_k$ and $n_{k+1}$, the sample mean $S_n/n$ is squeezed between values converging to $\mu/\alpha$ and $\alpha\mu$.
 
-Since $\alpha \geq 2$ is fixed, the lower bound approaches $\mu/2$ and the upper bound approaches $2\mu$ — useful, but not the $S_n/n \to \mu$ that we want. The squeeze is too loose because the ratio $n_{k+1}/n_k = \alpha$ between consecutive subsequence terms is too large. But we can still extract the result by combining the squeeze with the WLLN.
-
-For *any* $\alpha \geq 2$:
+For a fixed $\alpha$ this squeeze is too loose — it gives the bounds $\mu/\alpha$ and $\alpha\mu$, not $\mu$ — because consecutive subsequence terms are a factor of about $\alpha$ apart. The remedy is to let $\alpha$ shrink toward 1. For each fixed $\alpha > 1$, there is a probability-one event $\Omega_\alpha$ on which
 
 $$
 \frac{\mu}{\alpha} \leq \liminf_{n \to \infty} \frac{S_n}{n} \leq \limsup_{n \to \infty} \frac{S_n}{n} \leq \alpha \mu
 $$
 
-almost surely. Now, the left-hand side and right-hand side hold for *every* integer $\alpha \geq 2$. Taking $\alpha \to \infty$ does not help — the bounds get *worse* (the squeeze widens). But we can finesse this with the following observation.
-
-The random variables $L = \liminf_{n \to \infty} S_n/n$ and $U = \limsup_{n \to \infty} S_n/n$ are both *tail random variables* — they depend only on the tail of the sequence. By Kolmogorov's 0-1 law (Remark 4), each is almost surely constant: $L = c_1$ a.s. and $U = c_2$ a.s. for some deterministic constants $c_1, c_2$ with $c_1 \leq c_2$.
-
-The squeeze gives $\mu/\alpha \leq c_1$ and $c_2 \leq \alpha\mu$ for every $\alpha \geq 2$. This constrains $c_1$ and $c_2$ but does not pin them down. However, the WLLN (Theorem 10.3, which we proved independently) tells us $S_n/n \xrightarrow{P} \mu$. Convergence in probability to a constant implies that any almost-sure subsequential limit must equal that constant. Since $c_1$ and $c_2$ are the infimum and supremum of the subsequential limits, we must have:
+Now take $\alpha = 1 + 1/m$ for $m = 1, 2, 3, \ldots$ The intersection $\bigcap_{m \geq 1} \Omega_{1 + 1/m}$ of countably many probability-one events still has probability 1, and on it the display above holds for every $m$ at once. Letting $m \to \infty$ squeezes both sides to $\mu$:
 
 $$
 \liminf_{n \to \infty} \frac{S_n}{n} = \limsup_{n \to \infty} \frac{S_n}{n} = \mu \quad \text{a.s.}
@@ -753,28 +749,27 @@ Let us step back and appreciate the structure of Etemadi's argument, because it 
 
 - **Stage 1** reduces to non-negative variables — a clean trick that unlocks monotonicity in Stage 3. The decomposition $X = X^+ - X^-$ is standard, but its use here is strategic: monotonicity of partial sums is what lets us fill in the gaps between subsequence terms.
 
-- **Stage 2** is the hard work, and it interleaves three ideas. *Truncation* ($Y_i = X_i \cdot \mathbf{1}(X_i \leq i)$) makes the variance summable — this is where $E[|X_1|] < \infty$ is used, via the interchange-of-sum trick $\sum E[Y_i^2]/i^2 \leq 2E[X_1]$. *Kolmogorov's maximal inequality* controls the running maximum of the centered partial sums, not just the terminal value. *Borel--Cantelli* converts the summable probability bounds into almost sure convergence, but only along the geometric subsequence $n_k = \alpha^k$.
+- **Stage 2** is the hard work, and it interleaves three ideas. *Truncation* ($Y_i = X_i \cdot \mathbf{1}(X_i \leq i)$) makes the variance summable — this is where $E[|X_1|] < \infty$ is used, via the interchange-of-sum trick $\sum E[Y_i^2]/i^2 \leq 2E[X_1]$. *Chebyshev's inequality* at the subsequence endpoints (the endpoint case of Kolmogorov's maximal inequality) bounds the centered partial sums, and its variance identity needs only pairwise independence. *Borel--Cantelli* converts the summable probability bounds into almost sure convergence, but only along the geometric subsequence $n_k = \lfloor \alpha^k \rfloor$.
 
-- **Stage 3** fills in the gaps using the non-negativity from Stage 1. The squeeze $S_{n_k}/n_{k+1} \leq S_n/n \leq S_{n_{k+1}}/n_k$ traps every $S_n/n$ between two sequences that both converge to $\mu$.
+- **Stage 3** fills in the gaps using the non-negativity from Stage 1. The squeeze $S_{n_k}/n_{k+1} \leq S_n/n \leq S_{n_{k+1}}/n_k$ traps every $S_n/n$ between bounds converging to $\mu/\alpha$ and $\alpha\mu$; letting $\alpha \downarrow 1$ along the countable sequence $\alpha = 1 + 1/m$ closes the gap.
 
-The proof requires only *pairwise* independence — a remarkable weakening of the usual assumption. Full mutual independence is not needed for two reasons. First, the Kolmogorov maximal inequality proof (Theorem 10.4) uses independence only to show that the future increment $S_n - S_k$ is independent of $S_k \cdot \mathbf{1}(A_k)$; for the variance calculation $\text{Var}(S_n) = \sum \text{Var}(X_i)$, pairwise independence suffices. Second, the first Borel--Cantelli lemma ($\sum P(A_n) < \infty$ implies $P(A_n \text{ i.o.}) = 0$) makes no independence assumption at all — it is a purely measure-theoretic fact.
+The proof requires only *pairwise* independence — a remarkable weakening of the usual assumption. Full mutual independence is not needed for two reasons. First, the probability bound in Step 2d is Chebyshev's inequality at the endpoint $n_k$, and its variance identity $\text{Var}\big(\sum_i Z_i\big) = \sum_i \text{Var}(Z_i)$ needs only pairwise independence (indeed, only uncorrelatedness). The full maximal inequality (Theorem 10.4) is never invoked: its proof needs the future increment $S_n - S_k$ to be independent of $S_k \cdot \mathbf{1}(A_k)$, which pairwise independence does not supply. Second, the first Borel--Cantelli lemma ($\sum P(A_n) < \infty$ implies $P(A_n \text{ i.o.}) = 0$) makes no independence assumption at all — it is a purely measure-theoretic fact.
 
-This pairwise-independence generalization is not just a mathematical curiosity. In several practical settings, observations are pairwise independent but not mutually independent:
+This pairwise-independence generalization is not just a mathematical curiosity. In practice, observations can be pairwise independent but not mutually independent. (Sampling without replacement is *not* an example: there any two draws are negatively correlated, so even pairwise independence fails.)
 
-- **Sampling without replacement** from a finite population: knowing that observation 1 and observation 2 take specific values tells you something about observation 3 (the population is slightly depleted), so the three are not mutually independent. But any two observations are pairwise independent (each pair is equally likely to produce any pair of values).
 - **Hash-based sampling:** Random hash functions with pairwise independence (2-universal hash families) are widely used in streaming algorithms. The SLLN via Etemadi applies to averages computed from such samples.
 
-Etemadi's theorem guarantees that the SLLN still holds in all these settings.
+Etemadi's theorem guarantees that the SLLN still holds in such settings.
 
 The following proposition confirms that finite mean is not just sufficient but *necessary* for the SLLN.
 
 <TheoremBlock type="corollary" number={1} title="Proposition 10.1 (Finite Mean is Necessary)">
-If $X_1, X_2, \ldots$ are iid and $\bar{X}_n$ converges almost surely (or even in probability) to a finite limit, then $E[|X_1|] < \infty$.
+If $X_1, X_2, \ldots$ are iid and $\bar{X}_n$ converges almost surely to a finite limit, then $E[|X_1|] < \infty$.
 </TheoremBlock>
 
 The proof uses the converse direction of the Borel--Cantelli lemma. If $E[|X_1|] = \infty$, then $\sum_{n=1}^{\infty} P(|X_n| > n) = \sum_{n=1}^{\infty} P(|X_1| > n) = \infty$ (since $\sum_{n=1}^{\infty} P(|X_1| > n) \geq E[|X_1|] - 1$, which is infinite). By the second Borel--Cantelli lemma — which applies here because the events $\{|X_n| > n\}$ are independent (they depend on different $X_n$'s) — we get $P(|X_n| > n \text{ infinitely often}) = 1$.
 
-This means that with probability 1, the sequence $X_1, X_2, \ldots$ contains infinitely many terms with $|X_n| > n$. Each such term contributes at least $1/n$ to the sample mean (since $|X_n/n| > 1$), and these large contributions arrive infinitely often. A careful argument shows this prevents $\bar{X}_n$ from converging to any finite limit. The details are in Durrett (2019, Theorem 2.4.5).
+This means that with probability 1, the sequence $X_1, X_2, \ldots$ contains infinitely many terms with $|X_n| > n$. Each such term contributes more than 1 in absolute value to the sample mean (since $|X_n/n| > 1$), and these large contributions arrive infinitely often. A careful argument shows this prevents $\bar{X}_n$ from converging to any finite limit. The details are in Durrett (2019, Theorem 2.4.5).
 
 The takeaway: $E[|X_1|] < \infty$ is the *exact boundary* for the LLN. Below this threshold (e.g., the Cauchy with $E[|X_1|] = \infty$), sample means do not converge to any finite limit. At or above this threshold, they converge almost surely to $E[X_1]$. The condition is sharp — it cannot be weakened.
 
@@ -1000,14 +995,14 @@ The improvement over Chebyshev is dramatic. Chebyshev gives polynomial decay: $P
 
 | $n$ | Chebyshev bound | Hoeffding bound |
 |-----|-----------------|-----------------|
-| 100 | 2.500 (useless) | 0.271 |
-| 500 | 0.500 | 0.000045 |
-| 1000 | 0.250 | $2 \times 10^{-9}$ |
-| 5000 | 0.050 | $2 \times 10^{-44}$ |
+| 100 | 0.250 | 0.271 |
+| 500 | 0.050 | $9.1 \times 10^{-5}$ |
+| 1000 | 0.025 | $4.1 \times 10^{-9}$ |
+| 5000 | 0.005 | $7.4 \times 10^{-44}$ |
 
-At $n = 1000$, Chebyshev says the probability of a 0.1 deviation is at most 25%, while Hoeffding says it is at most two in a billion. At $n = 5000$, Chebyshev gives 5% (barely useful) while Hoeffding gives $10^{-44}$ (effectively zero).
+At $n = 100$ the two bounds are comparable (Chebyshev is even slightly smaller), but the gap opens quickly. At $n = 1000$, Chebyshev says the probability of a 0.1 deviation is at most 2.5%, while Hoeffding says it is at most about four in a billion. At $n = 5000$, Chebyshev gives 0.5% while Hoeffding gives about $7 \times 10^{-44}$ (effectively zero).
 
-The practical implication: if you need a confidence guarantee of $P(|\bar{X}_n - \mu| \geq 0.01) \leq 0.05$ for bounded $[0,1]$ variables, Chebyshev requires $n \geq \sigma^2/(0.01^2 \cdot 0.05) = 200,\!000/\sigma^2$ samples (at least $50,\!000$ for $\sigma^2 = 1/4$). Hoeffding requires $n \geq -\ln(0.025)/(2 \cdot 0.0001) \approx 18,\!400$ samples — nearly three times fewer. The Chebyshev bound is useless for practical sample-size calculations; the Hoeffding bound is tight enough to be actionable.
+The practical implication: if you need a confidence guarantee of $P(|\bar{X}_n - \mu| \geq 0.01) \leq 0.05$ for bounded $[0,1]$ variables, Chebyshev requires $n \geq \sigma^2/(0.01^2 \cdot 0.05) = 200,\!000\,\sigma^2$ samples (at least $50,\!000$ for $\sigma^2 = 1/4$). Hoeffding requires $n \geq -\ln(0.025)/(2 \cdot 0.0001) \approx 18,\!400$ samples — nearly three times fewer. The Chebyshev bound is useless for practical sample-size calculations; the Hoeffding bound is tight enough to be actionable.
 
 The full proof of Hoeffding's inequality uses the **Chernoff bounding technique**: apply Markov's inequality to $e^{t(X - \mu)}$ instead of $|X - \mu|$, then optimize over $t$. The exponential transform converts additive structure (the sum of independent variables) into multiplicative structure (a product of MGFs), which is much easier to control. The boundedness assumption $X_i \in [a_i, b_i]$ enters through the Hoeffding lemma, which bounds the MGF of a bounded random variable. The full development is the subject of [Large Deviations & Tail Bounds](/topics/large-deviations) — the Chernoff technique, Hoeffding's lemma, and the complete proof are in §§12.2–12.3.
 
@@ -1150,7 +1145,7 @@ This topic traced the arc from the simplest weak law to the strongest convergenc
 | Theorem 10.2 (WLLN) | uncorrelated, $\frac{1}{n^2}\sum \sigma_i^2 \to 0$ | $\bar{X}_n - \bar{\mu}_n \xrightarrow{P} 0$ | Variance of sums |
 | Theorem 10.3 (Khintchine) | iid, $E[\lvert X \rvert] < \infty$ | $\bar{X}_n \xrightarrow{P} \mu$ | Truncation + DCT |
 | Theorem 10.4 (Kolmogorov) | independent, $E[X_i] = 0$ | $P(\max\lvert S_k \rvert \geq \varepsilon) \leq \text{Var}(S_n)/\varepsilon^2$ | Stopping time decomposition |
-| Theorem 10.5 (SLLN) | pairwise iid, $E[\lvert X \rvert] < \infty$ | $\bar{X}_n \xrightarrow{\text{a.s.}} \mu$ | Etemadi (truncation + Kolmogorov + B-C) |
+| Theorem 10.5 (SLLN) | pairwise iid, $E[\lvert X \rvert] < \infty$ | $\bar{X}_n \xrightarrow{\text{a.s.}} \mu$ | Etemadi (truncation + Chebyshev + B-C) |
 | Theorem 10.6 (Glivenko--Cantelli) | iid | $\sup_x \lvert F_n(x) - F(x) \rvert \xrightarrow{\text{a.s.}} 0$ | SLLN for indicators + monotonicity |
 | Theorem 10.7 (Hoeffding) | independent, bounded | $P(\lvert\bar{X}_n - \mu\rvert \geq \varepsilon) \leq 2e^{-2n\varepsilon^2/(b-a)^2}$ | (Proof: [Topic 12, Theorem 12.3](/topics/large-deviations)) |
 | Theorem 10.8 (LIL) | iid, $\sigma^2 < \infty$ | $\limsup (\bar{X}_n - \mu)/\sigma\sqrt{2\ln\ln n/n} = 1$ a.s. | (Statement only) |

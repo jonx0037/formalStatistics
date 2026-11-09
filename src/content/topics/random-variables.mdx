@@ -464,7 +464,7 @@ For continuous $X, Y$ with $f_Y(y) > 0$,
 
 $$f_{X|Y}(x \mid y) = \frac{f_{X,Y}(x, y)}{f_Y(y)}.$$
 
-This requires more care than the discrete case — since $P(Y = y) = 0$ for continuous $Y$, we can't directly condition on $\{Y = y\}$. The conditional PDF is defined as the limit $f_{X|Y}(x \mid y) = \lim_{\epsilon \to 0} P(X \leq x \mid y - \epsilon < Y \leq y + \epsilon)$. The formula above is the result of that limit.
+This requires more care than the discrete case — since $P(Y = y) = 0$ for continuous $Y$, we can't directly condition on $\{Y = y\}$. Instead we take a limit: the conditional CDF is $F_{X|Y}(x \mid y) = \lim_{\epsilon \to 0} P(X \leq x \mid y - \epsilon < Y \leq y + \epsilon)$, and differentiating it in $x$ gives the formula above.
 </DefinitionBlock>
 
 <img src="/images/topics/random-variables/conditional-distribution-slice.png" alt="Three-panel conditional distribution visualization: joint density with slice line, normalized conditional PDF, and multiple conditional PDFs for different values of y" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
@@ -606,7 +606,7 @@ Differentiate using the chain rule:
 
 $$f_Y(y) = f_X(g^{-1}(y)) \cdot (g^{-1})'(y).$$
 
-Since $g$ is increasing, $g^{-1}$ is also increasing, so $(g^{-1})'(y) > 0 = |(g^{-1})'(y)|$.
+Since $g$ is increasing, $g^{-1}$ is also increasing, so $(g^{-1})'(y) > 0$, and therefore $(g^{-1})'(y) = |(g^{-1})'(y)|$.
 
 For decreasing $g$, the inequality flips: $P(g(X) \leq y) = P(X \geq g^{-1}(y)) = 1 - F_X(g^{-1}(y))$, and differentiating introduces a minus sign that the absolute value absorbs. $\square$
 

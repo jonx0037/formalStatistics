@@ -531,7 +531,7 @@ In practice the infinite sum is truncated by **Geyer's initial-positive-sequence
 </DefinitionBlock>
 
 <ExampleBlock number={7} title="R̂ collapse as chains mix">
-Initialize four chains at positions $\\{-3, -1, 1, 3\\}$ targeting $\mathcal{N}(0, 1)$ with a random-walk Metropolis proposal at the RGG-1997 optimum. At iteration 100, chains are still concentrated near their starts — $\hat R \approx 1.34$ signals mixing has not occurred. By iteration 2000, chains have interpenetrated; $\hat R$ has dropped below 1.01. The dashboard component below lets you scrub through this collapse interactively.
+Initialize four chains at positions $\\{-3, -1, 1, 3\\}$ targeting $\mathcal{N}(0, 1)$ with a random-walk Metropolis proposal at the RGG-1997 optimum (scale 2.38). The dispersed starts make $\hat R$ large at first (about 1.5), but at this scale the chains interpenetrate within a few dozen iterations: by iteration 100, $\hat R$ is already about 1.01, and by iteration 2000 it is well below 1.01. A much smaller proposal scale stretches the same collapse over hundreds of iterations. The dashboard component below lets you scrub through this collapse interactively.
 </ExampleBlock>
 
 <ExampleBlock number={8} title="ESS collapse under autocorrelation">
@@ -653,13 +653,13 @@ The ergodic-theorem conditions are not automatic — bimodal posteriors can trap
 <ExampleBlock number={10} title="Stuck chains on a bimodal target">
 Consider the mixture $\pi(x) = \tfrac12 \mathcal{N}(x; -3, 0.25) + \tfrac12 \mathcal{N}(x; 3, 0.25)$. Both modes have probability 1/2; the valley between them has density ~$e^{-18}$, effectively zero at double precision. Run four random-walk Metropolis chains starting at $\\{-3, -2.8, 2.8, 3\\}$ with a local proposal scale of 0.5. The chains centered at $+3$ stay there; the chains centered at $-3$ stay there. Neither group ever visits the other mode within the 5000-iteration budget.
 
-The between-chain variance $B$ is large (chains have different means — one pair near $-3$, one near $+3$), but **so is** the within-chain variance $W$ — because "variance around the local chain mean" is dominated by the motion within each mode. When we compute $\hat R = \sqrt{(N-1)/N + B/(N W)}$, the ratio $B/W$ is not catastrophically large, and $\hat R$ comes out near 1.0 despite the pooled posterior missing the valley entirely. The diagnostic is **fooled**.
+With this dispersed start, $\hat R$ does its job. The chain means sit near $-3$ and $+3$, so $B \approx \tfrac{N}{3}\cdot 4 \cdot 3^2 = 12N$, while the within-chain variance is only the within-mode variance, $W \approx 0.25$. Then $B/(NW) \approx 48$ and $\hat R = \sqrt{(N-1)/N + B/(N W)} \approx 7$ — a loud alarm. The diagnostic is **fooled** when every chain lands in the same basin: start all four chains near $+3$, and each one mixes well within the right mode, so $B \approx W$ and $\hat R \approx 1.00$ — even though the pooled sample misses the left mode, and half the posterior mass, entirely.
 
-This is the canonical caution in §26.6 Rem 16: low $\hat R$ is not a proof of convergence. Multi-modal problems require domain knowledge (is the posterior expected to be multi-modal? if so, tempering or dispersed restarts are mandatory).
+This is the canonical caution in §26.6 Rem 16: low $\hat R$ is not a proof of convergence, and dispersed starting points (Rem 22) are what give it a chance to fire. Multi-modal problems require domain knowledge (is the posterior expected to be multi-modal? if so, tempering or dispersed restarts are mandatory).
 </ExampleBlock>
 
 <img src="/images/topics/bayesian-computation-and-mcmc/26-8-stuck-chain-multimodal.png"
-     alt="Two-panel failure-mode figure. Left: trace plots of four MH chains, two stuck in the left mode around x = -3 and two stuck in the right mode around x = +3. Right: pooled posterior histogram compared with the true bimodal density; the valley between the modes is completely missing from the pooled sample. The displayed R̂ is approximately 1.02 — low enough to pass a naive convergence check."
+     alt="Two-panel failure-mode figure. Left: trace plots of four MH chains, two stuck in the left mode around x = -3 and two stuck in the right mode around x = +3. Right: pooled posterior histogram compared with the true bimodal density; the valley between the modes is completely missing from the pooled sample."
      class="w-full rounded-lg border my-6"
      style="border-color: var(--color-border);" />
 
@@ -697,7 +697,7 @@ The workflow: specify the model in Stan or PyMC, let NUTS sample 4 chains × 200
      style="border-color: var(--color-border);" />
 
 <ExampleBlock number={11} title="8-schools via NUTS">
-Running the 8-schools model in Stan with default settings — 4 chains, 2000 post-warmup iterations each — produces $\hat R < 1.01$ for every parameter and $N_{\text{eff}} > 400$ for every parameter. Neal's funnel is visible in $\log \tau$: the posterior concentrates in a narrow neck near $\tau \approx 0$ that fans out as $\tau$ grows. The school-level effects $\theta_j$ all shrink toward the group mean $\mu \approx 7.7$; the shrinkage is stronger for schools with larger observational $\sigma_j$ (less individual information). The partial-pooling posterior has noticeably smaller uncertainty than either fully-pooled ($\theta_j = \mu$ for all $j$, 1 parameter) or no-pooling ($\theta_j = y_j$ with known $\sigma_j$, 8 independent problems) analyses. This is the classical Bayesian hierarchical advantage, made computational by NUTS.
+Running the 8-schools model in Stan with default settings — 4 chains, 2000 iterations each, the first 1000 of them warmup — produces $\hat R < 1.01$ for every parameter and $N_{\text{eff}} > 400$ for every parameter. Neal's funnel is visible in $\log \tau$: the posterior concentrates in a narrow neck near $\tau \approx 0$ that fans out as $\tau$ grows. The school-level effects $\theta_j$ all shrink toward the group mean $\mu \approx 7.7$; the shrinkage is stronger for schools with larger observational $\sigma_j$ (less individual information). The partial-pooling posterior has noticeably smaller uncertainty than either fully-pooled ($\theta_j = \mu$ for all $j$, 1 parameter) or no-pooling ($\theta_j = y_j$ with known $\sigma_j$, 8 independent problems) analyses. This is the classical Bayesian hierarchical advantage, made computational by NUTS.
 
 The non-centered reparameterization — sample $\tilde\theta_j \sim \mathcal{N}(0, 1)$ and set $\theta_j = \mu + \tau \tilde\theta_j$ — eliminates the funnel at the cost of slightly more verbose model code. Full treatment in [Topic 28](/topics/hierarchical-bayes-and-partial-pooling).
 

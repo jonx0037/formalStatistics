@@ -253,7 +253,7 @@ $$
 \hat f_{0.5}(0.5) = \frac{1}{2 \cdot 0.5}\bigl[\varphi(1) + \varphi(-1)\bigr] = \varphi(1) + \varphi(-1) \approx 0.4839,
 $$
 
-where we used $\varphi(1) = \varphi(-1) \approx 0.2420$. The KDE at the midpoint $x = 0.5$ receives equal contribution from both observations and is therefore twice $\varphi(1)/h$. This is the T30.8 test pin — a two-point sanity check on the `kdeEvaluate` implementation.
+where we used $\varphi(1) = \varphi(-1) \approx 0.2420$. The KDE at the midpoint $x = 0.5$ receives equal contribution from both observations ($\tfrac{1}{n}K_h(0.5) = \varphi(1)$ each) and is therefore $2\varphi(1) = \varphi(1)/h$ at $h = 0.5$. This is the T30.8 test pin — a two-point sanity check on the `kdeEvaluate` implementation.
 </ExampleBlock>
 
 <RemarkBlock number={3} title="Equivalent formulation via convolution">
@@ -375,7 +375,7 @@ $$
 where $R(f'') := \int f''(x)^2\,dx$ is the **curvature integral** of $f$. The two terms are the integrated squared bias (the first) and the integrated variance (the second) — a log-log plot shows them as a line with slope $+4$ and a line with slope $-1$, whose sum has a unique minimum we'll compute in §30.6.
 
 <ExampleBlock number={5} title="MISE vs AMISE at finite n">
-For $f = \varphi$, Gaussian kernel, $n = 200$: the closed-form AMISE-optimal bandwidth (from §30.6 Thm 4) is $h^\ast \approx 0.3705$. At that $h$, AMISE $\approx 0.01025$. The exact MISE computed by numerical integration over the same grid is $\approx 0.01058$ — about 3% higher than AMISE. The gap is the $o(h^2)$ and $o(1/(nh))$ terms we dropped; at $n = 200$ they are nonzero but small, and they vanish as $n \to \infty$.
+For $f = \varphi$, Gaussian kernel, $n = 200$: the closed-form AMISE-optimal bandwidth (from §30.6 Thm 4) is $h^\ast = (4/(3n))^{1/5} \approx 0.367$. At that $h$, AMISE $\approx 0.0048$. The exact MISE computed by numerical integration is $\approx 0.0033$ — about 30% *lower* than AMISE. The gap is the $o(h^2)$ and $o(1/(nh))$ terms we dropped; at $n = 200$ they are not negligible (here AMISE overstates the error), and their share of the total vanishes as $n \to \infty$. The exact-MISE minimizer, $h \approx 0.38$, still sits close to $h^\ast$.
 </ExampleBlock>
 
 ![Three-panel log-log plot. Left: integrated squared bias h^4 mu2(K)^2 R(f'')/4 vs h, a line with slope +4. Middle: integrated variance R(K)/(nh) vs h, a line with slope -1. Right: AMISE = IBias^2 + IVar vs h with the h* minimum marked by a vertical dashed line. For f = N(0,1), Gaussian kernel, n = 200.](/images/topics/kernel-density-estimation/30-bias-variance-mise-vs-h.png)
@@ -683,7 +683,7 @@ The 95% pointwise CI is $0.388 \pm 1.96 \cdot 0.027 = [0.335, 0.441]$. The true 
 <ExampleBlock number={9} title="Density-at-quantile: Bahadur's plug-in (discharge of Topic 29 §29.6 Rem 12)">
 [Topic 29 §29.6 Rem 12](/topics/order-statistics-and-quantiles#section-29-6) named KDE as *the* tool for estimating $f(\xi_p)$ — the density in Bahadur's limit variance $\sigma^2 = p(1 - p)/f(\xi_p)^2$. Here we discharge that promise.
 
-Take a Normal$(0, 1)$ sample of size $n = 500$ and focus on the upper quartile $p = 0.9$. The [Type-7 sample quantile](/topics/order-statistics-and-quantiles#section-29-4) is $\hat\xi_{0.9} \approx 1.30$. The Silverman-bandwidth KDE evaluated at that quantile is
+Take a Normal$(0, 1)$ sample of size $n = 500$ and focus on the upper decile $p = 0.9$. The [Type-7 sample quantile](/topics/order-statistics-and-quantiles#section-29-4) is $\hat\xi_{0.9} \approx 1.30$. The Silverman-bandwidth KDE evaluated at that quantile is
 
 $$
 \hat f_{\hat h}(\hat\xi_{0.9}) \approx 0.175,
@@ -819,7 +819,7 @@ The resulting bootstrap distribution is smoothly supported rather than concentra
 
 ![Track 8 forward-map. Topic 29 (Order Statistics, done) and Topic 30 (KDE, done, centered) are filled boxes. Topics 31 (Bootstrap) and 32 (Empirical Processes) are dashed outline boxes (forthcoming). Forward arrows from Topic 30 to five formalml satellites: kernel-regression, local-regression, normalizing-flows, clustering, density-ratio-estimation. Back-arrows to Topics 7, 10, 11, 13, 19, 29 in grey.](/images/topics/kernel-density-estimation/30-track8-spine-update.png)
 
-*Figure 9. Track 8 spine with Topic 30 at the center. Topics 29 and 30 are published (filled); Topics 31 and 32 are forthcoming (dashed). Forward arrows fan out to the formalml satellites where KDE machinery is re-used; back-arrows acknowledge the six prerequisite topics.*
+*Figure 9. Track 8 spine with Topic 30 at the center. Topics 29 and 30 are filled; Topics 31 and 32 are drawn dashed because the figure predates their publication — both are now published. Forward arrows fan out to the formalml satellites where KDE machinery is re-used; back-arrows acknowledge the six prerequisite topics.*
 
 <RemarkBlock number={19} title="Topic 31: Bootstrap">
 The bootstrap (Efron 1979) is the Track 8 closer for parametric-inference questions. It resamples from the empirical distribution (or, in the smooth variant, from $\hat f_h$) to simulate the sampling distribution of a statistic without invoking asymptotic normality. [Topic 31 (now published)](/topics/bootstrap) develops nonparametric and parametric bootstraps, bootstrap CIs (percentile, BCa, studentized), and the Edgeworth-expansion-based analysis of bootstrap accuracy. Expect Topic 30's bandwidth selectors to reappear as pilot estimators for smooth bootstraps of sample-quantile statistics.
@@ -830,7 +830,7 @@ Modern neural density estimators — normalizing flows (Rezende–Mohamed 2015; 
 </RemarkBlock>
 
 <RemarkBlock number={21} title="Multivariate KDE and the curse of dimensionality">
-In $d$ dimensions, the KDE generalizes via a product kernel or a full bandwidth matrix $\mathbf{H}$: $\hat f_\mathbf{H}(\mathbf{x}) = n^{-1} |\mathbf{H}|^{-1} \sum_i K(\mathbf{H}^{-1}(\mathbf{x} - \mathbf{X}_i))$. The AMISE rate deteriorates to $O(n^{-4/(4+d)})$ — the **curse of dimensionality** for density estimation. At $d = 10$, $n = 1000$ is effectively $n^{4/14} \approx 6$ in the univariate-equivalent rate, which is why high-dimensional density estimation is hard. Duong 2007's `ks` R package is the standard multivariate implementation; Scott 2015 Ch. 6 is the standard reference. The forthcoming formalml *density-estimation-multivariate* chapter treats the full story.
+In $d$ dimensions, the KDE generalizes via a product kernel or a full bandwidth matrix $\mathbf{H}$: $\hat f_\mathbf{H}(\mathbf{x}) = n^{-1} |\mathbf{H}|^{-1} \sum_i K(\mathbf{H}^{-1}(\mathbf{x} - \mathbf{X}_i))$. The AMISE rate deteriorates to $O(n^{-4/(4+d)})$ — the **curse of dimensionality** for density estimation. At $d = 10$, $n = 1000$ is effectively $n^{4/14} \approx 7$ in the univariate-equivalent rate, which is why high-dimensional density estimation is hard. Duong 2007's `ks` R package is the standard multivariate implementation; Scott 2015 Ch. 6 is the standard reference. The forthcoming formalml *density-estimation-multivariate* chapter treats the full story.
 </RemarkBlock>
 
 <RemarkBlock number={22} title="Density-ratio estimation and covariate shift">

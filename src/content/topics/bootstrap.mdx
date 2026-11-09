@@ -235,7 +235,7 @@ On a Normal$(0, 1)$ sample of size $n = 100$ and $B = 10{,}000$, the bootstrap S
 </ExampleBlock>
 
 <ExampleBlock number={3} title="Bootstrap distribution of a ratio statistic">
-Two samples $(X_i, Y_i)_{i=1}^n$ iid from Exponential$(1) \times$ Exponential$(1)$, $n = 50$. The statistic $T_n = \bar X_n / \bar Y_n$ has no closed-form sampling distribution — it's a ratio of independent Gammas divided by themselves, near-Cauchy in the tails. Classical delta-method intervals rely on a Taylor expansion around $E[X]/E[Y] = 1$ that becomes unstable for small $\bar Y_n$. Bootstrap: generate $B = 2000$ resamples, compute $T^{\ast(b)}$ on each, use the empirical quantiles for a CI. Topic 19's Wald CI gives $(0.74, 1.38)$; the bootstrap percentile CI (coming in §31.4) gives $(0.79, 1.35)$. Both close; the bootstrap's advantage is that it doesn't depend on the delta-method expansion.
+Two samples $(X_i, Y_i)_{i=1}^n$ iid from Exponential$(1) \times$ Exponential$(1)$, $n = 50$. The statistic $T_n = \bar X_n / \bar Y_n$ is a ratio of independent Gamma means. For this Exponential fixture its law happens to be exactly $F_{2n,2n} = F_{100,100}$ — mildly right-skewed and light-tailed at $n = 50$, not heavy-tailed — but for a general parent distribution a ratio of means has no closed-form sampling distribution, and the bootstrap never needs to know it. Classical delta-method intervals rely on a Taylor expansion around $E[X]/E[Y] = 1$ that becomes unstable for small $\bar Y_n$. Bootstrap: generate $B = 2000$ resamples, compute $T^{\ast(b)}$ on each, use the empirical quantiles for a CI. Topic 19's Wald CI gives $(0.74, 1.38)$; the bootstrap percentile CI (coming in §31.4) gives $(0.79, 1.35)$. Both close; the bootstrap's advantage is that it doesn't depend on the delta-method expansion.
 </ExampleBlock>
 
 <ExampleBlock number={4} title="Cross-validation variance estimation">
@@ -301,7 +301,7 @@ $$
 \frac{1}{\hat\sigma^2_n} E^\ast\bigl[(X^\ast_1 - \bar X_n)^2 \mathbf{1}\{|X^\ast_1 - \bar X_n| > \varepsilon\sqrt{n}\,\hat\sigma_n\}\bigr] \to 0.
 $$
 
-The conditional expectation equals $n^{-1}\sum_{i=1}^n (X_i - \bar X_n)^2 \mathbf{1}\{|X_i - \bar X_n| > \varepsilon\sqrt{n}\,\hat\sigma_n\}$. Each indicator vanishes for $n$ large: $|X_i - \bar X_n|$ is bounded by a constant depending on $i$, while $\sqrt{n}\,\hat\sigma_n \to \infty$ almost surely. Dominated convergence — the summands are bounded above by $(X_i - \bar X_n)^2$ and average to $\hat\sigma^2_n$, which is itself almost-surely bounded — delivers the limit.
+The conditional expectation equals $n^{-1}\sum_{i=1}^n (X_i - \bar X_n)^2 \mathbf{1}\{|X_i - \bar X_n| > \varepsilon\sqrt{n}\,\hat\sigma_n\}$. The sum runs over a whole row of a triangular array, so it is not enough that each fixed indicator eventually vanishes; we need them to vanish uniformly in $i \le n$. Because $E[X_1^2] < \infty$, $\sum_n P(X_1^2 > \delta n) < \infty$ for every $\delta > 0$, so by Borel–Cantelli $X_n^2/n \to 0$ almost surely, and hence $\max_{i \le n} |X_i|/\sqrt{n} \to 0$ almost surely. With $\bar X_n \to \mu$ and $\hat\sigma_n \to \sigma > 0$, this gives $\max_{i \le n} |X_i - \bar X_n| / (\sqrt{n}\,\hat\sigma_n) \to 0$ almost surely. So for $n$ large every indicator in the sum is zero at once, and the conditional expectation is exactly $0$.
 
 **Step 2 — apply the triangular-array CLT.** Topic 11 Theorem 4 (Lindeberg–Feller) yields, conditionally on the data on the same full-probability event,
 
@@ -324,7 +324,7 @@ $\blacksquare$ — using Bickel–Freedman 1981 Thm 2.1, Topic 11 Thm 4 (Lindebe
 
 ![Featured two-panel figure. Left panel: three overlaid bootstrap histograms at B = 100, 500, and 2000 against a high-precision Monte-Carlo reference of the true sampling distribution, for fixed n = 50 and the sample-mean statistic on N(0, 1); the histograms progressively match the reference as B grows. Right panel: Kolmogorov distance sup over x of the absolute difference between H-n-star and H-n as n increases through 20, 50, and 200, showing the expected decay.](/images/topics/bootstrap/31-sampling-distribution-convergence.png)
 
-*Figure 3. **Featured.** Theorem 3 in action. Left: fixed $n = 50$, Monte-Carlo error shrinks as $B$ grows — the bootstrap histogram matches the reference sampling distribution arbitrarily well given enough replicates. Right: fixed $B = 2000$, asymptotic error shrinks as $n$ grows — the Kolmogorov distance between $H^\ast_n$ and $H_n$ decays at the $n^{-1/2}$ rate the proof supplies. Source: Normal$(0, 1)$, statistic $\bar X_n$.*
+*Figure 3. **Featured.** Theorem 3 in action. Left: fixed $n = 50$, Monte-Carlo error shrinks as $B$ grows — the bootstrap histogram matches the reference sampling distribution arbitrarily well given enough replicates. Right: fixed $B = 2000$, asymptotic error shrinks as $n$ grows — the Kolmogorov distance between $H^\ast_n$ and $H_n$ decays toward zero, as the proof guarantees. (The proof gives convergence but no rate; a rate such as $n^{-1/2}$ needs a Berry–Esseen-type argument.) Source: Normal$(0, 1)$, statistic $\bar X_n$.*
 
 <BootstrapDistributionExplorer client:visible />
 
@@ -416,9 +416,9 @@ The percentile and basic CIs follow directly from Theorem 3: the bootstrap empir
 $\blacksquare$ — using Theorem 3, the continuous mapping theorem, and Lehmann 1998 §7.3 for the studentized upgrade.
 </ProofBlock>
 
-![Coverage and length of five 95% confidence interval methods across sample sizes n in 20, 50, 100, 200, 500. Two rows: row one for sample mean of Normal(0,1); row two for sample mean of Student-t with 3 degrees of freedom. Five curves per panel: percentile, basic, BCa, studentized, and Wald-t. On the Normal row all methods converge to the nominal 95% by n=50. On the t-3 row the bootstrap methods track 95% while the Wald-t curve falls short.](/images/topics/bootstrap/31-ci-comparison.png)
+![Coverage and length of five 95% confidence interval methods across sample sizes n in 20, 50, 100, 200, 500. Two rows: row one for sample mean of Normal(0,1); row two for sample mean of Student-t with 3 degrees of freedom. Five curves per panel: percentile, basic, BCa, studentized, and Wald-t. On the Normal row all methods sit within a few points of the nominal 95%. On the t-3 row the Wald-t and basic curves stay at or above 95%, while the percentile and BCa curves fall a few points short.](/images/topics/bootstrap/31-ci-comparison.png)
 
-*Figure 4. Five CI methods compared across sample sizes. Top row: Normal$(0, 1)$ — all methods converge quickly to nominal coverage. Bottom row: Student-$t_3$ — the Wald-$t$ baseline degrades because its Normal-tail assumption is wrong, while the bootstrap methods retain validity because they don't make the assumption. The BCa method's slightly faster convergence at small $n$ previews the second-order accuracy §31.5 will prove.*
+*Figure 4. Five CI methods compared across sample sizes. Top row: Normal$(0, 1)$ — all methods sit within a few points of nominal coverage. Bottom row: Student-$t_3$ — the $t_3$ mean still has finite variance, so the CLT carries the Wald-$t$ interval: it stays at or above nominal (the $t$-interval is conservative for symmetric heavy tails), as do the basic and studentized intervals, while the percentile and BCa intervals under-cover by a few points. Heavy tails alone do not break the Wald interval for a mean; the bootstrap's payoff is for statistics without a usable analytic standard error. The point-to-point wiggles are Monte-Carlo noise.*
 
 <BootstrapCIComparator client:visible />
 
@@ -529,7 +529,7 @@ Under the regularity of Topic 14 (parametric MLE consistency) plus Topic 11's Ed
 </TheoremBlock>
 
 <ExampleBlock number={12} title="Normal-location bootstrap, right vs. wrong model">
-Data: $n = 100$ iid from Student-$t_3$ (heavy tails). Parametric bootstrap under a Normal model: fit $\hat\mu_n = \bar X_n$, $\hat\sigma^2_n = n^{-1}\sum_i (X_i - \bar X_n)^2$; resample from $\mathcal{N}(\hat\mu_n, \hat\sigma^2_n)$. The CI on $\mu$ is $(\bar X_n \pm 1.96 \hat\sigma_n / \sqrt{n})$, i.e. the Wald interval — and it under-covers because the Normal tails are wrong. Nonparametric bootstrap on the same data gives an interval that correctly includes the $t_3$ tail contribution; its coverage matches nominal within MC error. Misspecification matters for the parametric bootstrap; the nonparametric bootstrap is immune.
+Data: $n = 100$ iid from Student-$t_3$ (heavy tails). Parametric bootstrap under a Normal model: fit $\hat\mu_n = \bar X_n$, $\hat\sigma^2_n = n^{-1}\sum_i (X_i - \bar X_n)^2$; resample from $\mathcal{N}(\hat\mu_n, \hat\sigma^2_n)$. The CI on $\mu$ is $(\bar X_n \pm 1.96 \hat\sigma_n / \sqrt{n})$, i.e. the Wald interval. For the *mean*, the wrong tails cost little: $t_3$ has finite variance, so the CLT carries this interval to near-nominal coverage (about 95% at $n = 100$ in simulation), and the nonparametric percentile interval on the same data lands slightly below nominal (about 94%). Misspecification matters for the parametric bootstrap when the statistic's sampling distribution depends on the part of the model that is wrong — the tail shape, here — rather than on the first two moments the CLT uses; the nonparametric bootstrap makes no such shape assumption.
 </ExampleBlock>
 
 <RemarkBlock number={11} title="Parametric bootstrap in ML">
@@ -544,7 +544,7 @@ Residual bootstrap for regression is the canonical hybrid: parametric for the me
 
 ## 31.8 Smooth bootstrap (Topic 30 bridge)
 
-The nonparametric bootstrap resamples from $F_n$ — a discrete distribution on the sample points. For statistics that depend smoothly on $F$ (mean, most moments), the discreteness is invisible. For statistics that depend on continuity (the median, any quantile, density-ratio estimators), the discreteness causes lattice-artifacts: a bootstrap median must equal one of the observed sample points, so its distribution is supported on at most $n$ atoms. Smooth bootstrap fixes the artifact by resampling from $\hat f_h$ — the KDE from Topic 30 — instead of from $F_n$.
+The nonparametric bootstrap resamples from $F_n$ — a discrete distribution on the sample points. For statistics that depend smoothly on $F$ (mean, most moments), the discreteness is invisible. For statistics that depend on continuity (the median, any quantile, density-ratio estimators), the discreteness causes lattice-artifacts: for odd $n$, a bootstrap median must equal one of the observed sample points, so its distribution is supported on at most $n$ atoms (for even $n$, it is a sample point or the midpoint of two — still a finite lattice). Smooth bootstrap fixes the artifact by resampling from $\hat f_h$ — the KDE from Topic 30 — instead of from $F_n$.
 
 <DefinitionBlock number={9} title="Smooth bootstrap (Silverman–Young 1987)">
 Let $\hat f_h$ be the Gaussian-kernel KDE from Topic 30 with bandwidth $h$ (typically $h$ = Silverman's rule from Topic 30 §30.9). The **smooth bootstrap** resamples from $\hat f_h$ rather than from $F_n$:
@@ -560,9 +560,9 @@ The $J_i$ pick a sample point and the Gaussian $h Z_i$ adds a small kernel-shape
 Under the regularity of Topic 30 Thm 6 (pointwise KDE consistency) plus Theorem 3's moment condition, the smooth-bootstrap sampling distribution converges to the true sampling distribution in Kolmogorov distance, at the same $O(n^{-1/2})$ rate as the nonparametric bootstrap. For density-functional statistics (median, quantiles, integrals of $f$), smooth bootstrap strictly dominates: its MC variance is smaller at every $B$, and the $O(n^{-1/2})$ rate constant is smaller too.
 </TheoremBlock>
 
-![Two histograms of B = 2000 bootstrap medians on the same Normal(0,1) sample of size n = 50. The naive histogram (resampling from F_n) shows spikes at the original sample points; the smooth histogram is continuous. True sampling-distribution reference curve (from high-precision Monte Carlo) overlaid on both; smooth histogram matches the reference closely, naive histogram approximates it piecewise.](/images/topics/bootstrap/31-smooth-bootstrap.png)
+![Two histograms of B = 2000 bootstrap medians on the same Normal(0,1) sample of size n = 50. The naive histogram (resampling from F_n) is a spiky lattice at and between the original sample points; the smooth histogram is continuous. True sampling-distribution reference curve (from high-precision Monte Carlo) overlaid on both; smooth histogram matches the reference closely, naive histogram approximates it piecewise.](/images/topics/bootstrap/31-smooth-bootstrap.png)
 
-*Figure 7. Naïve vs. smooth bootstrap of the sample median, $n = 50$, $B = 2000$. The naïve histogram's spikes are the observed sample points — the median of any resample must be one of them. Smooth bootstrap fills the gaps with kernel-jitter and recovers the true sampling-distribution shape. The smooth SE is roughly 3 % smaller than the naïve SE at this $n$; the gap grows at smaller $n$.*
+*Figure 7. Naïve vs. smooth bootstrap of the sample median, $n = 50$, $B = 2000$. The naïve histogram is a spiky lattice: with $n = 50$ (even), the median of any resample is a sample point or the midpoint of two sample points, so it can take only finitely many values (for odd $n$, the spikes sit exactly on the sample points). Smooth bootstrap fills the gaps with kernel-jitter and recovers the continuous sampling-distribution shape. It is not automatically more precise: depending on the bandwidth and the sample, its SE for the median can come out larger than the naïve SE.*
 
 <SmoothBootstrapDemo client:visible />
 
@@ -609,7 +609,7 @@ Under the regularity of Theorem 3, the bias-corrected estimator satisfies $\math
 *Figure 8. Bias correction in action: MSE of the naïve vs. bias-corrected ratio-of-means estimator on Exponential$(1)$-by-Exponential$(1)$ fixtures. The bias-corrected estimator's MSE is strictly lower at every $n$, with the gap shrinking as $n$ grows. At $n = 20$ the correction is worth a factor of $1.4$ in MSE; by $n = 200$ the two are within $5$ %.*
 
 <ExampleBlock number={14} title="Bias correction for the sample variance">
-The sample variance $\hat\sigma^2_n = n^{-1}\sum_i (X_i - \bar X_n)^2$ has bias $-\sigma^2/n$ relative to the population variance $\sigma^2$. The Bessel-corrected $s^2_n = \hat\sigma^2_n \cdot n/(n-1)$ fixes this analytically — a well-known first-order correction. The bootstrap bias-correction recovers the same fix without the analytic insight: $\widehat{\mathrm{bias}}^\ast(\hat\sigma^2_n) = -\hat\sigma^2_n / n + O_P(n^{-3/2})$, matching the analytic bias. Subtracting gives $\tilde\sigma^2_n = \hat\sigma^2_n (1 + 1/n) + O_P(n^{-1/2})$, first-order equivalent to $s^2_n$. The bootstrap recovered Bessel's correction by Monte Carlo.
+The sample variance $\hat\sigma^2_n = n^{-1}\sum_i (X_i - \bar X_n)^2$ has bias $-\sigma^2/n$ relative to the population variance $\sigma^2$. The Bessel-corrected $s^2_n = \hat\sigma^2_n \cdot n/(n-1)$ fixes this analytically — a well-known first-order correction. The bootstrap bias-correction recovers the same fix without the analytic insight: $\widehat{\mathrm{bias}}^\ast(\hat\sigma^2_n) = -\hat\sigma^2_n / n + O_P(n^{-3/2})$, matching the analytic bias. Subtracting gives $\tilde\sigma^2_n = \hat\sigma^2_n (1 + 1/n) + O_P(n^{-3/2})$, first-order equivalent to $s^2_n$. The bootstrap recovered Bessel's correction by Monte Carlo.
 </ExampleBlock>
 
 <RemarkBlock number={15} title="When not to bias-correct">

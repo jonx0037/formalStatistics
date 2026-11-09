@@ -72,7 +72,7 @@ formalnlpConnections:
     relationship: "The continuous mapping theorem and Slutsky's theorem here carry the CLT to the χ² limits of Pearson's X² and the likelihood-ratio G² used to score collocations."
 connections:
   - topic: "expectation-moments"
-    relationship: "Topic 4 developed Markov's inequality (Theorem 11), Chebyshev's inequality (Theorem 12), Jensen's inequality (Theorem 13), and MGF uniqueness (Theorem 16). These are the four tools that launch convergence theory: Chebyshev gives convergence in probability, MGF convergence gives convergence in distribution, and Jensen provides Lp moment control."
+    relationship: "Topic 4 developed Markov's inequality (Theorem 11), Chebyshev's inequality (Theorem 12), Jensen's inequality (Theorem 13), and MGF uniqueness (Theorem 17). These are the four tools that launch convergence theory: Chebyshev gives convergence in probability, MGF convergence gives convergence in distribution, and Jensen provides Lp moment control."
   - topic: "discrete-distributions"
     relationship: "Topic 5 stated the Poisson limit theorem informally (Bin(n, λ/n) → Poisson(λ)). This topic makes it rigorous using convergence in distribution via MGF convergence."
   - topic: "continuous-distributions"
@@ -280,9 +280,9 @@ $$
 P(|X_n| > \varepsilon) \leq 2e^{-n^2\varepsilon^2/2}
 $$
 
-This decays exponentially fast to zero. For concrete values with $\varepsilon = 0.1$:
+This decays exponentially fast to zero. The bound is loose for small $n\varepsilon$ (it exceeds 1 until $n\varepsilon > \sqrt{2\ln 2} \approx 1.18$), so the table reports the exact tail probability $P(|Z| > n\varepsilon)$ for $\varepsilon = 0.1$:
 
-| $n$ | $n\varepsilon$ | $P(\|X_n\| > 0.1) \leq$ |
+| $n$ | $n\varepsilon$ | $P(\|X_n\| > 0.1)$ (exact) |
 |-----|----------|--------------------------|
 | 1 | 0.1 | 0.920 |
 | 5 | 0.5 | 0.617 |
@@ -477,7 +477,7 @@ $$
 So $\|X_n - X\|_p \to 0$ implies $\|X_n - X\|_q \to 0$. In particular, $L^2$ convergence implies $L^1$ convergence. $\square$
 </ProofBlock>
 
-This theorem highlights an important contrast. Convergence in probability does *not* guarantee convergence of moments (Example 7 in Section 9.7 will show this dramatically). $L^p$ convergence does — it's what you need when moment control matters, which is most of statistics.
+This theorem highlights an important contrast. Convergence in probability does *not* guarantee convergence of moments (Examples 6 and 7 in Section 9.7 will show this dramatically). $L^p$ convergence does — it's what you need when moment control matters, which is most of statistics.
 
 <ExampleBlock number={3} title="L2 convergence with explicit rate">
 Let $U \sim \text{Uniform}(0,1)$ and define $X_n = \sqrt{n} \cdot U \cdot \mathbf{1}(U < 1/n)$. We claim $X_n \xrightarrow{L^2} 0$.
@@ -592,10 +592,10 @@ The punchline is Slutsky's theorem (Theorem 9.10, Section 9.8): if $Z \xrightarr
 This is why, for large $\nu$, the $t$-distribution and the Normal give nearly identical critical values. At $\nu = 30$, the 97.5th percentile of $t(\nu)$ is 2.042 versus 1.960 for the Normal — a difference of about 4%.
 </ExampleBlock>
 
-<RemarkBlock number={2} title="Levy's Continuity Theorem (MGF version)">
+<RemarkBlock number={2} title="Lévy's Continuity Theorem (MGF version)">
 If the moment-generating functions $M_{X_n}(t)$ converge to $M_X(t)$ for all $t$ in an open interval containing 0, and $M_X$ is the MGF of some distribution, then $X_n \xrightarrow{d} X$.
 
-This is the MGF version of Levy's continuity theorem (the full version uses characteristic functions, which always exist). It converts a convergence-in-distribution problem into a pointwise limit of MGFs — a calculus problem rather than a probability problem. This is exactly the technique we'll use to prove the Poisson limit theorem (Section 9.9) and the [Central Limit Theorem](/topics/central-limit-theorem).
+This is the MGF version of Lévy's continuity theorem (the full version uses characteristic functions, which always exist). It converts a convergence-in-distribution problem into a pointwise limit of MGFs — a calculus problem rather than a probability problem. This is exactly the technique we'll use to prove the Poisson limit theorem (Section 9.9) and the [Central Limit Theorem](/topics/central-limit-theorem).
 
 The MGF version requires that the limit MGF $M_X(t)$ exists in a neighborhood of 0. When it does, MGF uniqueness (Topic 4, Theorem 17) identifies the limiting distribution. The characteristic function version avoids this existence requirement, which is why the full [CLT proof](/topics/central-limit-theorem) uses characteristic functions for the most general version.
 </RemarkBlock>
@@ -1016,7 +1016,7 @@ For $\mu \neq 1$, the delta method variance $\sigma^2/\mu^2$ is the *squared coe
 
 ## 9.9 Making the Poisson Limit Theorem Rigorous
 
-In [Topic 5 — Discrete Distributions](/topics/discrete-distributions), we stated that $\text{Bin}(n, \lambda/n) \to \text{Poisson}(\lambda)$ as $n \to \infty$. At the time, we verified this by showing the PMFs converge pointwise. Now we can make this fully rigorous using convergence in distribution, proved via MGF convergence (Levy's continuity theorem, Remark 2).
+In [Topic 5 — Discrete Distributions](/topics/discrete-distributions), we stated that $\text{Bin}(n, \lambda/n) \to \text{Poisson}(\lambda)$ as $n \to \infty$. At the time, we verified this by showing the PMFs converge pointwise. Now we can make this fully rigorous using convergence in distribution, proved via MGF convergence (Lévy's continuity theorem, Remark 2).
 
 <TheoremBlock number={13} title="Theorem 9.13 (Poisson Limit Theorem)">
 Let $X_n \sim \text{Binomial}(n, \lambda/n)$ for a fixed $\lambda > 0$. Then:
@@ -1027,7 +1027,7 @@ $$
 </TheoremBlock>
 
 <ProofBlock>
-We prove this by showing that the MGF of $X_n$ converges to the MGF of $\text{Poisson}(\lambda)$ at every $t \in \mathbb{R}$, then invoking Levy's continuity theorem (Remark 2).
+We prove this by showing that the MGF of $X_n$ converges to the MGF of $\text{Poisson}(\lambda)$ at every $t \in \mathbb{R}$, then invoking Lévy's continuity theorem (Remark 2).
 
 **Step 1: MGF of $\text{Bin}(n, \lambda/n)$.** The MGF of a $\text{Binomial}(n, p)$ random variable is $M(t) = (1 - p + pe^t)^n$ (derived by exponentiating the binomial PMF and recognizing the binomial theorem). With $p = \lambda/n$:
 
@@ -1079,7 +1079,7 @@ $$
 
 So $M_{X_n}(t) \to M_Y(t)$ for all $t \in \mathbb{R}$. The limit $M_Y(t) = \exp(\lambda(e^t - 1))$ exists for all $t$ and is the MGF of $\text{Poisson}(\lambda)$.
 
-**Step 4: Apply Levy's continuity theorem.** Since $M_{X_n}(t)$ converges to $M_Y(t)$ pointwise on all of $\mathbb{R}$ (which contains a neighborhood of 0), and $M_Y$ is the MGF of $\text{Poisson}(\lambda)$, the theorem gives $X_n \xrightarrow{d} Y \sim \text{Poisson}(\lambda)$.
+**Step 4: Apply Lévy's continuity theorem.** Since $M_{X_n}(t)$ converges to $M_Y(t)$ pointwise on all of $\mathbb{R}$ (which contains a neighborhood of 0), and $M_Y$ is the MGF of $\text{Poisson}(\lambda)$, the theorem gives $X_n \xrightarrow{d} Y \sim \text{Poisson}(\lambda)$.
 
 By MGF uniqueness (Topic 4, Theorem 17), the limiting distribution is uniquely identified as $\text{Poisson}(\lambda)$. $\square$
 </ProofBlock>

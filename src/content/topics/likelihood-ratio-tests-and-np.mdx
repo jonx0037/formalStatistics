@@ -275,7 +275,7 @@ $$
 $$
 which is monotone increasing in $T(x) = \sum x_i$ (since $p_1 > p_0$ implies $p_1/p_0 > 1$ and $(1-p_1)/(1-p_0) < 1$). The NP test rejects iff $T(X) > c$ for some threshold $c$; randomization at $T = c$ achieves exact size $\alpha$.
 
-Concretely: for $n = 20$, $p_0 = 0.5$, $p_1 = 0.7$, $\alpha = 0.05$, the NP test rejects at $T > 15$ with exact size $\approx 0.021$ (the conservative size of §18.4). Power at $p_1 = 0.7$: $P_{0.7}(T > 15) \approx 0.416$ (verified in `binomialExactPower` of Topic 17's `testing.ts`).
+Concretely: for $n = 20$, $p_0 = 0.5$, $p_1 = 0.7$, $\alpha = 0.05$, the NP test rejects at $T > 14$ (that is, $T \ge 15$) with exact size $\approx 0.021$ (the conservative size of §18.4). Power at $p_1 = 0.7$: $P_{0.7}(T > 14) \approx 0.416$ (verified in `binomialExactPower` of Topic 17's `testing.ts`).
 </ExampleBlock>
 
 <ExampleBlock number={2} title="NP for Normal mean (σ known)">
@@ -404,7 +404,7 @@ Let $X_1, \ldots, X_n$ be iid Bernoulli$(p)$. Test $H_0: p \le p_0$ vs $H_1: p >
 $$
 \varphi^*(x) = \mathbf{1}\{\textstyle\sum x_i > c\}, \qquad c = \text{smallest integer with } P_{p_0}(\textstyle\sum X_i > c) \le \alpha
 $$
-is UMP level-$\alpha$. This is exactly the [binomial exact test](/topics/hypothesis-testing#section-17-6) of Topic 17 §17.6 Example 11 — now equipped with an optimality certificate. At $n = 20$, $p_0 = 0.5$, $\alpha = 0.05$, the boundary is $c = 15$ with exact size $0.0207$ (`binomialExactRejectionBoundary` in `testing.ts`).
+is UMP level-$\alpha$. This is exactly the [binomial exact test](/topics/hypothesis-testing#section-17-6) of Topic 17 §17.6 Example 11 — now equipped with an optimality certificate. At $n = 20$, $p_0 = 0.5$, $\alpha = 0.05$, the boundary is $c = 14$ (reject when $\sum x_i \ge 15$) with exact size $0.0207$ (`binomialExactRejectionBoundary` in `testing.ts`, which reports the equivalent $\ge$-boundary $15$).
 
 The payoff: the binomial exact test is *not just valid* — it is **the best** level-$\alpha$ test for every alternative $p_1 > 0.5$ simultaneously, with no competitor having higher power at any alternative.
 </ExampleBlock>
@@ -700,7 +700,7 @@ Bernoulli $p$ with logit link $\eta = \log[p/(1-p)]$. Test $H_0: p = 0.5$ (equiv
 
 **LRT:** $-2\log\Lambda_n = 2n\,[0.3 \log(0.3/0.5) + 0.7 \log(0.7/0.5)] \approx 8.22$. P-value $\approx 0.004$. The same value in both parameterizations (Theorem 6(i)).
 
-The three p-values (0.002, 0.006, 0.004) all clear α = 0.05. But at borderline significance — say, $\hat p = 0.42$ — the Wald p-values in the two parameterizations can straddle α, flipping the rejection decision. The LRT does not suffer this instability.
+The three p-values (0.002, 0.006, 0.004) all clear α = 0.05. But at borderline significance — say, $\hat p = 0.36$, where the p-space Wald p-value is $\approx 0.039$ and the logit-space one $\approx 0.051$ — the Wald p-values in the two parameterizations straddle α, flipping the rejection decision. The LRT does not suffer this instability.
 </ExampleBlock>
 
 <ExampleBlock number={14} title="MC at n = 20 — Wald liberal, Score conservative, LRT accurate">
@@ -718,7 +718,7 @@ Note: results replicate with `wilksSimulate('bernoulli', 0.3, 20, 10000, undefin
 </ExampleBlock>
 
 <RemarkBlock number={16} title="Wald's boundary pathology">
-The Wald statistic $W_n = n(\hat\theta_n - \theta_0)^2 I(\hat\theta_n)$ breaks down when $\hat\theta_n$ lies near the parameter boundary: $I(\hat\theta_n) \to \infty$ (for Bernoulli at $\hat p = 0$ or $1$, $I = 1/[\hat p(1-\hat p)] \to \infty$), which can produce $W_n = 0 \cdot \infty$ or degenerate behavior. The Score statistic evaluates $I(\theta_0)$ at a boundary-safe null value and usually remains finite; the LRT uses the logarithm, which is well-behaved on $(0, 1)$ except at the endpoints themselves. For A/B tests with rare-event outcomes (conversion rates of 0.1% or smaller), the Wald test's boundary fragility motivates the [Wilson interval in Topic 19](/topics/confidence-intervals-and-duality#section-19-5) and the log-odds-ratio approach that modern experimentation platforms increasingly use.
+The Wald statistic $W_n = n(\hat\theta_n - \theta_0)^2 I(\hat\theta_n)$ breaks down when $\hat\theta_n$ lies near the parameter boundary: $I(\hat\theta_n) \to \infty$ (for Bernoulli at $\hat p = 0$ or $1$, $I = 1/[\hat p(1-\hat p)] \to \infty$), so in $p$-space $W_n \to \infty$ as $\hat p \to 0$ or $1$ — spurious certainty. In logit space the same boundary gives the degenerate form $0 \cdot \infty$: $(\hat\eta_n - \eta_0)^2 \to \infty$ while $I^\eta(\hat\eta_n) = \hat p(1 - \hat p) \to 0$, and the product tends to $0$, so the logit-space Wald test loses the ability to reject. The Score statistic evaluates $I(\theta_0)$ at a boundary-safe null value and usually remains finite; the LRT uses the logarithm, which is well-behaved on $(0, 1)$ except at the endpoints themselves. For A/B tests with rare-event outcomes (conversion rates of 0.1% or smaller), the Wald test's boundary fragility motivates the [Wilson interval in Topic 19](/topics/confidence-intervals-and-duality#section-19-5) and the log-odds-ratio approach that modern experimentation platforms increasingly use.
 </RemarkBlock>
 
 <RemarkBlock number={17} title="GLM link choice is a reparameterization invariance question">
@@ -757,11 +757,11 @@ For Bernoulli$(p)$ at $p_0 = 0.5$: $I(0.5) = 1/[0.5 \cdot 0.5] = 4$. Local alter
 | $h$ | $\lambda = 4h^2$ | Local power at $\alpha = 0.05$ |
 |----:|------:|------:|
 | 0 | 0 | 0.050 (= size) |
-| 1 | 4 | 0.515 |
-| 2 | 16 | 0.977 |
-| 3 | 36 | 0.9998 |
+| 1 | 4 | 0.516 |
+| 2 | 16 | 0.979 |
+| 3 | 36 | 0.99997 |
 
-At $h = 2$ (an effect two standard errors into the alternative), power is already 97.7%. At $h = 3$, essentially certain rejection. Values match `localPower('bernoulli', 0.5, h, 0.05)` in `testing.ts`.
+At $h = 2$ (an effect two standard errors into the alternative), power is already 97.9%. At $h = 3$, essentially certain rejection. Values match `localPower('bernoulli', 0.5, h, 0.05)` in `testing.ts`.
 
 The practical reading: for Bernoulli at $p_0 = 0.5$, a local effect of $h = 1.96/\sqrt{I(\theta_0)} = 0.98$ standard deviations gives 50% power at $\alpha = 0.05$ — the classical "z-test power 50% at the rejection boundary" calibration.
 </ExampleBlock>

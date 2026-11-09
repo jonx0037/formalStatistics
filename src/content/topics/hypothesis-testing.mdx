@@ -267,7 +267,7 @@ If the product team cares whether A and B differ at all — perhaps because a de
 
 $$H_0: p_B = p_A \qquad \text{vs} \qquad H_1: p_B \ne p_A.$$
 
-Here $H_0$ is simple (one parameter value: $p_A$, with $p_B$ forced to equal it) and $H_1$ is composite. The rejection region is the union of two tails, and at the same nominal $\alpha$ it has roughly half the power of Example 1 against a given directional effect — the price paid for detecting the opposite direction as well.
+Here $H_0$ is simple (one parameter value: $p_A$, with $p_B$ forced to equal it) and $H_1$ is composite. The rejection region is the union of two tails, and at the same nominal $\alpha$ it has less power than Example 1 against a given directional effect — in that direction it behaves like a one-sided test at level $\alpha/2$ (for the half-$\sigma$ design of Example 6, power falls from $0.80$ to about $0.70$) — the price paid for detecting the opposite direction as well.
 </ExampleBlock>
 
 <ExampleBlock number={3} title="Clinical trial — three alternative framings">
@@ -478,7 +478,7 @@ A random sample of $n = 50$ adults has mean IQ $\bar x = 103.2$ and we wish to t
 
 $$z = \frac{\sqrt{50}\,(103.2 - 100)}{15} = \frac{7.071 \cdot 3.2}{15} \approx 1.508.$$
 
-Two-sided p-value: $p = 2\,(1 - \Phi(1.508)) \approx 0.131$. At $\alpha = 0.05$ we fail to reject. The point estimate is higher than $\mu_0$, but the evidence is not strong — a half-$\sigma$ effect would need $n \gtrsim 32$ to reach power 0.8 (Example 6), and we observed about $0.21 \sigma$.
+Two-sided p-value: $p = 2\,(1 - \Phi(1.508)) \approx 0.131$. At $\alpha = 0.05$ we fail to reject. The point estimate is higher than $\mu_0$, but the evidence is not strong — a half-$\sigma$ effect would need $n \gtrsim 32$ to reach power 0.8 two-sided (Example 6's formula with $z_{\alpha/2} = 1.96$; its one-sided answer is $25$), and we observed about $0.21 \sigma$.
 </ExampleBlock>
 
 <ExampleBlock number={9} title="Two-sample z-test — drug trial">
@@ -508,7 +508,7 @@ $$p_{\mathrm{exact}} = P_{H_0}(X \ge 15) = \sum_{k=15}^{20} \binom{20}{k} (0.5)^
 
 At $\alpha = 0.05$, we reject. The rejection region $\{X \ge 15\}$ has exact size $0.0207$ — conservative (Remark 4).
 
-**Normal approximation.** Under $H_0$, $X \approx \mathcal{N}(10, 5)$; the standardized observed value is $z = (15 - 10)/\sqrt 5 \approx 2.236$, giving p-value $\approx 0.0127$. With a continuity correction (using $14.5$ instead of $15$), the p-value becomes $\approx 0.0207$ — close to the exact. Without continuity correction, the Normal approximation overstates significance.
+**Normal approximation.** Under $H_0$, $X \approx \mathcal{N}(10, 5)$; the standardized observed value is $z = (15 - 10)/\sqrt 5 \approx 2.236$, giving p-value $\approx 0.0127$. With a continuity correction (using $14.5$ instead of $15$), $z = 4.5/\sqrt 5 \approx 2.012$ and the p-value becomes $\approx 0.0221$ — within about 7% of the exact $0.0207$, and now slightly conservative rather than anti-conservative. Without continuity correction, the Normal approximation overstates significance.
 
 **Why this matters.** At $n = 20$, the Normal approximation p-value can be 30-40% off the exact p-value at moderate thresholds. At $n = 200$ it is typically within a few percent. The notebook figure (right panel) shows the size comparison across $n \in [10, 200]$: exact size stays below $\alpha$ by a discrete jump; Normal-approximation size oscillates above and below $\alpha$, converging as $n \to \infty$. The binomial exact test has the additional property — [covered in Topic 18](/topics/likelihood-ratio-tests-and-np#section-18-4) — of being UMP one-sided for the Bernoulli family.
 </ExampleBlock>
@@ -598,7 +598,7 @@ $$T = \frac{\sqrt{10}\,(105 - 100)}{12} = \frac{5\sqrt{10}}{12} \approx 1.318.$$
 
 **Using z (wrong!):** Two-sided z-approximation p-value: $p_z = 2\,(1 - \Phi(1.318)) \approx 0.187$.
 
-The t p-value is $\sim 18\%$ larger than the z approximation — the $t_9$ density has heavier tails than $\mathcal{N}(0, 1)$, so extreme values are less surprising under $t_9$ and the resulting p-value is larger. For small $n$, ignoring this difference inflates the Type I rate. At $n = 30$ the discrepancy shrinks to $\sim 3\%$; at $n = 100$ it is negligible.
+The t p-value is $\sim 18\%$ larger than the z approximation — the $t_9$ density has heavier tails than $\mathcal{N}(0, 1)$, so extreme values are less surprising under $t_9$ and the resulting p-value is larger. For small $n$, ignoring this difference inflates the Type I rate. At $n = 30$ (the same $T$, now against $t_{29}$) the discrepancy shrinks to $\sim 5.5\%$; at $n = 100$ it is under $2\%$.
 </ExampleBlock>
 
 <ExampleBlock number={13} title="Two-sample pooled t-test">

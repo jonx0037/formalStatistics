@@ -467,7 +467,7 @@ The MGF follows from the product of $r$ independent Geometric MGFs, as shown in 
 
 <img src="/images/topics/discrete-distributions/negative-binomial.png" alt="Three-panel figure: NegBin PMF varying r, NegBin PMF varying p, and Geometric = NegBin(r=1) overlap" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
 
-A key feature of the Negative Binomial is that $\text{Var}(X) = rq/p^2 = E[X] \cdot q/p = E[X] \cdot (E[X]/r)$, which means the variance is always larger than the mean when $q > 0$. This **overdispersion** (variance exceeding the mean) makes the Negative Binomial the go-to alternative when Poisson is too restrictive.
+A key feature of the Negative Binomial is that $\text{Var}(X) = rq/p^2 = E[X] \cdot q/p$. For the trial count $X$, this exceeds the mean only when $q > p$, i.e., $p < 1/2$. Count failures instead, $Y = X - r$ (the form used for count data): then $E[Y] = rq/p$ and $\text{Var}(Y) = rq/p^2 = E[Y]/p$, so the variance is always larger than the mean when $q > 0$. This **overdispersion** (variance exceeding the mean) makes the Negative Binomial the go-to alternative when Poisson is too restrictive.
 
 <ExampleBlock number={4} title="RNA-seq count modeling with overdispersion">
 In RNA-seq experiments, gene expression is measured as read counts. If counts followed a Poisson model, $\text{Var}(Y) = E[Y]$. But biological replicates consistently show $\text{Var}(Y) > E[Y]$ — overdispersion due to biological variability between samples. Tools like DESeq2 model counts as $Y \sim \text{NegBin}(\mu, r)$, where the dispersion parameter $r$ captures the excess variability. As $r \to \infty$, $\text{NegBin} \to \text{Poisson}$, so the Poisson model is a special case — and a testable hypothesis.
@@ -750,7 +750,7 @@ $$\text{Var}(X) = G_X''(1) + G_X'(1) - [G_X'(1)]^2$$
 The general $r$-th derivative follows by induction. $\square$
 </ProofBlock>
 
-Here are the PGFs for our seven distributions:
+Here are the PGFs for six of our seven distributions (the Hypergeometric's PGF is a polynomial with no compact closed form, so we omit it):
 
 | Distribution | PGF $G(s)$ |
 |---|---|
@@ -831,7 +831,7 @@ The seven distributions are not isolated — they form a web of connections thro
 - $\text{Hypergeometric}(N, Np, n) \to \text{Binomial}(n, p)$ as $N \to \infty$ (infinite population limit)
 
 <RemarkBlock title="Five of seven are exponential family members">
-Bernoulli, Binomial, Geometric, Negative Binomial, and Poisson all belong to the **exponential family** — distributions whose PMFs can be written as $p(k \mid \theta) = h(k) \exp(\eta(\theta) \cdot T(k) - A(\theta))$. The Hypergeometric does *not* belong because its support $\{\max(0, n-N+K), \ldots, \min(n, K)\}$ depends on the parameter $N$ — violating the requirement that the support is fixed. The Discrete Uniform does not belong because its support $\{1, \ldots, m\}$ depends on the parameter $m$, also violating the fixed-support requirement. [Exponential Families](/topics/exponential-families) makes this precise and shows why exponential family membership matters for estimation, testing, and GLMs.
+Bernoulli, Binomial, Geometric, Negative Binomial, and Poisson all belong to the **exponential family** — distributions whose PMFs can be written as $p(k \mid \theta) = h(k) \exp(\eta(\theta) \cdot T(k) - A(\theta))$. The Hypergeometric does *not* belong because its support $\{\max(0, n-N+K), \ldots, \min(n, K)\}$ depends on the parameter $N$ — violating the requirement that the support is fixed. The Discrete Uniform does not belong because its support $\{a, \ldots, b\}$ depends on the parameters $a$ and $b$, also violating the fixed-support requirement. [Exponential Families](/topics/exponential-families) makes this precise and shows why exponential family membership matters for estimation, testing, and GLMs.
 </RemarkBlock>
 
 ---

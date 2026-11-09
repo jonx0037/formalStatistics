@@ -641,7 +641,7 @@ $$
 \operatorname{ARE}(\hat{\theta}_1 ; \hat{\theta}_2) \;=\; \frac{v_2(\theta)}{v_1(\theta)},
 $$
 
-the ratio of their asymptotic variances (in the order that makes values above $1$ mean "$\hat{\theta}_1$ wins"). For Normal data, the sample median has ARE $2/\pi \approx 0.637$ relative to the sample mean — meaning 1,000 observations for the median give about the same precision as $\pi/2 \times 1{,}000 \approx 1{,}570$ for the mean. For Cauchy data (where the sample mean has no well-defined asymptotic variance), the ARE comparison flips: the median is the efficient choice and the mean is catastrophic. Asymptotic efficiency is distribution-dependent; efficient-for-Normal and efficient-for-Cauchy are different estimators.
+the ratio of their asymptotic variances (in the order that makes values above $1$ mean "$\hat{\theta}_1$ wins"). For Normal data, the sample median has ARE $2/\pi \approx 0.637$ relative to the sample mean — meaning 1,000 observations for the median give about the same precision as $2/\pi \times 1{,}000 \approx 637$ for the mean (equivalently, the median needs about $\pi/2 \times 1{,}000 \approx 1{,}570$ observations to match the mean on 1,000). For Cauchy data (where the sample mean has no well-defined asymptotic variance), the ARE comparison flips: the median is the efficient choice and the mean is catastrophic. Asymptotic efficiency is distribution-dependent; efficient-for-Normal and efficient-for-Cauchy are different estimators.
 
 The next section, on the Cramér–Rao bound, quantifies the ceiling on achievable asymptotic variance — and therefore the ceiling on asymptotic efficiency.
 </RemarkBlock>
@@ -1008,7 +1008,7 @@ The **cheat sheet** for every downstream topic:
 | Asymptotic variance | $\lim n\,\operatorname{Var}(\hat{\theta}_n)$ | Rate of convergence, confidence interval width |
 | Fisher information | $-\mathbb{E}[\partial^2 \log f / \partial \theta^2]$ | Curvature of the loss — optimization landscape |
 | CRLB | $1/(nI(\theta))$ | Information-theoretic lower bound on MSE |
-| Efficiency | Var / CRLB | Fraction of information the estimator extracts |
+| Efficiency | CRLB / Var | Fraction of information the estimator extracts |
 
 The arc of Track 4 is to apply this framework to specific estimation methods. [**Maximum Likelihood Estimation**](/topics/maximum-likelihood) defines $\hat{\theta}_{\text{MLE}}$ as the root of the score equation $S(\theta) = 0$; consistency, asymptotic normality, and asymptotic efficiency of the MLE are consequences of the LLN, CLT, and CRLB framework developed here. [**Method of Moments**](/topics/method-of-moments) applies bias, MSE, and consistency to moment-matching estimators, comparing their efficiency to the MLE benchmark. [**Sufficient Statistics**](/topics/sufficient-statistics) uses Fisher information and the CRLB to prove Rao–Blackwell and Lehmann–Scheffé theorems, thereby establishing the theory of UMVUE.
 

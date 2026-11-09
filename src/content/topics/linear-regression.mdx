@@ -285,13 +285,13 @@ $$
 <img src="/images/topics/linear-regression/21-residuals-geometry.png" alt="Two-panel. Left: a scatter with the fitted OLS line and signed residual segments drawn vertically above and below the line. Right: a bar chart of the residuals in observation order, showing sum-to-zero and the symmetry enforced by the normal equations." />
 
 <ExampleBlock number={2} title="Five-point worked example">
-Take the data $\mathbf{x} = (1, 2, 3, 4, 5)$, $\mathbf{y} = (1.2, 1.9, 3.3, 4.1, 5.0)$. Then $\bar x = 3$, $\bar y = 3.1$, $\sum (x_i - \bar x)^2 = 10$, $\sum (x_i - \bar x)(y_i - \bar y) = 9.6$, so
+Take the data $\mathbf{x} = (1, 2, 3, 4, 5)$, $\mathbf{y} = (1.2, 1.9, 3.3, 4.1, 5.0)$. Then $\bar x = 3$, $\bar y = 3.1$, $\sum (x_i - \bar x)^2 = 10$, $\sum (x_i - \bar x)(y_i - \bar y) = 9.8$, so
 
 $$
-\hat\beta_1 = \frac{9.6}{10} = 0.96, \qquad \hat\beta_0 = 3.1 - 0.96 \cdot 3 = 0.22.
+\hat\beta_1 = \frac{9.8}{10} = 0.98, \qquad \hat\beta_0 = 3.1 - 0.98 \cdot 3 = 0.16.
 $$
 
-The fitted line $\hat y = 0.22 + 0.96 x$ produces residuals $(0.02, -0.24, 0.20, -0.04, 0.02)$, which sum to $-0.04$ (≈ 0, the small numerical residual from finite arithmetic) and have the signature of an OLS fit: one-half positive, one-half negative, approximately centered on zero.
+The fitted line $\hat y = 0.16 + 0.98 x$ produces residuals $(0.06, -0.22, 0.20, 0.02, -0.06)$, which sum to exactly zero and have the signature of an OLS fit: scattered on both sides of zero and centered on it.
 </ExampleBlock>
 
 <LeastSquaresDraggable client:visible />
@@ -345,7 +345,7 @@ $$
 (The $\beta_0$ and $\bar x \bar\epsilon$ terms cancel because $\sum (x_i - \bar x) = 0$.) Taking expectations: $E[\hat\beta_1] = \beta_1 + 0 = \beta_1$. The variance: $\text{Var}(\hat\beta_1) = \frac{\sum (x_i - \bar x)^2 \sigma^2}{[\sum (x_i - \bar x)^2]^2} = \sigma^2 / \sum (x_i - \bar x)^2$. ∎
 
 <ExampleBlock number={3} title="A 95% CI for the slope">
-Continuing Example 2 with $\sigma$ assumed known for illustration at $\sigma = 0.3$: $\sum (x_i - \bar x)^2 = 10$, so $\text{SE}(\hat\beta_1) = 0.3 / \sqrt{10} \approx 0.095$. A 95% Wald CI for $\beta_1$ is $0.96 \pm 1.96 \cdot 0.095 = (0.77, 1.15)$. In practice $\sigma$ is unknown and we plug in $\hat\sigma$ with a t-distribution critical value — see §21.8. The [test–CI duality](/topics/confidence-intervals-and-duality#section-19-2) of Topic 19 tells us this CI is exactly the set of $\beta_1$ values a two-sided level-0.05 t-test would not reject.
+Continuing Example 2 with $\sigma$ assumed known for illustration at $\sigma = 0.3$: $\sum (x_i - \bar x)^2 = 10$, so $\text{SE}(\hat\beta_1) = 0.3 / \sqrt{10} \approx 0.095$. A 95% Wald CI for $\beta_1$ is $0.98 \pm 1.96 \cdot 0.095 = (0.79, 1.17)$. In practice $\sigma$ is unknown and we plug in $\hat\sigma$ with a t-distribution critical value — see §21.8. The [test–CI duality](/topics/confidence-intervals-and-duality#section-19-2) of Topic 19 tells us this CI is exactly the set of $\beta_1$ values a two-sided level-0.05 t-test would not reject.
 </ExampleBlock>
 
 <RemarkBlock number={5} title="$R^2$ interpretation and its limitations">
@@ -536,7 +536,7 @@ $$
 Take $n = 4$, $\mathbf{x} = (1, 2, 3, 4)$, $\boldsymbol\beta = (0, 1)^\top$, $\sigma = 1$. OLS gives $\text{Var}(\hat\beta_1) = 1/\sum(x_i - \bar x)^2 = 1/5 = 0.2$. A naive competitor — "use only the first three observations to fit a simple regression" — is also linear and unbiased, with $\text{Var}(\tilde\beta_1) = 1/\sum_{i=1}^3 (x_i - \bar x_3)^2 = 1/2 = 0.5$. Gauss–Markov guarantees OLS wins; the gap here is a factor of 2.5. Figure 6 shows the full MC comparison.
 </ExampleBlock>
 
-<img src="/images/topics/linear-regression/21-gauss-markov-comparison.png" alt="Two-panel. Left: MC histograms of β̂_1 from 5000 simulations — OLS (tight, centered at 1) vs 'first-3-points only' estimator (wider, also centered at 1). Right: variance as a function of n. OLS variance decreases as 1/n; the naive estimator's variance is flat (it never uses the extra data). Gauss–Markov guarantees the picture." />
+<img src="/images/topics/linear-regression/21-gauss-markov-comparison.png" alt="Two-panel. Left: MC histograms of β̂_1 from 5000 simulations at n = 10 — OLS (tight, centered at the true slope 2) vs 'first-3-points only' estimator (wider, also centered at 2). Right: variance as a function of n on a log scale. OLS variance decreases roughly as 1/n; the naive estimator's variance does not shrink — it rises, since it never uses the extra data. Gauss–Markov guarantees the picture." />
 
 <RemarkBlock number={11} title="Under Normal errors, BLUE promotes to UMVUE">
 Gauss–Markov says OLS beats every linear unbiased competitor. Could a *nonlinear* unbiased estimator do better? Under Normal errors, [Topic 16 Thm 4 (Lehmann–Scheffé)](/topics/sufficient-statistics) answers no: $(\mathbf{X}^\top \mathbf{X})^{-1} \mathbf{X}^\top \mathbf{y}$ is the unique UMVUE — minimum variance among *all* unbiased estimators, linear or not — because it is a function of a complete sufficient statistic for the Normal-linear-model exponential family. Without Normality, BLUE is the best we can claim; with Normality, BLUE = UMVUE. This is the §16.12 Track-6 promise discharged.
@@ -659,7 +659,7 @@ $$
 ANOVA is regression. Topic 21 treats it as a running example rather than a separate chapter.
 </ExampleBlock>
 
-<img src="/images/topics/linear-regression/21-f-test-null-alt.png" alt="Two-panel. Left: F_{3,96} null density (blue) with upper-α = 0.05 rejection region shaded grey. The observed F-statistic from Example 8 is drawn as a dashed vertical line, well inside the rejection region. Right: non-central F_{3,96}(λ) densities at λ = 5, 15, 30 (amber curves) showing power increasing with λ. 'F-test power grows with the effect-size non-centrality.'" />
+<img src="/images/topics/linear-regression/21-f-test-null-alt.png" alt="Two-panel. Left: F_{3,96} null density (blue) with upper-α = 0.05 rejection region shaded grey. An illustrative observed F = 4.10 (p ≈ 0.0088; not Example 8's F_{2,45} = 5.625) is drawn as a solid vertical line, well inside the rejection region. Right: non-central F_{3,96}(λ) densities at λ = 5, 15, 30 (amber curves) showing power increasing with λ. 'F-test power grows with the effect-size non-centrality.'" />
 
 <FTestExplorer client:visible />
 

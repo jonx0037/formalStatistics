@@ -493,8 +493,8 @@ satisfies $\mathbb{E}_\theta[g(T)] = 0$ for every $\theta \in \mathbb{R}$ — ye
 The CompletenessProbe above lets you visualize this directly: choose Uniform$(\theta, \theta+1)$, evaluate the centered range across the $\theta$-grid, and see the empirical $\mathbb{E}_\theta[g(T)] \approx 0$ curve. By contrast, on the same grid a non-witness like $g'(T) = X_{(1)} - 1/(n+1)$ traces a non-zero linear function of $\theta$ — illustrating the difference between an ancillary-derived witness (which makes incompleteness visible) and a generic test function (which does not).
 </ExampleBlock>
 
-<RemarkBlock number={7} title="Bounded completeness suffices for Lehmann–Scheffé">
-The Lehmann–Scheffé theorem (§16.7) is usually proved using *full* completeness. But a closer look at the proof shows that only *bounded* completeness is needed — the only test functions that arise are differences $h_1(T) - h_2(T)$ between unbiased estimators of the same quantity, and these are bounded whenever both have finite second moment. Bounded completeness is strictly weaker than full completeness, and a small number of important families (notably some non-regular location-scale families) are boundedly complete without being completely complete. For the canonical exponential families in this topic, the distinction does not matter — all are fully complete by Lemma 1.
+<RemarkBlock number={7} title="When bounded completeness suffices">
+The Lehmann–Scheffé theorem (§16.7) is proved using *full* completeness, and in general it needs it: the only test functions that arise are differences $h_1(T) - h_2(T)$ between unbiased estimators of the same quantity, and a finite second moment does not make such a difference bounded. Only *bounded* completeness is needed when the unbiased estimators being compared are themselves bounded — estimating a probability such as $P_\theta(X > c)$, for instance — and Basu's theorem (§16.9) also goes through under bounded completeness, since the function its proof tests is a difference of probabilities and so is bounded. Bounded completeness is strictly weaker than full completeness, and a small number of important families (notably some non-regular location-scale families) are boundedly complete without being completely complete. For the canonical exponential families in this topic, the distinction does not matter — all are fully complete by Lemma 1.
 </RemarkBlock>
 
 ## 16.7 The Lehmann-Scheffé Theorem
@@ -596,7 +596,7 @@ since $\sum (X_i - \bar X)^2 \sim \sigma^2 \chi^2_{n-1}$ and $\mathbb{E}[\chi^2_
 
 $$\hat\sigma^2_{\text{MLE}} \;=\; \hat\sigma^2_{\text{MoM}} \;=\; S^2_n \;=\; \frac{1}{n}\sum_{i=1}^n (X_i - \bar X)^2,$$
 
-with bias $\mathbb{E}[S^2_n] - \sigma^2 = -\sigma^2 / n$. The bias is small but does not disappear: at $n = 30$ and $\sigma^2 = 4$, the MLE/MoM bias is $-0.133$. The featured §16.11 comparison runs all three estimators in parallel and shows the UMVUE on top by a small but persistent margin in MSE for moderate $n$.
+with bias $\mathbb{E}[S^2_n] - \sigma^2 = -\sigma^2 / n$. The bias is small but does not disappear: at $n = 30$ and $\sigma^2 = 4$, the MLE/MoM bias is $-0.133$. The featured §16.11 comparison runs all three estimators in parallel: the UMVUE is unbiased, yet the biased $S^2_n$ has the smaller MSE at every $n$ (Example 26).
 </ExampleBlock>
 
 <ExampleBlock number={20} title="UMVUE of P(X > c) for Normal data via Rao-Blackwellization of an indicator">
@@ -607,10 +607,10 @@ $$\hat g_{\text{UMVUE}} \;=\; I_{y}\!\left(\frac{n-2}{2}, \frac{n-2}{2}\right), 
 with $I_y$ the regularized incomplete beta function. This is the formula used by `umvueNormalTailProb` in `estimation.ts`. The full derivation (in Lehmann & Casella, 1998, §2.4) integrates the indicator against the conditional distribution of $X_1$ given $(\bar X, S^2)$, which has a scaled-Beta form. The point: even for non-trivial parametric functions, Rao-Blackwellization combined with completeness gives the UMVUE in closed form when the sufficient statistic has tractable conditional distributions.
 </ExampleBlock>
 
-![UMVUE Normal variance — featured figure for Example 19. Left: sampling distributions for n=10, σ²=4: UMVUE S²_(n-1), MLE S²_n, MoM S²_n plotted as histograms over M=10000 replications. Center: bias bars — UMVUE ≈ 0, MLE = MoM ≈ -σ²/n = -0.4. Right: MSE bars — UMVUE has slightly higher variance but zero bias; MLE/MoM slightly lower variance but biased; UMVUE wins for moderate n.](/images/topics/sufficient-statistics/umvue-normal-variance.png)
+![UMVUE Normal variance — featured figure for Example 19. Left: sampling distributions for n=10, σ²=4: UMVUE S²_(n-1), MLE S²_n, MoM S²_n plotted as histograms over M=10000 replications. Center: bias bars — UMVUE ≈ 0, MLE = MoM ≈ -σ²/n = -0.4. Right: MSE bars — UMVUE has slightly higher variance but zero bias; MLE/MoM slightly lower variance but biased; MLE/MoM has the lower MSE at every n.](/images/topics/sufficient-statistics/umvue-normal-variance.png)
 
 <RemarkBlock number={9} title="Bias-efficiency pattern across UMVUE / MLE / MoM">
-Reading the table at the top of §16.8: in every exp-family in its natural parameter, UMVUE = MLE = MoM = $\bar X$ (or its relevant linear transform). Outside the natural parameterization, UMVUE and MLE diverge in a structured way: UMVUE prioritizes unbiasedness ($S^2_{n-1}$ for Normal $\sigma^2$); MLE and MoM coincidentally prioritize a different summary ($S^2_n$, the maximum-likelihood projection onto the tangent space) and pay a small bias cost. For finite $n$, the comparison is family-specific: sometimes UMVUE wins on MSE (Normal $\sigma^2$ at moderate $n$), sometimes MLE wins (e.g., Gamma scale in some regimes — its slight positive bias and lower variance can yield smaller MSE for very small $n$). Asymptotically, all three are consistent and asymptotically Normal at the same $n^{-1/2}$ rate; the bias gap shrinks as $1/n$, so it disappears in the asymptotic limit.
+Reading the table at the top of §16.8: in every exp-family in its natural parameter, UMVUE = MLE = MoM = $\bar X$ (or its relevant linear transform). Outside the natural parameterization, UMVUE and MLE diverge in a structured way: UMVUE prioritizes unbiasedness ($S^2_{n-1}$ for Normal $\sigma^2$); MLE and MoM coincidentally prioritize a different summary ($S^2_n$, the maximum-likelihood projection onto the tangent space) and pay a small bias cost. For finite $n$, the comparison is family-specific: sometimes UMVUE wins on MSE (Gamma rate with $\alpha$ known — among estimators $c/\sum X_i$ the MSE-optimal constant is $c = n\alpha - 2$, so the UMVUE's $n\alpha - 1$ beats the MLE's $n\alpha$ at every $n$), sometimes MLE wins (Normal $\sigma^2$ — $(2n-1)\sigma^4/n^2 < 2\sigma^4/(n-1)$ at every $n$, Example 26). Asymptotically, all three are consistent and asymptotically Normal at the same $n^{-1/2}$ rate; the bias gap shrinks as $1/n$, so it disappears in the asymptotic limit.
 </RemarkBlock>
 
 <a id="section-16-9" />
@@ -792,11 +792,11 @@ while the MLE and MoM both equal $\hat\beta_{\text{MLE/MoM}} = \alpha/\bar X = n
 </ExampleBlock>
 
 <ExampleBlock number={26} title="Normal σ² (with μ unknown) revisited — featured triple comparison">
-Returning to Example 19 with the full triple-comparison lens. UMVUE is $S^2_{n-1}$ (the Bessel-corrected variance, unbiased); MLE = MoM is $S^2_n$ (with bias $-\sigma^2/n$). At $n = 30$ and $\sigma^2 = 4$, the bias gap is $-0.133$, the variance ratio is $S^2_n / S^2_{n-1} = (n-1)/n \approx 0.967$, and MSE comparison is dictated by
+Returning to Example 19 with the full triple-comparison lens. UMVUE is $S^2_{n-1}$ (the Bessel-corrected variance, unbiased); MLE = MoM is $S^2_n$ (with bias $-\sigma^2/n$). At $n = 30$ and $\sigma^2 = 4$, the bias gap is $-0.133$, the estimator ratio is $S^2_n / S^2_{n-1} = (n-1)/n \approx 0.967$ (so the variance ratio is $((n-1)/n)^2 \approx 0.934$), and MSE comparison is dictated by
 
 $$\mathrm{MSE}(S^2_{n-1}) = \mathrm{Var}(S^2_{n-1}) = \frac{2\sigma^4}{n-1}, \qquad \mathrm{MSE}(S^2_n) = \mathrm{Var}(S^2_n) + \mathrm{Bias}^2 = \frac{(n-1)\cdot 2\sigma^4}{n^2} + \frac{\sigma^4}{n^2} = \frac{(2n - 1)\sigma^4}{n^2}.$$
 
-For $\sigma^2 = 4$ and $n = 30$: MSE(UMVUE) $\approx 1.103$, MSE(MLE/MoM) $\approx 1.049$ — slightly lower for the biased estimator. This is the small-sample regime where the bias-variance trade-off can favor the biased MLE; for larger $n$, both MSEs collapse and the UMVUE's strict unbiasedness wins. The UMVUEComparator's Normal preset visualizes both regimes by varying $n$.
+For $\sigma^2 = 4$ and $n = 30$: MSE(UMVUE) $\approx 1.103$, MSE(MLE/MoM) $\approx 1.049$ — slightly lower for the biased estimator. This is not a small-sample accident: $(2n-1)(n-1) = 2n^2 - 3n + 1 < 2n^2$, so $\mathrm{MSE}(S^2_n) < \mathrm{MSE}(S^2_{n-1})$ at every $n \ge 2$. As $n$ grows both MSEs collapse and the gap vanishes, but the ordering never flips — the bias-variance trade-off favors the biased MLE throughout. The UMVUEComparator's Normal preset shows the shrinking gap by varying $n$.
 </ExampleBlock>
 
 <RemarkBlock number={13} title="This closes Track 4 — the complete classical estimation toolkit">
