@@ -266,7 +266,7 @@ $$
 30 \pm 1.96 \cdot 4.58 \;\approx\; [21.02, 38.98].
 $$
 
-The exact Binomial probability $\mathbb{P}(21 \le S_{100} \le 39)$ is $0.9507$ — the Normal approximation is off by less than $0.001$. For discrete-data accuracy, a *continuity correction* replaces the integer endpoints by half-integer ones: $\mathbb{P}(a \le S_n \le b) \approx \Phi((b + 0.5 - np)/\sqrt{npq}) - \Phi((a - 0.5 - np)/\sqrt{npq})$. This is what the explorer below toggles on and off.
+The Normal approximation at the integer endpoints, $\Phi((39 - 30)/\sqrt{21}) - \Phi((21 - 30)/\sqrt{21})$, is $\approx 0.9505$, while the exact Binomial probability $\mathbb{P}(21 \le S_{100} \le 39)$ is $0.9625$ — an error of about $0.012$, because the integer endpoints carry atoms of probability that the continuous density spreads across neighboring intervals. For discrete-data accuracy, a *continuity correction* replaces the integer endpoints by half-integer ones: $\mathbb{P}(a \le S_n \le b) \approx \Phi((b + 0.5 - np)/\sqrt{npq}) - \Phi((a - 0.5 - np)/\sqrt{npq})$. Here it gives $\approx 0.9618$, within $0.001$ of the exact value. This is what the explorer below toggles on and off.
 
 </ExampleBlock>
 

@@ -35,7 +35,7 @@ import {
 
 /**
  * Example 2 (§21.2): 5-point worked example for OLS hand-computation.
- * Hand-computable slope = 0.96, intercept = 0.22 (ȳ = 3.1, x̄ = 3).
+ * Hand-computable slope = 0.98, intercept = 0.16 (ȳ = 3.1, x̄ = 3, Sxy = 9.8).
  */
 export const EXAMPLE_2_DATA = {
   x: [1, 2, 3, 4, 5],

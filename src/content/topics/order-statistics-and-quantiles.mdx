@@ -59,7 +59,7 @@ connections:
   - topic: "continuous-distributions"
     relationship: "§7.10 introduced the Beta distribution via the Uniform order-statistic story and §7.13 forward-promised the general proof; §29.3 Thm 2 + Cor 1 discharge that promise. Exponential, Gamma, and Cauchy densities anchor §29.3's Rényi proof and §29.6's heavy-tail quantile examples."
   - topic: "law-of-large-numbers"
-    relationship: "§10.7 proved Glivenko–Cantelli via the ε-net argument and named DKW + Kolmogorov distribution as forthcoming. §29.5 Thm 6 gives DKW with Massart's tight constant; §29.8 Thm 7 completes the Kolmogorov-distribution forecast."
+    relationship: "§10.7 proved Glivenko–Cantelli via the ε-net argument and named DKW + Kolmogorov distribution as forthcoming. §29.5 Thm 5 gives DKW with Massart's tight constant; §29.8 Thm 8 completes the Kolmogorov-distribution forecast."
   - topic: "sufficient-statistics"
     relationship: "§16 Thm 1 established that the order statistic $(X_{(1)}, \\dots, X_{(n)})$ is sufficient for every iid model. §29.2 Rem 2 cross-references — the order statistic is the maximally-informative summary under no distributional assumption, which is why Track 8 starts here."
   - topic: "central-limit-theorem"
@@ -96,19 +96,19 @@ references:
     year: 1956
     title: "Asymptotic Minimax Character of the Sample Distribution Function and of the Classical Multinomial Estimator"
     publisher: "Annals of Mathematical Statistics 27(3): 642–669"
-    note: "DVO1956. Original DKW paper; constant not yet optimal. §29.5 Thm 6 attribution. https://projecteuclid.org/journals/annals-of-mathematical-statistics/volume-27/issue-3/Asymptotic-Minimax-Character-of-the-Sample-Distribution-Function-and-of/10.1214/aoms/1177728174.full"
+    note: "DVO1956. Original DKW paper; constant not yet optimal. §29.5 Thm 5 attribution. https://projecteuclid.org/journals/annals-of-mathematical-statistics/volume-27/issue-3/Asymptotic-Minimax-Character-of-the-Sample-Distribution-Function-and-of/10.1214/aoms/1177728174.full"
   - type: "article"
     author: "Pascal Massart"
     year: 1990
     title: "The Tight Constant in the Dvoretzky–Kiefer–Wolfowitz Inequality"
     publisher: "Annals of Probability 18(3): 1269–1283"
-    note: "MAS1990. Proves $C = 2$ is optimal. §29.5 Thm 6 uses Massart's constant. https://projecteuclid.org/journals/annals-of-probability/volume-18/issue-3/The-Tight-Constant-in-the-Dvoretzky-Kiefer-Wolfowitz-Inequality/10.1214/aop/1176990746.full"
+    note: "MAS1990. Proves $C = 2$ is optimal. §29.5 Thm 5 uses Massart's constant. https://projecteuclid.org/journals/annals-of-probability/volume-18/issue-3/The-Tight-Constant-in-the-Dvoretzky-Kiefer-Wolfowitz-Inequality/10.1214/aop/1176990746.full"
   - type: "article"
     author: "Nikolai Vasilyevich Smirnov"
     year: 1948
     title: "Table for Estimating the Goodness of Fit of Empirical Distributions"
     publisher: "Annals of Mathematical Statistics 19(2): 279–281"
-    note: "SMI1948. Smirnov's finite-sample formula for the KS null distribution. §29.8 Thm 7 attribution. https://projecteuclid.org/journals/annals-of-mathematical-statistics/volume-19/issue-2/Table-for-Estimating-the-Goodness-of-Fit-of-Empirical-Distributions/10.1214/aoms/1177730256.full"
+    note: "SMI1948. Smirnov's finite-sample formula for the KS null distribution. §29.8 Thm 8 attribution. https://projecteuclid.org/journals/annals-of-mathematical-statistics/volume-19/issue-2/Table-for-Estimating-the-Goodness-of-Fit-of-Empirical-Distributions/10.1214/aoms/1177730256.full"
   - type: "article"
     author: "Andrey Nikolaevich Kolmogorov"
     year: 1933
@@ -153,7 +153,7 @@ references:
     edition: "2nd"
     title: "Convergence of Probability Measures"
     publisher: "Wiley"
-    note: "BIL1999. §14 on Brownian bridge + KS distribution; §16 on Donsker. §29.8 Thm 7's partial proof quotes BIL1999 §14.4. Reused from Topic 11. https://onlinelibrary.wiley.com/doi/book/10.1002/9780470316962"
+    note: "BIL1999. §14 on Brownian bridge + KS distribution; §16 on Donsker. §29.8 Thm 8's partial proof quotes BIL1999 §14.4. Reused from Topic 11. https://onlinelibrary.wiley.com/doi/book/10.1002/9780470316962"
 ---
 
 import TheoremBlock from '../../components/ui/TheoremBlock.astro';
@@ -445,9 +445,9 @@ contains $F$ uniformly in $x$ with probability $\ge 1 - \alpha$.
 
 DKW is a finite-sample strengthening of Glivenko–Cantelli that (i) holds for every $n \ge 1$, (ii) is distribution-free — $F$ does not appear in the bound — and (iii) has the optimal constant $C = 2$. It is the workhorse inequality behind every distribution-free uniform-deviation statement the rest of Track 8 uses. The envelope $[F_n \pm \varepsilon_n]$ is a *simultaneous* confidence band for $F$ at every $x$, not just a pointwise CI at a single $x$.
 
-![Three-panel figure showing the DKW envelope against the empirical CDF of Normal(0,1) samples at n=20, 100, 1000. The true CDF Phi is overlaid in black. At alpha=0.05, the envelope width is epsilon_n ≈ 0.301 at n=20, 0.135 at n=100, and 0.043 at n=1000 — roughly the 1/sqrt(n) rate DKW predicts. The envelope visibly contains Phi in each panel.](/images/topics/order-statistics-and-quantiles/29-dkw-envelope.png)
+![Three-panel figure showing the DKW envelope against the empirical CDF of Normal(0,1) samples at n=20, 100, 1000. The true CDF Phi is overlaid in black. At alpha=0.05, the envelope width is epsilon_n ≈ 0.304 at n=20, 0.136 at n=100, and 0.043 at n=1000 — roughly the 1/sqrt(n) rate DKW predicts. The envelope visibly contains Phi in each panel.](/images/topics/order-statistics-and-quantiles/29-dkw-envelope.png)
 
-*Figure 4. The DKW confidence envelope at $\alpha = 0.05$. At $n = 20$ the envelope is wide (±0.301) but already informative; at $n = 1000$ it narrows to ±0.043. The true CDF $\Phi$ is contained by the envelope at every $x$ in each realization — this is guaranteed with probability $\ge 0.95$ by DKW, and the `ECDFDKWBandExplorer` below lets the reader empirically verify the coverage rate.*
+*Figure 4. The DKW confidence envelope at $\alpha = 0.05$. At $n = 20$ the envelope is wide (±0.304) but already informative; at $n = 1000$ it narrows to ±0.043. The true CDF $\Phi$ is contained by the envelope at every $x$ in each realization — this is guaranteed with probability $\ge 0.95$ by DKW, and the `ECDFDKWBandExplorer` below lets the reader empirically verify the coverage rate.*
 
 <ECDFDKWBandExplorer client:visible />
 
@@ -456,7 +456,7 @@ A common ML workflow: you suspect the distribution of a production feature has s
 </ExampleBlock>
 
 <RemarkBlock number={10} title="DKW vs CLT-for-one-point">
-CLT says $\sqrt n\, (F_n(x) - F(x)) \Rightarrow \mathcal{N}(0, F(x)(1 - F(x)))$ for each fixed $x$ — a pointwise asymptotic statement. DKW says $\sup_x |F_n(x) - F(x)|$ is bounded non-asymptotically with probability $\ge 1 - \alpha$ — a uniform finite-sample statement. Both are useful: CLT gives the pointwise limiting distribution that §29.8 Thm 7 upgrades to uniform (via Donsker); DKW gives the uniform bound that does not require any asymptotic machinery. The Bahadur proof (§29.6) exploits both: CLT at the point $\xi_p$ plus a uniform-over-neighborhood fluctuation bound that DKW is the finite-sample analog of.
+CLT says $\sqrt n\, (F_n(x) - F(x)) \Rightarrow \mathcal{N}(0, F(x)(1 - F(x)))$ for each fixed $x$ — a pointwise asymptotic statement. DKW says $\sup_x |F_n(x) - F(x)|$ is bounded non-asymptotically with probability $\ge 1 - \alpha$ — a uniform finite-sample statement. Both are useful: CLT gives the pointwise limiting distribution that §29.8 Thm 8 upgrades to uniform (via Donsker); DKW gives the uniform bound that does not require any asymptotic machinery. The Bahadur proof (§29.6) exploits both: CLT at the point $\xi_p$ plus a uniform-over-neighborhood fluctuation bound that DKW is the finite-sample analog of.
 </RemarkBlock>
 
 <RemarkBlock number={11} title="DKW is sharp; CLT is not (at $x = F^{-1}(1/2)$)">
@@ -565,7 +565,7 @@ The corollary's asymptotic variance $p(1 - p)/f(\xi_p)^2$ has a striking feature
 
 <QuantileAsymptoticsExplorer client:visible />
 
-![Three-panel histogram showing asymptotic-normality of sqrt(n)(sample-median - population-median) at n=100 over 5000 MC replicates, for F in {Normal(0,1), Exp(1), Cauchy(0,1)}. Each panel overlays the Bahadur-limit Normal density N(0, p(1-p)/f(xi_p)^2). Normal limit variance is 1.571; Exp limit variance is 0.25; Cauchy limit variance is 2.467. All three histograms visibly match the overlaid limits.](/images/topics/order-statistics-and-quantiles/29-asymptotic-normality-three-families.png)
+![Three-panel histogram showing asymptotic-normality of sqrt(n)(sample-median - population-median) at n=100 over 5000 MC replicates, for F in {Normal(0,1), Exp(1), Cauchy(0,1)}. Each panel overlays the Bahadur-limit Normal density N(0, p(1-p)/f(xi_p)^2). Normal limit variance is 1.571; Exp limit variance is 1.0; Cauchy limit variance is 2.467. All three histograms visibly match the overlaid limits.](/images/topics/order-statistics-and-quantiles/29-asymptotic-normality-three-families.png)
 
 *Figure 6. The Bahadur limit overlay for three distributions with very different moment behavior. Cauchy has no mean, no variance — but the sample median is still root-$n$ Normal, with limit variance finite because $f(\xi_{0.5}) = 1/\pi > 0$. The Bahadur representation is distribution-free in this sense: regularity lives at $\xi_p$, not globally.*
 
@@ -755,7 +755,7 @@ Track 8 has three topics after this one:
 
 - **[Topic 30 — Kernel Density Estimation (KDE)](/topics/kernel-density-estimation).** The density $f$ in Bahadur's denominator is estimated non-parametrically via kernel smoothing of the ECDF. KDE is "what happens when you differentiate $F_n$ using a smooth weighting function." The Silverman rule-of-thumb bandwidth, cross-validation bandwidth selection, and higher-order kernels all sit there.
 - **[Topic 31 — The Bootstrap](/topics/bootstrap)** (published). The bootstrap replaces the unknown $F$ with $F_n$ (the ECDF) and resamples with replacement. Every bootstrap statement is a pushforward of Topic 29's ECDF-convergence results through a functional. Hall's second-order accuracy for BCa is the anchor result.
-- **[Topic 32 — Empirical Processes & Uniform Convergence](/topics/empirical-processes) (track closer, now published).** The functional view: $\mathbb{G}_n(f) = \sqrt n\,(\int f\, dF_n - \int f\, dF)$ for function classes $\mathcal{F}$. DKW, Bahadur, and the Kolmogorov distribution are all consequences of **Donsker's theorem** — the empirical process converges to the Gaussian Brownian-bridge process in $\ell^\infty(\mathcal{F})$ for Donsker classes. Topic 32 proves Donsker; Topic 29 used it once (§29.8 Thm 7).
+- **[Topic 32 — Empirical Processes & Uniform Convergence](/topics/empirical-processes) (track closer, now published).** The functional view: $\mathbb{G}_n(f) = \sqrt n\,(\int f\, dF_n - \int f\, dF)$ for function classes $\mathcal{F}$. DKW, Bahadur, and the Kolmogorov distribution are all consequences of **Donsker's theorem** — the empirical process converges to the Gaussian Brownian-bridge process in $\ell^\infty(\mathcal{F})$ for Donsker classes. Topic 32 proves Donsker; Topic 29 used it once (§29.8 Thm 8).
 
 ![Forward-map diagram showing Topic 29 at center with arrows to Topic 30 (Kernel Density Estimation, labeled 'density in the Bahadur denominator'), Topic 31 (Bootstrap, labeled 'ECDF replacement'), and Topic 32 (Empirical Processes, labeled 'Donsker'). Up-arrows connect to five forthcoming formalml boxes: extreme-value-theory, quantile-regression, rank-tests, conformal-prediction, statistical-depth. Back-arrows in grey connect Topic 29 to its predecessors (Topics 7, 10, 16, 19). A small color legend in the corner identifies ECDF blue, DKW teal, Bahadur violet, KS orange.](/images/topics/order-statistics-and-quantiles/29-track8-forward-map.png)
 

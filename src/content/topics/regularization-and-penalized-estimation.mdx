@@ -254,7 +254,7 @@ Penalized estimation is older than computer-era statistics. **Tikhonov 1943** in
 
 ## 23.2 The penalized-objective framework
 
-> **Notation (extending §21.4 and §22.2).** Throughout Topic 23, $\lambda \ge 0$ is the **penalty parameter** and $P : \mathbb{R}^{p+1} \to \mathbb{R}_{\ge 0}$ is a convex **penalty function** ($P(\boldsymbol\beta) = \|\boldsymbol\beta\|_2^2$ for ridge, $\|\boldsymbol\beta\|_1$ for lasso, $\alpha\|\boldsymbol\beta\|_1 + (1-\alpha)\|\boldsymbol\beta\|_2^2/2$ for elastic net). The **soft-thresholding operator** is $S_\lambda(x) = \text{sign}(x)\max(|x| - \lambda, 0)$, applied componentwise to vectors. The **active set** is $\mathcal{A}(\boldsymbol\beta) = \{j : \beta_j \neq 0\}$. The **partial score** at coordinate $j$ is $s_j(\boldsymbol\beta) = \frac{1}{n}\mathbf{x}_j^\top(\mathbf{y} - \mathbf{X}\boldsymbol\beta)$. We write $\boldsymbol\beta^\star$ for the data-generating "true" coefficient and $\hat{\boldsymbol\beta}(\lambda)$ for the regularization path.
+> **Notation (extending §21.4 and §22.2).** Throughout Topic 23, $\lambda \ge 0$ is the **penalty parameter** and $P : \mathbb{R}^{p+1} \to \mathbb{R}_{\ge 0}$ is a convex **penalty function** ($P(\boldsymbol\beta) = \|\boldsymbol\beta\|_2^2$ for ridge, $\|\boldsymbol\beta\|_1$ for lasso, $\alpha\|\boldsymbol\beta\|_1 + (1-\alpha)\|\boldsymbol\beta\|_2^2/2$ for elastic net). The **soft-thresholding operator** is $S_\lambda(x) = \text{sign}(x)\max(|x| - \lambda, 0)$, applied componentwise to vectors. The **active set** is $\mathcal{A}(\boldsymbol\beta) = \{j : \beta_j \neq 0\}$. The **partial score** at coordinate $j$ is $s_j(\boldsymbol\beta) = \mathbf{x}_j^\top(\mathbf{y} - \mathbf{X}\boldsymbol\beta)$, matching the $\tfrac12\|\mathbf{y} - \mathbf{X}\boldsymbol\beta\|_2^2$ loss scale of Defs 1–2 (references that use a $\tfrac{1}{2n}$-scaled loss carry an extra $\tfrac1n$). We write $\boldsymbol\beta^\star$ for the data-generating "true" coefficient and $\hat{\boldsymbol\beta}(\lambda)$ for the regularization path.
 
 <DefinitionBlock number={1} title="Ridge objective">
 The **ridge regression** estimator at penalty parameter $\lambda \ge 0$ is
@@ -600,11 +600,11 @@ For any $\alpha \in [0, 1)$ and $\lambda > 0$, the elastic-net objective is stri
 </TheoremBlock>
 
 <ExampleBlock number={7} title="Grouping effect on correlated features">
-Take a synthetic problem with three pairs of perfectly correlated predictors plus four independent ones (the `CORRELATED_FEATURES_DATA` preset). The true coefficient is nonzero only at $X_1$ and $X_3$ — both members of correlated pairs. Lasso, run at the CV-optimal $\lambda$, picks one predictor from each correlated pair and zeros the other — and which one it picks varies arbitrarily across bootstrap samples. Elastic net with $\alpha = 0.5$ at the same effective penalty strength assigns nonzero weight to all four members of the correlated pairs, distributing weight across the group. The grouping effect: correlated predictors get similar coefficients, and the active set is more stable.
+Take a synthetic problem with three pairs of highly correlated predictors (within-pair $\rho = 0.9$) plus four independent ones (the `CORRELATED_FEATURES_DATA` preset). The true coefficient is nonzero only at $X_1$ and $X_3$ — both members of correlated pairs. Lasso, run at the CV-optimal $\lambda$, picks one predictor from each correlated pair and zeros the other — and which one it picks varies arbitrarily across bootstrap samples. Elastic net with $\alpha = 0.5$ at the same effective penalty strength assigns nonzero weight to all four members of the correlated pairs, distributing weight across the group. The grouping effect: correlated predictors get similar coefficients, and the active set is more stable.
 </ExampleBlock>
 
 <RemarkBlock number={11} title="Grouping effect formalized">
-Zou & Hastie 2005 prove that for any two predictors $X_j$ and $X_k$ with $\mathbf{X}^\top\mathbf{x}_j = \mathbf{X}^\top\mathbf{x}_k$ (a strong correlation condition), the elastic-net coefficients satisfy
+Zou & Hastie 2005 prove that for any two standardized predictors $X_j$ and $X_k$ with sample correlation $\rho$ whose elastic-net coefficients share a sign ($\hat\beta_j \hat\beta_k > 0$), the coefficients satisfy
 
 $$
 |\hat\beta_j - \hat\beta_k| \;\le\; \frac{\sqrt{2(1 - \rho)}}{\lambda(1-\alpha)} \cdot \frac{\|\mathbf{y}\|}{n}
@@ -659,8 +659,8 @@ The `EXAMPLE_10_GLM_DATA` preset (n = 120, p = 2) is the near-separation problem
      class="w-full rounded-lg border my-6"
      style="border-color: var(--color-border);" />
 
-<ExampleBlock number={9} title="Lasso-Poisson on polynomial-expanded credit-default">
-The Topic 22 `EXAMPLE_6_GLM_DATA` (credit-default logistic, n = 200, p = 2) becomes a high-dimensional problem when its predictors are expanded to degree 3 polynomials. The expanded design has p = 34 features (the `CREDIT_DEFAULT_EXPANDED_DATA` preset). Fitting a lasso-logistic at the CV-selected $\lambda$ produces a sparse $\hat{\boldsymbol\beta}$ with around 6–10 active coefficients, automatically selecting the polynomial terms that contribute predictive signal. Pure logistic regression on the expanded design overfits badly; lasso-logistic regularizes both selection and shrinkage in one pass.
+<ExampleBlock number={9} title="Lasso-logistic on polynomial-expanded credit-default">
+The Topic 22 `EXAMPLE_6_GLM_DATA` (credit-default logistic, n = 200, p = 2) becomes a richer, more flexible problem when its predictors are expanded to degree 3 polynomials. The expanded design has p = 9 features — every monomial of degree 1 to 3 in the two predictors, $\binom{5}{3} - 1 = 9$ (the `CREDIT_DEFAULT_EXPANDED_DATA` preset). Fitting a lasso-logistic at the CV-selected $\lambda$ produces a sparse $\hat{\boldsymbol\beta}$ that keeps only some of those columns, automatically selecting the polynomial terms that contribute predictive signal. Pure logistic regression on the expanded design overfits badly; lasso-logistic regularizes both selection and shrinkage in one pass.
 </ExampleBlock>
 
 <RemarkBlock number={11} title="Firth 1993 as the alternative for separation">
@@ -820,8 +820,8 @@ The ridge path shows smooth shrinkage: every coefficient starts near OLS at smal
      class="w-full rounded-lg border my-6"
      style="border-color: var(--color-border);" />
 
-<ExampleBlock number={15} title="Lasso-Poisson on credit-default polynomial expansion">
-Topic 22's `EXAMPLE_6_GLM_DATA` has 200 observations and 2 raw predictors. Expanding to degree-3 polynomial features gives 34 columns — a high-dimensional regime where unpenalized logistic regression would overfit. Lasso-logistic regression at the CV-optimal $\lambda$ selects 6–10 features automatically: the linear and squared terms in the original predictors, a handful of cross-terms, and a few cubic terms. The remaining $\sim 24$ polynomial features are zeroed out. This is the practical workflow that justifies the brief's "high-dimensional p ≫ n" promise from Topic 22 §22.10 Rem 28: penalized GLMs make polynomial-feature expansion a viable modeling strategy.
+<ExampleBlock number={15} title="Lasso-logistic on credit-default polynomial expansion">
+Topic 22's `EXAMPLE_6_GLM_DATA` has 200 observations and 2 raw predictors. Expanding to degree-3 polynomial features gives 9 columns (all monomials of degree 1 to 3 in two predictors) — a richer design where unpenalized logistic regression starts to chase noise in the higher-order terms. Lasso-logistic regression at the CV-optimal $\lambda$ selects a subset of these features automatically and zeros out the polynomial terms that carry no predictive signal. This is the practical workflow behind Topic 22 §22.10 Rem 28's promise: penalized GLMs make polynomial-feature expansion a viable modeling strategy, and the same machinery scales to genuinely high-dimensional $p \gg n$ designs.
 </ExampleBlock>
 
 <RemarkBlock number={21} title="Coefficient interpretation under shrinkage">

@@ -590,7 +590,7 @@ Observe 10 successes in 50 Bernoulli trials. Compare three posteriors:
 - Weakly informative $\mathrm{Beta}(2, 2)$ centered at $0.5$: posterior $\mathrm{Beta}(12, 42)$, mean $\approx 0.222$.
 - Non-informative Jeffreys $\mathrm{Beta}(1/2, 1/2)$: posterior $\mathrm{Beta}(10.5, 40.5)$, mean $\approx 0.206$.
 
-At $n = 50$ all three posterior means lie in $[0.20, 0.23]$ — the data dominates the informative prior's pull toward $0.2$. At $n = 10$, the three posterior means are far apart ($\sim 0.21$, $\sim 0.23$, $\sim 0.25$); at $n = 1000$ they are numerically identical. The interpolation is exactly what Bernstein–von Mises (§25.8) predicts.
+At $n = 50$ all three posterior means lie in $[0.20, 0.23]$ — the data dominates the informative prior's pull toward $0.2$. Holding the MLE at $0.2$: at $n = 10$ ($2$ successes) the three posterior means are far apart ($0.200$, $0.286$, $0.227$); at $n = 1000$ ($200$ successes) they agree to two decimals ($0.200$, $0.201$, $0.200$). The interpolation is exactly what Bernstein–von Mises (§25.8) predicts.
 </ExampleBlock>
 
 <img src="/images/topics/bayesian-foundations-and-prior-selection/25-7-prior-sensitivity-three-priors.png"
@@ -639,7 +639,7 @@ That is, the rescaled posterior converges in total variation to $\mathcal{N}(0, 
 </TheoremBlock>
 
 <img src="/images/topics/bayesian-foundations-and-prior-selection/25-8-bernstein-von-mises-convergence.png"
-     alt="Four-panel figure for n = 5, 25, 100, 500. Beta(2, 2) prior, true θ₀ = 0.3. Each panel shows the posterior density (purple) overlaid with the Normal-at-MLE approximation 𝒩(θ̂_MLE, 𝓘⁻¹/n) (black dashed), with vertical reference lines at θ₀ (green dotted) and θ̂_MLE (orange solid). At n=5 the two curves disagree noticeably (posterior narrower near boundaries). By n=500 they are visually indistinguishable — BvM's total-variation convergence."
+     alt="Four-panel figure for n = 5, 25, 100, 500. Beta(2, 2) prior, true θ₀ = 0.3. Each panel shows the posterior density (purple) overlaid with the Normal-at-MLE approximation 𝒩(θ̂_MLE, 𝓘⁻¹/n) (black dashed), with vertical reference lines at θ₀ (green dotted) and θ̂_MLE (orange solid). At n=5 the two curves disagree noticeably (posterior narrower near boundaries). By n=500 they nearly overlap (total-variation distance about 0.02–0.03; the Beta(2, 2) pseudocounts still leave a faint shift) — BvM's total-variation convergence in progress."
      class="w-full rounded-lg border my-6"
      style="border-color: var(--color-border);" />
 
@@ -696,7 +696,7 @@ Under BvM, $\hat\theta_{\text{MAP}}$ and $\hat\theta_{\text{MLE}}$ converge at r
 </ExampleBlock>
 
 <img src="/images/topics/bayesian-foundations-and-prior-selection/25-8-map-as-penalized-mle.png"
-     alt="Two-panel figure. Left: Gaussian prior 𝒩(0, 0.25) (thin blue) + Normal likelihood centered at x̄=1 (amber) for n=4, σ²=1 → posterior (purple) with MAP vertical line coinciding exactly with the ridge-estimate vertical line. Right: Laplace(0, 0.5) prior + same likelihood → MAP vertical line coincides with lasso estimate (at a sparser solution)."
+     alt="Two-panel figure. Left: Gaussian prior 𝒩(0, 0.25) (thin blue) + Normal likelihood centered at x̄=1 (amber) for n=4, σ²=1 → posterior (purple) with MAP vertical line coinciding exactly with the ridge-estimate vertical line. Right: Laplace(0, 0.5) prior + same likelihood → MAP vertical line coincides with lasso estimate. With these settings both MAPs land at 0.5: ridge shrinks the MLE by the factor 4/8, lasso soft-thresholds it by the constant 1/(4 · 0.5) = 0.5."
      class="w-full rounded-lg border my-6"
      style="border-color: var(--color-border);" />
 

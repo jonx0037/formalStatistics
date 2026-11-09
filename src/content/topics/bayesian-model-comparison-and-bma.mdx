@@ -470,7 +470,7 @@ is the multiplicative penalty a model pays for having $k$ parameters — the fac
 <ExampleBlock number={4} title="Laplace approximation on Beta-Binomial">
 For $(n, y, \alpha, \beta) = (20, 12, 1, 1)$, the unnormalized log-posterior is $\log L + \log \pi = 12 \log\theta + 8 \log(1-\theta)$ (ignoring the binomial coefficient). The mode is $\hat\theta = 12/20 = 0.6$, and the second derivative at the mode is $-12/\hat\theta^2 - 8/(1-\hat\theta)^2 = -12/0.36 - 8/0.16 = -33.33 - 50 = -83.33$. So $H = 83.33$ and the Laplace estimate (after adding the binomial normalization) is
 
-$$\log m \approx \log \binom{20}{12} + 12 \log 0.6 + 8 \log 0.4 + \tfrac{1}{2}\log(2\pi) - \tfrac{1}{2}\log 83.33 \approx -3.06,$$
+$$\log m \approx \log \binom{20}{12} + 12 \log 0.6 + 8 \log 0.4 + \tfrac{1}{2}\log(2\pi) - \tfrac{1}{2}\log 83.33 \approx -3.01,$$
 
 close to the closed-form $-3.0445$ (Ex 1). The Laplace approximation is accurate to $O(1/n)$ under regularity — impressive given its closed-form simplicity — but deteriorates for small $n$ or multimodal posteriors. `marginalLikelihoodLaplace` in `bayes.ts` handles the general multivariate case via Cholesky log-determinant.
 </ExampleBlock>
@@ -605,7 +605,7 @@ Any non-BMA predictive — hard model selection, stacking, equal-weight averagin
 Thm 8's caveat is M-closed: the theorem assumes the true data-generating process is in $\mathcal{M}$. Under M-open (§27.2 Rem 3), BMA's weights concentrate on whichever model is closest to truth — which may still be far from truth, leaving BMA over-confident in a single approximation. Stacking (formalml) directly optimizes predictive weights and often outperforms BMA under M-open.
 
 <ExampleBlock number={7} title="BMA over three nested polynomial models">
-Synthetic data: $y_i = \sin(2\pi x_i / 10) + 0.3 x_i + \varepsilon_i$, $\varepsilon_i \sim \mathcal{N}(0, 0.25^2)$, $x_i \sim U(0, 10)$, $n = 20$. Fit three polynomial models — degree 1 (linear), degree 2 (quadratic), degree 3 (cubic) — and compare via BIC-approximated marginal likelihoods. For this specific sample, BIC strongly prefers degree 3 (posterior model probability $\approx 1.00$, weights $(0, 0, 1)$), so BMA collapses to hard selection. The `BMAPredictiveComparison` component lets you flip to uniform weights $(1/3, 1/3, 1/3)$ or single-model weights and watch the predictive-fan change — uniform BMA produces a noticeably wider predictive band in the mid-range where the three models disagree most. The lesson: BMA's predictive uncertainty reflects *model-set uncertainty*; hard selection under-reports it.
+Synthetic data: $y_i = \sin(2\pi x_i / 10) + 0.3 x_i + \varepsilon_i$, $\varepsilon_i \sim \mathcal{N}(0, 0.25^2)$, $x_i \sim U(0, 10)$, $n = 20$. Fit three polynomial models — degree 1 (linear), degree 2 (quadratic), degree 3 (cubic) — and compare via BIC-approximated marginal likelihoods. For this specific sample, BIC strongly prefers degree 3 (posterior model probability $\approx 1.00$, weights $(0, 0, 1)$), so BMA collapses to hard selection. The `BMAPredictiveComparison` component lets you flip to uniform weights $(1/3, 1/3, 1/3)$ or single-model weights and watch the predictive-fan change — uniform BMA produces a noticeably wider predictive band, most of all near the edges of the $x$-range, where the three fits fan apart and disagree most (in the mid-range they nearly coincide). The lesson: BMA's predictive uncertainty reflects *model-set uncertainty*; hard selection under-reports it.
 </ExampleBlock>
 
 <BMAPredictiveComparison client:visible />
@@ -639,7 +639,7 @@ Marginal likelihood comparison (Bayes factors, BMA) is one regime; predictive-sc
 
 All three target $\mathrm{elpd} = \sum_i \mathbb{E}_{p(\theta \mid \mathbf{y})}[\log p(y_i \mid \theta)]$, the expected log pointwise predictive density. [Vehtari–Gelman–Gabry 2017](https://link.springer.com/article/10.1007/s11222-016-9696-4) argues PSIS-LOO $>$ WAIC $>$ DIC in applied practice (more accurate, better uncertainty quantification), but all three are consistent under regularity and all three beat AIC/BIC for posterior-honest predictive comparison.
 
-<ExampleBlock number={8} title="DIC on Beta-Binomial">
+<ExampleBlock number={8} title="DIC on a Normal mean">
 Back to the canonical tiny problem: $n = 5$ Normal observations, $\sigma = 1$, posterior $\mu \mid \mathbf{y} \sim \mathcal{N}(\bar y, \sigma^2/n) = \mathcal{N}(0.04, 0.2)$ with 2000 posterior draws. Compute the deviance $D(\mu) = -2 \sum \log \phi(y_i \mid \mu, 1)$ at each draw, take the posterior mean $\bar D$, compare to $D(\bar\mu)$ at the posterior-mean $\bar\mu = 0.04$. The effective parameter count $p_{\mathrm{DIC}} = \bar D - D(\bar\mu) \approx 1$ (as expected for a one-parameter model under weak prior regularity), and $\mathrm{DIC} = D(\bar\mu) + 2 p_{\mathrm{DIC}} \approx 12.06$. The `dic` function in `bayes.ts` computes this in one line per input.
 </ExampleBlock>
 

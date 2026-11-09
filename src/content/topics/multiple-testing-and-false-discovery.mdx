@@ -32,7 +32,7 @@ notebookPath: "notebooks/multiple-testing-and-false-discovery/20_multiple_testin
 githubUrl: "https://github.com/jonx0037/formalStatistics/blob/main/src/content/topics/multiple-testing-and-false-discovery.mdx"
 datePublished: 2026-04-18
 estimatedReadTime: 55
-abstract: "Single-test inference asks one yes-or-no question. Real science asks many at once — every coefficient in a regression, every gene in a GWAS, every metric in an A/B dashboard — and controlling Type I error *individually* is no longer enough. This topic builds the two dominant frameworks: the **family-wise error rate (FWER)**, which bounds the probability of *any* false rejection, and the **false discovery rate (FDR)**, which bounds the *expected fraction* of false rejections among all rejections. Bonferroni (Dunn 1961) and Šidák (1967) are the single-step FWER procedures; Holm (1979) is its uniformly-more-powerful step-down variant, with full proof via induction on rank order; Hochberg (1988) is the corresponding step-up. The closed-testing principle (Marcus–Peritz–Gabriel 1976) is the organizing scaffold — stated with reference to LEH2005 §9.1. The featured result is **Theorem 5, Benjamini–Hochberg 1995**: under independence, the BH step-up procedure controls FDR at $\\alpha \\cdot \\pi_0 \\le \\alpha$. Full proof follows BH 1995 and BEN2001 Lemma 2.1. Benjamini–Yekutieli (2001) handles arbitrary dependence at an $H_m$-factor power cost; Storey (2002) adapts to the true null fraction $\\pi_0$. The simultaneous-CI section (§20.9) fulfils the §19.10 Rem 19 promise by dualizing the FWER-controlled tests into Bonferroni / Šidák bands. §20.10 surveys what Topic 20 does not cover — knockoffs, online FDR, e-processes, permutation multiplicity, Bayesian local-FDR — pointing each to Track 6, Track 7, Track 8, or formalml.com. This topic closes Track 5."
+abstract: "Single-test inference asks one yes-or-no question. Real science asks many at once — every coefficient in a regression, every gene in a GWAS, every metric in an A/B dashboard — and controlling Type I error *individually* is no longer enough. This topic builds the two dominant frameworks: the **family-wise error rate (FWER)**, which bounds the probability of *any* false rejection, and the **false discovery rate (FDR)**, which bounds the *expected fraction* of false rejections among all rejections. Bonferroni (Dunn 1961) and Šidák (1967) are the single-step FWER procedures; Holm (1979) is its uniformly-more-powerful step-down variant, with full proof via a first-true-null argument; Hochberg (1988) is the corresponding step-up. The closed-testing principle (Marcus–Peritz–Gabriel 1976) is the organizing scaffold — stated with reference to LEH2005 §9.1. The featured result is **Theorem 5, Benjamini–Hochberg 1995**: under independence, the BH step-up procedure controls FDR at $\\alpha \\cdot \\pi_0 \\le \\alpha$. Full proof follows BH 1995 and BEN2001 Lemma 2.1. Benjamini–Yekutieli (2001) handles arbitrary dependence at an $H_m$-factor power cost; Storey (2002) adapts to the true null fraction $\\pi_0$. The simultaneous-CI section (§20.9) fulfills the §19.10 Rem 19 promise by dualizing the FWER-controlled tests into Bonferroni / Šidák bands. §20.10 surveys what Topic 20 does not cover — knockoffs, online FDR, e-processes, permutation multiplicity, Bayesian local-FDR — pointing each to Track 6, Track 7, Track 8, or formalml.com. This topic closes Track 5."
 formalcalculusPrereqs:
   - topic: "probability-and-union-bound"
     site: "formalcalculus"
@@ -157,7 +157,7 @@ This quantity is the **family-wise error rate (FWER)** under the global null. Fo
 
 ![FWER under independence as a function of $m$, at $\\alpha = 0.05$. By $m = 20$ the probability of at least one false rejection is 64\\%; by $m = 100$ it is 99.4\\%. The union-bound upper envelope $m\\alpha$ tracks the exact curve closely for $m \\alpha \\lesssim 1$ and overshoots 1 thereafter.](/images/topics/multiple-testing-and-false-discovery/20-fwer-explosion.png)
 
-<ExampleBlock number={1} title="Twenty A/B tests, one genuine effect">
+<ExampleBlock number={1} title="Twenty A/B tests, no genuine effect">
 A product team runs twenty simultaneous A/B tests on unrelated features, each at level $\alpha = 0.05$. None of the twenty has a true effect — the global null holds. The probability that at least one test falsely flags its feature as significant is $1 - 0.95^{20} \approx 0.64$. A team that deploys whichever features cross the $p < 0.05$ threshold will, in expectation, ship *at least one* null feature in this batch. Doing this every quarter across a company compounds the effect: after four quarters, the probability of *never* having shipped a null feature is $0.36^4 \approx 0.017$.
 </ExampleBlock>
 
@@ -224,7 +224,7 @@ At $m = 1$ FWER collapses to the per-test Type I error $\alpha$ of <ExternalLink
 </RemarkBlock>
 
 <RemarkBlock number={6} title="The FWER–power trade-off">
-Holding each test's nominal level fixed, controlling FWER at level $\alpha$ forces each individual test to use a smaller effective $\alpha_i \le \alpha$. Smaller per-test level means smaller per-test power. The trade-off is quantitative: under Bonferroni at global $\alpha = 0.05$, a test of a single alternative with effect size $\delta$ that had power $0.80$ at $\alpha = 0.05$ with $m = 1$ retains only power $\approx 0.60$ at $m = 20$ and $\approx 0.25$ at $m = 200$ — a dramatic loss. The FDR framework of §20.6 sacrifices some of FWER's protection to claw back this power, and is the right tool whenever false *discoveries* (rather than any false rejection whatsoever) are the cost metric.
+Holding each test's nominal level fixed, controlling FWER at level $\alpha$ forces each individual test to use a smaller effective $\alpha_i \le \alpha$. Smaller per-test level means smaller per-test power. The trade-off is quantitative: under Bonferroni at global $\alpha = 0.05$, a test of a single alternative with effect size $\delta$ that had power $0.80$ at $\alpha = 0.05$ with $m = 1$ retains only power $\approx 0.41$ at $m = 20$ and $\approx 0.20$ at $m = 200$ (two-sided $z$-test) — a dramatic loss. The FDR framework of §20.6 sacrifices some of FWER's protection to claw back this power, and is the right tool whenever false *discoveries* (rather than any false rejection whatsoever) are the cost metric.
 </RemarkBlock>
 
 ## 20.4 Bonferroni and Šidák
@@ -273,7 +273,7 @@ Holm's step-down procedure is uniformly more powerful than Bonferroni: every rej
 Order the $p$-values ascending: $p_{(1)} \le p_{(2)} \le \cdots \le p_{(m)}$. Let $k^\dagger$ be the smallest rank $k$ such that $p_{(k)} > \alpha / (m - k + 1)$ (set $k^\dagger = m + 1$ if no such $k$ exists). The **Holm procedure** rejects the hypotheses corresponding to $p_{(1)}, \ldots, p_{(k^\dagger - 1)}$. This controls FWER at level $\alpha$ in the strong sense under any joint dependence structure.
 </TheoremBlock>
 
-<ProofBlock title="Proof 3 — Holm FWER control (induction on rank order)">
+<ProofBlock title="Proof 3 — Holm FWER control (first-true-null argument)">
 Let $H_0$ be the true-null configuration with $|H_0| = m_0$ and let $r^*$ be the smallest rank (in the overall ordering of $p_{(1)}, \ldots, p_{(m)}$) at which some true null appears. Equivalently, $r^* = m_1 + 1$: the first $m_1$ positions in the ordering must be alternatives (if every null is larger than every alternative, which is the worst case for Type I; otherwise $r^*$ is smaller, which only makes a false rejection require a smaller $p_{(r^*)}$).
 
 We show that $\Pr_{H_0}(V \ge 1)$ — the probability that Holm falsely rejects at least one true null — is at most $\alpha$. A false rejection requires Holm to walk past step $r^*$, which requires $p_{(r^*)} \le \alpha / (m - r^* + 1)$. At rank $r^*$, exactly $m - r^* + 1 = m_0$ of the remaining $p$-values are true nulls. The smallest of those $m_0$ null $p$-values — call it $p^*_{(1)}$, the *first-order statistic* of the null $p$-values — is at most $p_{(r^*)}$. So
@@ -284,7 +284,7 @@ The first-order statistic of $m_0$ null $p$-values, each stochastically at least
 
 $$\Pr_{H_0}\!\left(p^*_{(1)} \le \tfrac{\alpha}{m_0}\right) \;=\; \Pr_{H_0}\!\left(\min_{i \in H_0} p_i \le \tfrac{\alpha}{m_0}\right) \;\le\; \sum_{i \in H_0} \Pr_{H_0}\!\left(p_i \le \tfrac{\alpha}{m_0}\right) \;\le\; m_0 \cdot \tfrac{\alpha}{m_0} \;=\; \alpha.$$
 
-Combining the two displays: $\Pr_{H_0}(V \ge 1) \le \alpha$. No dependence assumption is required because every inequality used is the union bound applied to events on a fixed set of null-indexed $p$-values. ∎ — using induction-on-rank + union bound; HOL1979.
+Combining the two displays: $\Pr_{H_0}(V \ge 1) \le \alpha$. No dependence assumption is required because every inequality used is the union bound applied to events on a fixed set of null-indexed $p$-values. ∎ — using the first-true-null rank + union bound; HOL1979.
 </ProofBlock>
 
 The proof shows *why* Holm dominates Bonferroni: Bonferroni uses the union bound once at threshold $\alpha/m$; Holm uses it at threshold $\alpha/m_0$, which is larger when $m_0 < m$ (i.e., whenever there are real alternatives). The step-down structure is the device that lets the threshold depend on the number of surviving hypotheses.
@@ -418,7 +418,7 @@ The visualizer below runs the step-up walk one rank at a time. Load the canonica
 <BHAlgorithmVisualizer client:visible />
 
 <RemarkBlock number={16} title="Why the threshold is linear in $k$ (not Bonferroni's constant)">
-The BH threshold function $k \mapsto k\alpha/m$ has two endpoints: $\alpha/m$ at $k = 1$ (exactly Bonferroni) and $\alpha$ at $k = m$ (no adjustment). The linear interpolation between them is what makes the independence cancellation in Proof 5 Step 3 work: the per-rank threshold increment $\alpha/m$ is *also* the per-rank denominator increment $1/R$, and the two cancel. Any nonlinear threshold function breaks this. Storey's adaptive variant (§20.8) rescales to $k\alpha/(m \cdot \hat{\pi}_0)$ — still linear, but with $\hat{\pi}_0$ shrinking the effective $m$.
+The BH threshold function $k \mapsto k\alpha/m$ has two endpoints: $\alpha/m$ at $k = 1$ (exactly Bonferroni) and $\alpha$ at $k = m$ (no adjustment). The linear interpolation between them is what makes the independence cancellation in Proof 5 Step 3 work: the threshold $k\alpha/m$ grows in exact proportion to the rejection count $k$ in the denominator, so their ratio is the constant $\alpha/m$ at every rank, and the two cancel. Any nonlinear threshold function breaks this. Storey's adaptive variant (§20.8) rescales to $k\alpha/(m \cdot \hat{\pi}_0)$ — still linear, but with $\hat{\pi}_0$ shrinking the effective $m$.
 </RemarkBlock>
 
 <RemarkBlock number={17} title="BH under positive regression dependence">
@@ -507,7 +507,7 @@ with equality when every $\theta_i$ equals the value against which the test was 
 Both follow immediately from Topic 19 Thm 1 combined with the union bound (Bonferroni) or the independence product (Šidák). Stated without separate proof.
 </TheoremBlock>
 
-![Three simultaneous CI constructions for $m = 10$ Normal means at $n = 25$, $\\alpha = 0.05$: unadjusted (marginal $95\\%$ coverage but joint coverage $\\approx 0.60$), Bonferroni-adjusted (joint coverage $\\ge 0.95$, each CI $\\approx 2.5\\times$ wider than unadjusted), Šidák-adjusted (slightly narrower than Bonferroni, joint coverage $\\approx 0.95$ exactly under independence).](/images/topics/multiple-testing-and-false-discovery/20-simultaneous-cis.png)
+![Three simultaneous CI constructions for $m = 10$ Normal means at $n = 25$, $\\alpha = 0.05$: unadjusted (marginal $95\\%$ coverage but joint coverage $\\approx 0.60$), Bonferroni-adjusted (joint coverage $\\ge 0.95$, each CI $\\approx 1.43\\times$ wider than unadjusted), Šidák-adjusted (slightly narrower than Bonferroni, joint coverage $\\approx 0.95$ exactly under independence).](/images/topics/multiple-testing-and-false-discovery/20-simultaneous-cis.png)
 
 <ExampleBlock number={13} title="Bonferroni simultaneous CIs for $m = 10$ means">
 Ten independent sample means $\bar{X}_i$ with SE $= 1/\sqrt{n}$, $n = 25$, $\alpha = 0.05$. The per-interval critical value is $z_{1 - \alpha/(2m)} = z_{0.9975} = 2.807$, so each Bonferroni CI is $\bar{X}_i \pm 2.807 / 5 = \bar{X}_i \pm 0.561$. The unadjusted critical value is $z_{0.975} = 1.96$, giving width $\pm 0.392$. The Bonferroni width is $2.807/1.96 \approx 1.43\times$ the unadjusted. Over 500 simulations with all true means $= 0$: empirical joint coverage for unadjusted is $\approx 0.60$; for Bonferroni $\approx 0.95$.
@@ -533,7 +533,7 @@ These are Topic 20's immediate neighbors and are covered in depth in [Track 6's 
 An FDR procedure like BH controls the expected false-discovery *proportion* but does not produce a simultaneous CI — there is no "$(1 - \alpha)$ joint coverage" interpretation of BH rejections. When the practitioner reports "10 features rejected at BH $\alpha = 0.05$," the claim is that $\le 5\%$ of those 10 are expected to be false rejections, not that the 10 parameters are jointly confined to specific intervals. For joint confidence statements on multiple parameters, Bonferroni / Šidák CIs are the correct tool; for discovery-rate-controlled flag lists, BH is correct.
 </RemarkBlock>
 
-<RemarkBlock number={25} title="Fulfils Topic 19 §19.10 Rem 19 #3">
+<RemarkBlock number={25} title="Fulfills Topic 19 §19.10 Rem 19 #3">
 Topic 19 explicitly deferred simultaneous CIs to Topic 20. The construction above — Bonferroni-adjusted inversion of FWER-controlled tests — *is* the formal treatment Topic 19 promised. Every claim about test–CI duality in Topic 19 carries over unchanged; the adjustment is to the level (not the construction).
 </RemarkBlock>
 

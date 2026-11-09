@@ -251,7 +251,7 @@ $$
 The special case $Z \sim N(0, 1)$ is the **standard Normal**, with PDF $\varphi(z) = \frac{1}{\sqrt{2\pi}} e^{-z^2/2}$ and CDF $\Phi(z) = \int_{-\infty}^z \varphi(t) \, dt$.
 </DefinitionBlock>
 
-The PDF is the familiar bell curve, symmetric about $\mu$. That $\int_{-\infty}^{\infty} e^{-z^2/2} \, dz = \sqrt{2\pi}$ — the Gaussian integral — is a classical result from <ExternalLink href="https://formalcalculus.com/topics/sequences-limits" site="formalcalculus">Sequences & Limits</ExternalLink>.
+The PDF is the familiar bell curve, symmetric about $\mu$. That $\int_{-\infty}^{\infty} e^{-z^2/2} \, dz = \sqrt{2\pi}$ — the Gaussian integral — is a classical result from <ExternalLink href="https://formalcalculus.com/topics/improper-integrals" site="formalcalculus">Improper Integrals & Special Functions</ExternalLink>.
 
 <img src="/images/topics/continuous-distributions/normal-deep-dive.png" alt="Normal distribution: 68-95-99.7 rule, effect of μ, effect of σ" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
 
@@ -695,7 +695,7 @@ The Beta belongs to the exponential family with natural parameters $\eta_1 = \al
 <ExampleBlock number={5} title="Beta-Bernoulli A/B Testing">
 A company runs an A/B test comparing two button designs. Design A has a $\text{Beta}(1, 1)$ prior (uniform — no prior information about the click rate). After 200 users see Design A, 34 click. The posterior is $\text{Beta}(1 + 34, 1 + 166) = \text{Beta}(35, 167)$.
 
-The posterior mean click rate is $35/202 \approx 0.173$, with a 95% credible interval of approximately $[0.124, 0.231]$.
+The posterior mean click rate is $35/202 \approx 0.173$, with a 95% credible interval of approximately $[0.124, 0.228]$.
 
 Design B, with prior $\text{Beta}(1, 1)$ and 42 clicks from 200 users, has posterior $\text{Beta}(43, 159)$, mean $43/202 \approx 0.213$.
 

@@ -300,7 +300,7 @@ $$
 \hat{\theta}_{\text{MLE}} \;=\; X_{(n)},
 $$
 
-with asymptotic variance of order $\theta^2/n^2$ — a full order of magnitude better than MoM's $\theta^2/(3n)$. The ratio $\text{ARE}(\hat{\theta}_{\text{MoM}}, \hat{\theta}_{\text{MLE}}) = 3/(n+2) \to 0$ as $n \to \infty$.
+with asymptotic variance of order $\theta^2/n^2$ — a full order of magnitude better than MoM's $\theta^2/(3n)$. The variance ratio is $\operatorname{Var}(X_{(n)})/\operatorname{Var}(2\bar X_n) = 3n^2/[(n+1)^2(n+2)]$, and exactly $3/(n+2)$ for the bias-corrected maximum $\tfrac{n+1}{n}X_{(n)}$; either way $\text{ARE}(\hat{\theta}_{\text{MoM}}, \hat{\theta}_{\text{MLE}}) \to 0$ as $n \to \infty$.
 
 We do not call this a failure of MoM — MoM gives an answer, and the answer converges to $\theta$. We call it the most graphic illustration of *why efficiency matters*: when the MLE achieves a faster convergence rate (here $1/n$ vs. $1/\sqrt{n}$), the asymptotic ratio of variances is not a fixed number but a sequence going to zero.
 </ExampleBlock>

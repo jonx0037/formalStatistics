@@ -218,7 +218,7 @@ Three sections pivot between these threads: notation (§28.3), linear mixed-effe
 <ExampleBlock number={1} title="The original Rubin 8-schools question">
 Rubin's 1981 motivation was not primarily statistical — a research group wanted to know whether coaching helped, and a meta-analytic question followed: do we believe school A's 28-point effect, school C's $-3$, or some compromise between each school's point estimate and the grand mean?
 
-Complete pooling answers "roughly $+8$ everywhere," losing school A's apparent success and school C's apparent null. No pooling answers "trust each school's sample mean," but then school C's $-3$ with $\sigma_C = 16$ is barely different from zero, so the no-pool answer is mostly noise. Partial pooling provides the compromise. The partial-pool answer — at $\tau = 10$, consistent with GEL2013's posterior analysis — moves school A's estimate down toward $+11$ and school C's up toward $+6$, scaled by how informative each $y_k$ is individually.
+Complete pooling answers "roughly $+8$ everywhere," losing school A's apparent success and school C's apparent null. No pooling answers "trust each school's sample mean," but then school C's $-3$ with $\sigma_C = 16$ is barely different from zero, so the no-pool answer is mostly noise. Partial pooling provides the compromise. The partial-pool answer — at $\tau = 10$, consistent with GEL2013's posterior analysis — moves school A's estimate down to about $+14$ and school C's up to about $+5$ (§28.6 Ex 7 works the numbers), scaled by how informative each $y_k$ is individually.
 </ExampleBlock>
 
 <RemarkBlock number={1} title="Why partial pooling almost always beats either extreme">
@@ -428,7 +428,7 @@ Since $\|X\|^2$ is non-central $\chi^2_d(\|\theta\|^2)$ with $d \geq 3$, the exp
 The shrinkage factor $1 - (d-2)/\|X\|^2$ is positive when $\|X\|^2 > d - 2$ and *negative* otherwise — plain JS can flip the sign of $X$, which is never the right answer. The **positive-part JS estimator** $\hat\theta_{\text{JS}^+} = \max(0, 1 - (d-2)/\|X\|^2) \cdot X$ (EFR1973) dominates plain JS uniformly in $\theta$ and is the estimator used in practice.
 
 <TheoremBlock number={3} title="James–Stein as empirical-Bayes posterior mean (stated)">
-Under the model $\theta \mid \mu, \tau^2 \sim \mathcal{N}_d(\mu \mathbf{1}, \tau^2 I)$ and $X \mid \theta \sim \mathcal{N}_d(\theta, I_d)$ with $\mu = 0$ known and $\tau^2$ estimated by its Type-II MLE, the posterior mean of $\theta$ coincides with the James-Stein estimator up to a finite-sample correction. The plug-in $\hat\tau^2$ is $\max(0, \|X\|^2/d - 1)$, yielding shrinkage factor $B = 1/(1 + \hat\tau^2) = d/(d + \|X\|^2 - d) \approx (d-2)/\|X\|^2$ for large $\|X\|^2$ — exactly Stein's shrinkage coefficient, with the $(d - 2)$ adjustment arising from the unbiased estimation of $1/\|\theta\|^2$ via Stein's identity (EFR1973).
+Under the model $\theta \mid \mu, \tau^2 \sim \mathcal{N}_d(\mu \mathbf{1}, \tau^2 I)$ and $X \mid \theta \sim \mathcal{N}_d(\theta, I_d)$ with $\mu = 0$ known and $\tau^2$ estimated by its Type-II MLE, the posterior mean of $\theta$ coincides with the James-Stein estimator up to a finite-sample correction. The plug-in $\hat\tau^2$ is $\max(0, \|X\|^2/d - 1)$, yielding shrinkage factor $B = 1/(1 + \hat\tau^2) = d/(d + \|X\|^2 - d) = d/\|X\|^2$ (when $\|X\|^2 > d$). This is Stein's shrinkage coefficient up to the constant factor $d/(d-2)$, which does not shrink as $\|X\|^2$ grows: the $(d - 2)$ version arises from estimating $B$ unbiasedly rather than by plug-in, since under the marginal $X \sim \mathcal{N}_d(0, (1+\tau^2) I_d)$ we have $\mathbb{E}[(d-2)/\|X\|^2] = 1/(1+\tau^2)$ exactly (EFR1973).
 </TheoremBlock>
 
 This is the Efron–Morris rereading: Stein's paradox is not a paradox at all but a theorem about empirical-Bayes shrinkage. The "unrelated quantities" are related by the empirical prior the data itself estimates.
@@ -453,7 +453,7 @@ The plain JS estimator can flip signs when $\|X\|^2 < d - 2$. The positive-part 
 </RemarkBlock>
 
 <RemarkBlock number={12} title="Why $d \geq 3$">
-Stein's theorem fails for $d = 1, 2$: in those dimensions the MLE is admissible under squared-error loss (Hodges–Lehmann 1951 for $d = 1$; Stein 1956 for $d = 2$). The proof above breaks because $\mathbb{E}[1/\|X\|^2]$ diverges for central $\chi^2_{1, 2}$ — the risk-reduction term is unbounded. In $d \geq 3$, the non-centrality parameter doesn't save us (the expectation diverges even at $\theta = 0$ when $d = 2$), so Stein's construction only works when the central $\chi^2$ has finite reciprocal moment.
+Stein's theorem fails for $d = 1, 2$: in those dimensions the MLE is admissible under squared-error loss (Hodges–Lehmann 1951 for $d = 1$; Stein 1956 for $d = 2$). The proof above breaks because $\mathbb{E}[1/\|X\|^2]$ diverges for central $\chi^2_{1, 2}$ — the risk-reduction term is unbounded. In $d \leq 2$, the non-centrality parameter doesn't save us (the expectation diverges for every $\theta$, not just at $\theta = 0$), so Stein's construction only works when the central $\chi^2$ has finite reciprocal moment.
 </RemarkBlock>
 
 <a id="section-28-6"></a>
@@ -531,7 +531,7 @@ where the expectation is under the posterior of $(\mu, \tau^2)$. The shrinkage f
 <ExampleBlock number={7} title="8-schools at $\tau = 10$">
 From Rubin's data: $\sigma_A^2 = 225$, $y_A = 28$. Precision-weighted grand mean at $\tau = 10$: $\hat\mu(\tau=10) \approx 8.2$. Shrinkage factor: $B_A = 225/(225 + 100) = 0.692$. Posterior mean for school A: $(1 - 0.692)(28) + (0.692)(8.2) = 0.308 \cdot 28 + 0.692 \cdot 8.2 \approx 14.3$. Posterior SD: $\sqrt{(1 - 0.692)(225)} \approx 8.3$. Compare to school B: $\sigma_B^2 = 100$, $y_B = 8$, $B_B = 100/200 = 0.5$. Posterior mean: $0.5 \cdot 8 + 0.5 \cdot 8.2 \approx 8.1$. Posterior SD: $\sqrt{0.5 \cdot 100} \approx 7.1$.
 
-School A's posterior mean has moved from $28$ halfway toward $\mu$; school B's barely moved because $y_B$ was already near $\mu$. The precision-weighted grand mean itself changes with $\tau$: at $\tau = 10$ it's $\approx 8.2$; at $\tau = 0$ (complete pool) it's $\approx 7.7$.
+School A's posterior mean has moved from $28$ about 70% of the way toward $\mu$ — the fraction $B_A = 0.692$; school B's barely moved because $y_B$ was already near $\mu$. The precision-weighted grand mean itself changes with $\tau$: at $\tau = 10$ it's $\approx 8.2$; at $\tau = 0$ (complete pool) it's $\approx 7.7$.
 </ExampleBlock>
 
 <EightSchoolsPartialPooling client:visible />
@@ -634,9 +634,9 @@ In R/Stan syntax (`brms`, `rstanarm`), this is `y ~ x + (1 + z | group)` — a f
 Under Def 5 with Gaussian likelihood and conjugate priors on $(\boldsymbol\beta, \sigma^2)$ plus a Wishart (or inverse-Wishart) hyperprior on $\boldsymbol\Sigma_b$, the joint posterior factorizes as a product of Gaussian full conditionals on $(\boldsymbol\beta, \mathbf{b}_k)$ and an inverse-Wishart full conditional on $\boldsymbol\Sigma_b$ (up to its hyperparameters). Gibbs sampling with these conjugate full conditionals converges geometrically; the resulting posterior predictive for a new observation in group $k$ is a multivariate $t$-distribution analogous to Topic 25's §25.5 Ex 2.
 </TheoremBlock>
 
-![Random-effects regression on simulated clustered data. Left panel: twelve groups, each fit separately with OLS — no-pool slopes and intercepts show large between-group spread including obviously-noisy slopes in small groups. Right panel: partial-pool random-effects fit — group-specific lines are pulled toward the fixed-effect population line, with small-n groups shrunk most heavily.](/images/topics/hierarchical-bayes-and-partial-pooling/28-random-effects-slopes-intercepts.png)
+![Random-effects regression on simulated clustered data. Left panel: twelve groups, each fit separately with OLS — no-pool slopes and intercepts show large between-group spread including visibly noisy slopes in some groups. Right panel: partial-pool random-effects fit — group-specific lines are pulled toward the fixed-effect population line, with the noisiest group fits shrunk most heavily.](/images/topics/hierarchical-bayes-and-partial-pooling/28-random-effects-slopes-intercepts.png)
 
-*Figure 6. Random-effects shrinkage on slopes and intercepts. Twelve simulated groups, each with $n_k = 8$ observations, fitted with (left) per-group OLS and (right) a Bayesian LMM with hierarchical Gaussian priors on the group-level coefficients. The LMM regularizes the per-group lines toward the population fixed effect — most aggressively for small-$n$ groups whose individual OLS fits would be dominated by noise.*
+*Figure 6. Random-effects shrinkage on slopes and intercepts. Twelve simulated groups, each with $n_k = 8$ observations, fitted with (left) per-group OLS and (right) a Bayesian LMM with hierarchical Gaussian priors on the group-level coefficients. The LMM regularizes the per-group lines toward the population fixed effect — most aggressively for the groups whose individual OLS estimates have the largest standard errors (all groups share $n_k = 8$, so this is driven by residual noise and the spread of each group's $x$ values).*
 
 <ExampleBlock number={11} title="Schools revisited with covariates">
 Extend 8-schools: now suppose each school has a pre-test score $\bar{x}_k$, and the coaching effect varies with baseline performance. LMM form:
