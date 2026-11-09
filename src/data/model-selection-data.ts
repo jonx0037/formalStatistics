@@ -9,7 +9,7 @@
  *   YANG_INCOMPAT_WELL         — Yang-race Tab A: truth = degree-3 polynomial,
  *                                BIC consistency holds
  *   YANG_INCOMPAT_MIS          — Yang-race Tab B: truth = sin(2πx) (polynomial-
- *                                misspecified), AIC minimax-rate dominates
+ *                                misspecified); BIC risk is no worse here
  *   NESTED_POISSON             — §24.7 Ex 8: η = 1 + 0.8 x₁ - 0.5 x₂; x₃ null
  *   POLY_DGP_PRECOMPUTED       — IIFE-materialized POLY_DGP sample, per-degree
  *                                fits, and AIC/AICc/BIC/Cp/CV value arrays.
@@ -220,8 +220,9 @@ export const YANG_INCOMPAT_WELL: RacePreset = {
  * Truth is sin(2πx); candidate set is polynomials d ∈ [0, 12] (truth NOT in
  * the candidate set). BIC's selection target shifts with n (each n has a
  * different "best polynomial approximation"); AIC tracks the minimax-rate
- * polynomial approximation more aggressively. The divergence in prediction
- * risk is the qualitative content of Yang 2005's incompatibility theorem.
+ * polynomial approximation more aggressively. Yang 2005 predicts an AIC
+ * advantage in the worst case, but for this smooth truth the precomputed
+ * risks show none (BIC lower at small n, level after) — see Topic 24 Ex 7.
  */
 export const YANG_INCOMPAT_MIS: RacePreset = {
   name: 'Yang Tab B: truth is sin(2πx) (polynomial-misspecified)',

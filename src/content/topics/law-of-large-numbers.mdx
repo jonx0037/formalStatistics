@@ -144,7 +144,7 @@ This topic traces the full arc from the weak law to the strong law. We start whe
 
 2. **Strengthening the conclusion** (Sections 10.5--10.7): We upgrade from convergence in probability to almost sure convergence (SLLN via Etemadi's proof), then from pointwise to uniform convergence (Glivenko--Cantelli).
 
-The bridge between these two directions is Kolmogorov's maximal inequality (Section 10.5) — a result that controls the *running maximum* of partial sums with the same bound as Chebyshev uses for the *terminal* value. It is the technical engine that powers the SLLN proof.
+The bridge between these two directions is Kolmogorov's maximal inequality (Section 10.5) — a result that controls the *running maximum* of partial sums with the same bound as Chebyshev uses for the *terminal* value. It is the technical engine of Kolmogorov's classical SLLN proof under full independence; Etemadi's pairwise proof (Section 10.6) needs only its endpoint case.
 
 To make the distinction between the weak and strong laws concrete, consider the following analogy. Imagine you are tracking a sequence of fair coin flips, computing the running proportion of heads $\hat{p}_n = (\text{number of heads in } n \text{ flips})/n$.
 
@@ -449,7 +449,7 @@ The three WLLN results (Theorems 10.1--10.3) all establish convergence in probab
 
 The key question is: how large can the partial sums $S_1, S_2, \ldots, S_n$ get along the way? Chebyshev's inequality controls $P(|S_n| \geq \varepsilon)$ — the probability that the *final* partial sum is large. But the partial sums might wander far from zero at intermediate times and then return. A random walk, for instance, typically reaches a maximum that is much larger than its terminal value. For the SLLN, we need to control $P(\max_{1 \leq k \leq n} |S_k| \geq \varepsilon)$ — the probability that *any* partial sum along the way is large.
 
-You might guess that controlling the maximum would cost a factor of $n$ (by the union bound: $P(\max |S_k| \geq \varepsilon) \leq \sum_{k=1}^n P(|S_k| \geq \varepsilon)$, and each term is bounded by Chebyshev). Kolmogorov's maximal inequality does dramatically better: the bound is *the same* as Chebyshev's for the terminal value alone. Controlling the running maximum costs nothing extra. This "free upgrade" is the mathematical reason why the SLLN proof works — it converts Chebyshev-type bounds (which give convergence in probability) into bounds on the running maximum (which, via Borel--Cantelli, give almost sure convergence).
+You might guess that controlling the maximum would cost a factor of $n$ (by the union bound: $P(\max |S_k| \geq \varepsilon) \leq \sum_{k=1}^n P(|S_k| \geq \varepsilon)$, and each term is bounded by Chebyshev). Kolmogorov's maximal inequality does dramatically better: the bound is *the same* as Chebyshev's for the terminal value alone. Controlling the running maximum costs nothing extra. This "free upgrade" is what powers Kolmogorov's classical SLLN proof under full independence — it converts Chebyshev-type bounds (which give convergence in probability) into bounds on the running maximum (which, via Borel--Cantelli, give almost sure convergence). Etemadi's pairwise proof (Section 10.6) needs only the endpoint case, with monotonicity filling in between.
 
 <TheoremBlock number={4} title="Theorem 10.4 (Kolmogorov's Maximal Inequality)">
 Let $X_1, \ldots, X_n$ be independent random variables with $E[X_i] = 0$ and $\text{Var}(X_i) = \sigma_i^2 < \infty$. Define partial sums $S_k = \sum_{i=1}^k X_i$. Then for any $\varepsilon > 0$:
@@ -541,7 +541,7 @@ $$
 
 This gives a bound that grows like $n \cdot \text{Var}(S_n)$ — a factor of $n$ worse than Kolmogorov's inequality. The stopping-time decomposition avoids this factor-of-$n$ loss by exploiting the independence structure: the future increments $S_n - S_k$ are independent of the past, so the cross-term $E[S_k(S_n - S_k) \cdot \mathbf{1}(A_k)]$ vanishes. Without independence, the best we could do is the union bound.
 
-This factor-of-$n$ savings is exactly what allows the Borel--Cantelli argument in the SLLN proof to succeed: the summable probability bounds from Kolmogorov's inequality, summed over the geometric subsequence, converge — whereas the union-bound version would diverge.
+This factor-of-$n$ savings is exactly what allows the Borel--Cantelli argument in Kolmogorov's classical, full-independence SLLN proof to succeed: there the running maximum over each block between consecutive points of a geometric subsequence gets a bound from Kolmogorov's inequality, and these bounds sum to a convergent series — whereas the union-bound version would diverge. Etemadi's pairwise proof (Section 10.6) avoids the block maximum altogether: it uses only the endpoint case and fills the gaps by monotonicity.
 
 <ExampleBlock number={3} title="Random Walk: the Gap Between max|S_k| and |S_n|">
 Let $X_1, \ldots, X_n$ be iid $N(0, 1)$, so $S_k = X_1 + \cdots + X_k$ is a random walk. The terminal value $|S_n|$ has the same distribution as $\sqrt{n} \cdot |Z|$ for $Z \sim N(0,1)$, with typical magnitude $\sqrt{n}$. But the running maximum $\max_{k \leq n} |S_k|$ is typically *larger* — the path might wander far from zero at some intermediate time and then return.
@@ -1155,8 +1155,8 @@ The logical dependencies form a clear ladder:
 - **Chebyshev WLLN** (Theorem 10.1) is the base case — three lines.
 - **Uncorrelated WLLN** (Theorem 10.2) generalizes by dropping "identically distributed."
 - **Khintchine's WLLN** (Theorem 10.3) generalizes by dropping "finite variance," using truncation.
-- **Kolmogorov's maximal inequality** (Theorem 10.4) provides the new tool needed to control *paths*, not just *endpoints*.
-- **SLLN** (Theorem 10.5) uses Kolmogorov + truncation + Borel--Cantelli to upgrade from "in probability" to "almost surely."
+- **Kolmogorov's maximal inequality** (Theorem 10.4) provides the new tool needed to control *paths*, not just *endpoints* — the engine of the classical full-independence SLLN proof.
+- **SLLN** (Theorem 10.5) uses truncation + Chebyshev at geometric endpoints (the endpoint case of Kolmogorov) + Borel--Cantelli + monotonicity to upgrade from "in probability" to "almost surely."
 - **Glivenko--Cantelli** (Theorem 10.6) uses the SLLN + monotonicity to upgrade from "pointwise" to "uniform."
 
 At every stage, we relaxed an assumption or strengthened a conclusion. This is how convergence theory works: you start with the simplest result that captures the essential phenomenon, then systematically push the boundaries — either by weakening the hypotheses (making the theorem more broadly applicable) or by strengthening the conclusion (making it more useful). The progression from Theorem 10.1 to Theorem 10.6 exemplifies both directions simultaneously.

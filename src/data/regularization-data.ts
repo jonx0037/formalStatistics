@@ -9,8 +9,9 @@
  *   §7.E.3  Precomputed regularization paths + CV curves on prostate (IIFE)
  *   §7.E.5  CORRELATED_FEATURES_DATA — synthetic n=200, p=10 with ρ=0.9 pairs
  *
- * §7.E.4 (reuse of EXAMPLE_10_GLM_DATA for §23.6 Ex 8) requires no new data —
- * the existing Topic-22 export is consumed verbatim from regression-data.ts.
+ * §7.E.4 (§23.6 Ex 8) requires no new data: its divergence demo uses the
+ * notebook's completely separated n=120, p=2 design (figures 1 and 8);
+ * Topic 22's EXAMPLE_10_GLM_DATA is only near-separated (finite MLE).
  *
  * Numeric values for PROSTATE_CANCER_DATA come from the HTF / ESL companion
  * dataset at <https://hastie.su.domains/ElemStatLearn/datasets/prostate.data>;

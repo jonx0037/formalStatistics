@@ -1629,8 +1629,10 @@ console.log('========================================\n');
   const X = data.X.map((row) => row.slice(1)); // drop the intercept column
   const y = data.y;
 
-  // Without ridge: bare glmFit on the near-separation preset is expected to
-  // fail to converge (the IRLS divergence pathology that motivates §23.6 Ex 8).
+  // EXAMPLE_10_GLM_DATA is only near-separated (finite MLE; bare glmFit
+  // converges to β̂₁ ≈ 3.95). §23.6 Ex 8's divergence demo uses the notebook's
+  // completely separated n=120, p=2 design; here we check only that ridge
+  // converges to a bounded estimate on the near-separation preset.
   const ridgeFit01 = penalizedGLMFit(X, y, 0.1, {
     family: 'binomial',
     link: 'logit',
@@ -1641,7 +1643,7 @@ console.log('========================================\n');
     'T9.7 penalizedGLMFit ridge-logistic on near-separation: converges',
     ridgeFit01.converged,
     `converged = ${ridgeFit01.converged}, nOuterIter = ${ridgeFit01.nOuterIter}`,
-    'true (converges where bare IRLS diverges)',
+    'true',
   );
   // Bounded coefficients: ‖β̂‖_∞ < 10 (the brief T9.13 acceptance bar).
   let maxAbs = 0;
@@ -1653,7 +1655,7 @@ console.log('========================================\n');
     'T9.7 penalizedGLMFit ridge: ‖β̂‖_∞ bounded by 10',
     maxAbs < 10,
     `‖β̂‖_∞ = ${maxAbs.toFixed(3)}`,
-    '< 10 (vs the ∞ that bare IRLS would produce)',
+    '< 10',
   );
   // Iter count comparable to notebook (notebook reports ridge_irls_iters = 10).
   // Allow a wide window since our IRLS convergence criterion may differ.

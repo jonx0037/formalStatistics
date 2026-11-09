@@ -326,7 +326,7 @@ $$
 \hat\phi = \frac{1}{n - p - 1}\sum_{i=1}^n \frac{(y_i - \hat\mu_i)^2}{V(\hat\mu_i)}.
 $$
 
-When $\phi$ is estimated rather than known, the deviance test (§22.7) uses an $F$-reference instead of $\chi^2$, exactly as in Topic 21 §21.8 where $\hat\sigma^2$ replaced $\sigma^2$ in the $F$-statistic. The §22.9 sandwich estimator generalizes this further: when the variance specification $\phi V(\mu_i)$ is wrong (overdispersed Poisson, misspecified Gamma scale, clustered Bernoulli), the QMLE is still consistent for $\boldsymbol\beta$ as long as the *mean* specification $\mu_i = g^{-1}(\mathbf{x}_i^\top\boldsymbol\beta)$ is correct; only the variance estimate needs adjustment.
+When $\phi$ is estimated rather than known, the deviance test (§22.7) uses an $F$-reference instead of $\chi^2$, exactly as in Topic 21 §21.8 where $\hat\sigma^2$ replaced $\sigma^2$ in the $F$-statistic. The §22.9 sandwich estimator generalizes this further: when the variance specification $\phi V(\mu_i)$ is wrong (overdispersed Poisson, a wrong Gamma variance function, clustered Bernoulli), the QMLE is still consistent for $\boldsymbol\beta$ as long as the *mean* specification $\mu_i = g^{-1}(\mathbf{x}_i^\top\boldsymbol\beta)$ is correct; only the variance estimate needs adjustment.
 </RemarkBlock>
 
 <a id="section-22-3"></a>
@@ -460,7 +460,7 @@ The boxed update in Step 4 is what `IRLSVisualizer` animates one iteration at a 
 <IRLSVisualizer client:visible />
 
 <img src="/images/topics/generalized-linear-models/22-irls-trajectory.png"
-     alt="Two-panel figure. Left: 2D contour map of the logistic log-likelihood ℓ(β₀, β₁) over a toy n=60 dataset; iterates β⁽⁰⁾ = (0,0), β⁽¹⁾, …, β⁽⁷⁾ plotted as arrows converging to the MLE β̂ near (0.1, 1.9) (a separate toy dataset from Example 5, with true β = (−0.8, 1.8)). Right: convergence plot of ‖β⁽ᵗ⁺¹⁾ − β⁽ᵗ⁾‖ on log scale vs iteration t — slow for the first few steps, then plunging ever faster once near the optimum, the signature of Newton's quadratic convergence."
+     alt="Two-panel figure. Left: 2D contour map of the logistic log-likelihood ℓ(β₀, β₁) over a toy n=60 dataset; iterates β⁽⁰⁾ = (0,0), β⁽¹⁾, …, β⁽⁵⁾ plotted as arrows converging to the MLE β̂ ≈ (−0.36, 1.67) on Example 5's dataset (true β = (−0.5, 1.8), marked ×). Right: convergence plot of ‖β⁽ᵗ⁾ − β⁽ᵗ⁻¹⁾‖ on log scale vs iteration t = 1…5 (1.40 down to 7.9×10⁻⁹) — slow for the first few steps, then plunging ever faster once near the optimum, the signature of Newton's quadratic convergence."
      class="w-full rounded-lg border my-6"
      style="border-color: var(--color-border);" />
 
@@ -506,13 +506,13 @@ On a synthetic logistic dataset with $n = 60$, $p = 1$ predictor, and true $\bol
 | $t$ | $\boldsymbol\beta^{(t)}$ | $\|\boldsymbol\beta^{(t)} - \boldsymbol\beta^{(t-1)}\|$ | $\ell(\boldsymbol\beta^{(t)})$ |
 |---|---|---|---|
 | 0 | $(0, 0)$ | — | $-41.59$ |
-| 1 | $(-0.41, 1.45)$ | $1.51$ | $-31.82$ |
-| 2 | $(-0.50, 1.83)$ | $0.39$ | $-31.65$ |
-| 3 | $(-0.50, 1.86)$ | $0.026$ | $-31.65$ |
-| 4 | $(-0.50, 1.86)$ | $1.6 \times 10^{-4}$ | $-31.65$ |
-| 5 | $(-0.50, 1.86)$ | $9.0 \times 10^{-9}$ | $-31.65$ |
+| 1 | $(-0.28, 1.37)$ | $1.40$ | $-32.61$ |
+| 2 | $(-0.35, 1.65)$ | $0.29$ | $-32.38$ |
+| 3 | $(-0.36, 1.67)$ | $0.024$ | $-32.37$ |
+| 4 | $(-0.36, 1.67)$ | $1.7 \times 10^{-4}$ | $-32.37$ |
+| 5 | $(-0.36, 1.67)$ | $7.9 \times 10^{-9}$ | $-32.37$ |
 
-Five iterations to convergence at $\|\Delta\boldsymbol\beta\| < 10^{-8}$. The error $\|\boldsymbol\beta^{(t)} - \hat{\boldsymbol\beta}\|$ shrinks roughly *quadratically* per step ($1.51 \to 0.39 \to 0.026 \to \cdots$, each step squaring the previous gap up to a constant) — the signature of Newton-method convergence in a neighborhood of the optimum (Topic 14 Thm 6). The right-panel readout of `IRLSVisualizer` reproduces this trajectory live.
+Five iterations to convergence at $\|\Delta\boldsymbol\beta\| < 10^{-8}$. The error $\|\boldsymbol\beta^{(t)} - \hat{\boldsymbol\beta}\|$ shrinks roughly *quadratically* per step ($1.40 \to 0.29 \to 0.024 \to 1.7 \times 10^{-4} \to \cdots$, each step squaring the previous gap up to a constant of about $0.15$–$0.3$) — the signature of Newton-method convergence in a neighborhood of the optimum (Topic 14 Thm 6). The IRLS-trajectory figure above plots this run; `IRLSVisualizer` shows the same Newton-style collapse live on its own presets.
 </ExampleBlock>
 
 <a id="section-22-4"></a>
@@ -904,8 +904,8 @@ Generate $n = 200$ overdispersed-Poisson responses with true $\boldsymbol\beta_0
 Naive Wald undercovers severely — $79\%$ instead of $95\%$ — because its SE is too small by roughly $\sqrt{1.8} \approx 1.34$. HC3 recovers nearly nominal coverage with no change to the point estimates. The §22.9 figure renders this directly: each simulation contributes two horizontal CI bars (one naive, one HC3), color-coded green if it covers $\beta_1^{\text{true}}$ or red if it misses. The naive bars miss roughly one in five times; the HC3 bars miss roughly one in twenty.
 </ExampleBlock>
 
-<ExampleBlock number={13} title="Gamma regression with misspecified dispersion">
-For a Gamma GLM, the variance function is $V(\mu) = \mu^2$ and dispersion $\phi$ is estimated. Suppose the true DGP has $\text{Var}(Y_i) = 4 \mu_i^2$ (so the dispersion is twice the value the model is implicitly assuming via $\hat\phi$). Naive Wald CIs again undercover; HC3 sandwich CIs recover. The pattern is the same as Poisson: point estimates ($\hat{\boldsymbol\beta}$ from IRLS) are unaffected by the dispersion misspecification because the score equation $\mathbf{X}^\top(\mathbf{y} - \boldsymbol\mu) = \mathbf{0}$ does not involve $\phi$; only the SE estimation needs adjustment. The `SandwichCoverageSimulator` exposes this with a "misspecifiedGamma" preset.
+<ExampleBlock number={13} title="Gamma regression with rescaled dispersion — the contrast case">
+For a Gamma GLM, the variance function is $V(\mu) = \mu^2$ and dispersion $\phi$ is estimated. Suppose the true DGP has a larger dispersion than Example 8's $\phi = 0.5$ — say $\text{Var}(Y_i) = 4 \mu_i^2$, i.e. $\phi = 4$. That is *not* a misspecification: it is still a Gamma model, and the Pearson estimate $\hat\phi$ absorbs the change. So, unlike the Poisson case (where $\phi$ is pinned at $1$), naive Wald CIs keep roughly nominal coverage here and the HC3 sandwich CIs agree with them. Point estimates ($\hat{\boldsymbol\beta}$ from IRLS) are unaffected either way, because the score equation does not involve $\phi$. For a Gamma fit, the sandwich earns its keep only when the variance *function* is wrong — say $\text{Var}(Y_i) \propto \mu_i^3$ — so that no single $\hat\phi$ can correct every SE. The `SandwichCoverageSimulator`'s Gamma setting (the "misspecifiedGamma" preset, log link) shows the contrast: as the ratio slider rescales $\phi$, both coverage bars stay near $95\%$.
 </ExampleBlock>
 
 <img src="/images/topics/generalized-linear-models/22-pearson-deviance-residuals.png"
@@ -934,7 +934,7 @@ The sandwich approach is the "model-agnostic" fix for Poisson overdispersion: ke
 The quasi-likelihood framework is older than the sandwich SE: Wedderburn (1974) introduced the idea that "specifying the mean–variance relationship is enough for consistent estimation" two years after Nelder–Wedderburn (1972) introduced GLMs. Huber (1967) had derived the misspecified-MLE asymptotic-variance form independently in the M-estimation context, and White (1980) made the empirical sandwich estimator standard in econometrics. Three threads, three authors, one consensus by the late 1980s: under correct mean specification, the QMLE / IRLS estimate is consistent, and the sandwich variance fixes the SE. McCullagh–Nelder (1989) Ch. 9 is the canonical book-length development; modern statsmodels and R-`sandwich` implementations follow that template directly.
 </RemarkBlock>
 
-The `SandwichCoverageSimulator` lets you watch the coverage gap close in real time. Pick a family (overdispersed Poisson / misspecified Gamma / clustered Bernoulli), set the misspecification magnitude with the slider, and click "Run 500" — each simulation contributes a CI bar to the top panel and updates the running coverage in the bottom panel. The naive bars consistently undercover; the HC3 bars consistently approach the nominal $1 - \alpha$ line.
+The `SandwichCoverageSimulator` lets you watch the coverage gap close in real time. Pick a family (overdispersed Poisson / dispersion-rescaled Gamma / clustered Bernoulli), set the misspecification magnitude with the slider, and click "Run 500" — each simulation contributes a CI bar to the top panel and updates the running coverage in the bottom panel. For Poisson and Bernoulli the naive bars consistently undercover while the HC3 bars approach the nominal $1 - \alpha$ line; the Gamma setting is the Example 13 contrast, where the estimated $\hat\phi$ keeps both near nominal.
 
 <SandwichCoverageSimulator client:visible />
 
