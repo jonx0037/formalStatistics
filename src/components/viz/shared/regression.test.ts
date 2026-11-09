@@ -1239,6 +1239,39 @@ function maxAbsDiff(a: number[], b: number[]): number {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// T8.15b — §22.8 Example 10 numbers on EXAMPLE_10_GLM_DATA (notebook Ex 10
+//         cell, default_rng(14992)): β̂ ≈ (0.293, 4.136), Wald-z [1.416, 6.856],
+//         profile-LRT [2.160, 7.793], upper half / lower half ≈ 1.85.
+// ─────────────────────────────────────────────────────────────────────────────
+{
+  const fit = glmFit(EXAMPLE_10_GLM_DATA.X, EXAMPLE_10_GLM_DATA.y, FAMILIES.bernoulli);
+  const z975 = 1.959963984540054;
+  const se1 = Math.sqrt(fit.vcov[1][1]);
+  const wald = [fit.beta[1] - z975 * se1, fit.beta[1] + z975 * se1];
+  const prof = coefCIProfileGLM(fit, 1, 0.05);
+  const ratio = (prof.upper - prof.center) / (prof.center - prof.lower);
+  const near = (a: number, b: number, tol: number) => Math.abs(a - b) < tol;
+  check(
+    'T8.15b Ex 10 fit: β̂ ≈ (0.293, 4.136)',
+    fit.converged && near(fit.beta[0], 0.2929, 1e-3) && near(fit.beta[1], 4.13599, 1e-3),
+    `β̂ = (${fit.beta[0].toFixed(4)}, ${fit.beta[1].toFixed(4)})`,
+    '(0.2929, 4.1360)',
+  );
+  check(
+    'T8.15b Ex 10 Wald-z CI for β₁ ≈ [1.416, 6.856]',
+    near(wald[0], 1.41634, 1e-3) && near(wald[1], 6.85564, 1e-3),
+    `[${wald[0].toFixed(4)}, ${wald[1].toFixed(4)}]`,
+    '[1.4163, 6.8556]',
+  );
+  check(
+    'T8.15b Ex 10 profile-LRT CI for β₁ ≈ [2.160, 7.793], ratio ≈ 1.85',
+    near(prof.lower, 2.15975, 1e-3) && near(prof.upper, 7.79329, 1e-3) && near(ratio, 1.8506, 5e-3),
+    `[${prof.lower.toFixed(4)}, ${prof.upper.toFixed(4)}], ratio = ${ratio.toFixed(4)}`,
+    '[2.1598, 7.7933], 1.8506',
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // T8.16 — simulateGLM is reproducible: same seed → identical output.
 // ─────────────────────────────────────────────────────────────────────────────
 {
@@ -1630,7 +1663,7 @@ console.log('========================================\n');
   const y = data.y;
 
   // EXAMPLE_10_GLM_DATA is only near-separated (finite MLE; bare glmFit
-  // converges to β̂₁ ≈ 3.95). §23.6 Ex 8's divergence demo uses the notebook's
+  // converges to β̂₁ ≈ 4.14). §23.6 Ex 8's divergence demo uses the notebook's
   // completely separated n=120, p=2 design; here we check only that ridge
   // converges to a bounded estimate on the near-separation preset.
   const ridgeFit01 = penalizedGLMFit(X, y, 0.1, {
