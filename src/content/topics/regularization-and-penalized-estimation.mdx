@@ -450,7 +450,7 @@ Step 4 is the headline result: the diamond-vs-circle picture in `LevelSetExplore
      style="border-color: var(--color-border);" />
 
 <ExampleBlock number={4} title="Bias-variance decomposition on prostate-cancer">
-Plugging the prostate-cancer design into the SVD-coordinate MSE formula from Proof 1, we can compute the bias² and variance contributions to total MSE as a function of $\lambda$. At $\lambda = 0$ (OLS), bias² is zero and variance carries all the weight. As $\lambda$ grows, bias² rises quadratically while variance falls roughly proportionally to $\lambda \sum_j 1/d_j^4$. The total MSE traces a U-shape with minimum somewhere in the middle. For the prostate dataset, that minimum lies near $\lambda \approx 1$ — large enough to substantially reduce variance on the small singular values, small enough to keep bias modest.
+Plugging the prostate-cancer design into the SVD-coordinate MSE formula from Proof 1, we can compute the bias² and variance contributions to total MSE as a function of $\lambda$. At $\lambda = 0$ (OLS), bias² is zero and variance carries all the weight. As $\lambda$ grows, bias² rises quadratically while variance falls roughly proportionally to $\lambda \sum_j 1/d_j^4$. The total MSE traces a U-shape with minimum somewhere in the middle. For the prostate dataset (standardized predictors, with $\beta$ and $\sigma^2$ set to their OLS estimates, $\hat\sigma^2 \approx 0.48$), that minimum lies near $\lambda \approx 4.5$, about 12% below the OLS MSE — large enough to substantially reduce variance on the small singular values, small enough to keep bias modest.
 </ExampleBlock>
 
 <ExampleBlock number={5} title="Soft-thresholding on an orthogonal design">
