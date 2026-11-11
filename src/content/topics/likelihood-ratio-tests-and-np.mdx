@@ -684,7 +684,7 @@ $$
 $$
 W_n^\theta = n(\hat\theta_n - \theta_0)^2 I^\theta(\hat\theta_n) \ne n(\hat\eta_n - \eta_0)^2 I^\eta(\hat\eta_n) = W_n^\eta,
 $$
-except at the equality-of-derivatives condition $g'(\theta_0) = 1$. The Score statistic inherits Wald's non-invariance for the same reason.
+except when $g$ is affine. The Score statistic inherits Wald's non-invariance for the same reason.
 </TheoremBlock>
 
 **Proof sketch (full version in LEH2005 §12.4).** (i) The likelihood function $L(\theta) = L(g^{-1}(\eta))$ is the same function up to reparameterization; the sup under $H_0$ and the sup under $\Theta$ are unchanged. So $\Lambda_n$ and $-2 \log \Lambda_n$ are invariant. (ii) For Wald, the MLE transforms as $\hat\eta_n = g(\hat\theta_n)$ (MLE equivariance, Topic 14 §14.4) but the difference $\hat\eta_n - \eta_0 = g(\hat\theta_n) - g(\theta_0)$ is not linearly related to $\hat\theta_n - \theta_0$ unless $g$ is linear. The Jacobian $g'$ rescales the Fisher information $I^\eta(\eta) = I^\theta(g^{-1}(\eta)) / g'(g^{-1}(\eta))^2$, but this rescaling only partially compensates for the nonlinearity. The net result: $W_n$ takes different numerical values in the two parameterizations, and the corresponding p-values differ. ∎
@@ -696,9 +696,9 @@ Bernoulli $p$ with logit link $\eta = \log[p/(1-p)]$. Test $H_0: p = 0.5$ (equiv
 
 **Wald in p-space:** $W_n^p = n(\hat p - 0.5)^2 / [\hat p(1 - \hat p)] = 50 \cdot 0.04 / 0.21 \approx 9.52$. P-value $\approx 0.002$.
 
-**Wald in logit-space:** $\hat\eta = \log(0.3/0.7) \approx -0.847$, $\eta_0 = 0$. Information at $\hat\eta$: $I^\eta(\hat\eta) = \hat p(1-\hat p) = 0.21$. $W_n^\eta = 50 \cdot 0.717 \cdot 0.21 \approx 7.53$. P-value $\approx 0.006$.
+**Wald in logit-space:** $\hat\eta = \log(0.3/0.7) \approx -0.847$, $\eta_0 = 0$. Information at $\hat\eta$: $I^\eta(\hat\eta) = \hat p(1-\hat p) = 0.21$. $W_n^\eta = 50 \cdot 0.718 \cdot 0.21 \approx 7.54$. P-value $\approx 0.006$.
 
-**LRT:** $-2\log\Lambda_n = 2n\,[0.3 \log(0.3/0.5) + 0.7 \log(0.7/0.5)] \approx 8.22$. P-value $\approx 0.004$. The same value in both parameterizations (Theorem 6(i)).
+**LRT:** $-2\log\Lambda_n = 2n\,[0.3 \log(0.3/0.5) + 0.7 \log(0.7/0.5)] \approx 8.23$. P-value $\approx 0.004$. The same value in both parameterizations (Theorem 6(i)).
 
 The three p-values (0.002, 0.006, 0.004) all clear α = 0.05. But at borderline significance — say, $\hat p = 0.36$, where the p-space Wald p-value is $\approx 0.039$ and the logit-space one $\approx 0.051$ — the Wald p-values in the two parameterizations straddle α, flipping the rejection decision. The LRT does not suffer this instability.
 </ExampleBlock>

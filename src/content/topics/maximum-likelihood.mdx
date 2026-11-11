@@ -432,7 +432,7 @@ So the asymptotic variance scales by $[g'(\theta_0)]^2$. A consequence: the Fish
 The first asymptotic property is the most basic. As the sample size grows, does the MLE settle on the true parameter?
 
 <img src="/images/topics/maximum-likelihood/mle-consistency.png"
-     alt="Four overlaid log-likelihood curves ℓ(θ) normalized to their own maxima, for n = 10, 50, 200, 1000 samples from the same model. As n grows, the curve sharpens dramatically around the true parameter θ₀ (marked with a vertical line). The maximizers θ̂ₙ cluster ever more tightly around θ₀ as n increases — consistency visualized."
+     alt="Three panels. Left: running MLE paths μ̂ₙ = X̄ₙ for a Normal model with μ₀ = 5, plotted against n on a log scale from 1 to 1000; the paths start spread between about 1 and 8 and settle inside a ±0.5 band around μ₀. Middle: running MLE paths p̂ₙ = X̄ₙ for a Bernoulli model with p₀ = 0.3, settling inside a ±0.1 band. Right: the expected log-likelihood E_θ₀[log f(X; θ)] − E_θ₀[log f(X; θ₀)] (the negative KL divergence) on θ ∈ [2, 8], with its unique maximum of zero at θ₀ = 5 — consistency visualized."
      class="w-full rounded-lg border my-6"
      style="border-color: var(--color-border);" />
 
