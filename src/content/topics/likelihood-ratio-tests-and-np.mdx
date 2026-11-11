@@ -761,9 +761,9 @@ For Bernoulli$(p)$ at $p_0 = 0.5$: $I(0.5) = 1/[0.5 \cdot 0.5] = 4$. Local alter
 | 2 | 16 | 0.979 |
 | 3 | 36 | 0.99997 |
 
-At $h = 2$ (an effect two standard errors into the alternative), power is already 97.9%. At $h = 3$, essentially certain rejection. Values match `localPower('bernoulli', 0.5, h, 0.05)` in `testing.ts`.
+At $h = 2$ (an effect $h\sqrt{I(\theta_0)} = 4$ standard errors into the alternative), power is already 97.9%. At $h = 3$, essentially certain rejection. Values match `localPower('bernoulli', 0.5, h, 0.05)` in `testing.ts`.
 
-The practical reading: for Bernoulli at $p_0 = 0.5$, a local effect of $h = 1.96/\sqrt{I(\theta_0)} = 0.98$ standard deviations gives 50% power at $\alpha = 0.05$ — the classical "z-test power 50% at the rejection boundary" calibration.
+The practical reading: for Bernoulli at $p_0 = 0.5$, a local effect of $h = 1.96/\sqrt{I(\theta_0)} = 0.98$ (that is, 1.96 standard errors of $\hat p$) gives 50% power at $\alpha = 0.05$ — the classical "z-test power 50% at the rejection boundary" calibration.
 </ExampleBlock>
 
 <RemarkBlock number={18} title="CRLB as the power envelope — Fisher information plays both roles">
