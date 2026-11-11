@@ -466,7 +466,7 @@ $$
 c^* \;=\; \frac{\mu^2}{\mu^2 + \sigma^2/n}.
 $$
 
-Note that $c^* < 1$ strictly whenever $\sigma^2/n > 0$ — which it always is. So the sample mean is **never** MSE-optimal in this family; there always exists a shrunk version that strictly dominates it. The catch: $c^*$ depends on $\mu$ itself, so we cannot use it as a standalone estimator. But this example is the seed of every shrinkage, regularization, and empirical-Bayes method: allowing bias opens a strictly better option in terms of MSE.
+Note that $c^* < 1$ strictly whenever $\sigma^2/n > 0$ — which it always is. So the sample mean is **never** MSE-optimal in this family; for each $\mu$, the shrunk version $c^* \bar{X}_n$ has strictly smaller MSE at that $\mu$. This is not domination in the sense of Definition 13 below: the catch is that $c^*$ depends on $\mu$ itself, so we cannot use it as a standalone estimator. But this example is the seed of every shrinkage, regularization, and empirical-Bayes method: allowing bias opens a strictly better option in terms of MSE.
 </ExampleBlock>
 
 <RemarkBlock number={4} title="The bias-variance tradeoff as the fundamental tension in estimation">
