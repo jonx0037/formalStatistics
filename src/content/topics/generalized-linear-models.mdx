@@ -512,7 +512,7 @@ On a synthetic logistic dataset with $n = 60$, $p = 1$ predictor, and true $\bol
 | 4 | $(-0.36, 1.67)$ | $1.7 \times 10^{-4}$ | $-32.37$ |
 | 5 | $(-0.36, 1.67)$ | $7.9 \times 10^{-9}$ | $-32.37$ |
 
-Five iterations to convergence at $\|\Delta\boldsymbol\beta\| < 10^{-8}$. The error $\|\boldsymbol\beta^{(t)} - \hat{\boldsymbol\beta}\|$ shrinks roughly *quadratically* per step ($1.40 \to 0.29 \to 0.024 \to 1.7 \times 10^{-4} \to \cdots$, each step squaring the previous gap up to a constant of about $0.15$–$0.3$) — the signature of Newton-method convergence in a neighborhood of the optimum (Topic 14 Thm 6). The IRLS-trajectory figure above plots this run; `IRLSVisualizer` shows the same Newton-style collapse live on its own presets.
+Five iterations to convergence at $\|\Delta\boldsymbol\beta\| < 10^{-8}$. The step $\|\boldsymbol\beta^{(t)} - \boldsymbol\beta^{(t-1)}\|$ shrinks roughly *quadratically* per iteration ($1.40 \to 0.29 \to 0.024 \to 1.7 \times 10^{-4} \to \cdots$, each step squaring the previous one up to a constant of about $0.15$–$0.3$), and so does the error $\|\boldsymbol\beta^{(t)} - \hat{\boldsymbol\beta}\|$ ($1.71 \to 0.31 \to 0.025 \to 1.7 \times 10^{-4}$ for $t = 0, \dots, 3$) — the signature of Newton-method convergence in a neighborhood of the optimum (Topic 14 Thm 6). The IRLS-trajectory figure above plots this run; `IRLSVisualizer` shows the same Newton-style collapse live on its own presets.
 </ExampleBlock>
 
 <a id="section-22-4"></a>
