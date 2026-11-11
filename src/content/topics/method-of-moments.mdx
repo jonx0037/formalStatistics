@@ -688,7 +688,7 @@ Three reasons, in increasing order of importance.
 
 **(1) Closed form.** When the moment map inverts in elementary functions — Gamma, Beta, Weibull (numerically), Pareto with $\alpha > 1$ — MoM gives an estimate in two lines of arithmetic. No iteration, no convergence diagnostics, no risk of missing a local maximum.
 
-**(2) Warm-start for MLE.** The next section makes this precise. When MLE requires Newton-Raphson, the MoM estimate is almost always a good starting point: it is consistent (so it converges to $\theta_0$ at the same rate as the MLE), it is computable, and it lies inside the parameter space whenever the data are not pathological. Newton from MoM converges in 3–5 iterations at typical $n$; Newton from an arbitrary start can take 8–12 or fail to converge at all.
+**(2) Warm-start for MLE.** The next section makes this precise. When MLE requires Newton-Raphson, the MoM estimate is almost always a good starting point: it is consistent (so it converges to $\theta_0$ at the same rate as the MLE), it is computable, and it lies inside the parameter space whenever the data are not pathological. Newton from MoM converges in 3–5 iterations at typical $n$; Newton from an arbitrary start can take 8–12, step outside the parameter space, or fail to converge at all (Example 15).
 
 **(3) Diagnostic.** When MoM and MLE disagree wildly, *the model is suspect*. The two recipes use different summaries of the data — sample moments for MoM, the full likelihood for MLE — and a large discrepancy means the model is not capturing the moment structure consistently with the likelihood structure. This is a free goodness-of-fit signal, available without additional computation.
 </RemarkBlock>
@@ -698,7 +698,7 @@ Three reasons, in increasing order of importance.
 Topic 14 §14.7 introduced Newton-Raphson for the Gamma shape MLE. It mentioned, briefly, that "a standard initial guess is the [method-of-moments](/topics/method-of-moments) estimate" — that's the warm-start pattern. Here we make it first-class.
 
 <RemarkBlock number={8} title="Conceptual: cheap first pass, expensive refinement">
-The MLE is asymptotically efficient. The MoM is consistent. The two estimates converge to the same true $\theta_0$ at the same $\sqrt{n}$ rate, and the *difference* between them is $O_p(1/\sqrt{n})$. So the MoM estimate places us, with high probability, within an $O(1/\sqrt{n})$ neighborhood of the MLE — close enough that one or two Newton steps land at the MLE to machine precision. This is the algorithmic reason MoM matters even when we have decided to fit by maximum likelihood.
+The MLE is asymptotically efficient. The MoM is consistent. The two estimates converge to the same true $\theta_0$ at the same $\sqrt{n}$ rate, and the *difference* between them is $O_p(1/\sqrt{n})$. So the MoM estimate places us, with high probability, within an $O(1/\sqrt{n})$ neighborhood of the MLE — close enough that Newton's quadratic convergence takes over at once: a few steps (four on the sample in Example 15, with the error falling $0.15 \to 6 \times 10^{-3} \to 9 \times 10^{-6} \to 2 \times 10^{-11}$) land at the MLE to machine precision. This is the algorithmic reason MoM matters even when we have decided to fit by maximum likelihood.
 
 The conceptual analogue in optimization is **multi-resolution**: solve a cheap approximate problem to get a good initial point, then refine with the expensive exact procedure. MoM-warm-started MLE is exactly this pattern at the level of statistical estimation.
 </RemarkBlock>
@@ -709,7 +709,13 @@ The conceptual analogue in optimization is **multi-resolution**: solve a cheap a
      style="border-color: var(--color-border);" />
 
 <ExampleBlock number={15} title="Gamma shape MLE: MoM init takes 4 Newton steps">
-For a $\text{Gamma}(\alpha = 3, \beta = 2)$ sample of size $n = 100$, the MoM estimate of the shape is typically $\hat{\alpha}_{\text{MoM}} \approx 3.0 \pm 0.3$ on a single replicate. Starting Newton-Raphson on the score equation $\log\beta - \psi(\alpha) + \overline{\log X} = 0$ from this initial value, convergence to machine precision (step size $< 10^{-8}$) requires **4 iterations** in the typical case. Starting from $\alpha_0 = 0.5$ takes **9 iterations** — Newton has to traverse the steep left tail of the score function. Starting from $\alpha_0 = 2 \times \hat{\alpha}_{\text{MoM}} \approx 6$ takes **10 iterations**, with the first step often overshooting. The pattern holds across sample sizes from $n = 50$ to $n = 1000$: MoM-warm-started Newton converges in 3–5 steps; arbitrary-start Newton needs 8–12.
+For a $\text{Gamma}(\alpha = 3, \beta = 2)$ sample of size $n = 100$, the MoM estimate of the shape varies from sample to sample as roughly $3.0 \pm 0.5$ (its standard deviation over replicates is about $0.50$, matching the asymptotic $\sqrt{2\alpha(\alpha + 1)/n} \approx 0.49$). On the sample in the figure, $\hat{\alpha}_{\text{MoM}} = 3.87$ and $\hat{\alpha}_{\text{MLE}} = 4.02$. With the rate profiled out at $\hat\beta = \alpha/\bar{X}$, the shape MLE solves the profile score equation
+
+$$
+\log\alpha - \psi(\alpha) \;=\; \log\bar{X} - \overline{\log X}.
+$$
+
+Starting Newton-Raphson on this equation from $\hat{\alpha}_{\text{MoM}}$, convergence to machine precision (step size $< 10^{-8}$) takes **4 iterations**. Starting from $\alpha_0 = 0.5$ takes **9 iterations** — Newton has to traverse the steep left tail of the score function. Starting from $\alpha_0 = 2 \times \hat{\alpha}_{\text{MoM}} = 7.74$ takes **10 iterations**: the first step overshoots all the way down to $\alpha \approx 0.45$, and Newton then climbs back along the left tail. That start is close to the edge. On this sample any start above about $7.97$ sends the first step to $\alpha \leq 0$, outside the parameter space, and the iteration continues only because of a positivity safeguard that clips $\alpha$ to a small positive value ($10^{-6}$ in the figure's code); without it, Newton fails outright. Across samples from $n = 50$ to $n = 1000$, MoM-warm-started Newton converges in 3–5 steps and the $\alpha_0 = 0.5$ start in 8–9. The $2 \times$ MoM start is worse than it looks on this sample: in more than half of replicates (62% at $n = 100$) its first step leaves the parameter space, and even with the safeguard it then needs about 30 steps, or does not converge at all without one.
 </ExampleBlock>
 
 <RemarkBlock number={9} title="Pattern in modern software">

@@ -3,7 +3,6 @@ import * as d3 from 'd3';
 import { useResizeObserver } from './shared/useResizeObserver';
 import {
   momGamma,
-  mleGammaShape,
   digamma,
   trigamma,
   logGamma,
@@ -23,31 +22,52 @@ function makeLCG(seed: number): () => number {
   };
 }
 
-// Run Newton-Raphson on the Gamma shape score from a given starting α₀.
-// Records the full path so we can visualize all three trajectories.
-function newtonPath(data: number[], beta: number, init: number, maxIter = 30, tol = 1e-9):
-  { path: number[]; converged: boolean } {
+// Smallest α a Newton iterate may take: a step that would leave the
+// parameter space (α ≤ 0) is clipped here, as in the companion notebook.
+const ALPHA_FLOOR = 1e-6;
+
+// log X̄ − mean(log X): the data summary in the profile score equation.
+function logMeanGap(data: number[]): number {
   const n = data.length;
   let sumLog = 0;
   for (let i = 0; i < n; i++) sumLog += Math.log(Math.max(data[i], 1e-300));
+  return Math.log(sampleMean(data)) - sumLog / n;
+}
+
+// Newton-Raphson on the profile score equation for the Gamma shape (β profiled
+// out at β̂ = α/X̄):  f(α) = log α − ψ(α) − (log X̄ − mean log X) = 0,
+// f'(α) = 1/α − ψ'(α). Same method, stopping rule (|step| < 1e-8) and
+// positivity clip as the article's Example 15 and the notebook figure.
+// Records the full path so we can visualize all three trajectories.
+function newtonPath(data: number[], init: number, maxIter = 60, tol = 1e-8):
+  { path: number[]; converged: boolean; clipped: boolean } {
+  const c = logMeanGap(data);
   const path: number[] = [init];
   let alpha = init;
   let converged = false;
+  let clipped = false;
   for (let k = 0; k < maxIter; k++) {
-    const score = n * Math.log(beta) - n * digamma(alpha) + sumLog;
-    const info = n * trigamma(alpha);
-    if (!Number.isFinite(info) || info <= 0) break;
-    const step = score / info;
-    const next = Math.max(alpha + step, 1e-6);
+    const f = Math.log(alpha) - digamma(alpha) - c;
+    const fp = 1 / alpha - trigamma(alpha);
+    if (!Number.isFinite(f) || !Number.isFinite(fp) || fp >= 0) break;
+    const step = f / fp;
+    const raw = alpha - step;
+    if (raw <= 0) clipped = true;
+    const next = Math.max(raw, ALPHA_FLOOR);
     path.push(next);
+    alpha = next;
     if (Math.abs(step) < tol) {
       converged = true;
-      alpha = next;
       break;
     }
-    alpha = next;
   }
-  return { path, converged };
+  return { path, converged, clipped };
+}
+
+// Profile log-likelihood ℓ_p(α) = max_β ℓ(α, β), attained at β = α/X̄.
+function profileLogLik(alpha: number, n: number, xbar: number, sumLog: number): number {
+  if (alpha <= 0) return NaN;
+  return n * (alpha * Math.log(alpha / xbar) - logGamma(alpha)) + (alpha - 1) * sumLog - n * alpha;
 }
 
 export default function WarmStartExplorer() {
@@ -67,10 +87,10 @@ export default function WarmStartExplorer() {
 
   const xbar = useMemo(() => sampleMean(data), [data]);
   const momAlpha = useMemo(() => momGamma(data).alphaHat, [data]);
-  const profileBeta = momAlpha > 0 && xbar > 0 ? momAlpha / xbar : preset.trueBeta;
 
   const trajectories = useMemo(() => {
-    const trueMle = mleGammaShape(data, profileBeta, { init: momAlpha, maxIter: 40 }).mle;
+    const mlePath = newtonPath(data, momAlpha, 100, 1e-13).path;
+    const trueMle = mlePath[mlePath.length - 1];
     const inits = [
       { label: 'MoM init', color: '#2563EB', start: momAlpha },
       { label: 'Small (0.5)', color: '#DC2626', start: 0.5 },
@@ -78,12 +98,12 @@ export default function WarmStartExplorer() {
     ];
     return inits.map((it) => ({
       ...it,
-      ...newtonPath(data, profileBeta, it.start),
+      ...newtonPath(data, it.start),
       finalMLE: trueMle,
     }));
-  }, [data, profileBeta, momAlpha]);
+  }, [data, momAlpha]);
 
-  // ── Left panel: log-likelihood ℓ(α) with iterate markers ────────────────
+  // ── Left panel: profile log-likelihood ℓ_p(α) with iterate markers ──────
   const leftRef = useRef<SVGSVGElement | null>(null);
   const leftW = isWide ? Math.floor(w * 0.55) : w;
 
@@ -105,11 +125,7 @@ export default function WarmStartExplorer() {
 
     let sumLog = 0;
     for (let i = 0; i < data.length; i++) sumLog += Math.log(Math.max(data[i], 1e-300));
-    const sumX = data.reduce((s, x) => s + x, 0);
-    const ll = grid.map((alpha) => {
-      if (alpha <= 0) return NaN;
-      return n * (alpha * Math.log(profileBeta) - logGamma(alpha)) + (alpha - 1) * sumLog - profileBeta * sumX;
-    });
+    const ll = grid.map((alpha) => profileLogLik(alpha, n, xbar, sumLog));
 
     const x = d3.scaleLinear().domain([lo, hi]).range([0, innerW]);
     const llValid = ll.filter(Number.isFinite);
@@ -146,7 +162,7 @@ export default function WarmStartExplorer() {
     trajectories.forEach((tr) => {
       tr.path.forEach((alpha, i) => {
         if (alpha < lo || alpha > hi || alpha <= 0) return;
-        const llVal = n * (alpha * Math.log(profileBeta) - logGamma(alpha)) + (alpha - 1) * sumLog - profileBeta * sumX;
+        const llVal = profileLogLik(alpha, n, xbar, sumLog);
         if (!Number.isFinite(llVal)) return;
         g.append('circle').attr('cx', x(alpha)).attr('cy', y(llVal))
           .attr('r', i === 0 ? 5 : 3).attr('fill', tr.color)
@@ -160,9 +176,9 @@ export default function WarmStartExplorer() {
     trajectories.forEach((it, i) => {
       lg.append('circle').attr('cx', 5).attr('cy', i * 14).attr('r', 4).attr('fill', it.color);
       lg.append('text').attr('x', 14).attr('y', i * 14 + 3)
-        .text(`${it.label} (${it.path.length - 1} steps)`);
+        .text(`${it.label} (${it.path.length - 1} steps${it.clipped ? ', clipped' : ''})`);
     });
-  }, [trajectories, leftW, data, n, profileBeta, trueAlpha]);
+  }, [trajectories, leftW, data, n, xbar, trueAlpha]);
 
   // ── Right panel: convergence plot |α_t − α̂| vs iteration on log-y ──────
   const rightRef = useRef<SVGSVGElement | null>(null);
@@ -218,7 +234,7 @@ export default function WarmStartExplorer() {
       <div style={{ marginBottom: '0.5rem' }}>
         <strong>Interactive: MoM warm-start vs arbitrary inits</strong>
         <div style={{ fontSize: '0.8125rem', color: 'var(--color-text-muted)', marginTop: 4 }}>
-          Newton-Raphson on the Gamma shape MLE from three starting points. The MoM init lands close to the maximum, converging in 3–5 steps; arbitrary starts wander.
+          Newton-Raphson on the profile score log α − ψ(α) = log X̄ − mean(log X) for the Gamma shape MLE, from three starting points (stop when the step is below 10⁻⁸). The MoM init lands close to the maximum and converges in 3–5 steps. The 2 × MoM start often overshoots past α = 0 on its first step; “clipped” means a positivity safeguard reset α to 10⁻⁶ and Newton climbed back from there.
         </div>
       </div>
 
