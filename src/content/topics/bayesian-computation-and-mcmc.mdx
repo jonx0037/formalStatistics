@@ -230,9 +230,9 @@ $$\alpha(x, x') \;=\; \min\!\left\{1,\; \frac{\pi(x') \, q(x \mid x')}{\pi(x) \,
 
 The **MH transition kernel** is
 
-$$K(x, dx') \;=\; \alpha(x, x') \, q(x' \mid x) \, dx' \;+\; r(x) \, \delta_x(dx'), \qquad r(x) \;=\; 1 - \!\int \alpha(x, y) \, q(y \mid x) \, dy,$$
+$$K(x, dx') \;=\; \alpha(x, x') \, q(x' \mid x) \, dx' \;+\; s(x) \, \delta_x(dx'), \qquad s(x) \;=\; 1 - \!\int \alpha(x, y) \, q(y \mid x) \, dy,$$
 
-where the first term covers accepted moves and the second (the rejection mass $r(x)$) parks the chain at $x$ when the proposal is rejected.
+where the first term covers accepted moves and the second (the rejection mass $s(x)$, the probability of staying put) parks the chain at $x$ when the proposal is rejected.
 </DefinitionBlock>
 
 <DefinitionBlock number={2} title="Invariant distribution, detailed balance">
@@ -250,7 +250,7 @@ $$\alpha(x, x') \;=\; \min\!\left\{1,\, \frac{\pi(x') \, q(x \mid x')}{\pi(x) \,
 
 Transition kernel
 
-$$K(x, dx') \;=\; \alpha(x, x') \, q(x' \mid x) \, dx' \;+\; r(x) \, \delta_x(dx'), \qquad r(x) \;=\; 1 - \int \alpha(x, y) \, q(y \mid x) \, dy.$$
+$$K(x, dx') \;=\; \alpha(x, x') \, q(x' \mid x) \, dx' \;+\; s(x) \, \delta_x(dx'), \qquad s(x) \;=\; 1 - \int \alpha(x, y) \, q(y \mid x) \, dy.$$
 
 **Claim:** $\pi$ is invariant for $K$: for every measurable $A \subseteq \mathcal{X}$, $\int \pi(x) K(x, A) \, dx = \pi(A)$.
 
@@ -270,11 +270,11 @@ LHS equals RHS. The $r > 1$ case is the same calculation with labels swapped.
 
 **Step 6 — invariance from detailed balance.** For any measurable $A$,
 
-$$\int \pi(x) K(x, A) \, dx \;=\; \int_A \!\!\int \pi(x) \, k(x, x') \, dx \, dx' \;+\; \int_A r(x) \, \pi(x) \, dx.$$
+$$\int \pi(x) K(x, A) \, dx \;=\; \int_A \!\!\int \pi(x) \, k(x, x') \, dx \, dx' \;+\; \int_A s(x) \, \pi(x) \, dx.$$
 
-Apply detailed balance to the inner integral: $\int \pi(x) k(x, x') \, dx = \pi(x') \int \alpha(x', x) q(x \mid x') \, dx = \pi(x') \, \bigl(1 - r(x')\bigr)$. Substitute:
+Apply detailed balance to the inner integral: $\int \pi(x) k(x, x') \, dx = \pi(x') \int \alpha(x', x) q(x \mid x') \, dx = \pi(x') \, \bigl(1 - s(x')\bigr)$. Substitute:
 
-$$\int \pi(x) K(x, A) \, dx \;=\; \int_A \pi(x') \bigl(1 - r(x')\bigr) \, dx' \;+\; \int_A r(x) \pi(x) \, dx \;=\; \int_A \pi(x') \, dx' \;=\; \pi(A).$$
+$$\int \pi(x) K(x, A) \, dx \;=\; \int_A \pi(x') \bigl(1 - s(x')\bigr) \, dx' \;+\; \int_A s(x) \pi(x) \, dx \;=\; \int_A \pi(x') \, dx' \;=\; \pi(A).$$
 
 ∎ — using the MH acceptance ratio definition (HAS1970 §2) and the detailed-balance-⇒-invariance lemma (MEY2009 Thm 1.6).
 </ProofBlock>
