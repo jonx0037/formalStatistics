@@ -271,9 +271,9 @@ Order the $p$-values ascending: $p_{(1)} \le p_{(2)} \le \cdots \le p_{(m)}$. Le
 </TheoremBlock>
 
 <ProofBlock title="Proof 3 — Holm FWER control (first-true-null argument)">
-Let $H_0$ be the true-null configuration with $|H_0| = m_0$ and let $r^*$ be the smallest rank (in the overall ordering of $p_{(1)}, \ldots, p_{(m)}$) at which some true null appears. Equivalently, $r^* = m_1 + 1$: the first $m_1$ positions in the ordering must be alternatives (if every null is larger than every alternative, which is the worst case for Type I; otherwise $r^*$ is smaller, which only makes a false rejection require a smaller $p_{(r^*)}$).
+Let $H_0$ be the true-null configuration with $|H_0| = m_0$ and let $r^*$ be the smallest rank (in the overall ordering of $p_{(1)}, \ldots, p_{(m)}$) at which some true null appears. Only alternatives can precede it, so $r^* \le m_1 + 1$, with equality exactly when the first $m_1$ positions in the ordering are all alternatives (every null is larger than every alternative, which is the worst case for Type I; otherwise $r^*$ is smaller, which only makes a false rejection require a smaller $p_{(r^*)}$).
 
-We show that $\Pr_{H_0}(V \ge 1)$ — the probability that Holm falsely rejects at least one true null — is at most $\alpha$. A false rejection requires Holm to walk past step $r^*$, which requires $p_{(r^*)} \le \alpha / (m - r^* + 1)$. At rank $r^*$, exactly $m - r^* + 1 = m_0$ of the remaining $p$-values are true nulls. The smallest of those $m_0$ null $p$-values — call it $p^*_{(1)}$, the *first-order statistic* of the null $p$-values — is at most $p_{(r^*)}$. So
+We show that $\Pr_{H_0}(V \ge 1)$ — the probability that Holm falsely rejects at least one true null — is at most $\alpha$. A false rejection requires Holm to walk past step $r^*$, which requires $p_{(r^*)} \le \alpha / (m - r^* + 1)$. At rank $r^*$, all $m_0$ true nulls are still among the $m - r^* + 1$ remaining $p$-values, so $m - r^* + 1 \ge m_0$ (with equality in the worst case $r^* = m_1 + 1$) and the Holm threshold satisfies $\alpha / (m - r^* + 1) \le \alpha / m_0$. The smallest of those $m_0$ null $p$-values — call it $p^*_{(1)}$, the *first-order statistic* of the null $p$-values — is at most $p_{(r^*)}$. So
 
 $$\Pr_{H_0}(V \ge 1) \;\le\; \Pr_{H_0}\!\left(p^*_{(1)} \le \tfrac{\alpha}{m_0}\right).$$
 
