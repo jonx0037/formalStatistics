@@ -887,15 +887,15 @@ Therefore the sample mean is **inadmissible** in dimension $d \geq 3$.
 <ProofBlock>
 *Proof sketch.* The full proof uses Stein's lemma — integration by parts for Normal expectations — to compute $\mathbb{E}[\|\hat{\theta}_{JS} - \theta\|^2]$ in closed form. Here we give the statement and the geometric intuition.
 
-**Statement.** An explicit (slightly idealized) risk formula for the non-positive-part James–Stein estimator is
+**Statement.** Stein's lemma gives the exact risk of the non-positive-part James–Stein estimator, $R(\hat{\theta}_{JS}, \theta) = d\sigma^2 - (d-2)^2\sigma^4\,\mathbb{E}[1/\|X\|^2]$. Jensen's inequality bounds the expectation below by $1/(\|\theta\|^2 + (d-2)\sigma^2)$ (apply it to the convex map $k \mapsto 1/(d-2+2k)$, writing $\|X\|^2/\sigma^2$ as a Poisson mixture of central $\chi^2_{d+2K}$ variables), which gives an explicit upper bound on the risk:
 
 $$
-R(\hat{\theta}_{JS}, \theta) \;=\; d\sigma^2 \;-\; \frac{(d-2)^2 \sigma^4}{\|\theta\|^2 + (d-2)\sigma^2},
+R(\hat{\theta}_{JS}, \theta) \;\leq\; d\sigma^2 \;-\; \frac{(d-2)^2 \sigma^4}{\|\theta\|^2 + (d-2)\sigma^2},
 $$
 
-which is strictly less than $d\sigma^2$ (the risk of the MLE) for every $\theta$, provided $d \geq 3$. The positive-part version is uniformly at least as good.
+with equality at $\theta = 0$. (At $d = 10$, $\sigma = 1$, $\|\theta\| = 3$, the bound is $6.24$ and the exact risk is $5.99$.) The bound is strictly less than $d\sigma^2$ (the risk of the MLE) for every $\theta$, provided $d \geq 3$. The positive-part version is uniformly at least as good.
 
-**Geometric intuition.** The sample mean $X$ estimates each component $\theta_i$ independently. In $d \geq 3$ dimensions, the "noise ball" around $\theta$ concentrates in a thin annulus at radius $\approx \sigma\sqrt{d}$ — by the CLT applied to $\|X - \theta\|^2$. Shrinking $X$ toward the origin (or any fixed point) reduces total squared error on average, because the shrinkage moves most of the noise away from the part of the annulus farthest from the origin, more than it moves signal away from the target. The $(d-2)$ factor is the smallest shrinkage strength that wins against noise in all directions simultaneously — it is exactly the threshold where the bound integrates to give a net improvement.
+**Geometric intuition.** The sample mean $X$ estimates each component $\theta_i$ independently. In $d \geq 3$ dimensions, the "noise ball" around $\theta$ concentrates in a thin annulus at radius $\approx \sigma\sqrt{d}$ — by the CLT applied to $\|X - \theta\|^2$. Shrinking $X$ toward the origin (or any fixed point) reduces total squared error on average, because the shrinkage moves most of the noise away from the part of the annulus farthest from the origin, more than it moves signal away from the target. The $(d-2)$ factor is the optimal shrinkage constant, not a threshold: replacing it with any constant $a$ strictly between $0$ and $2(d-2)$ still dominates $X$, because the risk reduction is $a\,(2(d-2) - a)\,\sigma^4\,\mathbb{E}[1/\|X\|^2] > 0$, and $a = d-2$ maximizes that reduction.
 
 **Pointer.** The full proof uses Stein's identity: for $Z \sim \mathcal{N}(0, 1)$ and smooth $g$, $\mathbb{E}[Z\, g(Z)] = \mathbb{E}[g'(Z)]$. Applied coordinate-wise to the squared error of $\hat{\theta}_{JS}$, it reduces the MSE calculation to an integral involving $(d-2)/\|X\|^2$. See Lehmann & Casella (1998), Chapter 5, for the detailed argument; [Topic 28 §28.5](/topics/hierarchical-bayes-and-partial-pooling#section-28-5) now also gives the full Stein-identity proof in the hierarchical-Bayes context. $\quad\blacksquare$
 </ProofBlock>
