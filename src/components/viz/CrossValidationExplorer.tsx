@@ -121,8 +121,9 @@ export default function CrossValidationExplorer() {
       </div>
 
       <div className="mt-3 text-xs text-gray-600">
-        <strong>Reading the figure.</strong> Left: U-shaped CV curve with one-SE
-        error bars at each λ. Right: active-set size (number of nonzero
+        <strong>Reading the figure.</strong> Left: CV curve with one-SE error
+        bars at each λ — on the prostate data it falls steeply as λ shrinks,
+        then stays nearly flat. Right: active-set size (number of nonzero
         coefficients in the refit) drops as λ grows. The two vertical markers
         highlight the prediction-optimal λ_min and the parsimony-favoring λ_1SE.
         Both refits live as <code>cv.pathAtLambdaMin</code> and{' '}
