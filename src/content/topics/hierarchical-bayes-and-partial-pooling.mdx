@@ -327,9 +327,9 @@ Gibbs sweeps through the three full-conditional updates in any order; the invari
 
 The third conditional is already the partial-pool posterior — §28.6 will prove this closed form from first principles.
 
-![Left: the Gibbs alternation diagram for the Normal-Normal hierarchical model — block-updating (theta given (mu, tau squared)) and ((mu, tau squared) given theta). Right: a 200-iteration mu trace from an 8-schools Gibbs run, with burn-in shaded in the first 40 iterations and the post-burn-in mean annotated.](/images/topics/hierarchical-bayes-and-partial-pooling/28-gibbs-schematic.png)
+![Left: the Gibbs alternation diagram for the Normal-Normal hierarchical model — block-updating (theta given (mu, tau squared)) and ((mu, tau squared) given theta). Right: a 400-iteration mu trace from an 8-schools Gibbs run, with burn-in shaded in the first 100 iterations and a dashed reference line at the complete-pooling estimate mu-hat-pool = 7.69; around iterations 75 to 110 the trace flattens near 3 while tau sits close to zero.](/images/topics/hierarchical-bayes-and-partial-pooling/28-gibbs-schematic.png)
 
-*Figure 2. Block Gibbs for Normal–Normal. Left: the alternation diagram — sample $\boldsymbol\theta$ given the hyperparameters, then sample the hyperparameters given $\boldsymbol\theta$. Right: 200 iterations of $\mu$ from an 8-schools Gibbs run. The chain mixes quickly because all full conditionals are Gaussian or inverse-$\chi^2$ — no Metropolis rejection to slow it down.*
+*Figure 2. Block Gibbs for Normal–Normal. Left: the alternation diagram — sample $\boldsymbol\theta$ given the hyperparameters, then sample the hyperparameters given $\boldsymbol\theta$. Right: 400 iterations of $\mu$ from an 8-schools Gibbs run (uniform prior on $\tau$), the first 100 shaded as burn-in; the dashed line marks the complete-pooling estimate $\hat\mu_{\text{pool}} = 7.69$, the precision-weighted grand mean of Figure 1. Every draw is accepted, because all full conditionals are Gaussian or inverse-$\chi^2$ — but acceptance is not mixing: around iterations 75–110, $\tau$ drops below about 2 and $\mu$ stalls near 3, the small-$\tau$ neck of the funnel that §28.9 describes.*
 
 <ExampleBlock number={4} title="8-schools Gibbs, one sweep at a time">
 From a warm start $(\theta_k = y_k, \mu = \bar y, \tau = 10)$:
