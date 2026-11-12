@@ -668,7 +668,7 @@ $$
 \hat V(x) \;=\; \frac{\hat f_h(x)\, R(K)}{n\,h}, \qquad \mathrm{CI}_{1-\alpha}(x) \;=\; \hat f_h(x) \;\pm\; z_{1 - \alpha/2}\,\sqrt{\hat V(x)},
 $$
 
-noting the coverage will be biased-low at modest $n$ and small $h$.
+noting the coverage will be biased low whenever the smoothing bias is not negligible next to the width — which, for bandwidths of order $n^{-1/5}$, is at every $n$ (Remark 14).
 
 <ExampleBlock number={8} title="Pointwise CI at x = 0 for N(0,1), n = 500">
 For a Normal$(0, 1)$ sample of size $n = 500$ (seed-42 NumPy draw, $\hat\sigma \approx 0.98$), Silverman's bandwidth $\hat h_{\mathrm{ROT}} \approx 0.300$. At $x = 0$:
@@ -692,18 +692,18 @@ $$
 giving the Bahadur-plug-in asymptotic standard error
 
 $$
-\hat{\mathrm{SE}}(\hat\xi_{0.9}) \;=\; \sqrt{\frac{0.9 \cdot 0.1}{500 \cdot 0.175^2}} \;\approx\; 0.0242.
+\hat{\mathrm{SE}}(\hat\xi_{0.9}) \;=\; \sqrt{\frac{0.9 \cdot 0.1}{500 \cdot 0.175^2}} \;\approx\; 0.0767.
 $$
 
-The resulting 95% asymptotic CI is $1.30 \pm 1.96 \cdot 0.0242 = [1.25, 1.35]$. For comparison, the [distribution-free binomial-exact CI](/topics/order-statistics-and-quantiles#section-29-7) from Topic 29 §29.7 is $[X_{(r)}, X_{(s)}]$ with $r$ and $s$ chosen so the coverage is at least $1 - \alpha$; at $n = 500$, $p = 0.9$, $\alpha = 0.05$ the CI is approximately $[1.24, 1.37]$. The Bahadur-plug-in CI is noticeably tighter — asymptotic efficiency at the cost of nominal-coverage validity at finite $n$.
+The resulting 95% asymptotic CI is $1.30 \pm 1.96 \cdot 0.0767 = [1.15, 1.45]$. For comparison, the [distribution-free binomial-exact CI](/topics/order-statistics-and-quantiles#section-29-7) from Topic 29 §29.7 is $[X_{(r)}, X_{(s)}]$ with $r$ and $s$ chosen so the coverage is at least $1 - \alpha$; at $n = 500$, $p = 0.9$, $\alpha = 0.05$ that is $[X_{(436)}, X_{(464)}]$ (exact coverage $0.963$), approximately $[1.14, 1.46]$ for a Normal sample. The Bahadur-plug-in CI is slightly tighter (width $0.30$ against $0.32$) — asymptotic efficiency at the cost of nominal-coverage validity at finite $n$.
 </ExampleBlock>
 
-![Plot of empirical coverage vs sample size n for the pointwise 95% CI at x=0 under f = N(0,1). Bars extend from the coverage observed over 2000 MC replicates at each n in {100, 200, 500, 1000, 2000, 5000}. At small n coverage is below 95% because of the bias shift; at large n it approaches nominal.](/images/topics/kernel-density-estimation/30-pointwise-ci-coverage.png)
+![Plot of empirical coverage vs sample size n for the pointwise 95% CI at x=0 under f = N(0,1). Bars extend from the coverage observed over 2000 MC replicates at each n in {100, 200, 500, 1000, 2000, 5000}. Left: empirical coverage, about 0.946 at n = 100 drifting down to about 0.931 at n = 5000, below the nominal 95% line throughout. Right: mean CI width on log–log axes, shrinking like n^(−2/5).](/images/topics/kernel-density-estimation/30-pointwise-ci-coverage.png)
 
-*Figure 7. Empirical coverage of the 95% pointwise CI for $f(0)$ under $f = $ Normal$(0, 1)$ across sample sizes. At small $n$ the bias shift in Theorem 6 depresses coverage below $95\%$; by $n = 5000$ the coverage is within Monte-Carlo noise of nominal.*
+*Figure 7. Empirical coverage of the 95% pointwise CI for $f(0)$ under $f = $ Normal$(0, 1)$ across sample sizes. The bias shift in Theorem 6 keeps coverage below $95\%$ at every $n$, and it drifts down rather than recovering (about $94.5\%$ at $n = 100$ to $93\%$ at $n = 5000$): with Silverman's $h \propto n^{-1/5}$ the bias and the width shrink at the same rate.*
 
-<RemarkBlock number={14} title="Why the CI has biased coverage at small n">
-The CI is centered at $\hat f_h(x)$, which is a consistent estimator of $\mathbb{E}[\hat f_h(x)] = f(x) + \frac{h^2}{2}\mu_2(K) f''(x) + o(h^2)$ — not $f(x)$ itself. At the oracle bandwidth $h^\ast$ the bias is $O(n^{-2/5})$, and the interval width is $O(n^{-2/5})$ as well, so the bias is of the same order as the width. Coverage improves as $n$ grows (the $o(h^2)$ terms shrink faster than the width) but remains biased-low at the finite $n$ ML practitioners see in practice. Bias-corrected CIs (plug-in estimates of $f''$, or undersmoothing) exist; vdV2000 §24.1 is a standard reference.
+<RemarkBlock number={14} title="Why the CI has biased coverage at every n">
+The CI is centered at $\hat f_h(x)$, which is a consistent estimator of $\mathbb{E}[\hat f_h(x)] = f(x) + \frac{h^2}{2}\mu_2(K) f''(x) + o(h^2)$ — not $f(x)$ itself. At the oracle bandwidth $h^\ast$ the bias is $O(n^{-2/5})$, and the interval width is $O(n^{-2/5})$ as well, so the bias is of the same order as the width. Their ratio therefore tends to a constant, so coverage does not recover as $n$ grows: it stays biased low at every $n$, and in Figure 7 it drifts slightly down. Only a bandwidth that shrinks faster than $n^{-1/5}$ (undersmoothing) makes the bias negligible next to the width. Bias-corrected CIs (plug-in estimates of $f''$, or undersmoothing) exist; vdV2000 §24.1 is a standard reference.
 </RemarkBlock>
 
 <RemarkBlock number={15} title="Simultaneous CIs and the bootstrap">

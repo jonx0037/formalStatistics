@@ -795,7 +795,7 @@ The score test is parameterization-invariant when the MLE is computed on the sam
 The concrete logit-vs-raw Bernoulli example — where Wald p-values differ between parameterizations while the LRT's p-value is identical — is worked out in [Topic 18 §18.8](/topics/likelihood-ratio-tests-and-np#section-18-8).
 </RemarkBlock>
 
-![Three panels. Left: overlaid null-distribution histograms of W_n (Wald, amber), S_n (Score, purple), −2log Λ_n (LRT, green) for Bernoulli H₀: p = 0.5 at n = 30, 10000 MC runs, common χ²_1 density overlaid. Center: algebraic formulas with Bernoulli specializations. Right: under H_A (true p = 0.65), overlay of the three alternative distributions — similar means, slightly different spreads, the first glimpse of finite-sample power differences.](/images/topics/hypothesis-testing/wald-score-lrt.png)
+![Three panels. Left: overlaid null-distribution histograms of W_n (Wald, amber), S_n (Score, purple), −2log Λ_n (LRT, green) for Bernoulli H₀: p = 0.5 at n = 30, 10000 MC runs, common χ²_1 density overlaid. Center: algebraic formulas with Bernoulli specializations. Right: under H_A (true p = 0.65), overlay of the three alternative distributions — similar means, slightly different spreads. At n = 30 with p₀ = 0.5 all three tests reject the same set of counts (|k − 15| ≥ 6), so their powers are identical here (exactly 0.358 at p = 0.65; the panel's 0.349 is Monte Carlo noise).](/images/topics/hypothesis-testing/wald-score-lrt.png)
 
 <WaldScoreLRTComparison client:visible />
 
