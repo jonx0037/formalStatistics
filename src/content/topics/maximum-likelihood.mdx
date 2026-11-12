@@ -898,7 +898,7 @@ The broader lesson is that all consistency-level statements (Theorem 7) let you 
 Every ML practitioner uses maximum likelihood daily, often without calling it that. The three most important translations are cross-entropy, MAP/regularization, and the exponential-family MLE recipe — and they are all re-readings of §§14.1–14.8 in ML notation.
 
 <img src="/images/topics/maximum-likelihood/ml-connections.png"
-     alt="Conceptual diagram with three interconnected boxes. Center: 'MLE = maximize Σ log f(xᵢ; θ)'. Left branch: 'Minimize cross-entropy loss' with examples (binary cross-entropy → Bernoulli MLE, categorical cross-entropy → Multinomial MLE, MSE → Normal MLE). Right branch: 'MAP = MLE + log prior' with examples (Gaussian prior → L² / ridge, Laplace prior → L¹ / lasso). Bottom: 'Exponential-family GLM: ∇A(η̂) = T̄' with examples (logistic regression, Poisson regression, linear regression)."
+     alt="Two-panel plot. Left, titled 'MLE = Minimize Cross-Entropy': the negative average log-likelihood −ℓ(μ)/n and the cross-entropy H(p̂_data, p_μ) for a Normal mean, plotted against μ; the two curves coincide and share one minimizer, marked by a vertical line at μ̂ = 4.79, with the annotation argmin_μ H(p̂, p_μ) = argmax_μ ℓ(μ). Right, titled 'MAP = MLE + Prior Penalty': the shifted log-likelihood ℓ(μ), a Gaussian log-prior log π(μ) centered at 0 (drawn scaled by 0.3), and the log-posterior ℓ(μ) + log π(μ), plotted against μ; vertical lines mark MLE = 4.79, MAP = 4.61, and prior mean 0, and an arrow labeled 'Shrinkage toward prior' points from the MLE to the MAP."
      class="w-full rounded-lg border my-6"
      style="border-color: var(--color-border);" />
 

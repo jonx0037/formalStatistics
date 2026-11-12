@@ -664,14 +664,14 @@ Topic 6 Example 4 introduced insurance claim amounts as a motivating Gamma examp
 
 | Coefficient | $\hat\beta_j$ | $\widehat{\text{SE}}(\hat\beta_j)$ |
 |---|---|---|
-| Intercept | $0.936$ | $0.087$ |
-| Severity | $0.569$ | $0.062$ |
+| Intercept | $0.936$ | $0.042$ |
+| Severity | $0.569$ | $0.042$ |
 
 Estimated dispersion $\hat\phi = 0.444$ (true 0.5; recovery within sampling error at $n = 250$). Deviance $D = 126.49$ on $248$ df. The fitted model is $\log E[Y_i \mid z_i] = 0.936 + 0.569 z_i$, so a one-SD increase in claim severity multiplies the expected claim amount by $e^{0.569} \approx 1.77$. The right panel of Figure 6 below shows deviance residuals against fitted values — the symmetric-around-zero, no-trend pattern signals the Gamma+log specification is adequate; if the dispersion were misspecified or the variance function wrong, the deviance residuals would show heteroscedastic structure. The §22.9 sandwich estimator handles this when it happens.
 </ExampleBlock>
 
 <img src="/images/topics/generalized-linear-models/22-gamma-fit.png"
-     alt="Two-panel figure. Left: histogram of insurance claim amounts on log x-axis (n=250), with fitted Gamma density overlaid per covariate decile — deciles 1, 5, 10 shown as separate density curves shifted along the x-axis. Right: deviance residuals r_i^D against fitted μ̂_i on log x-axis; residuals scatter symmetrically around 0 with no systematic trend, indicating the Gamma+log specification is adequate."
+     alt="Two-panel figure. Left: scatter of the n=250 synthetic claim amounts y against the claim-severity score z, on a log-scale y-axis, with the fitted mean curve μ̂(z) = exp(0.936 + 0.569 z), a straight line on the log axis, and a shaded 95% Wald band that is narrowest near z = 0 and widens toward the extremes. Right: deviance residuals r_i^D against fitted μ̂_i on a log x-axis, with dotted reference lines at ±2; residuals scatter symmetrically around 0 with no systematic trend and nearly all fall inside ±2, indicating the Gamma+log specification is adequate."
      class="w-full rounded-lg border my-6"
      style="border-color: var(--color-border);" />
 
