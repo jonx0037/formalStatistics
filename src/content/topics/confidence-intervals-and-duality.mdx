@@ -303,7 +303,7 @@ The z, t, χ², and F pivots exhaust essentially every classical example of exac
 
 <ExternalLink href="/topics/likelihood-ratio-tests-and-np#section-18-7">Topic 18 §18.7</ExternalLink> proved that the Wald, Score, and LRT statistics all converge in distribution to $\chi^2_1$ under the null for regular parametric families. Theorem 1 now turns each test into a CI. The three CIs coincide asymptotically — they share the same leading-order $\chi^2_1$ coverage — but differ at finite $n$ in ways that matter for rare-event regimes and boundary parameters. §19.5 handles the Bernoulli boundary case; the rest of §19.4 catalogues the trio.
 
-![Log-likelihood and three CIs for Bernoulli p̂ = 0.3, n = 50. Wald (amber) is the symmetric interval from the quadratic approximation at p̂. Wilson (purple; score-test inversion) follows the likelihood curvature. LRT (green) bisects the likelihood's χ²₁-threshold contour. All three agree asymptotically; at finite n the asymmetric LRT and Wilson stay further from the boundary.](/images/topics/confidence-intervals-and-duality/19-wald-score-lrt-intervals.png)
+![Relative likelihood L(p)/L(p̂) and three 95% CIs for Bernoulli p̂ = 0.3, n = 50, with a side-by-side comparison and a numerical summary. Wald (amber) [0.173, 0.427] is the symmetric interval from the quadratic approximation at p̂. Wilson (purple; score-test inversion) [0.191, 0.438] follows the likelihood curvature. LRT (green) [0.185, 0.435] is where the relative likelihood crosses exp(−χ²₁,₀.₉₅/2) ≈ 0.147 (the threshold itself is not drawn). All three agree asymptotically; at finite n the asymmetric LRT and Wilson stay further from the boundary.](/images/topics/confidence-intervals-and-duality/19-wald-score-lrt-intervals.png)
 
 <DefinitionBlock number={4} title="Wald confidence interval">
 For a regular parametric family with scalar $\theta$, MLE $\hat\theta_n$, and Fisher information $I(\theta)$, the **Wald CI** at level $1-\alpha$ is
@@ -353,10 +353,10 @@ All three are close — agreement to ≈ 0.02 in each endpoint — because $n = 
 For iid Poisson$(\lambda)$ with $\hat\lambda = 2$, $n = 30$, $\alpha = 0.05$:
 
 - **Wald**: $\hat\lambda \pm z_{0.025}\sqrt{\hat\lambda/n} = 2 \pm 1.96 \cdot 0.258 = [1.494, 2.506]$.
-- **Score**: invert $n(\hat\lambda - \lambda_0)^2/\lambda_0 = z^2$; quadratic in $\lambda_0$ gives $[1.527, 2.572]$.
-- **LRT**: bisection on $2n[\hat\lambda\log(\hat\lambda/\lambda_0) - (\hat\lambda - \lambda_0)] = \chi^2_{1, 0.95}$; here $[1.529, 2.572]$.
+- **Score**: invert $n(\hat\lambda - \lambda_0)^2/\lambda_0 = z^2$; quadratic in $\lambda_0$ gives $[1.554, 2.574]$.
+- **LRT**: bisection on $2n[\hat\lambda\log(\hat\lambda/\lambda_0) - (\hat\lambda - \lambda_0)] = \chi^2_{1, 0.95}$; here $[1.536, 2.550]$.
 
-Score and LRT agree to three decimals here; Wald is visibly different because the Poisson log-likelihood's curvature at $\hat\lambda = 2$ differs from the quadratic approximation.
+Score and LRT are close but not identical — they differ by about $0.02$ at each end. Both sit to the right of Wald, because the Poisson log-likelihood is asymmetric about $\hat\lambda = 2$ and its curvature differs from the quadratic approximation that Wald uses.
 </ExampleBlock>
 
 <RemarkBlock number={7} title="CRLB as CI-width envelope">
