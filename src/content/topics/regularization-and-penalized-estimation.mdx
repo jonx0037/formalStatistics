@@ -770,11 +770,11 @@ Running 5-fold and 10-fold CV on the prostate-cancer lasso path with seed 42 giv
 </ExampleBlock>
 
 <ExampleBlock number={13} title="One-SE rule in action">
-On the prostate dataset, 10-fold lasso CV identifies $\hat\lambda_{\min}$ at a small value where most of the 8 predictors enter the active set. Applying the one-SE rule shifts to a substantially larger $\hat\lambda_{\text{1SE}}$ where only 4–5 predictors remain — a sparser, more interpretable model whose CV performance is statistically indistinguishable. The one-SE rule's aggressive bias toward sparsity is a feature when interpretation matters (e.g. variable importance for medical research) and a bug when prediction is the only goal.
+On the prostate dataset, 10-fold lasso CV identifies $\hat\lambda_{\min}$ at a small value where all 8 predictors are active. Applying the one-SE rule shifts to a substantially larger $\hat\lambda_{\text{1SE}}$ where only 3 predictors remain (`lcavol`, `lweight`, `svi`) — a sparser, more interpretable model whose CV performance is statistically indistinguishable. The one-SE rule's aggressive bias toward sparsity is a feature when interpretation matters (e.g. variable importance for medical research) and a bug when prediction is the only goal.
 </ExampleBlock>
 
 <img src="/images/topics/regularization-and-penalized-estimation/23-cv-curve.png"
-     alt="Cross-validation curve for lasso on prostate-cancer dataset. X-axis: log λ; y-axis: 10-fold mean squared error with one-SE error bars at each λ. U-shape with minimum at λ_min marked with a vertical dashed line; one-SE threshold horizontal line; λ_1SE marked with a second vertical dashed line at the largest λ within one SE of the minimum. Right panel shows active-set size as a function of λ — staircase descending from p = 8 to 0."
+     alt="Cross-validation curve for lasso on prostate-cancer dataset. X-axis: log10 λ, decreasing from left to right; y-axis: 10-fold mean squared error with one-SE error bars at each λ. The curve falls steeply as λ shrinks and then flattens, reaching its minimum at the smallest λ on the grid, where λ_min is marked with a vertical dashed line; λ_1SE, the largest λ within one SE of the minimum, is marked with a vertical dotted line. Right panel shows active-set size as a function of λ — a staircase climbing from 0 to all 8 predictors, at 3 where λ_1SE sits."
      class="w-full rounded-lg border my-6"
      style="border-color: var(--color-border);" />
 
@@ -812,7 +812,7 @@ The HTF Table 3.3 prostate-cancer dataset has 97 patients and 8 predictors; the 
 3. Run 10-fold CV with seed 42 to identify $\hat\lambda_{\min}$ and $\hat\lambda_{\text{1SE}}$.
 4. Refit on the full data at each chosen $\lambda$ to get the final coefficient estimates.
 
-The ridge path shows smooth shrinkage: every coefficient starts near OLS at small $\lambda$ and decays smoothly toward zero. The lasso path is piecewise linear: each coefficient enters the active set at its own $\lambda$, with the strongest signals (`lcavol`, `lweight`) entering first and weaker ones (`gleason`, `pgg45`) entering only at small $\lambda$. At $\hat\lambda_{\text{1SE}}$, the lasso retains 4–5 predictors; ridge keeps all 8 with shrunken weights. The two estimators agree on the leading coefficients but diverge in their treatment of the marginal predictors.
+The ridge path shows smooth shrinkage: every coefficient starts near OLS at small $\lambda$ and decays smoothly toward zero. The lasso path is piecewise linear: each coefficient enters the active set at its own $\lambda$, in the order `lcavol`, `svi`, `lweight`, `pgg45`, `lbph`, `age`, `gleason`, `lcp` — the strongest signals first, with `gleason` and `lcp` entering only at small $\lambda$. At $\hat\lambda_{\text{1SE}}$, the lasso retains 3 predictors (`lcavol`, `lweight`, `svi`); ridge keeps all 8 with shrunken weights. The two estimators agree on the leading coefficients but diverge in their treatment of the marginal predictors.
 </ExampleBlock>
 
 <img src="/images/topics/regularization-and-penalized-estimation/23-prostate-paths.png"
