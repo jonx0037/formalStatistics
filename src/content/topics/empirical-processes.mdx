@@ -450,17 +450,17 @@ For every Donsker class $\mathcal{F}$ we meet in §§32.4–32.8, the limit proc
   - Rem 9: fundamental theorem of statistical learning (names the result explicitly; ML anchor).
 */}
 
-The question §32.2 Rem 3 left hanging: *which* function classes admit a uniform LLN? Answer — classes with finite **VC dimension**, a combinatorial complexity measure due to Vapnik and Chervonenkis (1971) that captures how many $\{0, 1\}^n$-labellings of an $n$-point set the class can realise. Rich classes realise all $2^n$ labellings at every $n$ and fail uniform LLN; VC-finite classes realise only polynomially many, and the exponential tail of Hoeffding's inequality (Topic 12) wins against that polynomial with room to spare. The resulting theorem — Glivenko–Cantelli for VC classes — goes by a less formal name in the ML literature: the *fundamental theorem of statistical learning*. See Rem 9.
+The question §32.2 Rem 3 left hanging: *which* function classes admit a uniform LLN? Answer — classes with finite **VC dimension**, a combinatorial complexity measure due to Vapnik and Chervonenkis (1971) that captures how many $\{0, 1\}^n$-labelings of an $n$-point set the class can realise. Rich classes realise all $2^n$ labelings at every $n$ and fail uniform LLN; VC-finite classes realise only polynomially many, and the exponential tail of Hoeffding's inequality (Topic 12) wins against that polynomial with room to spare. The resulting theorem — Glivenko–Cantelli for VC classes — goes by a less formal name in the ML literature: the *fundamental theorem of statistical learning*. See Rem 9.
 
 <DefinitionBlock number={6} title="VC dimension">
 
-Let $\mathcal{F}$ be a class of $\{0, 1\}$-valued functions on $\mathcal{X}$. For any finite set $\{x_1, \dots, x_n\} \subseteq \mathcal{X}$, the **restriction** of $\mathcal{F}$ to this set is the finite set of labellings $\{(f(x_1), \dots, f(x_n)) : f \in \mathcal{F}\} \subseteq \{0, 1\}^n$. The **shatter coefficient** is
+Let $\mathcal{F}$ be a class of $\{0, 1\}$-valued functions on $\mathcal{X}$. For any finite set $\{x_1, \dots, x_n\} \subseteq \mathcal{X}$, the **restriction** of $\mathcal{F}$ to this set is the finite set of labelings $\{(f(x_1), \dots, f(x_n)) : f \in \mathcal{F}\} \subseteq \{0, 1\}^n$. The **shatter coefficient** is
 
 $$
 s_{\mathcal{F}}(n) \;:=\; \sup_{x_1, \dots, x_n \in \mathcal{X}} \bigl|\{(f(x_1), \dots, f(x_n)) : f \in \mathcal{F}\}\bigr|.
 $$
 
-A set $\{x_1, \dots, x_n\}$ is **shattered** by $\mathcal{F}$ if its restriction has cardinality $2^n$ — every $\{0,1\}^n$-labelling is realised. The **VC dimension** of $\mathcal{F}$ is the largest $n$ such that some $n$-point set is shattered:
+A set $\{x_1, \dots, x_n\}$ is **shattered** by $\mathcal{F}$ if its restriction has cardinality $2^n$ — every $\{0,1\}^n$-labeling is realized. The **VC dimension** of $\mathcal{F}$ is the largest $n$ such that some $n$-point set is shattered:
 
 $$
 \mathrm{VC}(\mathcal{F}) \;:=\; \sup\{n : s_{\mathcal{F}}(n) = 2^n\}.
@@ -566,17 +566,17 @@ $\blacksquare$ — using VAP1971, SAU1972, vdV–Wellner 1996 Lem 2.3.7 (symmetr
 
 <ExampleBlock number={6} title="Halfspaces in $\mathbb{R}^d$ have VC dimension $d + 1$">
 
-Consider $\mathcal{F} = \{\mathbf{1}\{w \cdot x \le b\} : w \in \mathbb{R}^d,\, b \in \mathbb{R}\}$, the class of halfspace indicators in $\mathbb{R}^d$. Take any $d + 1$ points in general position (no $d + 1$ on a common affine hyperplane) — these *shatter*: for any target labelling, solve the linear system $\mathrm{sign}(w \cdot x_i - b) = \pm 1$ coordinate-wise, and a non-degenerate Radon separation always exists. So $\mathrm{VC}(\mathcal{F}) \ge d + 1$.
+Consider $\mathcal{F} = \{\mathbf{1}\{w \cdot x \le b\} : w \in \mathbb{R}^d,\, b \in \mathbb{R}\}$, the class of halfspace indicators in $\mathbb{R}^d$. Take any $d + 1$ points in general position (no $d + 1$ on a common affine hyperplane) — these *shatter*: for any target labeling, solve the linear system $\mathrm{sign}(w \cdot x_i - b) = \pm 1$ coordinate-wise, and a non-degenerate Radon separation always exists. So $\mathrm{VC}(\mathcal{F}) \ge d + 1$.
 
-The matching upper bound is Radon's theorem: any $d + 2$ points in $\mathbb{R}^d$ admit a partition into two subsets whose convex hulls intersect. Pick such a partition and target the labelling *+1 for one subset, −1 for the other*; a separating hyperplane would have to put both convex hulls on opposite sides, which is impossible because they share a point. No halfspace realises this labelling, so $d + 2$ points never shatter, and $\mathrm{VC}(\mathcal{F}) = d + 1$.
+The matching upper bound is Radon's theorem: any $d + 2$ points in $\mathbb{R}^d$ admit a partition into two subsets whose convex hulls intersect. Pick such a partition and target the labeling *+1 for one subset, −1 for the other*; a separating hyperplane would have to put both convex hulls on opposite sides, which is impossible because they share a point. No halfspace realizes this labeling, so $d + 2$ points never shatter, and $\mathrm{VC}(\mathcal{F}) = d + 1$.
 
 </ExampleBlock>
 
 <ExampleBlock number={7} title="Axis-aligned rectangles in $\mathbb{R}^2$ have VC dimension 4">
 
-The class $\mathcal{F} = \{\mathbf{1}\{a_1 \le x_1 \le b_1, a_2 \le x_2 \le b_2\}\}$ of axis-aligned rectangles in $\mathbb{R}^2$ shatters the four-point diamond $\{(0, 1), (1, 0), (0, -1), (-1, 0)\}$: for any target labelling, put the tightest axis-aligned rectangle around the "+1"-labelled points — the four-point geometry guarantees no "−1" point lies inside. So $\mathrm{VC}(\mathcal{F}) \ge 4$.
+The class $\mathcal{F} = \{\mathbf{1}\{a_1 \le x_1 \le b_1, a_2 \le x_2 \le b_2\}\}$ of axis-aligned rectangles in $\mathbb{R}^2$ shatters the four-point diamond $\{(0, 1), (1, 0), (0, -1), (-1, 0)\}$: for any target labeling, put the tightest axis-aligned rectangle around the "+1"-labelled points — the four-point geometry guarantees no "−1" point lies inside. So $\mathrm{VC}(\mathcal{F}) \ge 4$.
 
-Now take any $5$ points. Form the tightest axis-aligned bounding box around them. Each of the four sides of this box is "supported" by at least one of the five points (the side coincides with the extremal $x$- or $y$-coordinate); by pigeonhole at least one point is *not* extremal on any side. Label the non-extremal point $-1$ and the four extremal points $+1$. Any rectangle containing the four $+1$-points must contain their axis-aligned bounding box, which contains the non-extremal point — so it labels the $-1$-point as $+1$. No rectangle realises this labelling, and $\mathrm{VC}(\mathcal{F}) = 4$.
+Now take any $5$ points. Form the tightest axis-aligned bounding box around them. Each of the four sides of this box is "supported" by at least one of the five points (the side coincides with the extremal $x$- or $y$-coordinate); by pigeonhole at least one point is *not* extremal on any side. Label the non-extremal point $-1$ and the four extremal points $+1$. Any rectangle containing the four $+1$-points must contain their axis-aligned bounding box, which contains the non-extremal point — so it labels the $-1$-point as $+1$. No rectangle realizes this labeling, and $\mathrm{VC}(\mathcal{F}) = 4$.
 
 </ExampleBlock>
 
