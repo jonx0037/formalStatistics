@@ -641,7 +641,7 @@ export const localFdrPresets: readonly LocalFdrPreset[] = [
     sigmaAlt: 1.0,
     m: 1000,
     description:
-      '10% signal, μ_alt = 2.5 — the notebook Cell 12 default; BH and local-FDR disagree around z ≈ 2.',
+      '10% signal, μ_alt = 2.5 — the notebook Cell 12 default; BH and local FDR disagree between z ≈ 2.7 and 3.0.',
   },
   {
     id: 'dense-signal',

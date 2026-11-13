@@ -262,7 +262,7 @@ No independence was used — only the existence of marginals from the joint. $\s
 This is worth emphasizing: $E[X + Y] = E[X] + E[Y]$ always, even when $X$ and $Y$ are dependent. The proof uses only marginalization, not factorization of the joint. This makes linearity enormously useful — we can compute $E[\text{sum}]$ as a sum of expectations even when the summands are tangled together in complex ways. The classic application: expected number of fixed points in a random permutation (Example 3 below).
 </RemarkBlock>
 
-<img src="/images/topics/expectation-moments/linearity-of-expectation.png" alt="Three-panel figure showing linearity of expectation: Bin(5,0.4) PMF, Bin(5,0.6) PMF, and convolution PMF of X+Y with E[X+Y] = E[X]+E[Y]" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
+<img src="/images/topics/expectation-moments/linearity-of-expectation.png" alt="Three-panel figure showing linearity of expectation: Bin(5,0.4) PMF, Bin(5,0.6) PMF, and the PMF of X+Y computed as a convolution, which assumes X and Y are independent in this panel, with E[X+Y] = E[X]+E[Y] = 5 marked; linearity itself needs no independence" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
 
 <TheoremBlock number={3} title="Monotonicity">
 If $X \leq Y$ almost surely (i.e., $P(X \leq Y) = 1$), then $E[X] \leq E[Y]$.
