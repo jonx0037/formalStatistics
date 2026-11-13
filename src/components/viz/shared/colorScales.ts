@@ -85,7 +85,7 @@ export type MultipleTestingColorKey = keyof typeof multipleTestingColors;
  *
  * Used by:
  *   - GLMExplorer (response-family selector indicator)
- *   - IRLSVisualizer (point coloring under Bernoulli "near-separation" preset)
+ *   - IRLSVisualizer (iterate-trail color for the Bernoulli presets)
  *   - DevianceTestExplorer (family selector)
  *   - SandwichCoverageSimulator (DGP family indicator)
  */

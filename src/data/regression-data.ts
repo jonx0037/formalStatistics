@@ -597,7 +597,11 @@ export const EXAMPLE_12_GLM_DATA = buildOverdispersedPoisson(2232, 200, 1.8);
 
 /**
  * IRLSVisualizer presets — toy 2-predictor logistic datasets covering three
- * convergence regimes.
+ * convergence regimes. `separated` is completely separated (seed 3184: every
+ * y = 0 point has x ≤ −0.043 and every y = 1 point has x ≥ 0.222), so the
+ * logistic MLE does not exist and IRLS iterates diverge (‖β‖ grows by ≈ 7.6
+ * per step after the first few iterations). The seed was chosen by search
+ * under the same DGP the old near-separation preset used, (n, β) = (40, (0, 4.5)).
  */
 function buildIRLSPreset(
   seed: number,
@@ -616,7 +620,7 @@ function buildIRLSPreset(
 export const IRLS_VISUALIZER_PRESETS = {
   wellSeparated: buildIRLSPreset(3001, 60, [-1.0, 2.0]),
   noisy: buildIRLSPreset(3002, 60, [0.0, 0.8]),
-  nearSeparation: buildIRLSPreset(3003, 40, [0.0, 4.5]),
+  separated: buildIRLSPreset(3184, 40, [0.0, 4.5]),
 };
 
 /**

@@ -28,7 +28,7 @@ type PresetKey = keyof typeof IRLS_VISUALIZER_PRESETS;
 const PRESET_LABELS: Record<PresetKey, string> = {
   wellSeparated: 'Well-separated',
   noisy: 'Noisy',
-  nearSeparation: 'Near-separation',
+  separated: 'Separated',
 };
 
 interface Iterate {
@@ -340,7 +340,7 @@ export default function IRLSVisualizer() {
             {PRESET_LABELS[key]}
           </button>
         ))}
-        {diverging && presetKey === 'nearSeparation' && (
+        {diverging && presetKey === 'separated' && (
           <span className="ml-auto rounded bg-red-100 px-2 py-1 text-xs font-medium text-red-700">
             Diverges toward boundary
           </span>
