@@ -1268,9 +1268,9 @@ export function irlsStep(
  *
  * Convergence is declared when ‖β^(t+1) - β^(t)‖_2 < tol. On non-convergence
  * (max-iter reached), returns a GLMFit with converged=false and a console
- * warning — does NOT throw. This is critical for `IRLSVisualizer` near-
- * separation preset (Bernoulli MLE diverges to ±∞ under quasi-complete
- * separation).
+ * warning — does NOT throw. This is critical for the `IRLSVisualizer`
+ * "Separated" preset (under complete or quasi-complete separation the
+ * Bernoulli MLE does not exist and the iterates diverge to ±∞).
  */
 export function glmFit(
   X: number[][],
