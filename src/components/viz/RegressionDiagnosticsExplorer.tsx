@@ -23,7 +23,7 @@ const PANEL_MARGIN = { top: 28, right: 20, bottom: 40, left: 48 };
 const POINT_COLOR = '#2563EB'; // blue
 const AXIS_COLOR = '#9CA3AF';
 const REFERENCE_COLOR = '#D97706'; // amber for reference lines
-const COOK_HI = '#DC2626'; // red for high Cook's distance
+const COOK_HI = '#DC2626'; // red for high Cook's distance (D_i > 4/n, §21.9 Rem 20)
 
 // ── DGP seed (fixed so "Fit the model" changes it, but preset swap keeps it) ─
 const DEFAULT_SEED = 424242;
@@ -61,7 +61,16 @@ export default function RegressionDiagnosticsExplorer() {
     const cook = cooksDistance(fit.fit, fit.X);
     const qq = qqPlotData(fit.fit, fit.X);
     const pPlusOne = fit.fit.p + 1;
-    return { lev, stu, cook, qq, pPlusOne, leverageThreshold: (2 * pPlusOne) / fit.fit.n };
+    return {
+      lev,
+      stu,
+      cook,
+      qq,
+      pPlusOne,
+      leverageThreshold: (2 * pPlusOne) / fit.fit.n,
+      // Rem 20's 4/n rule of thumb for Cook's distance.
+      cookThreshold: 4 / fit.fit.n,
+    };
   }, [fit]);
 
   if (!fit || !diag) {
@@ -113,7 +122,13 @@ export default function RegressionDiagnosticsExplorer() {
         <PanelResidualsVsFitted fit={fit.fit} />
         <PanelQQ qq={diag.qq} />
         <PanelScaleLocation fit={fit.fit} stu={diag.stu} />
-        <PanelLeverageCook stu={diag.stu} lev={diag.lev} cook={diag.cook} thr={diag.leverageThreshold} />
+        <PanelLeverageCook
+          stu={diag.stu}
+          lev={diag.lev}
+          cook={diag.cook}
+          thr={diag.leverageThreshold}
+          cookThr={diag.cookThreshold}
+        />
       </div>
 
       {/* Diagnosis */}
@@ -257,11 +272,13 @@ function PanelLeverageCook({
   lev,
   cook,
   thr,
+  cookThr,
 }: {
   stu: number[];
   lev: number[];
   cook: number[];
   thr: number;
+  cookThr: number;
 }) {
   const levExt = d3.extent(lev) as [number, number];
   const xScale = d3
@@ -275,7 +292,7 @@ function PanelLeverageCook({
     .range([PANEL_H - PANEL_MARGIN.bottom, PANEL_MARGIN.top]);
 
   return (
-    <PanelChrome title="Residuals vs Leverage (colored by Cook's D)">
+    <PanelChrome title="Residuals vs Leverage (red: Cook's D > 4/n)">
       <svg viewBox={`0 0 ${PANEL_W} ${PANEL_H}`} width="100%">
         <Axes xScale={xScale} yScale={yScale} xLabel="leverage h_ii" yLabel="studentized r" />
         <line
@@ -294,8 +311,17 @@ function PanelLeverageCook({
         >
           2(p+1)/n = {thr.toFixed(3)}
         </text>
+        <text
+          x={PANEL_W - PANEL_MARGIN.right}
+          y={PANEL_MARGIN.top + 22}
+          fontSize={10}
+          textAnchor="end"
+          fill={COOK_HI}
+        >
+          ● Cook&rsquo;s D &gt; 4/n = {cookThr.toFixed(3)}
+        </text>
         {lev.map((h, i) => {
-          const highCook = cook[i] > 0.5;
+          const highCook = cook[i] > cookThr;
           return (
             <circle
               key={i}
