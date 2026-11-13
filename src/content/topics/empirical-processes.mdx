@@ -781,7 +781,7 @@ Continuity of $F$ is load-bearing in Step 1: the probability-integral transform 
   - Def 10: bracketing number $N_{[\,]}(\varepsilon, \mathcal{F}, \|\cdot\|)$.
   - Def 11: bracketing integral $J_{[\,]}$, $P$-Donsker class.
   - Thm 4 (stated): Dudley 1978 — $J_{[\,]}(\infty, \mathcal{F}, L^2(P)) < \infty$ ⇒ $\mathcal{F}$ Donsker.
-  - Fig 5 (32-bracketing-vs-covering): bracketing-number geometry + loglog-slope-2 verification.
+  - Fig 5 (32-bracketing-vs-covering): bracketing-number geometry for $\mathcal{F}_{\mathrm{cdf}}$ (stacked brackets at $\varepsilon \in \{0.1, 0.05, 0.02\}$, window $t \in [0, 0.1]$) + loglog-slope-2 verification.
   - Ex 11: bracketing number for Lipschitz functions.
   - Ex 12: Dudley's entropy integral worked for $\mathcal{F}_{\mathrm{cdf}}$.
   - Rem 13: covering vs bracketing — when they differ.
@@ -835,9 +835,9 @@ Then $\mathcal{F}$ is $P$-Donsker: $\mathbb{G}_n \rightsquigarrow \mathbb{G}_P$ 
 
 </TheoremBlock>
 
-![Two-panel bracketing-number visualisation. Left: $\mathcal{F}_{\mathrm{cdf}}$ under Uniform(0, 1) covered by $\lceil \varepsilon^{-2} \rceil$ brackets at $\varepsilon \in \{0.1, 0.05, 0.02\}$, shown as horizontal stacked bars. Right: log-log plot of $\log N_{[\,]}(\varepsilon)$ vs $\log(1/\varepsilon)$ with slope-2 reference line overlaid, verifying $N_{[\,]} \sim \varepsilon^{-2}$.](/images/topics/empirical-processes/32-bracketing-vs-covering.png)
+![Two-panel bracketing-number visualization for $\mathcal{F}_{\mathrm{cdf}}$ under Uniform(0, 1). Left: brackets at $\varepsilon \in \{0.1, 0.05, 0.02\}$ as horizontal stacked bars, one row per $\varepsilon$, each segment the $t$-interval of width $\varepsilon^2$ that one bracket covers; only the window $t \in [0, 0.1]$ is drawn (10 of 100, 40 of 400 and 250 of 2500 brackets), because full rows of 2500 segments are too fine to resolve. Right: log-log plot of $N_{[\,]}(\varepsilon) = \lceil \varepsilon^{-2} \rceil$ against $1/\varepsilon$ with the slope-2 reference line $\varepsilon^{-2}$ overlaid and the three $\varepsilon$ levels highlighted at 100, 400 and 2500; the least-squares slope is 1.99.](/images/topics/empirical-processes/32-bracketing-vs-covering.png)
 
-*Figure 5. Bracketing geometry for $\mathcal{F}_{\mathrm{cdf}}$. Left: brackets at three resolutions; the number grows like $\lceil \varepsilon^{-2} \rceil$ — halving $\varepsilon$ from 0.1 to 0.05 quadruples the count (100 → 400), and refining from 0.05 to 0.02 multiplies it by 6.25 (400 → 2500). Right: log-log confirmation of the slope-2 scaling. The bracketing integral $\int_0^1 \sqrt{\log(\varepsilon^{-2})}\,d\varepsilon$ is finite, so $\mathcal{F}_{\mathrm{cdf}}$ is Donsker — the calculation §32.5 Step 3 used inline.*
+*Figure 5. Bracketing geometry for $\mathcal{F}_{\mathrm{cdf}}$. Left: brackets at three resolutions, drawn on the window $t \in [0, 0.1]$; each bracket $[\mathbf{1}\{x \le s_{j-1}\}, \mathbf{1}\{x \le s_j\}]$ has $L^2(P)$ size $\sqrt{s_j - s_{j-1}}$, so an $\varepsilon$-bracket covers a $t$-interval of width $\varepsilon^2$ and the number grows like $\lceil \varepsilon^{-2} \rceil$ — halving $\varepsilon$ from 0.1 to 0.05 quadruples the count (100 → 400), and refining from 0.05 to 0.02 multiplies it by 6.25 (400 → 2500). Right: log-log confirmation of the slope-2 scaling. The bracketing integral $\int_0^1 \sqrt{\log(\varepsilon^{-2})}\,d\varepsilon$ is finite, so $\mathcal{F}_{\mathrm{cdf}}$ is Donsker — the calculation §32.5 Step 3 used inline.*
 
 <ExampleBlock number={11} title="Bracketing number for Lipschitz functions on $[0, 1]$">
 

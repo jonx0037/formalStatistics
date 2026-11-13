@@ -298,7 +298,7 @@ A family of distributions $\{\pi(\theta \mid \chi, \nu) : \chi \in \mathbb{R}, \
 </DefinitionBlock>
 
 <TheoremBlock number={2} title="Exponential-family conjugacy">
-Let $\{f(y; \theta) : \theta \in H\}$ be a one-parameter exponential family in canonical form,
+Let $\{f(y; \eta) : \eta \in H\}$ be a one-parameter exponential family in canonical form,
 
 $$f(y; \eta) \;=\; h(y) \exp\!\big(\eta T(y) - A(\eta)\big),$$
 
@@ -344,7 +344,7 @@ $$p(\eta \mid \mathbf{y}) \;=\; \pi(\eta \mid \chi_0 + S, \; \nu_0 + n).$$
 </ProofBlock>
 
 <img src="/images/topics/bayesian-foundations-and-prior-selection/25-4-exp-fam-conjugacy-kernel.png"
-     alt="Three-panel figure showing the same conjugate-family update rule χ₀' = χ₀ + S, ν₀' = ν₀ + n applied to Beta-Binomial, Gamma-Poisson, and Normal-Normal. Each panel shows the prior (blue) and posterior (purple) densities with the updated hyperparameters annotated. The shared kernel-shift structure is visually apparent."
+     alt="Three-panel figure showing one conjugate update, χ₀' = χ₀ + S, ν₀' = ν₀ + n, in three conjugate pairs; each panel shows the prior (blue) and posterior (purple) densities, with both distributions named in the legend. Beta-Bernoulli: Beta(2, 2) to Beta(10, 4) after 8 heads in 10 tosses, annotated χ₀' = χ₀ + 8, ν₀' = ν₀ + 10. Gamma-Poisson: Gamma(2, 1) to Gamma(14, 5) with S = 12 over n = 4 counts, annotated α' = α + S, β' = β + n. Normal-Normal with known σ²: prior N(0, 4) to posterior N(0.976, 0.098), annotated as a precision-weighted average rather than with hyperparameters."
      class="w-full rounded-lg border my-6"
      style="border-color: var(--color-border);" />
 
