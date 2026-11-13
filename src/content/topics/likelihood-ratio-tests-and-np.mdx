@@ -220,8 +220,8 @@ $$
 For iid data $X = (X_1, \ldots, X_n)$ with density $\prod_i f(x_i; \theta)$, the LR factorizes: $\Lambda(x) = \prod_i f(x_i; \theta_1)/f(x_i; \theta_0)$, and we typically work with $\log \Lambda(x) = \sum_i [\log f(x_i; \theta_1) - \log f(x_i; \theta_0)]$ for numerical stability.
 </DefinitionBlock>
 
-<RemarkBlock number={4} title="Notation — Λ(x) here vs Λₙ in Topic 17">
-The $\Lambda(x)$ above is distinct from the composite generalized likelihood ratio $\Lambda_n$ defined in [Topic 17 §17.9 Def 15](/topics/hypothesis-testing#section-17-9). The simple-vs-simple LR compares two specific parameter values; the composite $\Lambda_n = \sup_{\theta \in \Theta_0} L(\theta) / \sup_{\theta \in \Theta} L(\theta)$ compares the best null fit to the best full-model fit. They coincide when both hypotheses are singletons. §18.5 reintroduces the composite $\Lambda_n$, and §18.6 proves its $\chi^2$ asymptotic limit.
+<RemarkBlock number={4} title="Notation — Λ(x) here vs the composite Λₙ">
+The $\Lambda(x)$ above is distinct from the composite generalized likelihood ratio $\Lambda_n$, which this topic defines in [§18.5 Definition 5](#section-18-5). [Topic 17 §17.9 Def 15](/topics/hypothesis-testing#section-17-9) introduced $-2\log\Lambda_n$ only for a point null $H_0: \theta = \theta_0$, where $\Lambda_n = L(\theta_0)/L(\hat\theta_n)$. The simple-vs-simple LR compares two specific parameter values; the composite $\Lambda_n = \sup_{\theta \in \Theta_0} L(\theta) / \sup_{\theta \in \Theta} L(\theta)$ compares the best null fit to the best full-model fit. They coincide when both hypotheses are singletons. §18.5 defines the composite $\Lambda_n$ in general, and §18.6 proves its $\chi^2$ asymptotic limit.
 </RemarkBlock>
 
 <TheoremBlock number={1} title="Neyman-Pearson lemma">

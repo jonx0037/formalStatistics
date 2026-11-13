@@ -75,7 +75,7 @@ connections:
   - topic: "hypothesis-testing"
     relationship: "§17's power analysis, size control, and permutation-test machinery generalize to the bootstrap-test setting. §31.6's power-curve figure (Fig 6) mirrors Topic 17's §17.4 layout."
   - topic: "central-limit-theorem"
-    relationship: "§11 Thm 3 (CLT) and §11 Thm 4 (Lindeberg–Feller triangular-array CLT) are the analytic workhorses of Theorem 3's proof. §11.7's Edgeworth-expansion foundations underwrite Theorem 5."
+    relationship: "§11 Thm 2 (classical CLT) and §11 Thm 4 (Lindeberg CLT, applied to the bootstrap's triangular array) are the analytic workhorses of Theorem 3's proof. Theorem 5's Edgeworth expansion goes beyond Topic 11, which supplies only its first-order backdrop: §11.7 (Berry–Esseen) bounds the $n^{-1/2}$ rate, and Example 5 there names the skewness term that BCa cancels."
   - topic: "law-of-large-numbers"
     relationship: "Glivenko–Cantelli (§10.7) is the consistency result that makes bootstrap meaningful — we're resampling from an ECDF that itself converges uniformly to $F$. §31.3 opens with this framing."
 references:
@@ -309,7 +309,7 @@ $$
 \sqrt{n}(\bar X^\ast_n - \bar X_n) = \frac{1}{\sqrt{n}}\sum_{i=1}^n Y^\ast_i \xrightarrow{d} \mathcal{N}(0, \sigma^2).
 $$
 
-Marginally (unconditionally), Topic 11 Theorem 3 gives the classical CLT $\sqrt{n}(\bar X_n - \mu) \xrightarrow{d} \mathcal{N}(0, \sigma^2)$ with the same limit variance. Thus $H^\ast_n(x) \to \Phi(x / \sigma)$ pointwise almost surely, and $H_n(x) \to \Phi(x / \sigma)$ pointwise.
+Marginally (unconditionally), Topic 11 Theorem 2 gives the classical CLT $\sqrt{n}(\bar X_n - \mu) \xrightarrow{d} \mathcal{N}(0, \sigma^2)$ with the same limit variance. Thus $H^\ast_n(x) \to \Phi(x / \sigma)$ pointwise almost surely, and $H_n(x) \to \Phi(x / \sigma)$ pointwise.
 
 **Step 3 — upgrade to Kolmogorov distance.** The limit $\Phi(\cdot / \sigma)$ is continuous; apply Lemma 1 to each sequence:
 
@@ -450,7 +450,7 @@ Topic 19 §19.7 established the CI↔test duality: inverting a family of level-$
 
 ## 31.5 BCa second-order accuracy
 
-Theorem 4 says all four CIs cover asymptotically. But how *fast*? The question matters in practice — a CI with $O(n^{-1/2})$ coverage error can be off by 5–10 percentage points at $n = 50$, while one with $O(n^{-1})$ error is typically off by under 1. Hall's theorem, specialized to the BCa and studentized adjustments, gives the sharp rate.
+Theorem 4 says all four CIs cover asymptotically. But how *fast*? The question matters in practice. Figure 5 below runs the check on the sample mean of an Exponential$(1)$ sample at nominal 95%. At $n = 50$ the percentile CI lies entirely above $\theta$ in 1.7% of samples and entirely below it in 5.4%, against 2.5% for each tail, a tail-wise coverage error of about 0.036 (3.6 percentage points). BCa's tail misses of 2.8% and 3.9% give a tail-wise error of about 0.018 (1.8 percentage points), half the percentile's. Two-sided coverage hides most of that gap, 92.9% for the percentile CI against 93.3% for BCa, because the two tails' errors partly offset. Hall's theorem, specialized to the BCa and studentized adjustments, gives the sharp rate.
 
 <TheoremBlock number={5} title="Hall 1992 second-order accuracy">
 Under smooth-functional regularity (one-term Edgeworth expansion, with $O(n^{-1})$ remainder, valid for $T_n$ and its studentized version), the percentile and basic bootstrap CIs have coverage error $O(n^{-1/2})$ in each tail, while the BCa and studentized CIs achieve coverage error $O(n^{-1})$ in each tail. (In a two-sided equal-tailed interval the percentile's two $n^{-1/2}$ tail errors have opposite signs and cancel, so the separation shows tail by tail.)
@@ -473,12 +473,12 @@ Inverting the studentized pivot at $z_{\alpha/2}$ gives a studentized CI with $O
 
 The percentile CI inverts the wrong pivot — the raw $\sqrt{n}(T_n - \theta)$ rather than its studentized version — so its coverage-error expansion retains an uncorrected $n^{-1/2}$ term from skewness; the basic CI shares this defect. The BCa adjustment estimates the bias correction $\hat z_0 = \Phi^{-1}(\hat F^\ast(T_n))$ and acceleration $\hat a$ (jackknife skewness estimator) precisely to cancel this skewness term; Hall 1992 Ch. 3 verifies the cancellation algebraically.
 
-$\blacksquare$ — using Hall 1992 Thm 3.2, Singh 1981, and the Edgeworth machinery of Topic 11 §11.7.
+$\blacksquare$ — using Hall 1992 Thm 3.2 and Singh 1981 for the Edgeworth expansions; Topic 11 §11.7 (Berry–Esseen; Example 5's skewness term) is the first-order backdrop.
 </ProofBlock>
 
-![Log-log plot of tail-wise coverage error versus sample size n in 20, 50, 100, 200, 500 for two CI methods, 50,000 replications per point. Percentile curve declines along the slope −1/2 reference, from about 0.064 to 0.011. BCa curve sits two to three times lower, from about 0.038 to 0.004, and falls more steeply (slope near −0.8 up to n = 200) before flattening toward the Monte-Carlo floor. Statistic is the sample mean of an Exponential(1) distribution.](/images/topics/bootstrap/31-bca-accuracy.png)
+![Log-log plot of tail-wise coverage error versus sample size n in 20, 50, 100, 200, 500 for two CI methods, 50,000 replications per point. Percentile curve declines along the slope −1/2 reference, from about 0.064 to 0.011. BCa curve sits 1.7 to 3 times lower, from about 0.038 to 0.004, and falls more steeply (slope near −0.8 up to n = 200) before flattening toward the Monte-Carlo floor. Statistic is the sample mean of an Exponential(1) distribution.](/images/topics/bootstrap/31-bca-accuracy.png)
 
-*Figure 5. Numerical check of Theorem 5 on the sample mean of a right-skewed Exponential$(1)$ distribution, $50{,}000$ replications per $n$. The error plotted is tail-wise, $|P(\theta < \mathrm{lo}) - \alpha/2| + |P(\theta > \mathrm{hi}) - \alpha/2|$. The percentile CI follows the slope $-1/2$ reference. The BCa CI sits two to three times lower at every $n$ and falls more steeply (slope about $-0.8$ through $n = 200$), approaching the $-1$ rate before Monte-Carlo noise flattens it at $n = 500$. That gap is the practical cash-out of second-order vs. first-order accuracy.*
+*Figure 5. Numerical check of Theorem 5 on the sample mean of a right-skewed Exponential$(1)$ distribution, $50{,}000$ replications per $n$. The error plotted is tail-wise, $|P(\theta < \mathrm{lo}) - \alpha/2| + |P(\theta > \mathrm{hi}) - \alpha/2|$. The percentile CI follows the slope $-1/2$ reference. The BCa error is 1.7 times lower than the percentile's at $n = 20$ and 2.1 to 3.0 times lower from $n = 50$ to $500$, and it falls more steeply (slope about $-0.8$ through $n = 200$), approaching the $-1$ rate before Monte-Carlo noise flattens it at $n = 500$. That gap is the practical cash-out of second-order vs. first-order accuracy.*
 
 <a id="section-31-6"></a>
 
@@ -525,7 +525,7 @@ Fit a parametric family $\{F_\theta : \theta \in \Theta\}$ to the observed sampl
 </DefinitionBlock>
 
 <TheoremBlock number={7} title="Parametric bootstrap consistency (stated)">
-Under the regularity of Topic 14 (parametric MLE consistency) plus Topic 11's Edgeworth validity, the parametric bootstrap distribution $H^{\ast,\mathrm{par}}_n$ converges in Kolmogorov distance to the true sampling distribution $H_n$ at rate $O(n^{-1/2})$, matching the nonparametric bootstrap in first-order accuracy. When the parametric model is correctly specified, the parametric bootstrap achieves the same second-order accuracy as the studentized or BCa versions without needing the studentization step.
+Under the regularity of Topic 14 (parametric MLE consistency) plus Edgeworth validity (Hall 1992), the parametric bootstrap distribution $H^{\ast,\mathrm{par}}_n$ converges in Kolmogorov distance to the true sampling distribution $H_n$ at rate $O(n^{-1/2})$, matching the nonparametric bootstrap in first-order accuracy. When the parametric model is correctly specified, the parametric bootstrap achieves the same second-order accuracy as the studentized or BCa versions without needing the studentization step.
 </TheoremBlock>
 
 <ExampleBlock number={12} title="Normal-location bootstrap, right vs. wrong model">
