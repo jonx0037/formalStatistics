@@ -350,7 +350,7 @@ The conjugacy of the Normal–Normal hierarchy is fragile: it relies on Normal o
 </RemarkBlock>
 
 <RemarkBlock number={7} title="Posterior couples the $\theta_k$'s">
-In the *prior*, the $\theta_k$'s are conditionally independent given $\phi$. In the *posterior*, they are not: conditioning on $\mathbf{y}$ induces correlations because $\phi$ is itself learned from the data. Partial pooling is literally this posterior correlation — every $\theta_k$'s posterior mean depends on every other $y_k$ through the shared $\mu, \tau^2$.
+In the *prior*, the $\theta_k$'s are conditionally independent given $\phi$. In the *posterior* (with $\phi$ integrated out), they are not: conditioning on $\mathbf{y}$ induces correlations because $\phi$ is itself learned from the data. Partial pooling is literally this posterior correlation — every $\theta_k$'s posterior mean depends on every other $y_k$ through the shared $\mu, \tau^2$.
 </RemarkBlock>
 
 <RemarkBlock number={8} title="Conditional vs marginal estimation">
@@ -529,9 +529,9 @@ where the expectation is under the posterior of $(\mu, \tau^2)$. The shrinkage f
 *Figure 4. Partial-pool posterior means on 8-schools as $\tau$ varies. At small $\tau$ (left) the shrinkage factor $B_k \approx 1$ for every school and the posterior collapses to the grand mean; at large $\tau$ (right) $B_k \approx 0$ and the posterior retains the raw estimate. The reader can trace this continuously in the EightSchoolsPartialPooling component below.*
 
 <ExampleBlock number={7} title="8-schools at $\tau = 10$">
-From Rubin's data: $\sigma_A^2 = 225$, $y_A = 28$. Precision-weighted grand mean at $\tau = 10$: $\hat\mu(\tau=10) \approx 8.2$. Shrinkage factor: $B_A = 225/(225 + 100) = 0.692$. Posterior mean for school A: $(1 - 0.692)(28) + (0.692)(8.2) = 0.308 \cdot 28 + 0.692 \cdot 8.2 \approx 14.3$. Posterior SD: $\sqrt{(1 - 0.692)(225)} \approx 8.3$. Compare to school B: $\sigma_B^2 = 100$, $y_B = 8$, $B_B = 100/200 = 0.5$. Posterior mean: $0.5 \cdot 8 + 0.5 \cdot 8.2 \approx 8.1$. Posterior SD: $\sqrt{0.5 \cdot 100} \approx 7.1$.
+From Rubin's data: $\sigma_A^2 = 225$, $y_A = 28$. Precision-weighted grand mean at $\tau = 10$: $\hat\mu(\tau=10) \approx 8.13$. Shrinkage factor: $B_A = 225/(225 + 100) = 0.692$. Posterior mean for school A: $(1 - 0.692)(28) + (0.692)(8.13) = 0.308 \cdot 28 + 0.692 \cdot 8.13 \approx 14.2$. Posterior SD: $\sqrt{(1 - 0.692)(225)} \approx 8.3$. Compare to school B: $\sigma_B^2 = 100$, $y_B = 8$, $B_B = 100/200 = 0.5$. Posterior mean: $0.5 \cdot 8 + 0.5 \cdot 8.13 \approx 8.1$. Posterior SD: $\sqrt{0.5 \cdot 100} \approx 7.1$.
 
-School A's posterior mean has moved from $28$ about 70% of the way toward $\mu$ — the fraction $B_A = 0.692$; school B's barely moved because $y_B$ was already near $\mu$. The precision-weighted grand mean itself changes with $\tau$: at $\tau = 10$ it's $\approx 8.2$; at $\tau = 0$ (complete pool) it's $\approx 7.7$.
+School A's posterior mean has moved from $28$ about 70% of the way toward $\mu$ — the fraction $B_A = 0.692$; school B's barely moved because $y_B$ was already near $\mu$. The precision-weighted grand mean itself changes with $\tau$: at $\tau = 10$ it's $\approx 8.13$; at $\tau = 0$ (complete pool) it's $\approx 7.7$.
 </ExampleBlock>
 
 <EightSchoolsPartialPooling client:visible />
