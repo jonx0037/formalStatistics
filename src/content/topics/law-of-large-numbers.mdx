@@ -267,7 +267,7 @@ By hypothesis, $\frac{1}{n^2}\sum_{i=1}^n \sigma_i^2 \to 0$, so the right-hand s
 
 The structure of the proof is identical to Theorem 10.1 — compute the variance, apply Chebyshev, watch it vanish — but the generalization is significant. We no longer require the $X_i$ to have the same distribution, or even to be independent. The only structural requirement is that they are uncorrelated: $\text{Cov}(X_i, X_j) = 0$ for $i \neq j$. This is strictly weaker than independence (independent variables are uncorrelated, but not conversely — recall the examples from [Topic 8 — Multivariate Distributions](/topics/multivariate-distributions)).
 
-The condition $\frac{1}{n^2}\sum_{i=1}^n \sigma_i^2 \to 0$ is a *Cesaro-type* condition on the variances: it says the average variance doesn't grow too fast. The most common sufficient condition is that the variances are uniformly bounded.
+The condition $\frac{1}{n^2}\sum_{i=1}^n \sigma_i^2 \to 0$ is a *Cesàro-type* condition on the variances: it says the average variance doesn't grow too fast. The most common sufficient condition is that the variances are uniformly bounded.
 
 <TheoremBlock type="corollary" number={1} title="Corollary 10.1 (Uniformly Bounded Variances)">
 If the variances are uniformly bounded — $\sigma_i^2 \leq C$ for all $i$ and some constant $C$ — then
@@ -284,7 +284,7 @@ An online learning platform collects user engagement scores $X_i$ that measure h
 
 The variances oscillate between 0.5 and 1.5 — some cohorts of users are more homogeneous than others — so they are uniformly bounded by $C = 1.5$. By Corollary 10.1, the running mean of the engagement scores converges in probability to $\mu = 12$ minutes, despite the non-identical distributions. The platform can trust its running average even though the noise level fluctuates.
 
-This is a common situation in practice: data collected over time rarely has constant variance (the phenomenon is called *heteroscedasticity* — literally, "different scatter"). Theorem 10.2 says the WLLN still holds as long as the variances don't grow too fast. The Cesaro condition $\frac{1}{n^2}\sum \sigma_i^2 \to 0$ allows the variances to oscillate, to have isolated spikes, or even to grow slowly — as long as their running sum grows slower than $n^2$.
+This is a common situation in practice: data collected over time rarely has constant variance (the phenomenon is called *heteroscedasticity* — literally, "different scatter"). Theorem 10.2 says the WLLN still holds as long as the variances don't grow too fast. The Cesàro condition $\frac{1}{n^2}\sum \sigma_i^2 \to 0$ allows the variances to oscillate, to have isolated spikes, or even to grow slowly — as long as their running sum grows slower than $n^2$.
 
 The uncorrelated condition is also natural in many applications. If users are sampled independently, their scores are certainly uncorrelated (since independence implies uncorrelatedness), even if the measurement process changes over time.
 
@@ -299,7 +299,7 @@ This does *not* go to zero, so the Chebyshev-based WLLN does not apply. The runn
 This distinction matters when designing experiments or data collection systems: if you anticipate that measurement noise grows over time, you cannot blithely trust the running average — you may need to downweight older, noisier observations, or cap the noise via trimming.
 </ExampleBlock>
 
-<img src="/images/topics/law-of-large-numbers/wlln-uncorrelated.png" alt="WLLN for uncorrelated sequences: bounded vs growing variance, sample mean trajectories" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
+<img src="/images/topics/law-of-large-numbers/wlln-uncorrelated.png" alt="WLLN for uncorrelated sequences. Left: Example 1, the running mean of uncorrelated observations with mean μ = 12 and variance 1 + 0.5 sin(i/20) (inset, bounded by C = 1.5), settles within ±0.3 of 12. Middle: with varying means, the running mean tracks the average mean μ̄ₙ. Right: the Chebyshev condition (1/n²)Σσᵢ² goes to 0 for Example 1 (below the C/n bound) and for σᵢ² = i^0.3, but tends to 1/2 for σᵢ² = i, so the condition fails there." class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
 
 <WLLNExplorer client:visible />
 
@@ -696,7 +696,7 @@ $$
 \frac{1}{n_k}\sum_{i=1}^{n_k} E[Y_i] \to \mu
 $$
 
-(This is a Cesaro mean of a convergent sequence. By the Cesaro lemma, if $a_i \to a$, then $\frac{1}{n}\sum_{i=1}^n a_i \to a$. Here $a_i = E[Y_i] \to \mu$, so the Cesaro mean also converges to $\mu$.)
+(This is a Cesàro mean of a convergent sequence. By the Cesàro lemma, if $a_i \to a$, then $\frac{1}{n}\sum_{i=1}^n a_i \to a$. Here $a_i = E[Y_i] \to \mu$, so the Cesàro mean also converges to $\mu$.)
 
 Combining Steps 2d and 2e:
 
