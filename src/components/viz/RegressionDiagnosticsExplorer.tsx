@@ -294,7 +294,13 @@ function PanelLeverageCook({
   return (
     <PanelChrome title="Residuals vs Leverage (red: Cook's D > 4/n)">
       <svg viewBox={`0 0 ${PANEL_W} ${PANEL_H}`} width="100%">
-        <Axes xScale={xScale} yScale={yScale} xLabel="leverage h_ii" yLabel="studentized r" />
+        <Axes
+          xScale={xScale}
+          yScale={yScale}
+          xLabel="leverage h_ii"
+          yLabel="studentized r"
+          xTickDigits={2}
+        />
         <line
           x1={xScale(thr)}
           x2={xScale(thr)}
@@ -362,11 +368,14 @@ function Axes({
   yScale,
   xLabel,
   yLabel,
+  xTickDigits = 1,
 }: {
   xScale: d3.ScaleLinear<number, number>;
   yScale: d3.ScaleLinear<number, number>;
   xLabel: string;
   yLabel: string;
+  /** Decimal places for x tick labels; leverage ticks (0.02 steps) need 2. */
+  xTickDigits?: number;
 }) {
   return (
     <>
@@ -377,7 +386,7 @@ function Axes({
           <g key={t} transform={`translate(${xScale(t)}, 0)`}>
             <line y1={0} y2={3} stroke={AXIS_COLOR} />
             <text y={14} textAnchor="middle" fontSize={9} fill={AXIS_COLOR}>
-              {t.toFixed(1)}
+              {t.toFixed(xTickDigits)}
             </text>
           </g>
         ))}

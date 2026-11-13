@@ -247,7 +247,7 @@ export const REGRESSION_DIAGNOSTICS_PRESETS: Record<string, DiagnosticPreset> = 
     kind: 'ideal',
     label: 'Ideal (textbook)',
     diagnosis:
-      'All assumptions met. No pattern in residuals. Q-Q plot is near-linear. Leverage values cluster below 2(p+1)/n.',
+      'All assumptions met. No pattern in residuals. Q-Q plot is near-linear. Leverage values cluster below 2(p+1)/n. The Cook’s D > 4/n rule still flags a few points in red by chance — it is a screening threshold, not a test.',
   },
   heteroscedastic: {
     kind: 'heteroscedastic',
@@ -271,7 +271,7 @@ export const REGRESSION_DIAGNOSTICS_PRESETS: Record<string, DiagnosticPreset> = 
     kind: 'highLeverage',
     label: 'High leverage',
     diagnosis:
-      'One observation has h_ii ≫ 2(p+1)/n. May dominate the fit even with small residual. See §21.9 Rem 13 and Cook’s distance.',
+      'One observation has h_ii ≫ 2(p+1)/n but follows the same line, so its residual is ordinary. High leverage on its own mainly sharpens the slope estimate (higher precision); influence needs leverage and a large residual together. Cook’s D = r²/(p+1) · h/(1−h) combines both, and with h/(1−h) this large even an ordinary residual can cross the 4/n screen — check the residual before calling the point influential. See §21.9 Rem 13 and Rem 20.',
   },
 };
 
