@@ -358,7 +358,7 @@ This is constant in $(\mu, \sigma^2)$ if and only if $\sum x_i = \sum y_i$ AND $
 </ExampleBlock>
 
 <ExampleBlock number={8} title="(X̄, X₁) is sufficient but NOT minimal for Normal μ">
-For Normal data with $\sigma^2$ known, $T = \bar X$ is minimal sufficient. The expanded statistic $T' = (\bar X, X_1)$ is also sufficient (any function from which $T$ can be recovered inherits sufficiency), but it is *not* minimal: for any pair of samples $x, y$ with $\bar x = \bar y$ but $x_1 \ne y_1$, the likelihood ratio is constant in $\mu$ (since the joint density depends on $x$ only through $\bar x$), but $T'(x) \ne T'(y)$. Theorem 3's biconditional fails, so $T'$ is not minimal. Carrying $X_1$ along is information-wasting: it refines the partition without buying any inferential content.
+For Normal data with $\sigma^2$ known, $T = \bar X$ is minimal sufficient. The expanded statistic $T' = (\bar X, X_1)$ is also sufficient (any function from which $T$ can be recovered inherits sufficiency), but it is *not* minimal: for any pair of samples $x, y$ with $\bar x = \bar y$ but $x_1 \ne y_1$, the likelihood ratio is constant in $\mu$ (since the $\mu$-dependent factor of the density depends on $x$ only through $\bar x$), but $T'(x) \ne T'(y)$. Theorem 3's biconditional fails, so $T'$ is not minimal. Carrying $X_1$ along is information-wasting: it refines the partition without buying any inferential content.
 </ExampleBlock>
 
 <RemarkBlock number={5} title="Complete sufficient ⇒ minimal sufficient (converse false)">
