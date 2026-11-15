@@ -369,6 +369,14 @@ $\square$
 
 In particular, the **standardization** $Z = (X - \mu)/\sigma \sim N(0, 1)$ is a special case with $a = 1/\sigma$ and $b = -\mu/\sigma$.
 
+**Worked example: a height tail.** Suppose adult heights are $X \sim N(170, 49)$ — mean $170$ cm, standard deviation $7$ cm. The probability that a randomly chosen adult is taller than $185$ cm is
+
+$$
+P(X > 185) = P\!\left(\frac{X - 170}{7} > \frac{185 - 170}{7}\right) = P(Z > 15/7) \approx P(Z > 2.14) = 1 - \Phi(2.14) \approx 0.016,
+$$
+
+about $1.6\%$. Standardization turns every Normal probability into a question about the single CDF $\Phi$, whatever $\mu$ and $\sigma$ are.
+
 <RemarkBlock number={3} title="Normal Exponential Family Form">
 The Normal belongs to the exponential family with natural parameters $\eta_1 = \mu/\sigma^2$ and $\eta_2 = -1/(2\sigma^2)$. The sufficient statistics are $(X, X^2)$. When $\sigma^2$ is known, the single natural parameter $\eta = \mu/\sigma^2$ makes MLE particularly clean: the sufficient statistic is $\bar{X}$, and the MLE is $\hat{\mu} = \bar{X}$. [Exponential Families](/topics/exponential-families) develops this systematically.
 </RemarkBlock>
