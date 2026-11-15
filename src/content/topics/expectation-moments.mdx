@@ -844,7 +844,7 @@ $$E[(Y - \hat{f}(X))^2] = \underbrace{(E[\hat{f}(X)] - f(X))^2}_{\text{Bias}^2} 
 
 This is Eve's law in disguise: the total prediction error decomposes into a systematic component (bias) and a variability component (variance), plus noise that no model can remove.
 
-<img src="/images/topics/expectation-moments/bias-variance-decomposition.png" alt="Three-panel figure showing polynomial fits: degree-1 (high bias, low variance), degree-5 (balanced), degree-15 (low bias, high variance) with Bias² and Var annotations" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
+<img src="/images/topics/expectation-moments/bias-variance-decomposition.png" alt="Three-panel figure of repeated polynomial fits to 20 noisy points from a sine curve: degree 1 (high bias: Bias² = 0.200, Var = 0.032), degree 5 (balanced: Bias² ≈ 0, Var = 0.097), and degree 15 (high variance: the fits are so unstable that even their average swings far off the plot, so its printed Bias² ≈ 6.3 × 10¹⁰ and Var ≈ 3.1 × 10¹² are dominated by a few extreme fits)" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
 
 | Concept from this topic | ML application |
 |---|---|
