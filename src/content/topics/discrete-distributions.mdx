@@ -38,7 +38,7 @@ formalnlpConnections:
     relationship: "Zipf's law and the discrete power laws of vocabulary statistics are PMFs on the positive integers, built from the same normalizers and tail calculations as the distributions here."
 datePublished: 2026-04-12
 estimatedReadTime: 50
-abstract: "Seven discrete distributions arise from seven distinct probabilistic mechanisms. The Bernoulli(p) models a single binary trial; the Binomial(n,p) counts successes in n independent trials; the Geometric(p) waits for the first success; the Negative Binomial(r,p) waits for the r-th; the Poisson(λ) counts rare events at a constant rate; the Hypergeometric(N,K,n) counts successes when sampling without replacement; and the Discrete Uniform assigns equal probability to every outcome. Each distribution receives the same systematic treatment: PMF derivation, proofs of E[X] and Var(X), MGF, key properties, and ML connections. The Poisson limit theorem shows Binomial(n, λ/n) → Poisson(λ) as n → ∞. The Geometric distribution is the only discrete distribution with the memoryless property. Probability-generating functions G(s) = E[s^X] provide a tool tailored to discrete variables, with the compound distribution formula G_S(s) = G_N(G_X(s)) as its signature application. Five of the seven distributions — Bernoulli, Binomial, Geometric, Negative Binomial, and Poisson — belong to the exponential family, which Topic 7 will unify."
+abstract: "Seven discrete distributions arise from seven distinct probabilistic mechanisms. The Bernoulli(p) models a single binary trial; the Binomial(n,p) counts successes in n independent trials; the Geometric(p) waits for the first success; the Negative Binomial(r,p) waits for the r-th; the Poisson(λ) counts rare events at a constant rate; the Hypergeometric(N,K,n) counts successes when sampling without replacement; and the Discrete Uniform assigns equal probability to every outcome. Each distribution receives the same systematic treatment: PMF derivation, proofs of E[X] and Var(X), MGF, key properties, and ML connections. The Poisson limit theorem shows Binomial(n, λ/n) → Poisson(λ) as n → ∞. The Geometric distribution is the only distribution on the positive integers with the memoryless property. Probability-generating functions G(s) = E[s^X] provide a tool tailored to discrete variables, with the compound distribution formula G_S(s) = G_N(G_X(s)) as its signature application. Five of the seven distributions — Bernoulli, Binomial, Geometric, Negative Binomial, and Poisson — belong to the exponential family, which Topic 7 will unify."
 formalcalculusPrereqs:
   - topic: "sequences-limits"
     site: "formalcalculus"
@@ -383,10 +383,10 @@ $$M_X(t) = \sum_{k=1}^{\infty} e^{tk} p q^{k-1} = pe^t \sum_{k=1}^{\infty} (qe^t
 The geometric series converges when $|qe^t| < 1$, i.e., $t < \ln(1/q) = -\ln(1-p)$. $\square$
 </ProofBlock>
 
-Now the most important structural property of the Geometric distribution — the one that makes it unique among discrete distributions.
+Now the most important structural property of the Geometric distribution — the one that makes it unique among discrete distributions on the positive integers.
 
 <TheoremBlock number={8} title="Memoryless Property of the Geometric Distribution">
-The Geometric distribution is the *only* discrete distribution with the **memoryless property**: for all $s, t \in \{0, 1, 2, \ldots\}$,
+Among distributions supported on $\{1, 2, \ldots\}$, the Geometric distribution is the *only* one with the **memoryless property**: for all $s, t \in \{0, 1, 2, \ldots\}$,
 
 $$P(X > s + t \mid X > s) = P(X > t)$$
 
@@ -436,7 +436,7 @@ If $Y_1, Y_2, \ldots, Y_r \overset{\text{iid}}{\sim} \text{Geometric}(p)$ and $X
 </TheoremBlock>
 
 <ProofBlock>
-Think of $Y_i$ as the number of trials from the $(i-1)$-th success to the $i$-th success. By the memoryless property of the Geometric, after each success the process "resets" — the remaining waiting time is independent of the past. So $Y_1, \ldots, Y_r$ are independent, and $X = Y_1 + \cdots + Y_r$ is the total number of trials until the $r$-th success.
+Think of $Y_i$ as the number of trials from the $(i-1)$-th success to the $i$-th success. Because the trials are independent, the process starts fresh after each success — the same no-memory mechanism behind Theorem 8 — so $Y_1, \ldots, Y_r$ are iid $\text{Geometric}(p)$, and $X = Y_1 + \cdots + Y_r$ is the total number of trials until the $r$-th success.
 
 To verify the PMF, we can use MGFs. The MGF of $Y_i$ is $pe^t/(1 - qe^t)$, so by independence:
 
