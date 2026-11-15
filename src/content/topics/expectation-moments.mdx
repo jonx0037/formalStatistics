@@ -844,7 +844,7 @@ $$E[(Y - \hat{f}(X))^2] = \underbrace{(E[\hat{f}(X)] - f(X))^2}_{\text{Bias}^2} 
 
 This is Eve's law in disguise: the total prediction error decomposes into a systematic component (bias) and a variability component (variance), plus noise that no model can remove.
 
-<img src="/images/topics/expectation-moments/bias-variance-decomposition.png" alt="Three-panel figure of repeated polynomial fits to 20 noisy points from a sine curve: degree 1 (high bias: Bias² = 0.200, Var = 0.032), degree 5 (balanced: Bias² ≈ 0, Var = 0.097), and degree 15 (high variance: the fits are so unstable that even their average swings far off the plot, so its printed Bias² ≈ 6.3 × 10¹⁰ and Var ≈ 3.1 × 10¹² are dominated by a few extreme fits)" class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
+<img src="/images/topics/expectation-moments/bias-variance-decomposition.png" alt="Three-panel figure of 2,000 repeated polynomial fits, each to 30 noisy points from a sine curve (noise variance σ² = 0.09), with 20 of the fits drawn in each panel: degree 1 (high bias: Bias² = 0.196, Var = 0.006, test MSE = 0.292), degree 5 (balanced: Bias² ≈ 0, Var = 0.018, test MSE = 0.109), and degree 12 (high variance: individual fits flare near the endpoints while their average tracks the sine; Bias² ≈ 0, Var = 0.128, test MSE = 0.218). In every panel, Bias² + Var + σ² matches the test MSE to within rounding." class="w-full rounded-lg border my-6" style="border-color: var(--color-border);" />
 
 | Concept from this topic | ML application |
 |---|---|
