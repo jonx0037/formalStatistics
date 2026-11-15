@@ -440,7 +440,7 @@ For every Donsker class $\mathcal{F}$ we meet in §§32.4–32.8, the limit proc
   - Def 7: Glivenko–Cantelli class (uniform LLN).
   - Thm 1 (Sauer–Shelah–Vapnik, stated with one-line proof sketch): shatter-coefficient bound $s_{\mathcal{F}}(n) \le \sum_{k=0}^V \binom{n}{k} \le (n+1)^V$.
   - Thm 2 (G-C for VC) — ★ FULL PROOF verbatim below.
-  - Fig 3 (32-vc-shattering): VC dims for halflines, halfspaces, rectangles.
+  - Fig 3 (32-vc-shattering): halfspaces in ℝ² (VC = 3, XOR/Radon obstruction) + Sauer bound vs 2^n.
   - VCShatteringDemo component embed here (placeholder).
   - Ex 6: halfspaces in ℝ^d have VC = d+1.
   - Ex 7: axis-aligned rectangles in ℝ² have VC = 4.
@@ -496,9 +496,9 @@ The shatter coefficient — which *a priori* could grow as fast as $2^n$ — is 
 
 </TheoremBlock>
 
-![Three-panel VC-shattering atlas. Panel (a): halflines $\{x \le t\}$ on $\mathbb{R}$ shatter 1 point but not 2. Panel (b): halfspaces in $\mathbb{R}^2$ shatter 3 non-collinear points; the 4-point Radon obstruction is pictured. Panel (c): axis-aligned rectangles in $\mathbb{R}^2$ shatter 4 points (diamond witness); 5 points obstruct.](/images/topics/empirical-processes/32-vc-shattering.png)
+![Two-panel figure. Panel (a): halfspaces in $\mathbb{R}^2$ shatter 3 non-collinear points, drawn with sample separating lines; beside them, 4 points in an XOR configuration whose two same-label diagonals cross, so no halfspace realizes that labeling. Panel (b): on a log scale for $n = 1$ to $30$, the Sauer bound for $V = 1, 3, 5$ follows $2^n$ up to $n = V$ and then bends away, reaching about $31$, $4.5 \times 10^3$ and $1.7 \times 10^5$ at $n = 30$, against $2^{30} \approx 1.1 \times 10^9$.](/images/topics/empirical-processes/32-vc-shattering.png)
 
-*Figure 3. Three classes, three VC dimensions. (a) Halflines: $\mathrm{VC} = 1$. (b) Halfspaces in $\mathbb{R}^2$: $\mathrm{VC} = 3$; Radon's theorem (every 4 points in $\mathbb{R}^2$ split into two disjoint subsets whose convex hulls meet) produces the 4-point obstruction. (c) Axis-aligned rectangles: $\mathrm{VC} = 4$; the diamond witness is drawn. Interactive exploration in `VCShatteringDemo` below.*
+*Figure 3. Shattering and the Sauer bound. (a) Halfspaces in $\mathbb{R}^2$: $\mathrm{VC} = 3$. Three non-collinear points realize all $2^3 = 8$ labelings; Radon's theorem (every 4 points in $\mathbb{R}^2$ split into two disjoint subsets whose convex hulls meet) produces the 4-point obstruction, drawn as the XOR configuration whose diagonals cross. (b) The Sauer–Shelah–Vapnik bound $\sum_{k=0}^{V} \binom{n}{k}$ (Thm 1) for $V = 1, 3, 5$ against the trivial $2^n$, on a log scale: polynomial growth of degree $V$ versus exponential growth. Axis-aligned rectangles ($\mathrm{VC} = 4$) are worked in Example 7 below. Interactive exploration in `VCShatteringDemo` below.*
 
 <VCShatteringDemo client:visible />
 
