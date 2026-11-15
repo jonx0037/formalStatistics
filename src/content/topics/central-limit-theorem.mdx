@@ -706,7 +706,7 @@ The statement follows directly from [Topic 9, Theorem 9.11](/topics/modes-of-con
 
 Suppose $X_i \sim \text{Exp}(\lambda)$ iid, and we want a 95% CI for the rate parameter $\lambda$. The MLE is $\hat{\lambda}_n = 1/\bar{X}_n$. By the CLT, $\sqrt{n}(\bar{X}_n - 1/\lambda) \xrightarrow{d} \mathcal{N}(0, 1/\lambda^2)$. Apply the delta method with $g(x) = 1/x$ so $g'(x) = -1/x^2$.
 
-The key subtlety: $g'$ must be evaluated at the *true mean* $\mu = 1/\lambda$, not left as a function of $x$. A common pitfall is to mechanically plug $g'(x) = -1/x^2$ into $[g'(\mu)]^2 \sigma^2$ with the symbol $x$ still floating, producing an expression like $\lambda^{-4} \cdot \lambda^{-2}$ that has no stable interpretation. Evaluate first:
+The key subtlety: $g'$ must be evaluated at the *true mean* $\mu = 1/\lambda$. A common pitfall is to evaluate $g'$ at $\lambda$ instead of at the mean $\mu = 1/\lambda$, giving $[g'(\lambda)]^2 \sigma^2 = \lambda^{-4} \cdot \lambda^{-2} = \lambda^{-6}$ instead of $\lambda^2$. Evaluate at the mean:
 
 $$
 g'(1/\lambda) \;=\; -\lambda^2, \qquad [g'(1/\lambda)]^2 \,\sigma^2 \;=\; \lambda^4 \cdot \lambda^{-2} \;=\; \lambda^2.
@@ -718,7 +718,7 @@ $$
 \sqrt{n}\!\left(\hat{\lambda}_n - \lambda\right) \;\xrightarrow{d}\; \mathcal{N}(0, \lambda^2).
 $$
 
-The 95% CI is $\hat{\lambda}_n \pm 1.96 \,\hat{\lambda}_n/\sqrt{n}$. For skewed estimators like this, a log transform often gives a better small-$n$ CI: $g(x) = \log(1/x) = -\log x$ has derivative $-1/x$, so $\sqrt{n}(\log \hat{\lambda}_n - \log \lambda) \xrightarrow{d} \mathcal{N}(0, 1)$. Build the CI on the log scale, then exponentiate: $\exp(\log \hat{\lambda}_n \pm 1.96/\sqrt{n})$. This symmetric-on-log-scale CI respects the non-negativity of $\lambda$ (unlike the naive linear CI, which can be negative for small $n$).
+The 95% CI is $\hat{\lambda}_n \pm 1.96 \,\hat{\lambda}_n/\sqrt{n}$. For skewed estimators like this, a log transform often gives a better small-$n$ CI: $g(x) = \log(1/x) = -\log x$ has derivative $-1/x$, so $\sqrt{n}(\log \hat{\lambda}_n - \log \lambda) \xrightarrow{d} \mathcal{N}(0, 1)$. Build the CI on the log scale, then exponentiate: $\exp(\log \hat{\lambda}_n \pm 1.96/\sqrt{n})$. This symmetric-on-log-scale CI respects the non-negativity of $\lambda$ (unlike the naive linear CI, whose lower endpoint $\hat{\lambda}_n(1 - 1.96/\sqrt{n})$ is negative whenever $n \le 3$).
 
 </ExampleBlock>
 

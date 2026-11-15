@@ -614,7 +614,7 @@ Fix a real number $\alpha > 1$ and define the geometric subsequence $n_k = \lflo
 
 The plan: prove $S_{n_k}/n_k \to \mu$ almost surely (the hard part, Steps 2a--2e), then show $S_n/n \to \mu$ for all $n$ between consecutive subsequence terms (Stage 3, using monotonicity from Stage 1).
 
-**Step 2a: Truncation.** Define truncated variables $Y_i = X_i \cdot \mathbf{1}(X_i \leq i)$. Since $X_i \geq 0$, the truncation simply caps values exceeding $i$ at zero: if $X_i \leq i$, then $Y_i = X_i$; if $X_i > i$, then $Y_i = 0$. Note that the truncation threshold for the $i$-th variable is $i$ itself (not $n$, as in the Khintchine proof). This is a different calibration — each variable gets its own threshold, growing with its index. Let $Z_i = Y_i - E[Y_i]$ denote the centered truncated variables.
+**Step 2a: Truncation.** Define truncated variables $Y_i = X_i \cdot \mathbf{1}(X_i \leq i)$. Since $X_i \geq 0$, the truncation sets values exceeding $i$ to zero: if $X_i \leq i$, then $Y_i = X_i$; if $X_i > i$, then $Y_i = 0$. Note that the truncation threshold for the $i$-th variable is $i$ itself (not $n$, as in the Khintchine proof). This is a different calibration — each variable gets its own threshold, growing with its index. Let $Z_i = Y_i - E[Y_i]$ denote the centered truncated variables.
 
 **Step 2b: The truncation error vanishes almost surely.** We need to show that $X_i = Y_i$ for all but finitely many $i$, with probability 1. Consider the "bad" events $\{X_i \neq Y_i\} = \{X_i > i\}$ — the events where the $i$-th observation exceeds the $i$-th truncation threshold. Since the $X_i$ are identically distributed:
 
