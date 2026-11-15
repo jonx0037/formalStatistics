@@ -47,7 +47,7 @@ formalcalculusPrereqs:
 formalmlConnections:
   - topic: "gradient-descent"
     site: "formalml"
-    relationship: "SGD convergence analysis is an exercise in modes of convergence. With decreasing step sizes satisfying the Robbins–Monro conditions, the iterates converge almost surely to a local minimum; with constant step size, convergence is only in probability to a neighborhood. Both regimes use the mode-hierarchy and Slutsky-style combination rules developed in this topic."
+    relationship: "SGD convergence analysis is an exercise in modes of convergence. With decreasing step sizes satisfying the Robbins–Monro conditions, the iterates converge almost surely to a local minimum; with constant step size, the iterates do not converge, but their distribution settles to a stationary law around the minimum (convergence in distribution), with spread on the order of √η. Both regimes use the mode-hierarchy and Slutsky-style combination rules developed in this topic."
   - topic: "generalization-bounds"
     site: "formalml"
     relationship: "PAC learning bounds state that the empirical risk converges to the true risk in probability: $P(|\\hat R(h) - R(h)| > \\varepsilon) \\le \\delta$. The uniform-convergence version (over hypothesis classes) uses the Glivenko–Cantelli theorem — a.s. convergence of the empirical CDF."
@@ -1110,7 +1110,7 @@ The first condition ensures the step sizes are large enough to reach any minimum
 
 Why *almost sure* convergence matters: you run SGD *once*. A single training run produces a single trajectory $\theta_1, \theta_2, \ldots$ Almost sure convergence guarantees that this specific trajectory converges — not just that "most" trajectories converge.
 
-With a constant step size $\eta_t = \eta$ (common in practice for speed), the Robbins-Monro conditions fail ($\sum \eta_t^2 = \infty$). The iterates then converge only *in probability* to a neighborhood of $\theta^*$, with the neighborhood size proportional to $\eta$. This is the exploration-exploitation tradeoff made explicit through convergence modes.
+With a constant step size $\eta_t = \eta$ (common in practice for speed), the Robbins-Monro conditions fail ($\sum \eta_t^2 = \infty$). The iterates no longer converge: their distribution settles to a stationary law around $\theta^*$ (convergence in distribution), whose mean squared distance from $\theta^*$ is proportional to $\eta$ for small $\eta$, so they keep fluctuating in a neighborhood of radius on the order of $\sqrt{\eta}$. This is the exploration-exploitation tradeoff made explicit through convergence modes.
 
 **Scenario 2: PAC learning (convergence in probability).**
 
