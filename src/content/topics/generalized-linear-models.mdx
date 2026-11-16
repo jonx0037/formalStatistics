@@ -788,7 +788,7 @@ For Normal+identity-link, both reduce to standardized OLS residuals (T8.9 verifi
 The Figure 8 grid in §22.9 shows both residual flavors side-by-side for Poisson and Gamma fits — the Pearson residuals fan out heteroscedastically even under correct specification (fitting artifact, not model failure), while the deviance residuals are symmetric and unstructured.
 </RemarkBlock>
 
-The `DevianceTestExplorer` component lets you explore the deviance LRT across families and effect sizes. The left panel shows the $\chi^2_k$ null density with the rejection region shaded; the middle panel shows the power curve as a function of non-centrality $\lambda$; the right panel shows the profile-likelihood for $\beta_j$ with both the Wald-z CI and the profile-LRT CI rendered, making the asymmetry of the latter visible.
+The `DevianceTestExplorer` component lets you explore the deviance LRT across families and effect sizes. The left panel shows the $\chi^2_k$ null density (for Gamma, the $F_{k, n-p-1}$ density of $(D_0 - D_1)/(k\hat\phi)$) with the rejection region shaded; the middle panel shows the power curve as a function of non-centrality $\lambda$ (non-central $\chi^2_k$, or non-central $F_{k, n-p-1}$ for Gamma); the right panel shows the profile-likelihood for $\beta_j$ with both the Wald-z CI and the profile-LRT CI rendered, making the asymmetry of the latter visible.
 
 <DevianceTestExplorer client:visible />
 
@@ -803,7 +803,7 @@ For a single GLM coefficient $\beta_j$ at confidence level $1 - \alpha$:
 
 - **Wald-z CI:** $\hat\beta_j \pm z_{1-\alpha/2}\widehat{\text{SE}}(\hat\beta_j)$, where $\widehat{\text{SE}}(\hat\beta_j) = \sqrt{[\hat\phi(\mathbf{X}^\top\hat{\mathbf{W}}\mathbf{X})^{-1}]_{jj}}$. Symmetric about $\hat\beta_j$; uses the asymptotic Normal distribution of $\hat\beta_j$ from Thm 3.
 - **Score (Rao) CI:** $\{\beta_j^0 : U_j(\boldsymbol\beta_0^*)^2 / \mathcal{I}_{jj}(\boldsymbol\beta_0^*) \leq \chi^2_{1, 1-\alpha}\}$, where $\boldsymbol\beta_0^*$ is the constrained MLE under $\beta_j = \beta_j^0$. Computed entirely at the null; never requires the full-model fit.
-- **Profile-likelihood CI:** $\{\beta_j^0 : D(\beta_j^0) - D(\hat{\boldsymbol\beta}) \leq \chi^2_{1, 1-\alpha}\}$, where $D(\beta_j^0)$ profiles out the nuisance coefficients (refits the model with $\beta_j$ fixed at $\beta_j^0$ and other coefficients optimized). Asymmetric in general; the gold standard for GLMs.
+- **Profile-likelihood CI:** $\{\beta_j^0 : D(\beta_j^0) - D(\hat{\boldsymbol\beta}) \leq \chi^2_{1, 1-\alpha}\}$, where $D(\beta_j^0)$ profiles out the nuisance coefficients (refits the model with $\beta_j$ fixed at $\beta_j^0$ and other coefficients optimized). Asymmetric in general; the gold standard for GLMs. This cutoff is for fixed-$\phi$ families (Bernoulli, Poisson). With $\phi$ estimated (Gamma, Normal), the deviance difference behaves like $\phi\,\chi^2_1$ (Thm 6), so the interval is $\{\beta_j^0 : D(\beta_j^0) \leq D(\hat{\boldsymbol\beta}) + \hat\phi\,\chi^2_{1, 1-\alpha}\}$; the finite-sample version of Thm 6 Step 5 replaces $\chi^2_{1, 1-\alpha}$ with $F_{1, n-p-1, 1-\alpha}$.
 
 All three CIs invert the corresponding hypothesis test (Topic 19 Thm 1, the test–CI duality). All three converge to the same $\chi^2_1$ asymptotic distribution by Topic 18 §18.7 — they disagree only by $O_p(n^{-1/2})$ in finite samples.
 </DefinitionBlock>
