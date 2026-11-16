@@ -235,10 +235,10 @@ The prostate-cancer dataset (HTF Table 3.3, used as the running benchmark throug
 This is the §21.5 multicollinearity warning made concrete. The variance inflation factor (VIF) flags it; ridge regression fixes it. The cure works by adding $\lambda \|\boldsymbol\beta\|_2^2$ to the objective: the closed form $(\mathbf{X}^\top\mathbf{X} + \lambda\mathbf{I})^{-1}\mathbf{X}^\top\mathbf{y}$ is well-defined as long as $\lambda > 0$, no matter how singular $\mathbf{X}^\top\mathbf{X}$ becomes.
 </ExampleBlock>
 
-<ExampleBlock number={2} title="Logistic IRLS diverges under near-separation">
+<ExampleBlock number={2} title="Logistic IRLS diverges under complete separation">
 Topic 22 §22.4 Rem 8 flagged separation as the second canonical pathology: when a hyperplane in predictor space perfectly classifies the binary response, the logistic log-likelihood is monotone-increasing along the direction $\boldsymbol\beta$, and IRLS iterates run away to $\pm\infty$. The brief promised the fix would arrive in Topic 23. Here it is.
 
-The two-cluster design plotted below and in §23.6 (n = 120, p = 2, built in the companion notebook) is the test case. Two injected boundary points sit near the dividing line but still on the class-1 side, so the classes are linearly separable and no finite MLE exists. Plain logistic IRLS never converges — by iteration 50, $\|\boldsymbol\beta^{(t)}\|$ has crossed 100 (at iteration 17) and is still growing. (Topic 22's `EXAMPLE_10_GLM_DATA`, n = 80, is only *near*-separated: its MLE is finite and bare `glmFit` converges, which is why Topic 22 can build a profile-likelihood CI on it.) Adding a ridge penalty with $\lambda = 0.1$ changes the picture immediately: convergence in 10 outer iterations to a finite, well-determined estimate. The §23.6 Ex 8 worked example develops this in detail, but the punchline lands here in §23.1: regularization is not just a remedy for the squared-error case — it restores well-posedness for IRLS too.
+The two-cluster design plotted below and in §23.6 (n = 120, p = 2, built in the companion notebook) is the test case. Two injected boundary points sit near the dividing line but still on the class-1 side, so the classes are completely (linearly) separable, with a thin margin, and no finite MLE exists. Plain logistic IRLS never converges — by iteration 50, $\|\boldsymbol\beta^{(t)}\|$ has crossed 100 (at iteration 17) and is still growing. (Topic 22's `EXAMPLE_10_GLM_DATA`, n = 80, is only *near*-separated: its MLE is finite and bare `glmFit` converges, which is why Topic 22 can build a profile-likelihood CI on it.) Adding a ridge penalty with $\lambda = 0.1$ changes the picture immediately: convergence in 10 outer iterations to a finite, well-determined estimate. The §23.6 Ex 8 worked example develops this in detail, but the punchline lands here in §23.1: regularization is not just a remedy for the squared-error case — it restores well-posedness for IRLS too.
 </ExampleBlock>
 
 <img src="/images/topics/regularization-and-penalized-estimation/23-motivation-ols-blowup.png"
@@ -650,12 +650,12 @@ where $\mathbf{W}^{(t)}$ and $\mathbf{z}^{(t)} = \boldsymbol\eta^{(t)} + \mathbf
 *Brief derivation:* a second-order Taylor expansion of $-\ell$ around $\boldsymbol\beta^{(t)}$ produces the WLS quadratic surrogate exactly as in Topic 22 Proof 2; adding $2\lambda P(\boldsymbol\beta)$ gives the penalized surrogate. Minimizing the surrogate is the next IRLS step. Convergence proceeds as in Tseng 2001 with the surrogate playing the role of $f$.
 </TheoremBlock>
 
-<ExampleBlock number={8} title="Ridge-logistic restores convergence on near-separation">
+<ExampleBlock number={8} title="Ridge-logistic restores convergence under complete separation">
 Return to the separated design of §23.1 Ex 2 (n = 120, p = 2). Unpenalized logistic IRLS has not converged after 50 iterations: $\|\boldsymbol\beta^{(t)}\|$ has crossed 100 and is still growing. Ridge-penalized IRLS with $\lambda = 0.1$ (intercept unpenalized; on the site, `penalizedGLMFit` with `penalty: 'ridge'` runs the same penalized IRLS) instead converges in 10 outer iterations to a finite estimate $\hat{\boldsymbol\beta}$ with $\|\hat{\boldsymbol\beta}\|_\infty \approx 5$ — a small fraction of the runaway unpenalized iterate. The ridge penalty makes the otherwise non-coercive objective coercive; the IRLS surrogate is then guaranteed to have a unique bounded minimizer at every step.
 </ExampleBlock>
 
 <img src="/images/topics/regularization-and-penalized-estimation/23-ridge-separation-fix.png"
-     alt="Side-by-side comparison of bare logistic IRLS (left) and ridge-logistic penalized IRLS (right) on the near-separation preset. Left panel: coefficient L∞ norm ‖β^(t)‖ vs IRLS iteration, growing without bound past iteration 30 in red. Right panel: same axes, ridge penalty (λ=0.1) applied — convergence to a bounded estimate around iteration 10 in green. Cross-symbols mark convergence."
+     alt="Side-by-side comparison of bare logistic IRLS (left) and ridge-logistic penalized IRLS (right) on the completely separated n = 120 design. Left panel, in red: coefficient L² norm ‖β^(t)‖ vs IRLS iteration on a symlog axis; it crosses 100 at iteration 17 and is still creeping upward at iteration 40 (about 146), never converging. Right panel, in green: the same norm with a ridge penalty (λ = 0.1) applied; it levels off near 5.8 and converges in 10 iterations."
      class="w-full rounded-lg border my-6"
      style="border-color: var(--color-border);" />
 

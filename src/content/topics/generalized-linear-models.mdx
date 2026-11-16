@@ -305,7 +305,7 @@ For the four GLM families covered in this topic, the canonical link is determine
 |---|---|---|---|---|
 | Bernoulli$(p)$ | $\log[p/(1-p)]$ | $\log(1 + e^\theta)$ | $e^\theta/(1 + e^\theta) = p$ | logit: $g(p) = \log[p/(1-p)]$ |
 | Poisson$(\mu)$ | $\log\mu$ | $e^\theta$ | $e^\theta = \mu$ | log: $g(\mu) = \log\mu$ |
-| Gamma$(\nu, \nu/\mu)$ (shape $\nu$, mean $\mu$) | $-1/\mu$ | $-\log(-\theta) = \log\mu$ | $-1/\theta = \mu$ | inverse: $g(\mu) = 1/\mu$ |
+| Gamma$(\nu, \nu/\mu)$ (shape $\nu$, mean $\mu$) | $-1/\mu$ | $-\log(-\theta) = \log\mu$ | $-1/\theta = \mu$ | inverse: $g(\mu) = -1/\mu$ (usually written $1/\mu$) |
 | Normal$(\mu, \sigma^2)$ | $\mu$ | $\theta^2/2$ | $\theta = \mu$ | identity: $g(\mu) = \mu$ |
 
 The Bernoulli logit and Poisson log are the two canonical links you will see most often in practice; the Gamma inverse link is unusual and §22.6 Rem 14 discusses why the log link is often preferred there despite being non-canonical.
@@ -656,7 +656,7 @@ $$
 Y_i \mid \mathbf{x}_i \sim \text{Gamma}(\nu, \nu/\mu_i), \qquad g(\mu_i) = \mathbf{x}_i^\top\boldsymbol\beta,
 $$
 
-parameterized so that the **shape** is $\nu$ and the **rate** is $\nu/\mu_i$, giving $E[Y_i] = \mu_i$ and $\text{Var}(Y_i) = \mu_i^2/\nu$. The dispersion is $\phi = 1/\nu$, and the variance function is $V(\mu) = \mu^2$. The canonical link is $g(\mu) = 1/\mu$ (the inverse link); the practical link is $g(\mu) = \log\mu$ (the log link, non-canonical) — Rem 14 explains why the latter is often preferred.
+parameterized so that the **shape** is $\nu$ and the **rate** is $\nu/\mu_i$, giving $E[Y_i] = \mu_i$ and $\text{Var}(Y_i) = \mu_i^2/\nu$. The dispersion is $\phi = 1/\nu$, and the variance function is $V(\mu) = \mu^2$. The canonical link is the inverse link, $\theta = -1/\mu$, usually written $g(\mu) = 1/\mu$ (the sign only flips $\boldsymbol\beta$); the practical link is $g(\mu) = \log\mu$ (the log link, non-canonical) — Rem 14 explains why the latter is often preferred.
 </DefinitionBlock>
 
 <ExampleBlock number={8} title="Gamma GLM on insurance claim amounts (fulfills Topic 6 Example 4)">
@@ -676,7 +676,7 @@ Estimated dispersion $\hat\phi = 0.444$ (true 0.5; recovery within sampling erro
      style="border-color: var(--color-border);" />
 
 <RemarkBlock number={14} title="Canonical inverse link vs practical log link">
-The Gamma's canonical link is the inverse: $g(\mu) = 1/\mu$, so $\eta_i = 1/\mu_i$. Under the inverse link the score identity Thm 1 applies cleanly — $\nabla\ell = \mathbf{X}^\top(\mathbf{y} - \boldsymbol\mu)$ — but coefficient interpretation is awkward: $\beta_j$ is the additive change in $1/\mu$ per unit change in $x_j$, which has no natural domain meaning ("additive on the reciprocal of expected claim amount"). Worse, the inverse link requires $\mathbf{x}^\top\boldsymbol\beta > 0$ to keep $\mu > 0$, and IRLS does not enforce this — the fit can stray into negative territory and crash.
+The Gamma's canonical link is the inverse. Strictly, $(A')^{-1}(\mu) = -1/\mu$ (Ex 3), but it is usually written $g(\mu) = 1/\mu$, so $\eta_i = 1/\mu_i = -\theta_i$. Under this sign convention Thm 1 holds with a sign flip: the score is $\nabla\ell = -\frac{1}{\phi}\mathbf{X}^\top(\mathbf{y} - \boldsymbol\mu)$, so the estimating equation $\mathbf{X}^\top(\mathbf{y} - \boldsymbol\mu) = \mathbf{0}$ is unchanged. Coefficient interpretation, though, is awkward: $\beta_j$ is the additive change in $1/\mu$ per unit change in $x_j$, which has no natural domain meaning ("additive on the reciprocal of expected claim amount"). Worse, the inverse link requires $\mathbf{x}^\top\boldsymbol\beta > 0$ to keep $\mu > 0$, and IRLS does not enforce this — the fit can stray into negative territory and crash.
 
 The log link $g(\mu) = \log\mu$ is non-canonical for Gamma but solves both problems: $\mu = \exp(\mathbf{x}^\top\boldsymbol\beta)$ is automatically positive, and $\hat\beta_j$ has a clean multiplicative interpretation ($e^{\hat\beta_j}$ is the multiplicative change in expected claim amount per unit change in $x_j$). The cost is in the IRLS weights. For a non-canonical link the *Fisher-scoring* weights are $W_{ii} = 1/[V(\mu_i)(g'(\mu_i))^2]$; with $g(\mu) = \log\mu$ we have $g'(\mu) = 1/\mu$ and $V(\mu) = \mu^2$, so $W_{ii} = 1/[\mu_i^2 \cdot \mu_i^{-2}] = 1$: under log-link Gamma, the IRLS weights are constant. The score equation acquires an extra Jacobian factor (the score is no longer $\mathbf{X}^\top(\mathbf{y} - \boldsymbol\mu)$ exactly), but IRLS still converges and the asymptotic theory still applies. In practice, log-link Gamma is the default in R's `glm(family=Gamma(link="log"))` and is what insurance, finance, and biostatistics applications use.
 </RemarkBlock>
