@@ -326,7 +326,7 @@ $$
 \hat\phi = \frac{1}{n - p - 1}\sum_{i=1}^n \frac{(y_i - \hat\mu_i)^2}{V(\hat\mu_i)}.
 $$
 
-When $\phi$ is estimated rather than known, the deviance test (§22.7) uses an $F$-reference instead of $\chi^2$, exactly as in Topic 21 §21.8 where $\hat\sigma^2$ replaced $\sigma^2$ in the $F$-statistic. The §22.9 sandwich estimator generalizes this further: when the variance specification $\phi V(\mu_i)$ is wrong (overdispersed Poisson, a wrong Gamma variance function, clustered Bernoulli), the QMLE is still consistent for $\boldsymbol\beta$ as long as the *mean* specification $\mu_i = g^{-1}(\mathbf{x}_i^\top\boldsymbol\beta)$ is correct; only the variance estimate needs adjustment.
+When $\phi$ is estimated rather than known, the deviance test (§22.7) divides the deviance difference by $k\hat\phi$, where $k$ is the number of restrictions, and uses an $F_{k, n - p - 1}$ reference instead of $\chi^2_k$, exactly as in Topic 21 §21.8 where $\hat\sigma^2$ replaced $\sigma^2$ in the $F$-statistic. The §22.9 sandwich estimator generalizes this further: when the variance specification $\phi V(\mu_i)$ is wrong (overdispersed Poisson, a wrong Gamma variance function, clustered Bernoulli), the QMLE is still consistent for $\boldsymbol\beta$ as long as the *mean* specification $\mu_i = g^{-1}(\mathbf{x}_i^\top\boldsymbol\beta)$ is correct; only the variance estimate needs adjustment.
 </RemarkBlock>
 
 <a id="section-22-3"></a>
@@ -550,9 +550,9 @@ A consumer-finance synthetic example: $n = 200$ loan applicants with two predict
 
 | Coefficient | $\hat\beta_j$ | $\widehat{\text{SE}}(\hat\beta_j)$ | $z$ | $p$-value |
 |---|---|---|---|---|
-| Intercept | $-0.972$ | $0.197$ | $-4.93$ | $< 0.001$ |
-| Age | $1.319$ | $0.236$ | $5.59$ | $< 0.001$ |
-| Income | $1.869$ | $0.282$ | $6.62$ | $< 0.001$ |
+| Intercept | $-0.972$ | $0.217$ | $-4.49$ | $< 0.001$ |
+| Age | $1.319$ | $0.250$ | $5.26$ | $< 0.001$ |
+| Income | $1.869$ | $0.276$ | $6.78$ | $< 0.001$ |
 
 Both predictors are highly significant. Coefficient interpretation: a one-standard-deviation increase in age raises log-odds-of-default by $1.32$ (multiplicative odds change $e^{1.32} \approx 3.74$); the analogous income coefficient is $e^{1.87} \approx 6.48$. The full model deviance is $D_{\text{full}} = 158.96$ on $n - p - 1 = 197$ residual df, vs the intercept-only deviance $D_{\text{null}} = 264.63$ on $199$ df. The deviance reduction $D_{\text{null}} - D_{\text{full}} = 105.67$ on 2 df has $p \ll 0.001$ under $\chi^2_2$ — overwhelming evidence the predictors carry information about default risk.
 </ExampleBlock>
@@ -615,7 +615,7 @@ $$
 \log E[Y_i \mid \mathbf{x}_i] = \beta_0 + \beta_1 z_{age, i} + \beta_2 r_i + \log t_i
 $$
 
-uses the offset $\log t_i$ to convert the model from "expected total claims" to "expected claims per policy-year" — without the offset, a policy observed for 10 years would dominate one observed for 1 year, and $\hat{\boldsymbol\beta}$ would be biased toward the long-exposure observations. Statsmodels fits this with `sm.GLM(y, X, family=Poisson(), offset=np.log(t))`. On the synthetic dataset (true $\boldsymbol\beta_0 = (-1.24, 0.61, 0.49)$, seed 2223), the fit gives $\hat{\boldsymbol\beta} \approx (-1.24, 0.61, 0.49)$ — recovery to within $0.005$ of truth on every coefficient, deviance $D = 330.94$ on $297$ df. Coefficient interpretation: each one-SD increase in driver age multiplies the expected claim rate by $e^{0.61} \approx 1.84$; being in region 1 multiplies it by $e^{0.49} \approx 1.63$.
+uses the offset $\log t_i$ to convert the model from "expected total claims" to "expected claims per policy-year" — without the offset, a policy observed for 10 years would dominate one observed for 1 year, and $\hat{\boldsymbol\beta}$ would be biased toward the long-exposure observations. Statsmodels fits this with `sm.GLM(y, X, family=Poisson(), offset=np.log(t))`. On the synthetic dataset (true $\boldsymbol\beta_0 = (-1.2, 0.6, 0.4)$, seed $2222 + 7 = 2229$), the fit gives $\hat{\boldsymbol\beta} \approx (-1.245, 0.608, 0.487)$ — the largest error is $0.087$, on the region effect (about $1.2$ standard errors, ordinary sampling error at $n = 300$), with the intercept off by $0.045$ and the age slope by $0.008$; deviance $D = 330.94$ on $297$ df. Coefficient interpretation: each one-SD increase in driver age multiplies the expected claim rate by $e^{0.61} \approx 1.84$; being in region 1 multiplies it by $e^{0.49} \approx 1.63$.
 </ExampleBlock>
 
 <img src="/images/topics/generalized-linear-models/22-poisson-fit.png"
@@ -688,7 +688,7 @@ $$
 \hat\phi = \frac{1}{n - p - 1}\sum_{i=1}^n \frac{(y_i - \hat\mu_i)^2}{\hat\mu_i^2}.
 $$
 
-The estimate $\hat\phi$ enters all coefficient SEs as a scalar multiplier: $\widehat{\text{Cov}}(\hat{\boldsymbol\beta}) = \hat\phi (\mathbf{X}^\top\hat{\mathbf{W}}\mathbf{X})^{-1}$. For nested-model deviance tests (§22.7), $\hat\phi$ also enters: when $\phi$ is estimated, the deviance test uses an $F_{k, n - p - 1}$ reference instead of $\chi^2_k$, exactly as in Topic 21 §21.8 where $\hat\sigma^2$ replaced $\sigma^2$. The notebook fit in Ex 8 produced $\hat\phi = 0.444$ vs true $0.5$ — within $13\%$ at $n = 250$, which is good enough for inference.
+The estimate $\hat\phi$ enters all coefficient SEs as a scalar multiplier: $\widehat{\text{Cov}}(\hat{\boldsymbol\beta}) = \hat\phi (\mathbf{X}^\top\hat{\mathbf{W}}\mathbf{X})^{-1}$. For nested-model deviance tests (§22.7), $\hat\phi$ also enters: when $\phi$ is estimated, the deviance test divides $D(\mathcal{M}_0) - D(\mathcal{M}_1)$ by $k\hat\phi$ and uses an $F_{k, n - p - 1}$ reference instead of $\chi^2_k$, exactly as in Topic 21 §21.8 where $\hat\sigma^2$ replaced $\sigma^2$. The notebook fit in Ex 8 produced $\hat\phi = 0.444$ vs true $0.5$ — within $13\%$ at $n = 250$, which is good enough for inference.
 </RemarkBlock>
 
 <a id="section-22-7"></a>
@@ -741,7 +741,7 @@ $$
 D(\mathcal{M}_0) - D(\mathcal{M}_1) \;\xrightarrow{d}\; \phi \cdot \chi^2_k.
 $$
 
-For fixed-$\phi$ families (Bernoulli, Poisson) the $\phi = 1$ asymptotic applies directly; for estimated-$\phi$ families (Gamma, Normal), the test statistic divided by $\hat\phi$ uses an $F_{k, n - p - 1}$ reference to account for dispersion-estimation uncertainty.
+For fixed-$\phi$ families (Bernoulli, Poisson) the $\phi = 1$ asymptotic applies directly; for estimated-$\phi$ families (Gamma, Normal), the deviance difference divided by $k\hat\phi$ uses an $F_{k, n - p - 1}$ reference to account for dispersion-estimation uncertainty.
 </TheoremBlock>
 
 <ProofBlock>
@@ -753,13 +753,13 @@ For fixed-$\phi$ families (Bernoulli, Poisson) the $\phi = 1$ asymptotic applies
 
 **Step 4 (Apply Wilks).** By Topic 18 Thm 4 (Wilks' theorem), under $H_0 : \mathbf{R}\boldsymbol\beta = \mathbf{r}$ and standard regularity (full-rank Fisher information, interior MLE, $H_0$ imposes $k$ smooth constraints), $-2\log\Lambda_n \xrightarrow{d} \chi^2_k$. Therefore $D(\mathcal{M}_0) - D(\mathcal{M}_1) \xrightarrow{d} \phi \cdot \chi^2_k$.
 
-**Step 5 (Decision rule).** At significance level $\alpha$, reject $H_0$ when $D(\mathcal{M}_0) - D(\mathcal{M}_1) > \phi \chi^2_{k, 1-\alpha}$. For estimated $\phi$, divide by $\hat\phi$ and reject when the quotient exceeds $\chi^2_{k, 1-\alpha}/k = F_{k, n-p-1, 1-\alpha}$ asymptotically. $\square$ — using Topic 18 Thm 4 (Wilks).
+**Step 5 (Decision rule).** At significance level $\alpha$, reject $H_0$ when $D(\mathcal{M}_0) - D(\mathcal{M}_1) > \phi \chi^2_{k, 1-\alpha}$. For estimated $\phi$, divide by $k\hat\phi$ and reject when $[D(\mathcal{M}_0) - D(\mathcal{M}_1)]/(k\hat\phi) > F_{k, n-p-1, 1-\alpha}$. Since $F_{k, n-p-1, 1-\alpha} \to \chi^2_{k, 1-\alpha}/k$ as $n \to \infty$, this is asymptotically the same as rejecting when $[D(\mathcal{M}_0) - D(\mathcal{M}_1)]/\hat\phi > \chi^2_{k, 1-\alpha}$. $\square$ — using Topic 18 Thm 4 (Wilks).
 </ProofBlock>
 
 The entire proof is five steps of book-keeping — the substance lives in Topic 18 Thm 4. The deviance test *is* Wilks; we just renamed $-2\log\Lambda_n$ to $D_0 - D_1$ to match GLM software output. R's `anova(fit0, fit1, test="Chisq")` and Python's `glm1.compare_lr_test(glm0)` both compute exactly $D(\mathcal{M}_0) - D(\mathcal{M}_1)$ and reference it to $\chi^2_k$.
 
 <ExampleBlock number={9} title="Nested-Poisson deviance test">
-Continuing the §22.5 insurance-frequency setup: fit a full Poisson model with intercept + 3 predictors + log-offset on $n = 150$ observations, and a reduced model with intercept + 1 predictor + log-offset (dropping the second and third predictors, $k = 2$ restrictions). On the synthetic dataset with true $\boldsymbol\beta = (-1.0, 0.5, 0.7, 0.3)$:
+A fresh simulation in the spirit of the §22.5 insurance-frequency setup: fit a full Poisson model with intercept + 3 predictors + log-offset (exposures $t_i \sim \text{Uniform}(1, 5)$) on $n = 150$ observations, and a reduced model with intercept + 1 predictor + log-offset (dropping the second and third predictors, $k = 2$ restrictions). On the synthetic dataset with true $\boldsymbol\beta = (-0.5, 0.7, 0.5, 0.3)$:
 
 | Quantity | Value |
 |---|---|
