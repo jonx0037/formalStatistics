@@ -25,10 +25,11 @@ import {
   fPDF,
   fCDF,
   fInvCDF,
+  fSF,
   studentTInvCDF,
   standardNormalCDF,
   standardNormalInvCDF,
-  chiSquaredCDF,
+  chiSquaredSF,
   chiSquaredInvCDF,
 } from './testing';
 import { seededRandom } from './probability';
@@ -892,6 +893,10 @@ const PROB_CLIP_HI = 1 - 1e-12;
 const POSITIVE_CLIP = 1e-12;
 const HC3_LEVERAGE_CAP = 0.9999;
 const WEIGHT_CLIP_LO = 1e-12;
+/** Max step halvings per IRLS iteration (step shrinks to 2^-30 ≈ 1e-9 of full). */
+const MAX_STEP_HALVINGS = 30;
+/** Relative deviance rise tolerated before halving (absorbs round-off near the MLE). */
+const DEVIANCE_RISE_TOL = 1e-10;
 
 const sigmoid = (x: number): number => {
   // Stable variant: avoid overflow on very negative x.
@@ -1264,9 +1269,41 @@ export function irlsStep(
 }
 
 /**
+ * Is (η, μ) admissible for this family/link? The inverse link's gInv clips
+ * η ≤ 0 to μ = 1/POSITIVE_CLIP, so η must be strictly positive; Poisson and
+ * Gamma means must be strictly positive (matters for the identity link).
+ * Bernoulli means are left unchecked: logit/probit/cloglog always map into
+ * [0, 1], and separation must still diverge visibly (IRLSVisualizer). The sqrt
+ * link's μ = η² is always positive, so it needs no extra check.
+ */
+function glmEtaMuValid(
+  eta: number,
+  mu: number,
+  family: GLMFamily,
+  link: LinkFunction,
+): boolean {
+  if (!Number.isFinite(eta) || !Number.isFinite(mu)) return false;
+  if (link.name === 'inverse' && !(eta > 0)) return false;
+  if ((family.name === 'poisson' || family.name === 'gamma') && !(mu > 0)) return false;
+  return true;
+}
+
+/**
  * IRLS / Fisher scoring solver for a GLM. Returns the full GLMFit object.
  *
- * Convergence is declared when ‖β^(t+1) - β^(t)‖_2 < tol. On non-convergence
+ * Step-halving safeguard: once the current iterate is valid (η in the link's
+ * domain, μ in the family's mean space, finite deviance), a proposed IRLS step
+ * is halved toward the current β while it leaves that domain or increases the
+ * deviance, up to MAX_STEP_HALVINGS times. Steps that already stay valid and
+ * do not raise the deviance are accepted unchanged, so fits that converged
+ * before the safeguard follow the identical iterate path. If the OLS-projected
+ * start is itself invalid (e.g. the Gamma inverse link with a negative η),
+ * glmFit restarts from the intercept-only point β = (g(ȳ), 0, …, 0) when X has
+ * an all-ones column. Without these two guards the inverse link can stall at
+ * a clipped fixed point (μ = 1/POSITIVE_CLIP), which looks converged.
+ *
+ * Convergence is declared when the full (unhalved) IRLS step satisfies
+ * ‖β^(t+1) - β^(t)‖_2 < tol. On non-convergence
  * (max-iter reached), returns a GLMFit with converged=false and a console
  * warning — does NOT throw. This is critical for the `IRLSVisualizer`
  * "Separated" preset (under complete or quasi-complete separation the
@@ -1316,6 +1353,36 @@ export function glmFit(
     }
   }
 
+  // Validity + deviance at a candidate β (used by the step-halving guard).
+  const evaluate = (b: number[]): { valid: boolean; dev: number } => {
+    let dev = 0;
+    for (let i = 0; i < n; i++) {
+      let e = off[i];
+      const xi = X[i];
+      for (let j = 0; j < m; j++) e += xi[j] * b[j];
+      const mu = linkFn.gInv(e);
+      if (!glmEtaMuValid(e, mu, family, linkFn)) return { valid: false, dev: NaN };
+      dev += family.devianceContribution(y[i], mu);
+    }
+    return Number.isFinite(dev) ? { valid: true, dev } : { valid: false, dev: NaN };
+  };
+
+  let current = evaluate(beta);
+  if (!current.valid) {
+    // Invalid start: fall back to the intercept-only point β = (g(ȳ), 0, …, 0).
+    const j0 = X[0].findIndex((_, j) => X.every((row) => row[j] === 1));
+    if (j0 >= 0) {
+      const yBar = family.initMu(y).reduce((a, v) => a + v, 0) / n;
+      const fallback = new Array<number>(m).fill(0);
+      fallback[j0] = linkFn.g(yBar);
+      const evFallback = evaluate(fallback);
+      if (evFallback.valid) {
+        beta = fallback;
+        current = evFallback;
+      }
+    }
+  }
+
   let nIter = 0;
   let converged = false;
 
@@ -1341,9 +1408,47 @@ export function glmFit(
       const d = step.betaNext[j] - beta[j];
       diffSq += d * d;
     }
-    beta = step.betaNext;
+    const fullStepSmall = Math.sqrt(diffSq) < tol;
 
-    if (Math.sqrt(diffSq) < tol) {
+    let candidate = step.betaNext;
+    if (current.valid) {
+      // Step-halving: shrink toward β while the step leaves the valid domain
+      // or raises the deviance (relative slack absorbs round-off at the MLE).
+      const worse = (ev: { valid: boolean; dev: number }) =>
+        !ev.valid || ev.dev > current.dev + DEVIANCE_RISE_TOL * (Math.abs(current.dev) + 1);
+      let ev = evaluate(candidate);
+      let halvings = 0;
+      while (worse(ev) && halvings < MAX_STEP_HALVINGS) {
+        candidate = candidate.map((bj, j) => 0.5 * (bj + beta[j]));
+        ev = evaluate(candidate);
+        halvings++;
+      }
+      if (worse(ev)) {
+        const evFull = evaluate(step.betaNext);
+        if (evFull.valid) {
+          // Halving cannot lower the deviance (e.g. a clipped-probability
+          // plateau): fall back to the plain IRLS step, as R's glm.fit does.
+          candidate = step.betaNext;
+          ev = evFull;
+        } else {
+          // Every trial step leaves the domain: β sits at the boundary.
+          converged = fullStepSmall;
+          if (!converged) {
+            // eslint-disable-next-line no-console
+            console.warn(
+              `glmFit: step-halving failed at iter ${iter} (family=${family.name}, link=${linkFn.name}); keeping the last valid β.`,
+            );
+          }
+          break;
+        }
+      }
+      current = ev;
+    } else {
+      current = evaluate(candidate);
+    }
+    beta = candidate;
+
+    if (fullStepSmall) {
       converged = true;
       break;
     }
@@ -1572,10 +1677,11 @@ export function devianceTestNested(
   const dfResidual = y.length - Xfull[0].length;
   const ref = devianceTestReference(diff, k, alpha, phiHat, dfResidual, family.fixedDispersion);
 
+  // Upper tails via survival functions: 1 − CDF cancels to 0 below ~1e-16.
   const pValue =
     ref.kind === 'chi2'
-      ? 1 - chiSquaredCDF(ref.statistic, k)
-      : 1 - fCDF(ref.statistic, k, dfResidual);
+      ? chiSquaredSF(ref.statistic, k)
+      : fSF(ref.statistic, k, dfResidual);
 
   return {
     devianceFull: fitFull.deviance,

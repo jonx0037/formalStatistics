@@ -95,6 +95,35 @@ function regGammaP(a: number, x: number): number {
 }
 
 /**
+ * Regularized upper incomplete gamma Q(a, x) = 1 − P(a, x), computed directly
+ * (continued fraction for x ≥ a + 1) so far-tail values keep full relative
+ * precision instead of cancelling to 0 in 1 − P.
+ */
+function regGammaQ(a: number, x: number): number {
+  if (x <= 0) return 1;
+  if (x < a + 1) return 1 - regGammaP(a, x);
+  const logPref = -x + a * Math.log(x) - lnGamma(a);
+  const TINY = 1e-300;
+  let b = x + 1 - a;
+  let c = 1 / TINY;
+  let d = 1 / b;
+  let h = d;
+  for (let i = 1; i <= 500; i++) {
+    const an = -i * (i - a);
+    b += 2;
+    d = an * d + b;
+    if (Math.abs(d) < TINY) d = TINY;
+    c = b + an / c;
+    if (Math.abs(c) < TINY) c = TINY;
+    d = 1 / d;
+    const del = d * c;
+    h *= del;
+    if (Math.abs(del - 1) < 1e-15) break;
+  }
+  return h * Math.exp(logPref);
+}
+
+/**
  * Regularized incomplete beta I_x(a, b).
  * Uses the continued-fraction expansion with the symmetry
  *   I_x(a, b) = 1 − I_{1−x}(b, a)
@@ -199,6 +228,15 @@ export function chiSquaredPDF(w: number, df: number): number {
 export function chiSquaredCDF(w: number, df: number): number {
   if (w <= 0) return 0;
   return regGammaP(df / 2, w / 2);
+}
+
+/**
+ * Chi-squared survival function 1 − F(w; k) = Q(k/2, w/2), computed directly
+ * so upper-tail p-values below ~1e-16 do not underflow to 0.
+ */
+export function chiSquaredSF(w: number, df: number): number {
+  if (w <= 0) return 1;
+  return regGammaQ(df / 2, w / 2);
 }
 
 /** Chi-squared inverse CDF via Wilson-Hilferty seed plus Newton polish. */
@@ -1353,6 +1391,16 @@ export function fCDF(x: number, df1: number, df2: number): number {
   if (x <= 0) return 0;
   const z = (df1 * x) / (df1 * x + df2);
   return regBetaI(z, df1 / 2, df2 / 2);
+}
+
+/**
+ * Snedecor's F survival function 1 − F(x; d1, d2) = I_{d2/(d2 + d1 x)}(d2/2, d1/2),
+ * computed directly so upper-tail p-values below ~1e-16 do not underflow to 0.
+ */
+export function fSF(x: number, df1: number, df2: number): number {
+  if (df1 <= 0 || df2 <= 0) return NaN;
+  if (x <= 0) return 1;
+  return regBetaI(df2 / (df2 + df1 * x), df2 / 2, df1 / 2);
 }
 
 /**

@@ -9,6 +9,7 @@ import {
   devianceTestReference,
   profileDevianceCutoff,
   coefCIProfileGLM,
+  noncentralFPower,
   coefCIWaldSandwich,
   type GLMFamily,
   type LinkFunction,
@@ -38,6 +39,13 @@ const WALD_COLOR = '#2563EB';
 type FamilyKey = 'bernoulli' | 'poisson' | 'gamma';
 type PresetKey = keyof typeof DEVIANCE_TEST_EXPLORER_PRESETS;
 
+/** Upper-tail p-values below 1e-16 print as "< 1e-16": past double-precision
+ *  resolution the asymptotic χ²/F reference carries no further information. */
+function formatPValue(p: number): string {
+  if (!Number.isFinite(p)) return '—';
+  return p < 1e-16 ? '< 1e-16' : p.toExponential(2);
+}
+
 const PRESET_LABELS: Record<PresetKey, string> = {
   nullTrue: 'H₀ true (β₂ = 0)',
   smallEffect: 'Small effect (β₂ = 0.2)',
@@ -56,10 +64,9 @@ export default function DevianceTestExplorer() {
   const [alpha, setAlpha] = useState<number>(0.05);
 
   const family: GLMFamily = FAMILIES[familyKey];
-  // Gamma uses the log link of §22.6 Ex 8, which generated EXAMPLE_8. The
-  // canonical inverse link is not positivity-preserving: IRLS on this data
-  // lands at a negative intercept-only η (μ clipped), so its deviances are
-  // not a valid fit.
+  // Gamma uses the log link of §22.6 Ex 8, which generated EXAMPLE_8. (The
+  // canonical inverse link is not positivity-preserving; glmFit's step-halving
+  // now keeps it at η > 0, but the log link is the data-generating model.)
   const link: LinkFunction = familyKey === 'gamma' ? LINKS.log : family.canonicalLink;
   // Estimated φ (Gamma): Thm 6 Step 5's F_{k, n−p−1} reference on Δ/(k·φ̂).
   const isF = !family.fixedDispersion;
@@ -203,6 +210,9 @@ export default function DevianceTestExplorer() {
   }, [chi2Density, chi2Critical, chi2XScale, chi2YScale]);
 
   // ── PANEL 2: power curve P(reject | λ) for k df ──────────────────────────
+  // Fixed φ: Δ ~ χ²_k(λ) against χ²_{k,1−α}. Estimated φ: the panel-1 F test,
+  // so Δ/(k·φ̂) ~ F_{k, n−p−1}(λ) against F_{k, n−p−1, 1−α}, with λ the
+  // noncentrality of the scaled deviance Δ/φ (the same λ as the χ² case when φ = 1).
   const lambdaDomain: [number, number] = [0, 20];
   const powerCurve = useMemo(() => {
     const N = 80;
@@ -210,11 +220,13 @@ export default function DevianceTestExplorer() {
     const crit = chiSquaredInvCDF(1 - alpha, k);
     for (let i = 0; i <= N; i++) {
       const lam = lambdaDomain[0] + ((lambdaDomain[1] - lambdaDomain[0]) * i) / N;
-      const cdf = nonCentralChiSquaredCDF(crit, k, lam);
-      out.push({ x: lam, y: 1 - cdf });
+      const power = isF
+        ? noncentralFPower(k, dfResidual, lam, alpha)
+        : 1 - nonCentralChiSquaredCDF(crit, k, lam);
+      out.push({ x: lam, y: power });
     }
     return out;
-  }, [alpha, k]);
+  }, [alpha, k, isF, dfResidual]);
 
   const powerXScale = useMemo(
     () => d3.scaleLinear().domain(lambdaDomain).range([MARGIN.left, panelW - MARGIN.right]),
@@ -404,7 +416,14 @@ export default function DevianceTestExplorer() {
         </Panel>
 
         {/* PANEL 2: power curve */}
-        <Panel title={`Power vs λ (k=${k}, α=${alpha.toFixed(3)})`} width={panelW}>
+        <Panel
+          title={
+            isF
+              ? `Power vs λ: noncentral F_${k},${dfResidual}(λ), λ on Δ/φ (α=${alpha.toFixed(3)})`
+              : `Power vs λ: noncentral χ²_${k}(λ) (α=${alpha.toFixed(3)})`
+          }
+          width={panelW}
+        >
           {powerPath && (
             <path d={powerPath} fill="none" stroke={NULL_COLOR} strokeWidth={2.5} />
           )}
@@ -597,7 +616,7 @@ export default function DevianceTestExplorer() {
               )}
               <div className="flex justify-between">
                 <span className="text-slate-600">p-value</span>
-                <span>{testResult.pValue.toExponential(2)}</span>
+                <span>{formatPValue(testResult.pValue)}</span>
               </div>
             </>
           )}
