@@ -1487,6 +1487,55 @@ export interface DevianceTestResult {
   pValue: number;
   reject: boolean;
   dispersionEstimated: boolean;
+  /** Pearson φ̂ from the full model; exactly 1 for fixed-φ families. */
+  phiHat: number;
+  /** Residual df of the full model, n − p − 1 (the F denominator df). */
+  dfResidual: number;
+}
+
+export interface DevianceTestReference {
+  /** 'chi2' for fixed-φ families, 'F' for estimated-φ families. */
+  kind: 'chi2' | 'F';
+  df1: number;
+  /** Denominator df n − p − 1 for the F reference; null for χ². */
+  df2: number | null;
+  /** Δ for χ²; Δ/(k·φ̂) for F. */
+  statistic: number;
+  /** χ²_{k,1−α} or F_{k, n−p−1, 1−α}. */
+  critical: number;
+}
+
+/**
+ * Reference distribution, test statistic, and critical value for the
+ * nested-model deviance test (§22.7 Thm 6 Step 5). Fixed φ (Bernoulli,
+ * Poisson): compare Δ = D₀ − D₁ with χ²_{k,1−α}. Estimated φ (Gamma, Normal):
+ * compare Δ/(k·φ̂) with F_{k, n−p−1, 1−α}; asymptotically this is Δ/φ̂ vs
+ * χ²_{k,1−α}.
+ */
+export function devianceTestReference(
+  diff: number,
+  k: number,
+  alpha: number,
+  phiHat: number,
+  dfResidual: number,
+  fixedDispersion: boolean,
+): DevianceTestReference {
+  if (fixedDispersion) {
+    return {
+      kind: 'chi2',
+      df1: k,
+      df2: null,
+      statistic: diff,
+      critical: chiSquaredInvCDF(1 - alpha, k),
+    };
+  }
+  return {
+    kind: 'F',
+    df1: k,
+    df2: dfResidual,
+    statistic: diff / (k * Math.max(phiHat, POSITIVE_CLIP)),
+    critical: fInvCDF(1 - alpha, k, dfResidual),
+  };
 }
 
 /**
@@ -1519,17 +1568,14 @@ export function devianceTestNested(
     skipNullDeviance: true,
   });
   const diff = fitRed.deviance - fitFull.deviance;
+  const phiHat = family.fixedDispersion ? 1 : fitFull.phi;
+  const dfResidual = y.length - Xfull[0].length;
+  const ref = devianceTestReference(diff, k, alpha, phiHat, dfResidual, family.fixedDispersion);
 
-  let pValue: number;
-  if (family.fixedDispersion) {
-    pValue = 1 - chiSquaredCDF(diff, k);
-  } else {
-    const phi = fitFull.phi;
-    const fStat = diff / k / phi;
-    const df1 = k;
-    const df2 = y.length - Xfull[0].length;
-    pValue = 1 - fCDF(fStat, df1, df2);
-  }
+  const pValue =
+    ref.kind === 'chi2'
+      ? 1 - chiSquaredCDF(ref.statistic, k)
+      : 1 - fCDF(ref.statistic, k, dfResidual);
 
   return {
     devianceFull: fitFull.deviance,
@@ -1539,6 +1585,8 @@ export function devianceTestNested(
     pValue,
     reject: pValue < alpha,
     dispersionEstimated: !family.fixedDispersion,
+    phiHat,
+    dfResidual,
   };
 }
 
@@ -1699,6 +1747,18 @@ export function coefCIWaldSandwich(
 }
 
 /**
+ * Profile-likelihood cutoff on the unscaled deviance scale: the CI is
+ * {β_j^0 : D(β_j^0) − D(β̂) ≤ cutoff}. Fixed φ (Bernoulli, Poisson):
+ * cutoff = χ²_{1,1−α}. Estimated φ (Gamma, Normal): the scaled deviance
+ * D/φ̂ is compared with χ²_{1,1−α}, so cutoff = φ̂·χ²_{1,1−α}.
+ */
+export function profileDevianceCutoff(fit: GLMFit, alpha: number): number {
+  const chiCutoff = chiSquaredInvCDF(1 - alpha, 1);
+  const dispScale = fit.family.fixedDispersion ? 1 : Math.max(fit.phi, POSITIVE_CLIP);
+  return dispScale * chiCutoff;
+}
+
+/**
  * Profile-likelihood CI for a single coefficient β_j. The constrained-fit
  * trick: move β_j · X[:,j] into the offset, drop column j from X, refit. This
  * is exact (the constrained MLE on the reduced design with the right offset
@@ -1706,9 +1766,9 @@ export function coefCIWaldSandwich(
  *   D(β_j^0) - D(β̂) = c × cutoff,
  * where the cutoff/scaling depends on whether the family has a fixed
  * dispersion (Bernoulli, Poisson — χ²_1 cutoff, c=1) or estimated dispersion
- * (Gamma, Normal — F_{1, n-p-1} cutoff via the Wilks-extension; we use the
- * scaled deviance D/φ̂ against χ²_1 as the asymptotic equivalent and emit a
- * console warning that the F reference would be more accurate at finite n).
+ * (Gamma, Normal — c = φ̂: the scaled deviance D/φ̂ is compared with χ²_1,
+ * the asymptotic equivalent of the F_{1, n-p-1} reference, which would be
+ * more accurate at finite n). See `profileDevianceCutoff`.
  * Bisection bracketed by ±gridBracket × Wald-SE around β̂_j.
  *
  * Loop-invariants `Xred`, `baseOff`, and `startBeta` are computed once
@@ -1734,9 +1794,7 @@ export function coefCIProfileGLM(
   // refinement matches Topic 21's exact-distribution treatment under Normal
   // errors but is not implemented here — we'd need to solve a per-bj F-cutoff
   // equation. Topic 23 (penalized GLMs) revisits.
-  const chiCutoff = chiSquaredInvCDF(1 - alpha, 1);
-  const dispScale = fit.family.fixedDispersion ? 1 : Math.max(fit.phi, POSITIVE_CLIP);
-  const target = dispScale * chiCutoff;
+  const target = profileDevianceCutoff(fit, alpha);
 
   // Loop-invariants — pulled out of profileDeviance for the up to 50 ×
   // bisection iterations per CI bound (PR #25 perf review).

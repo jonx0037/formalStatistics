@@ -36,6 +36,8 @@ import {
   pearsonResiduals,
   devianceResiduals,
   devianceTestNested,
+  devianceTestReference,
+  profileDevianceCutoff,
   sandwichVCov,
   sandwichSE,
   coefCIProfileGLM,
@@ -64,7 +66,8 @@ import {
   hatMatrixTrace,
   looCV,
 } from './regression';
-import { EXAMPLE_10_GLM_DATA } from '../../../data/regression-data';
+import { EXAMPLE_8_GLM_DATA, EXAMPLE_10_GLM_DATA } from '../../../data/regression-data';
+import { chiSquaredInvCDF } from './testing';
 import { PROSTATE_CANCER_DATA } from '../../../data/regularization-data';
 import { seededRandom } from './probability';
 import { normalSample } from './convergence';
@@ -1077,6 +1080,88 @@ function maxAbsDiff(a: number[], b: number[]): number {
     `df=${result.df}, diff=${result.diff.toFixed(3)}, p=${result.pValue.toExponential(2)}`,
     'two non-zero coefficients dropped ⇒ very significant',
   );
+  // Fixed φ: φ̂ ≡ 1 and the reference is χ²_k on the raw Δ.
+  const ref = devianceTestReference(result.diff, result.df, 0.05, result.phiHat, result.dfResidual, true);
+  check(
+    'T8.11 Poisson: φ̂ = 1, χ²_2 reference on raw Δ',
+    result.phiHat === 1 &&
+      result.dfResidual === n - 4 &&
+      ref.kind === 'chi2' &&
+      ref.statistic === result.diff &&
+      Math.abs(ref.critical - chiSquaredInvCDF(0.95, 2)) < 1e-12 &&
+      result.reject === ref.statistic > ref.critical,
+    `φ̂=${result.phiHat}, dfResid=${result.dfResidual}, crit=${ref.critical.toFixed(4)}`,
+    'φ̂ = 1, crit = χ²_{2,0.95} ≈ 5.9915',
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// T8.11b — Estimated φ (Gamma, log link, EXAMPLE_8_GLM_DATA as used by
+//          DevianceTestExplorer): Thm 6 Step 5 compares Δ/(k·φ̂) with
+//          F_{k, n−p−1, 1−α}; the profile-CI cutoff is φ̂·χ²_{1,1−α}.
+// ─────────────────────────────────────────────────────────────────────────────
+{
+  const X = EXAMPLE_8_GLM_DATA.X;
+  const y = EXAMPLE_8_GLM_DATA.y;
+  const Xred = X.map((row) => [row[0]]);
+  const n = y.length;
+  const full = glmFit(X, y, FAMILIES.gamma, LINKS.log);
+  const result = devianceTestNested(X, Xred, y, FAMILIES.gamma, LINKS.log, 0.05);
+  const ref = devianceTestReference(result.diff, result.df, 0.05, result.phiHat, result.dfResidual, false);
+  check(
+    'T8.11b Gamma: φ̂ is the full-model Pearson φ̂, df_resid = n − p − 1',
+    result.dispersionEstimated &&
+      Math.abs(result.phiHat - full.phi) < 1e-12 &&
+      result.phiHat !== 1 &&
+      result.dfResidual === n - 2,
+    `φ̂=${result.phiHat.toFixed(4)}, dfResid=${result.dfResidual}`,
+    `φ̂ = ${full.phi.toFixed(4)}, ${n - 2}`,
+  );
+  check(
+    'T8.11b Gamma: F statistic Δ/(k·φ̂) vs F_{1, n−2, 0.95}; p-value and decision agree',
+    ref.kind === 'F' &&
+      ref.df2 === n - 2 &&
+      Math.abs(ref.statistic - result.diff / result.phiHat) < 1e-9 &&
+      Math.abs(ref.critical - fQuantile(0.95, 1, n - 2)) < 1e-12 &&
+      Math.abs(result.pValue - (1 - fCDF(ref.statistic, 1, n - 2))) < 1e-12 &&
+      result.reject === ref.statistic > ref.critical,
+    `F=${ref.statistic.toFixed(3)}, crit=${ref.critical.toFixed(4)}, p=${result.pValue.toExponential(2)}`,
+    'F reference, consistent decision',
+  );
+  // k enters the F statistic's denominator: Δ = 10, k = 2, φ̂ = 0.5 ⇒ F = 10.
+  const ref2 = devianceTestReference(10, 2, 0.05, 0.5, 100, false);
+  check(
+    'T8.11b devianceTestReference divides by k·φ̂ (Δ=10, k=2, φ̂=0.5 ⇒ F=10)',
+    Math.abs(ref2.statistic - 10) < 1e-12 &&
+      ref2.df1 === 2 &&
+      Math.abs(ref2.critical - fQuantile(0.95, 2, 100)) < 1e-12,
+    `F=${ref2.statistic}, crit=${ref2.critical.toFixed(4)}`,
+    'F = 10, crit = F_{2,100,0.95}',
+  );
+  // Profile cutoff scales by φ̂, and coefCIProfileGLM's endpoints sit on it.
+  const chi1 = chiSquaredInvCDF(0.95, 1);
+  const cut = profileDevianceCutoff(full, 0.05);
+  const ci = coefCIProfileGLM(full, 1, 0.05);
+  const profDev = (bj: number) =>
+    glmFit(Xred, y, FAMILIES.gamma, LINKS.log, {
+      offset: X.map((row) => bj * row[1]),
+      skipNullDeviance: true,
+    }).deviance - full.deviance;
+  const gapLo = profDev(ci.lower) - cut;
+  const gapHi = profDev(ci.upper) - cut;
+  check(
+    'T8.11b Gamma profile cutoff = φ̂·χ²_{1,0.95}; CI endpoints sit on it',
+    Math.abs(cut - full.phi * chi1) < 1e-12 && Math.abs(gapLo) < 1e-4 && Math.abs(gapHi) < 1e-4,
+    `cut=${cut.toFixed(4)}, gaps=(${gapLo.toExponential(1)}, ${gapHi.toExponential(1)})`,
+    `φ̂·3.8415 = ${(full.phi * chi1).toFixed(4)}, gaps < 1e-4`,
+  );
+  const poisFit = glmFit(X, y.map((v) => Math.round(v)), FAMILIES.poisson, LINKS.log);
+  check(
+    'T8.11b Poisson profile cutoff = χ²_{1,0.95} (no φ̂ scaling)',
+    Math.abs(profileDevianceCutoff(poisFit, 0.05) - chi1) < 1e-12,
+    profileDevianceCutoff(poisFit, 0.05).toFixed(4),
+    chi1.toFixed(4),
+  );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1691,13 +1776,15 @@ console.log('========================================\n');
     `‖β̂‖_∞ = ${maxAbs.toFixed(3)}`,
     '< 10',
   );
-  // Iter count comparable to notebook (notebook reports ridge_irls_iters = 10).
-  // Allow a wide window since our IRLS convergence criterion may differ.
+  // Iteration-count sanity window. The notebook's verification cell prints
+  // ridge_irls_iters = 10 (under its T9.6 label), but for its completely
+  // separated n = 120, p = 2 design at λ = 0.1, not this preset, and with a
+  // different convergence criterion, so only a wide window is checked here.
   check(
     'T9.7 penalizedGLMFit ridge nOuterIter in [3, 50]',
     ridgeFit01.nOuterIter >= 3 && ridgeFit01.nOuterIter <= 50,
     `nOuterIter = ${ridgeFit01.nOuterIter}`,
-    'in [3, 50]; notebook printed 10',
+    'in [3, 50]; notebook printed 10 on its separated n = 120 design',
   );
   // Sanity: lasso variant should also converge and produce a sparser estimate.
   const lassoFit01 = penalizedGLMFit(X, y, 0.5, {
