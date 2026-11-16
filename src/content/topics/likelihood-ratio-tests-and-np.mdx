@@ -550,7 +550,7 @@ $$
 $$
 Thus $2 R_n = o_P(1)$.
 
-![Log-likelihood ℓ(θ) for Bernoulli p = 0.5 at n = 100 overlaid with the quadratic Taylor approximation tangent at θ̂ₙ. The vertical drop from the peak down to ℓ(θ₀) is exactly (minus half of) −2 log Λₙ; the quadratic approximation shows that this drop is n·I(θ₀)·(θ̂ₙ−θ₀)²/2 modulo o_P(1).](/images/topics/likelihood-ratio-tests-and-np/18-wilks-proof-geometry.png)
+![Log-likelihood ℓ(θ) for Bernoulli p = 0.5 at n = 100 overlaid with the quadratic Taylor approximation tangent at θ̂ₙ. The vertical drop from the peak down to ℓ(θ₀) is exactly half of −2 log Λₙ, since −2 log Λₙ = 2[ℓ(θ̂ₙ) − ℓ(θ₀)]; the quadratic approximation shows that this drop is n·I(θ₀)·(θ̂ₙ−θ₀)²/2 modulo o_P(1).](/images/topics/likelihood-ratio-tests-and-np/18-wilks-proof-geometry.png)
 
 **Step 5 — Rescale observed curvature to Fisher information.** Write $-\ell''(\hat\theta_n) = n \cdot [-(1/n)\ell''(\hat\theta_n)]$. The bracketed quantity converges in probability to $I(\theta_0)$:
 $$
