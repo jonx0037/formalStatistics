@@ -378,10 +378,10 @@ By sufficiency, the conditional distribution of $X \mid T$ does not depend on $\
 </DefinitionBlock>
 
 <TheoremBlock number={4} title="Rao–Blackwell: conditioning on a sufficient T does not increase MSE">
-Let $T$ be sufficient for $\theta$ and let $\hat\theta$ be an unbiased estimator of $\theta$ with finite variance. Define $\tilde\theta = \mathbb{E}[\hat\theta \mid T]$. Then:
+Let $T$ be sufficient for $\theta$ and let $\hat\theta$ be an unbiased estimator of $g(\theta)$ with finite variance, where $g$ is any parametric function ($g(\theta) = \theta$ is the most common case). Define $\tilde\theta = \mathbb{E}[\hat\theta \mid T]$. Then:
 
 1. $\tilde\theta$ is a statistic (function of $T$ alone).
-2. $\tilde\theta$ is unbiased: $\mathbb{E}_\theta[\tilde\theta] = \theta$.
+2. $\tilde\theta$ is unbiased: $\mathbb{E}_\theta[\tilde\theta] = g(\theta)$.
 3. $\mathrm{Var}_\theta(\tilde\theta) \le \mathrm{Var}_\theta(\hat\theta)$, with equality iff $\hat\theta = \tilde\theta$ almost surely (i.e., $\hat\theta$ was already a function of $T$).
 
 Since both estimators are unbiased, MSE = variance, so $\mathrm{MSE}(\tilde\theta) \le \mathrm{MSE}(\hat\theta)$.
@@ -392,7 +392,7 @@ Since both estimators are unbiased, MSE = variance, so $\mathrm{MSE}(\tilde\thet
 
 **Step 2 — $\tilde\theta$ is unbiased.** By the law of iterated expectation (Topic 4),
 
-$$\mathbb{E}_\theta[\tilde\theta] \;=\; \mathbb{E}_\theta[\mathbb{E}[\hat\theta \mid T]] \;=\; \mathbb{E}_\theta[\hat\theta] \;=\; \theta.$$
+$$\mathbb{E}_\theta[\tilde\theta] \;=\; \mathbb{E}_\theta[\mathbb{E}[\hat\theta \mid T]] \;=\; \mathbb{E}_\theta[\hat\theta] \;=\; g(\theta).$$
 
 **Step 3 — $\mathrm{Var}(\tilde\theta) \le \mathrm{Var}(\hat\theta)$ via Eve's law.** The law of total variance (Eve's law, Topic 4) decomposes the variance of $\hat\theta$ as
 
@@ -515,7 +515,7 @@ Let $T$ be a complete sufficient statistic for $\theta$, and let $\tilde\theta =
 </TheoremBlock>
 
 <ProofBlock>
-**Existence (any unbiased estimator can be improved to a function of $T$).** Let $\hat\theta^*$ be any unbiased estimator of $g(\theta)$. Define $\hat\theta^{**} = \mathbb{E}[\hat\theta^* \mid T]$. By the Rao–Blackwell theorem (Theorem 4), $\hat\theta^{**}$ is a function of $T$, is unbiased for $g(\theta)$, and has variance $\mathrm{Var}(\hat\theta^{**}) \le \mathrm{Var}(\hat\theta^*)$.
+**Existence (any unbiased estimator can be improved to a function of $T$).** Let $\hat\theta^*$ be any unbiased estimator of $g(\theta)$ with finite variance (an unbiased estimator with infinite variance cannot have smaller variance than any other, so there is nothing to improve). Define $\hat\theta^{**} = \mathbb{E}[\hat\theta^* \mid T]$. By the Rao–Blackwell theorem (Theorem 4), $\hat\theta^{**}$ is a function of $T$, is unbiased for $g(\theta)$, and has variance $\mathrm{Var}(\hat\theta^{**}) \le \mathrm{Var}(\hat\theta^*)$.
 
 **Uniqueness (any two unbiased functions of $T$ agree almost surely).** Suppose $\tilde\theta_1 = h_1(T)$ and $\tilde\theta_2 = h_2(T)$ are both unbiased for $g(\theta)$. Then for every $\theta \in \Theta$,
 
@@ -523,11 +523,11 @@ $$\mathbb{E}_\theta[h_1(T) - h_2(T)] \;=\; g(\theta) - g(\theta) \;=\; 0.$$
 
 By completeness of $T$ (Definition 5), this forces $h_1(T) - h_2(T) = 0$ almost surely under every $P_\theta$ — that is, $h_1(T) = h_2(T)$ a.s.
 
-**Optimality (Rao-Blackwellization always lands on $\tilde\theta$).** For any unbiased $\hat\theta^*$, the Rao-Blackwellization $\hat\theta^{**} = \mathbb{E}[\hat\theta^* \mid T]$ is an unbiased function of $T$. By uniqueness, $\hat\theta^{**} = \tilde\theta$ almost surely. Therefore
+**Optimality (Rao-Blackwellization always lands on $\tilde\theta$).** For any finite-variance unbiased $\hat\theta^*$, the Rao-Blackwellization $\hat\theta^{**} = \mathbb{E}[\hat\theta^* \mid T]$ is an unbiased function of $T$. By uniqueness, $\hat\theta^{**} = \tilde\theta$ almost surely. Therefore
 
 $$\mathrm{Var}(\tilde\theta) \;=\; \mathrm{Var}(\hat\theta^{**}) \;\le\; \mathrm{Var}(\hat\theta^*),$$
 
-with the second inequality from Rao-Blackwell. This holds for *every* unbiased $\hat\theta^*$, so $\tilde\theta$ is the UMVUE — uniformly across $\theta$ and uniquely up to a.s. equality.
+with the second inequality from Rao-Blackwell. This holds for *every* finite-variance unbiased $\hat\theta^*$, and an infinite-variance one cannot beat $\tilde\theta$, so $\tilde\theta$ is the UMVUE — uniformly across $\theta$ and uniquely up to a.s. equality.
 
 ∎ — by Rao-Blackwell (Theorem 4) and completeness (Definition 5).
 </ProofBlock>
@@ -538,7 +538,7 @@ If a UMVUE of $g(\theta)$ exists, then it is unique up to almost-sure equality u
 
 This is a corollary of Theorem 5: any UMVUE must be a function of any complete sufficient $T$ (otherwise Rao-Blackwellization strictly improves it), and any two unbiased functions of $T$ agree a.s. by completeness. Without completeness, the uniqueness conclusion fails — a family with multiple inequivalent UMVUEs exists in principle, but is exotic.
 
-![Lehmann-Scheffé construction. Left: the Lehmann-Scheffé "diamond" — θ̂* (any unbiased) → θ̃ = 𝔼[θ̂* | T] (Rao-Blackwellized, function of T) → unique UMVUE (by completeness). Right: for Normal σ² known μ, histograms of crude σ̂² = (X₁ − μ)², RB'd σ̃² = Σ(Xᵢ − μ)²/n, with the variance-ratio = n annotation.](/images/topics/sufficient-statistics/lehmann-scheffe-construction.png)
+![Lehmann-Scheffé construction. Left: the Lehmann-Scheffé "diamond" — θ̂* (any unbiased) → θ̂** = 𝔼[θ̂* | T] (Rao-Blackwellized, function of T) → unique UMVUE θ̃ (by completeness). Right: for Normal σ² known μ, histograms of crude σ̂² = (X₁ − μ)², RB'd σ̃² = Σ(Xᵢ − μ)²/n, with the variance-ratio = n annotation.](/images/topics/sufficient-statistics/lehmann-scheffe-construction.png)
 
 <ExampleBlock number={14} title="Normal σ² with known μ: UMVUE = Σ(Xᵢ − μ)²/n (worked in full)">
 Let $X_1, \ldots, X_n$ be iid $\mathcal{N}(\mu, \sigma^2)$ with $\mu$ known and $\sigma^2$ unknown. The complete sufficient statistic is $T = \sum (X_i - \mu)^2$, which has distribution $\sigma^2 \chi^2_n$. The unbiased function of $T$ for $\sigma^2$ is

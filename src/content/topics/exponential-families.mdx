@@ -858,7 +858,9 @@ The **canonical link function** for a GLM is $g(\mu) = (A')^{-1}(\mu) = \eta$, w
 | Normal | $g(\mu) = \mu$ | Identity | Linear regression |
 | Bernoulli | $g(\mu) = \log\!\frac{\mu}{1-\mu}$ | Logit | Logistic regression |
 | Poisson | $g(\mu) = \log \mu$ | Log | Poisson regression |
-| Gamma | $g(\mu) = 1/\mu$ | Inverse | Gamma regression |
+| Gamma | $g(\mu) = -1/\mu$ | Inverse | Gamma regression |
+
+The Normal and Gamma rows are written in dispersion form: the variance $\sigma^2$ and the Gamma shape $\alpha$ are held fixed and moved into a dispersion parameter. So the Normal's natural parameter $\mu/\sigma^2$ becomes $\mu$, and the Gamma's $\eta_2 = -\beta$ (with rate $\beta = \alpha/\mu$, so $\eta_2 = -\alpha/\mu$) becomes $-1/\mu$. The Gamma link is often written $1/\mu$; the sign does not change the fit. Flipping the sign (or dropping the constant $\alpha$) only rescales the coefficient vector $\boldsymbol{\beta}$, and the fitted means are the same.
 
 **Linear regression** is the Normal GLM with identity link: $E[Y \mid \boldsymbol{x}] = \boldsymbol{x}^T \boldsymbol{\beta}$. The mean *is* the linear predictor.
 

@@ -100,7 +100,6 @@ export interface RaoBlackwellPreset {
   defaultParams: Record<string, number>;
   crudeFormula: string;
   rbFormula: string;
-  expectedVarRatio: number;
   description: string;
 }
 
@@ -112,7 +111,6 @@ export const raoBlackwellPresets: RaoBlackwellPreset[] = [
     defaultParams: { p: 0.3, n: 20 },
     crudeFormula: '\\hat{p}_0 = X_1',
     rbFormula: '\\tilde{p} = \\bar{X}',
-    expectedVarRatio: 20,
     description:
       'Most visceral demo: $X_1 \\in \\{0,1\\}$ (huge variance), $\\bar X$ concentrates around $p$. Variance ratio $\\mathrm{Var}(X_1)/\\mathrm{Var}(\\bar X) = n$.',
   },
@@ -123,7 +121,6 @@ export const raoBlackwellPresets: RaoBlackwellPreset[] = [
     defaultParams: { lambda: 2, n: 10 },
     crudeFormula: '\\hat{q}_0 = \\mathbf{1}\\{X_1 = 0\\}',
     rbFormula: '\\tilde{q} = (1 - 1/n)^{\\sum X_i}',
-    expectedVarRatio: 10,
     description:
       'The textbook UMVUE-of-$e^{-\\lambda}$ demonstration; RB produces a smooth estimator from a 0/1 indicator.',
   },
@@ -134,7 +131,6 @@ export const raoBlackwellPresets: RaoBlackwellPreset[] = [
     defaultParams: { mu: 0, sigma2: 1, c: 1, n: 30 },
     crudeFormula: '\\hat{p}_c = \\mathbf{1}\\{X_1 > c\\}',
     rbFormula: '\\tilde{p}_c = I_y\\!\\left(\\tfrac{n-2}{2}, \\tfrac{n-2}{2}\\right),\\; y = \\tfrac{1}{2}\\!\\left(1 - \\tfrac{(c-\\bar X)/S}{\\sqrt{(n-2+(c-\\bar X)^2/S^2)/n}}\\right)',
-    expectedVarRatio: 5,
     description:
       'Lehmann-Casella (1998) §2.4 worked example; RB produces a Beta-CDF expression from a 0/1 indicator.',
   },
@@ -145,7 +141,6 @@ export const raoBlackwellPresets: RaoBlackwellPreset[] = [
     defaultParams: { p: 0.3, n: 30 },
     crudeFormula: '\\hat{v}_0 = X_1(1 - X_1) \\equiv 0',
     rbFormula: '\\tilde{v} = \\dfrac{\\bar{X}(n - \\sum X_i)}{n - 1}',
-    expectedVarRatio: 15,
     description:
       'Bernoulli-variance UMVUE — crude is identically 0 ($X_1 \\in \\{0,1\\}$ ⇒ $X_1(1-X_1) = 0$ always); RB rescues a completely uninformative crude estimator.',
   },
