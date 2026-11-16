@@ -1654,8 +1654,9 @@ console.log('========================================\n');
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// T9.7 — penalizedGLMFit ridge-logistic on near-separation (notebook T9.6)
-// Notebook prints: ridge_irls_iters = 10 on near-separation preset (λ=0.1).
+// T9.7 — penalizedGLMFit ridge- and lasso-logistic on EXAMPLE_10_GLM_DATA
+// (Topic 22's near-separated preset, n = 80, finite MLE): ridge (λ = 0.1)
+// converges to a bounded estimate (‖β̂‖_∞ < 10) and lasso (λ = 0.5) converges.
 // ─────────────────────────────────────────────────────────────────────────────
 {
   const data = EXAMPLE_10_GLM_DATA;
