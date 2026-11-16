@@ -240,7 +240,7 @@ Same setup but $\sigma$ unknown; replace $\sigma$ by the sample standard deviati
 
 $$C(X) = [\bar X - t_{n-1, \alpha/2} S/\sqrt n,\; \bar X + t_{n-1, \alpha/2} S/\sqrt n].$$
 
-Exactness — meaning the CI has coverage exactly $1-\alpha$ at every $\mu$ — is inherited from the exactness of the t-test, which comes from <ExternalLink href="/topics/sufficient-statistics">Basu's independence theorem (Topic 16 Thm 7)</ExternalLink>: the pivot $\sqrt n (\bar X - \mu)/S$ is distribution-free because $\bar X$ and $S^2$ are independent. Same Basu in §19.3.
+Exactness — meaning the CI has coverage exactly $1-\alpha$ at every $\mu$ — is inherited from the exactness of the t-test, which comes from <ExternalLink href="/topics/sufficient-statistics">Basu's independence theorem (Topic 16 Thm 7)</ExternalLink>: the pivot $\sqrt n (\bar X - \mu)/S$ is free of $\mu$ and $\sigma$ by location–scale invariance, and the independence of $\bar X$ and $S^2$ under normality makes it exactly $t_{n-1}$. Same Basu in §19.3.
 </ExampleBlock>
 
 <RemarkBlock number={4} title="Duality as organizing principle">
@@ -272,7 +272,7 @@ for $\theta$. The inversion is algebra; the probability content is packed into t
 <ExampleBlock number={3} title="z-pivot and t-pivot for a Normal mean">
 For iid $\mathcal{N}(\mu, \sigma^2)$ data with $\sigma$ known, $Q(X, \mu) = \sqrt n (\bar X - \mu)/\sigma$ is a pivot with $Q \sim \mathcal{N}(0, 1)$. Inverting $-z_{\alpha/2} \le Q \le z_{\alpha/2}$ gives $\bar X - z_{\alpha/2}\sigma/\sqrt n \le \mu \le \bar X + z_{\alpha/2}\sigma/\sqrt n$ — the z-CI of Example 1.
 
-For $\sigma$ unknown, $Q(X, \mu) = \sqrt n (\bar X - \mu)/S$ is a pivot with $Q \sim t_{n-1}$ — this is where Basu's independence theorem enters: the distribution of $\sqrt n (\bar X - \mu)/S$ is free of both $\mu$ and $\sigma$ precisely because $\bar X \perp\!\!\!\perp S^2$ under normality. Inversion gives the t-CI of Example 2. Worked numerically in <ExternalLink href="https://www.cengage.com/c/statistical-inference-2e-casella/">CAS2002 §9.2</ExternalLink>.
+For $\sigma$ unknown, $Q(X, \mu) = \sqrt n (\bar X - \mu)/S$ is a pivot with $Q \sim t_{n-1}$ — this is where Basu's independence theorem enters: the distribution of $\sqrt n (\bar X - \mu)/S$ is free of both $\mu$ and $\sigma$ by location–scale invariance (writing $X = \mu + \sigma Z$ makes $Q = \sqrt n\, \bar Z / S_Z$ a function of $Z$ alone), and the independence $\bar X \perp\!\!\!\perp S^2$ under normality makes it exactly $t_{n-1}$. Inversion gives the t-CI of Example 2. Worked numerically in <ExternalLink href="https://www.cengage.com/c/statistical-inference-2e-casella/">CAS2002 §9.2</ExternalLink>.
 </ExampleBlock>
 
 <ExampleBlock number={4} title="χ²-pivot for Normal variance">
