@@ -291,14 +291,14 @@ $$\mathrm{BF}_{10}(\mathbf{y}) \;=\; \frac{m_1(\mathbf{y})}{m_0(\mathbf{y})} \;=
 This is the data's multiplicative update to the prior odds of $\mathcal{M}_1$ over $\mathcal{M}_0$:
 
 <TheoremBlock number={2} title="Bayes factor as posterior odds update">
-For any two models $\mathcal{M}_0$ and $\mathcal{M}_1$ with positive prior probabilities,
+For any two models $\mathcal{M}_0$ and $\mathcal{M}_1$ with positive prior probabilities and $m_0(\mathbf{y}) > 0$,
 
 $$\underbrace{\frac{p(\mathcal{M}_1 \mid \mathbf{y})}{p(\mathcal{M}_0 \mid \mathbf{y})}}_{\text{posterior odds}} \;=\; \underbrace{\frac{p(\mathcal{M}_1)}{p(\mathcal{M}_0)}}_{\text{prior odds}} \;\times\; \underbrace{\mathrm{BF}_{10}(\mathbf{y})}_{\text{data's update}}.$$
 
 The Bayes factor is thus *prior-free* in one sense — it's the part of the comparison due to the data, independent of prior model probabilities — and *prior-dependent* in another: each $m_k$ depends on the *within-model* prior $\pi_k$. Rem 7 below elaborates the second sense; Rem 12–14 follow the consequences.
 </TheoremBlock>
 
-The identity is immediate from $p(\mathcal{M}_k \mid \mathbf{y}) \propto p(\mathcal{M}_k) m_k(\mathbf{y})$ (§27.2 Thm 1): take the ratio and the $p(\mathbf{y})$ normalizer cancels.
+The identity is immediate from $p(\mathcal{M}_k \mid \mathbf{y}) \propto p(\mathcal{M}_k) m_k(\mathbf{y})$ (§27.2 Thm 1): take the ratio and the $p(\mathbf{y})$ normalizer cancels. The hypotheses $p(\mathcal{M}_0) > 0$ and $m_0(\mathbf{y}) > 0$ keep both denominators, $p(\mathcal{M}_0 \mid \mathbf{y})$ and $m_0(\mathbf{y})$, nonzero.
 
 Jeffreys (1961, Appendix B) tabulated a heuristic scale for interpreting Bayes factors:
 
