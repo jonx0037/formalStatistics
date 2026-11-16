@@ -14,8 +14,9 @@
  *     [0.1222, 0.3466]; scipy wins per starter prompt).
  *   • T25.6 asserts the math-correct posterior mean 80/81 for the stated
  *     inputs. The brief quoted "20/21" but that's inconsistent with the
- *     stated (σ₀²=4, σ²=1, n=20, ȳ=1) — the notebook's Cell 13 hardcodes
- *     "20/21" as a typed literal (not a scipy computation). See brief
+ *     stated (σ₀²=4, σ²=1, n=20, ȳ=1). The notebook's ground-truth cell
+ *     and its five-pairs figure once hardcoded the typo (20/21 ≈ 0.95);
+ *     both now compute 80/81 (fixed 2026-11-16). See brief
  *     Gelman BDA3 Eq 2.10; precision-weighted update gives 80/81 here.
  *   • T25.14's brief claimed variance ratio "≈ 1.004"; the scipy-verified
  *     ratio is 0.993. Both satisfy the [0.98, 1.02] assertion bound.
@@ -189,7 +190,7 @@ console.log('========================================\n');
 // ── T25.6. Normal-Normal posterior (μ₀=0, σ₀²=4, n=20, ȳ=1, σ²=1) ─────────
 // Precision-weighted: σ_n² = 1/(1/4 + 20/1) = 4/81; μ_n = σ_n² · 20 = 80/81.
 // Brief claimed "20/21" but that's mathematically inconsistent with 4/81
-// for the stated inputs — the notebook's Cell 13 print hardcodes the typo.
+// for the stated inputs (the notebook printout carried the typo until 2026-11-16).
 {
   const post = posterior(
     'normal-normal',
