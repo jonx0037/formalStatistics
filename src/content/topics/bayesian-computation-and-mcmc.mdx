@@ -206,7 +206,7 @@ is a high-dimensional integral without a closed form. We know $p(\theta \mid \ma
      style="border-color: var(--color-border);" />
 
 <RemarkBlock number={1} title="The MCMC insight: the normalizer cancels">
-The trick underneath every MCMC algorithm: we never need $m(\mathbf{y})$. To sample from $p(\theta \mid \mathbf{y})$ we only need *ratios* $\pi(\theta')/\pi(\theta)$ (in the MCMC-theory notation introduced in §26.3, where $\pi$ denotes the posterior-as-target), and the unknown $m(\mathbf{y})$ cancels from numerator and denominator. This is the structural reason every MH / HMC / NUTS algorithm moves by proposing a candidate $\theta'$ and comparing its unnormalized density to the current state's.
+The trick underneath every MCMC algorithm: we never need $m(\mathbf{y})$. To sample from $p(\theta \mid \mathbf{y})$ we only need *ratios* $\pi(\theta')/\pi(\theta)$ (in the MCMC-theory notation of [§26.2 Def 1](#section-26-2); here $\pi$ denotes the target posterior, not the prior $\pi(\theta)$ in $m(\mathbf{y})$ above), and the unknown $m(\mathbf{y})$ cancels from numerator and denominator. This is the structural reason every MH / HMC / NUTS algorithm moves by proposing a candidate $\theta'$ and comparing its unnormalized density to the current state's.
 </RemarkBlock>
 
 <RemarkBlock number={2} title="What Topic 26 covers, and what it defers">

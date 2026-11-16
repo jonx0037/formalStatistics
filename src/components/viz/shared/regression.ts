@@ -878,7 +878,7 @@ export interface GLMFamily {
   logLik: (y: number, mu: number, phi: number) => number;
   /** ℓ_i(y; y, φ) — saturated-model contribution (used in deviance). */
   logLikSaturated: (y: number, phi: number) => number;
-  /** Per-observation deviance contribution d_i = 2[ℓ_sat - ℓ_i] / φ. */
+  /** Per-observation deviance contribution d_i = 2φ[ℓ_sat - ℓ_i] (Def 7; φ-free unit deviance). */
   devianceContribution: (y: number, mu: number) => number;
   /** Family-specific initial μ for IRLS (smoothed-y for Bernoulli/Poisson). */
   initMu: (y: number[]) => number[];
@@ -1492,8 +1492,8 @@ export interface DevianceTestResult {
 /**
  * Nested-model deviance test. Fits both models, returns (D_0 - D_1), df=k,
  * p-value. For fixed-φ families (Bernoulli, Poisson) uses χ²_k reference.
- * For estimated-φ families (Gamma, Normal), divides by the full-model φ̂ and
- * uses an F_{k, n-p-1} reference.
+ * For estimated-φ families (Gamma, Normal), divides (D_0 - D_1) by k·φ̂ (φ̂ from
+ * the full model) and uses an F_{k, n-p-1} reference.
  */
 export function devianceTestNested(
   Xfull: number[][],
