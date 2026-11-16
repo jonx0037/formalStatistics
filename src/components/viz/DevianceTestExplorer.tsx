@@ -3,8 +3,11 @@ import * as d3 from 'd3';
 import { useResizeObserver } from './shared/useResizeObserver';
 import {
   FAMILIES,
+  LINKS,
   glmFit,
   devianceTestNested,
+  devianceTestReference,
+  profileDevianceCutoff,
   coefCIProfileGLM,
   coefCIWaldSandwich,
   type GLMFamily,
@@ -13,6 +16,7 @@ import {
 import {
   chiSquaredPDF,
   chiSquaredInvCDF,
+  fPDF,
   nonCentralChiSquaredCDF,
 } from './shared/testing';
 import {
@@ -52,7 +56,13 @@ export default function DevianceTestExplorer() {
   const [alpha, setAlpha] = useState<number>(0.05);
 
   const family: GLMFamily = FAMILIES[familyKey];
-  const link: LinkFunction = family.canonicalLink;
+  // Gamma uses the log link of §22.6 Ex 8, which generated EXAMPLE_8. The
+  // canonical inverse link is not positivity-preserving: IRLS on this data
+  // lands at a negative intercept-only η (μ clipped), so its deviances are
+  // not a valid fit.
+  const link: LinkFunction = familyKey === 'gamma' ? LINKS.log : family.canonicalLink;
+  // Estimated φ (Gamma): Thm 6 Step 5's F_{k, n−p−1} reference on Δ/(k·φ̂).
+  const isF = !family.fixedDispersion;
 
   // Preset gives Poisson nested data; for non-Poisson, fall back to a
   // family-appropriate dataset (Bernoulli → EXAMPLE_6 with intercept reduced;
@@ -119,24 +129,40 @@ export default function DevianceTestExplorer() {
 
   const panelW = isStacked ? width - 24 : (width - 36) / 3;
 
-  // ── PANEL 1: χ²_k null density + observed deviance + rejection region ────
-  const chi2Critical = useMemo(() => chiSquaredInvCDF(1 - alpha, k), [alpha, k]);
-  const observedDiff = testResult?.diff ?? 0;
+  // ── PANEL 1: null density + observed statistic + rejection region ───────
+  // Fixed φ: Δ vs χ²_k. Estimated φ: Δ/(k·φ̂) vs F_{k, n−p−1} (Thm 6 Step 5),
+  // with k taken from the slider like the χ² axis.
+  const phiHat = testResult?.phiHat ?? 1;
+  const dfResidual = testResult?.dfResidual ?? dataset.y.length - dataset.Xfull[0].length;
+  const testRef = useMemo(
+    () =>
+      devianceTestReference(
+        testResult?.diff ?? 0,
+        k,
+        alpha,
+        phiHat,
+        dfResidual,
+        family.fixedDispersion,
+      ),
+    [testResult, k, alpha, phiHat, dfResidual, family],
+  );
+  const chi2Critical = testRef.critical;
+  const observedDiff = testRef.statistic;
 
   const chi2Domain: [number, number] = useMemo(() => {
-    const xMax = Math.max(chi2Critical * 2.5, observedDiff * 1.4, 12);
+    const xMax = Math.max(chi2Critical * 2.5, observedDiff * 1.4, isF ? 6 : 12);
     return [0, xMax];
-  }, [chi2Critical, observedDiff]);
+  }, [chi2Critical, observedDiff, isF]);
 
   const chi2Density = useMemo(() => {
     const N = 200;
     const out: { x: number; y: number }[] = [];
     for (let i = 0; i <= N; i++) {
       const x = chi2Domain[0] + ((chi2Domain[1] - chi2Domain[0]) * i) / N;
-      out.push({ x, y: chiSquaredPDF(x, k) });
+      out.push({ x, y: isF ? fPDF(x, k, dfResidual) : chiSquaredPDF(x, k) });
     }
     return out;
-  }, [chi2Domain, k]);
+  }, [chi2Domain, k, isF, dfResidual]);
 
   const chi2YMax = Math.max(...chi2Density.map((d) => d.y), 0.05);
 
@@ -246,14 +272,21 @@ export default function DevianceTestExplorer() {
     return [Math.min(...xs), Math.max(...xs)];
   }, [profileCurve]);
 
+  // Profile-CI cutoff on the deviance scale: χ²_{1,1−α} for fixed φ,
+  // φ̂·χ²_{1,1−α} for estimated φ — the same cutoff coefCIProfileGLM inverts.
+  const profileCutoff = useMemo(
+    () => (fullFit ? profileDevianceCutoff(fullFit, alpha) : chiSquaredInvCDF(1 - alpha, 1)),
+    [fullFit, alpha],
+  );
+
   const profileYDomain: [number, number] = useMemo(() => {
     if (profileCurve.length === 0 || !fullFit) return [0, 1];
     const ys = profileCurve.map((d) => d.y).filter((v) => Number.isFinite(v));
     if (ys.length === 0) return [0, 1];
     const lo = Math.min(...ys, fullFit.deviance);
-    const hi = Math.max(...ys, fullFit.deviance + chiSquaredInvCDF(1 - alpha, 1) * 1.5);
+    const hi = Math.max(...ys, fullFit.deviance + profileCutoff * 1.5);
     return [lo - 0.5, hi + 0.5];
-  }, [profileCurve, fullFit, alpha]);
+  }, [profileCurve, fullFit, profileCutoff]);
 
   const profileXScale = useMemo(
     () => d3.scaleLinear().domain(profileDomain).range([MARGIN.left, panelW - MARGIN.right]),
@@ -306,8 +339,15 @@ export default function DevianceTestExplorer() {
       </div>
 
       <div className={`flex gap-3 p-3 ${isStacked ? 'flex-col' : 'flex-row'}`}>
-        {/* PANEL 1: χ² null density */}
-        <Panel title={`χ²_${k} null + observed Δ`} width={panelW}>
+        {/* PANEL 1: χ²_k (fixed φ) or F_{k, n−p−1} (estimated φ) null density */}
+        <Panel
+          title={
+            isF
+              ? `F_${k},${dfResidual} null + observed F = Δ/(k·φ̂), φ̂ = ${phiHat.toFixed(3)}`
+              : `χ²_${k} null + observed Δ`
+          }
+          width={panelW}
+        >
           {chi2RejectPath && (
             <path d={chi2RejectPath} fill={REJECT_COLOR} opacity={0.25} />
           )}
@@ -330,7 +370,7 @@ export default function DevianceTestExplorer() {
             fontSize={10}
             fill={REJECT_COLOR}
           >
-            χ²_crit = {chi2Critical.toFixed(2)}
+            {isF ? 'F_crit' : 'χ²_crit'} = {chi2Critical.toFixed(2)}
           </text>
           {/* Observed Δ */}
           {testResult && (
@@ -350,7 +390,7 @@ export default function DevianceTestExplorer() {
                 fontSize={10}
                 fill={OBSERVED_COLOR}
               >
-                Δ = {observedDiff.toFixed(2)}
+                {isF ? 'F' : 'Δ'} = {observedDiff.toFixed(2)}
               </text>
             </>
           )}
@@ -358,7 +398,7 @@ export default function DevianceTestExplorer() {
             xScale={chi2XScale}
             yScale={chi2YScale}
             panelW={panelW}
-            xLabel={`χ²_${k}`}
+            xLabel={isF ? `F_${k},${dfResidual}` : `χ²_${k}`}
             yTickFormat={(v) => v.toFixed(2)}
           />
         </Panel>
@@ -397,25 +437,25 @@ export default function DevianceTestExplorer() {
 
         {/* PANEL 3: profile vs Wald CI */}
         <Panel title={`Profile D(β_j) vs Wald-z (j=${targetJ})`} width={panelW}>
-          {/* Threshold line at D(β̂) + χ²_{1, 1-α} */}
+          {/* Threshold line at D(β̂) + χ²_{1, 1-α} (fixed φ) or D(β̂) + φ̂·χ²_{1, 1-α} */}
           {fullFit && (
             <>
               <line
                 x1={profileXScale(profileDomain[0])}
                 x2={profileXScale(profileDomain[1])}
-                y1={profileYScale(fullFit.deviance + chiSquaredInvCDF(1 - alpha, 1))}
-                y2={profileYScale(fullFit.deviance + chiSquaredInvCDF(1 - alpha, 1))}
+                y1={profileYScale(fullFit.deviance + profileCutoff)}
+                y2={profileYScale(fullFit.deviance + profileCutoff)}
                 stroke={REJECT_COLOR}
                 strokeDasharray="4 4"
               />
               <text
                 x={profileXScale(profileDomain[1]) - 4}
-                y={profileYScale(fullFit.deviance + chiSquaredInvCDF(1 - alpha, 1)) - 4}
+                y={profileYScale(fullFit.deviance + profileCutoff) - 4}
                 textAnchor="end"
                 fontSize={10}
                 fill={REJECT_COLOR}
               >
-                D̂ + χ²₁,₁₋ₐ
+                {isF ? `D̂ + φ̂·χ²₁,₁₋ₐ (φ̂ = ${phiHat.toFixed(3)})` : 'D̂ + χ²₁,₁₋ₐ'}
               </text>
             </>
           )}
@@ -515,7 +555,8 @@ export default function DevianceTestExplorer() {
             </label>
           </div>
           <p className="text-[11px] text-slate-600">
-            Data k = {dataK} (slider just changes the χ²_k reference axis).
+            Data k = {dataK} (slider just changes the reference df k
+            {isF ? ` of F_k,${dfResidual} and the k in Δ/(k·φ̂)` : ' of χ²_k'}).
           </p>
         </div>
 
@@ -540,6 +581,20 @@ export default function DevianceTestExplorer() {
                 <span className="text-slate-600">Δ on {testResult.df} df</span>
                 <span>{testResult.diff.toFixed(3)}</span>
               </div>
+              {testResult.dispersionEstimated && (
+                <>
+                  <div className="flex justify-between">
+                    <span className="text-slate-600">φ̂ (Pearson)</span>
+                    <span>{testResult.phiHat.toFixed(3)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-600">
+                      F = Δ/({testResult.df}·φ̂) on ({testResult.df}, {testResult.dfResidual})
+                    </span>
+                    <span>{(testResult.diff / (testResult.df * testResult.phiHat)).toFixed(3)}</span>
+                  </div>
+                </>
+              )}
               <div className="flex justify-between">
                 <span className="text-slate-600">p-value</span>
                 <span>{testResult.pValue.toExponential(2)}</span>
