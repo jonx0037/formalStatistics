@@ -67,7 +67,7 @@ import {
   looCV,
 } from './regression';
 import { EXAMPLE_8_GLM_DATA, EXAMPLE_10_GLM_DATA } from '../../../data/regression-data';
-import { chiSquaredInvCDF } from './testing';
+import { chiSquaredInvCDF, chiSquaredCDF, chiSquaredSF, fSF } from './testing';
 import { PROSTATE_CANCER_DATA } from '../../../data/regularization-data';
 import { seededRandom } from './probability';
 import { normalSample } from './convergence';
@@ -1123,7 +1123,7 @@ function maxAbsDiff(a: number[], b: number[]): number {
       ref.df2 === n - 2 &&
       Math.abs(ref.statistic - result.diff / result.phiHat) < 1e-9 &&
       Math.abs(ref.critical - fQuantile(0.95, 1, n - 2)) < 1e-12 &&
-      Math.abs(result.pValue - (1 - fCDF(ref.statistic, 1, n - 2))) < 1e-12 &&
+      Math.abs(result.pValue - fSF(ref.statistic, 1, n - 2)) < 1e-12 * Math.max(result.pValue, 1e-300) &&
       result.reject === ref.statistic > ref.critical,
     `F=${ref.statistic.toFixed(3)}, crit=${ref.critical.toFixed(4)}, p=${result.pValue.toExponential(2)}`,
     'F reference, consistent decision',
@@ -1161,6 +1161,106 @@ function maxAbsDiff(a: number[], b: number[]): number {
     Math.abs(profileDevianceCutoff(poisFit, 0.05) - chi1) < 1e-12,
     profileDevianceCutoff(poisFit, 0.05).toFixed(4),
     chi1.toFixed(4),
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// T8.11c — Upper-tail p-values come from survival functions, not 1 − CDF.
+//          The DevianceTestExplorer's Gamma F (≈ 145 on (1, 248) df) has
+//          p ≈ 1e-26; 1 − fCDF cancels to exactly 0 there.
+// ─────────────────────────────────────────────────────────────────────────────
+{
+  const mid = [fSF(2.5, 3, 40), 1 - fCDF(2.5, 3, 40), chiSquaredSF(4, 2), 1 - chiSquaredCDF(4, 2)];
+  check(
+    'T8.11c fSF / chiSquaredSF agree with 1 − CDF in the body (Δ < 1e-12)',
+    Math.abs(mid[0] - mid[1]) < 1e-12 &&
+      Math.abs(mid[2] - mid[3]) < 1e-12 &&
+      Math.abs(mid[2] - Math.exp(-2)) < 1e-14 &&
+      Math.abs(fSF(0, 3, 40) - 1) < 1e-15,
+    `F: ${mid[0].toExponential(6)}, χ²₂(4): ${mid[2].toExponential(6)}`,
+    `${mid[1].toExponential(6)}, e^-2 = ${Math.exp(-2).toExponential(6)}`,
+  );
+  // Far tail: χ²₂ SF is exactly e^{-w/2}; F_{2,ν} SF is exactly (1 + 2x/ν)^{-ν/2}.
+  const chiTail = chiSquaredSF(200, 2);
+  const fTail = fSF(150, 2, 248);
+  const fExact = Math.pow(1 + (2 * 150) / 248, -124);
+  check(
+    'T8.11c far-tail SFs keep relative precision (1 − CDF would be 0)',
+    Math.abs(chiTail / Math.exp(-100) - 1) < 1e-10 &&
+      Math.abs(fTail / fExact - 1) < 1e-10 &&
+      1 - chiSquaredCDF(200, 2) === 0,
+    `χ²₂ SF(200) = ${chiTail.toExponential(4)}, F_{2,248} SF(150) = ${fTail.toExponential(4)}`,
+    `e^-100 = ${Math.exp(-100).toExponential(4)}, ${fExact.toExponential(4)}`,
+  );
+  const gamma = devianceTestNested(
+    EXAMPLE_8_GLM_DATA.X,
+    EXAMPLE_8_GLM_DATA.X.map((row) => [row[0]]),
+    EXAMPLE_8_GLM_DATA.y,
+    FAMILIES.gamma,
+    LINKS.log,
+    0.05,
+  );
+  check(
+    'T8.11c Gamma explorer p-value is a positive far-tail value, not 0',
+    gamma.pValue > 0 && gamma.pValue < 1e-16,
+    gamma.pValue.toExponential(3),
+    '0 < p < 1e-16',
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// T8.11d — Step-halving: Gamma with the canonical inverse link on EXAMPLE_8.
+//          Before step-halving, IRLS stalled at a clipped fixed point
+//          (η < 0 ⇒ μ = 1/POSITIVE_CLIP) and reported D₀ = 12,920.7 for the
+//          intercept-only model. Intercept-only, the inverse and log links span
+//          the same model (μ constant), so the inverse-link fit must reproduce
+//          the log-link deviance and μ̂ = ȳ. The full inverse-link model is a
+//          different model from the log-link one, so its check is a genuine
+//          interior MLE: η > 0 everywhere, a vanishing score, and a deviance no
+//          larger than the nested intercept-only fit.
+// ─────────────────────────────────────────────────────────────────────────────
+{
+  const X = EXAMPLE_8_GLM_DATA.X;
+  const y = EXAMPLE_8_GLM_DATA.y;
+  const n = y.length;
+  const Xred = X.map((row) => [row[0]]);
+  const yBar = y.reduce((a, v) => a + v, 0) / n;
+  const redInv = glmFit(Xred, y, FAMILIES.gamma, LINKS.inverse, { skipNullDeviance: true });
+  const redLog = glmFit(Xred, y, FAMILIES.gamma, LINKS.log, { skipNullDeviance: true });
+  check(
+    'T8.11d Gamma inverse link, intercept-only: converges to μ̂ = ȳ with the log-link deviance',
+    redInv.converged &&
+      Math.abs(redInv.beta[0] - 1 / yBar) < 1e-10 &&
+      Math.abs(redInv.deviance - redLog.deviance) < 1e-8,
+    `β₀ = ${redInv.beta[0].toFixed(6)}, D₀ = ${redInv.deviance.toFixed(4)}`,
+    `1/ȳ = ${(1 / yBar).toFixed(6)}, log-link D₀ = ${redLog.deviance.toFixed(4)}`,
+  );
+  const full = glmFit(X, y, FAMILIES.gamma, LINKS.inverse);
+  // Score of the Gamma inverse-link model: Σ x_i (y_i − μ_i)/V(μ_i) · dμ/dη, dμ/dη = −μ².
+  const score = X[0].map((_, j) =>
+    X.reduce((acc, row, i) => acc + row[j] * ((y[i] - full.mu[i]) / (full.mu[i] * full.mu[i])) * -(full.mu[i] * full.mu[i]), 0),
+  );
+  const minEta = Math.min(...full.eta);
+  check(
+    'T8.11d Gamma inverse link, full model: interior MLE (η > 0, score ≈ 0, D₁ ≤ D₀)',
+    full.converged &&
+      minEta > 0 &&
+      Math.max(...score.map(Math.abs)) < 1e-6 &&
+      full.deviance <= redInv.deviance &&
+      Math.abs(full.nullDeviance - redLog.deviance) < 1e-8,
+    `D₁ = ${full.deviance.toFixed(4)}, min η = ${minEta.toFixed(4)}, |score|∞ = ${Math.max(...score.map(Math.abs)).toExponential(1)}`,
+    `D₁ ≤ D₀ = ${redInv.deviance.toFixed(4)}`,
+  );
+  // Fits that converge without halving are untouched: log link on the same data.
+  const logFull = glmFit(X, y, FAMILIES.gamma, LINKS.log);
+  check(
+    'T8.11d log-link Gamma fit unchanged by the safeguard (β̂ ≈ (0.9952, 0.5197), D = 133.8675)',
+    logFull.converged &&
+      Math.abs(logFull.beta[0] - 0.99515387) < 1e-6 &&
+      Math.abs(logFull.beta[1] - 0.51969431) < 1e-6 &&
+      Math.abs(logFull.deviance - 133.86747216) < 1e-6,
+    `β̂ = (${logFull.beta[0].toFixed(6)}, ${logFull.beta[1].toFixed(6)}), D = ${logFull.deviance.toFixed(4)}`,
+    '(0.995154, 0.519694), 133.8675',
   );
 }
 
