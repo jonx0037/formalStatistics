@@ -295,10 +295,10 @@ The uniform case has one further structural property that motivates a named theo
 
 ![Schematic of Rényi's decomposition of exponential order statistics. Three horizontal rows: top row shows n=6 iid Exp(1) draws as tick marks on the real line; middle row shows the sorted sample with spacings W_k = Y_(k) - Y_(k-1) annotated as segments; bottom row shows rescaled spacings E_k = (n-k+1) W_k as iid Exp(1) bars of varying length.](/images/topics/order-statistics-and-quantiles/29-renyi-spacings-schematic.png)
 
-*Figure 3. Rényi's decomposition. Top: $n = 6$ iid $\mathrm{Exp}(1)$ draws. Middle: sorted, with spacings $W_k$ between consecutive order statistics. Bottom: rescaled spacings $E_k = (n - k + 1) W_k$, which Theorem 3 proves are iid $\mathrm{Exp}(1)$.*
+*Figure 3. Rényi's decomposition. Top: $n = 6$ iid $\mathrm{Exp}(1)$ draws. Middle: sorted, with spacings $W_k$ between consecutive order statistics. Bottom: normalized spacings $E_k = (n - k + 1) W_k$, which Theorem 3 proves are iid $\mathrm{Exp}(1)$.*
 
 <TheoremBlock number={3} title="Rényi's representation of exponential order statistics">
-Let $Y_1, \dots, Y_n$ be iid $\mathrm{Exp}(1)$. Define the **normalized spacings** $W_k = Y_{(k)} - Y_{(k - 1)}$ for $k = 1, \dots, n$ (with $Y_{(0)} = 0$). Then the rescaled spacings $E_k := (n - k + 1)\, W_k$ are iid $\mathrm{Exp}(1)$, and
+Let $Y_1, \dots, Y_n$ be iid $\mathrm{Exp}(1)$. Define the **spacings** $W_k = Y_{(k)} - Y_{(k - 1)}$ for $k = 1, \dots, n$ (with $Y_{(0)} = 0$). Then the **normalized spacings** $E_k := (n - k + 1)\, W_k$ are iid $\mathrm{Exp}(1)$, and
 
 $$
 Y_{(k)} \;\stackrel{d}{=}\; \sum_{i = 1}^{k} \frac{E_i}{n - i + 1},
@@ -360,7 +360,7 @@ The factor $n - k + 1$ in Theorem 3 counts the "remaining" iid samples at step $
 </RemarkBlock>
 
 <RemarkBlock number={6} title="Connection to the Poisson process">
-Rényi's representation is the order-statistic reading of a Poisson-process fact: if we sprinkle $n$ iid $\mathrm{Exp}(\lambda)$-distributed inter-arrival times on $[0, \infty)$, we get a Poisson process of rate $\lambda$. The sorted arrival times are $Y_{(1)} < Y_{(2)} < \cdots$, and the conditional distribution given $Y_{(n+1)} = T$ is uniform order statistics on $[0, T]$. Theorem 3 is a direct restatement of the inter-arrival independence in the forward direction. Point-process machinery (formalml `point-processes`, forthcoming) makes this connection structural.
+Rényi's representation and the Poisson process are both partial sums of independent exponential gaps, but they are different processes. A Poisson process of rate $\lambda$ has arrival times $S_k = G_1 + \cdots + G_k$, where the inter-arrival gaps $G_1, G_2, \dots$ are iid $\mathrm{Exp}(\lambda)$ — every gap has the same rate. The exponential order statistics of Theorem 3 form a **pure-death process** instead: start $n$ independent $\mathrm{Exp}(1)$ clocks, one per sample point. The $k$-th spacing $W_k$ is the wait for the first ring among the $n - k + 1$ clocks still running, and by memorylessness (Remark 5) that wait is $\mathrm{Exp}(n - k + 1)$, independent of the earlier spacings. So $Y_{(k)} = \sum_{j \le k} E_j / (n - j + 1)$ is a partial sum of independent gaps whose rates fall $n, n - 1, \dots, 1$; the Poisson process is the constant-rate case. Theorem 3 is therefore not a restatement of Poisson inter-arrival independence — its gaps are independent but not identically distributed — though both rest on the memorylessness of the exponential. The Poisson process meets order statistics through the Uniform instead: given $S_{n+1} = T$, the arrival times $(S_1, \dots, S_n)$ are distributed as the order statistics of $n$ iid $\mathrm{Uniform}(0, T)$ draws; equivalently, $(U_{(1)}, \dots, U_{(n)}) \stackrel{d}{=} (S_1 / S_{n+1}, \dots, S_n / S_{n+1})$. Point-process machinery (formalml `point-processes`, forthcoming) makes this connection structural.
 </RemarkBlock>
 
 <RemarkBlock number={7} title="Basu's theorem and the uniform-order-statistics ratio">
