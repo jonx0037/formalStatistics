@@ -711,10 +711,7 @@ Both AIC and BIC prefer the **reduced** model. T10.19 verifies the algebraic ide
      style="border-color: var(--color-border);" />
 
 <RemarkBlock number={17} title="AIC's effective $\alpha$ depends on $q$">
-{/* TODO Task 7: 3–4 sentences. AIC's threshold 2q corresponds to the LRT
-    p-value at chi^2_q ≥ 2q. For q=1 → α ≈ 0.157; for q=5 → α ≈ 0.075; for q=10
-    → α ≈ 0.029. So AIC is increasingly conservative as q grows. */}
-Thm 6's identification of AIC with a fixed-threshold LRT means AIC has an **effective $\alpha$** that depends on $q$. For $q = 1$, $\mathbb{P}(\chi^2_1 \geq 2) \approx 0.157$; for $q = 5$, $\mathbb{P}(\chi^2_5 \geq 10) \approx 0.075$; for $q = 10$, $\mathbb{P}(\chi^2_{10} \geq 20) \approx 0.029$. AIC is *more liberal* (admits more parameters) at small $q$, *more conservative* at large $q$ — the opposite of the LRT-with-fixed-$\alpha$ rule, which has fixed type-I error regardless of $q$.
+Thm 6's identification of AIC with a fixed-threshold LRT means AIC has an **effective $\alpha$** that depends on $q$. For $q = 1$, $\mathbb{P}(\chi^2_1 \geq 2) \approx 0.157$; for $q = 5$, $\mathbb{P}(\chi^2_5 \geq 10) \approx 0.075$; for $q = 10$, $\mathbb{P}(\chi^2_{10} \geq 20) \approx 0.029$. AIC is *more liberal* (admits more parameters) at small $q$, *more conservative* at large $q$ — unlike the LRT-with-fixed-$\alpha$ rule, which has fixed type-I error regardless of $q$.
 </RemarkBlock>
 
 <RemarkBlock number={18} title="Nested-only caveat — non-nested requires direct IC comparison">
