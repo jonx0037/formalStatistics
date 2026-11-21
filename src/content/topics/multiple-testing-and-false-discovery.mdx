@@ -499,7 +499,7 @@ $$\Pr\bigl(\theta_i \in C_i^{(\alpha/m)} \text{ for every } i\bigr) \;\ge\; 1 - 
 
 $$\Pr\bigl(\theta_i \in C_i^{(\alpha')} \text{ for every } i\bigr) \;\ge\; 1 - \alpha,$$
 
-with equality when every $\theta_i$ equals the value against which the test was constructed.
+with equality at every $\theta$ when each inverted test has size exactly $\alpha'$ (as for exact-pivot intervals such as the Normal-mean $z$-intervals of Ex 13–14).
 
 Both follow immediately from Topic 19 Thm 1 combined with the union bound (Bonferroni) or the independence product (Šidák). Stated without separate proof.
 </TheoremBlock>
@@ -507,11 +507,11 @@ Both follow immediately from Topic 19 Thm 1 combined with the union bound (Bonfe
 ![Three simultaneous CI constructions for $m = 10$ Normal means at $n = 25$, $\\alpha = 0.05$: unadjusted (marginal $95\\%$ coverage but joint coverage $\\approx 0.60$), Bonferroni-adjusted (joint coverage $\\ge 0.95$, each CI $\\approx 1.43\\times$ wider than unadjusted), Šidák-adjusted (slightly narrower than Bonferroni, joint coverage $\\approx 0.95$ exactly under independence).](/images/topics/multiple-testing-and-false-discovery/20-simultaneous-cis.png)
 
 <ExampleBlock number={13} title="Bonferroni simultaneous CIs for $m = 10$ means">
-Ten independent sample means $\bar{X}_i$ with SE $= 1/\sqrt{n}$, $n = 25$, $\alpha = 0.05$. The per-interval critical value is $z_{1 - \alpha/(2m)} = z_{0.9975} = 2.807$, so each Bonferroni CI is $\bar{X}_i \pm 2.807 / 5 = \bar{X}_i \pm 0.561$. The unadjusted critical value is $z_{0.975} = 1.96$, giving width $\pm 0.392$. The Bonferroni width is $2.807/1.96 \approx 1.43\times$ the unadjusted. Over 500 simulations with all true means $= 0$: empirical joint coverage for unadjusted is $\approx 0.60$; for Bonferroni $\approx 0.95$.
+Ten independent sample means $\bar{X}_i$ with SE $= 1/\sqrt{n}$, $n = 25$, $\alpha = 0.05$. The per-interval critical value is $z_{1 - \alpha/(2m)} = z_{0.9975} = 2.807$, so each Bonferroni CI is $\bar{X}_i \pm 2.807 / 5 = \bar{X}_i \pm 0.561$. The unadjusted critical value is $z_{0.975} = 1.96$, giving width $\pm 0.392$. The Bonferroni width is $2.807/1.96 \approx 1.43\times$ the unadjusted. Because the ten intervals are independent, the joint coverage is exactly $0.95^{10} \approx 0.599$ unadjusted and $0.995^{10} \approx 0.951$ with Bonferroni, whatever the true means are.
 </ExampleBlock>
 
 <ExampleBlock number={14} title="Šidák slightly tighter under independence">
-Same setup as Ex 13. Šidák's per-interval $\alpha' = 1 - 0.95^{0.1} = 0.00512$, so the critical value is $z_{1 - 0.00512/2} = z_{0.99744} = 2.800$ — only $0.007$ smaller than Bonferroni's. CI width is $\approx 0.560$ (vs Bonferroni's $0.561$), a gain of $0.2\%$. The Šidák construction achieves *exact* joint coverage $0.95$ under independence, not just $\ge 0.95$, so the marginal gain is worth knowing exists, though the practical difference is negligible.
+Same setup as Ex 13. Šidák's per-interval $\alpha' = 1 - 0.95^{0.1} = 0.00512$, so the critical value is $z_{1 - 0.00512/2} = z_{0.99744} = 2.800$ — only $0.007$ smaller than Bonferroni's. CI width is $\approx 0.560$ (vs Bonferroni's $0.561$), a gain of about $0.3\%$. The Šidák construction achieves *exact* joint coverage $0.95$ under independence, not just $\ge 0.95$, so the marginal gain is worth knowing exists, though the practical difference is negligible.
 </ExampleBlock>
 
 <SimultaneousCIBands client:visible />
