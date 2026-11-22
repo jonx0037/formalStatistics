@@ -617,7 +617,7 @@ The AMISE-optimal $h^\ast$ is the first-order condition on a quadratic-in-$h^2$ 
 </RemarkBlock>
 
 <RemarkBlock number={12} title="Kernel choice negligibility">
-Theorem 5 minimizes $R(K)$ subject to $\mu_2(K) = \sigma_0^2$. Substituting into $\mathrm{AMISE}^\ast$, the kernel enters through $\{R(K)^4 \mu_2(K)^2\}^{1/5}$. For the five standard kernels, this combined factor ranges from $0.98^{1/5}$ (uniform) to $1.00$ (Epanechnikov) — a spread of under 2%. In log-space, switching kernels moves AMISE$^\ast$ by less than 0.01. Bandwidth choice, by contrast, can move AMISE by an order of magnitude. The practical advice: pick any standard kernel (Gaussian for simplicity, Epanechnikov for compact support), and spend your energy on bandwidth selection (§30.8).
+Theorem 5 minimizes $R(K)$ subject to $\mu_2(K) = \sigma_0^2$. Substituting into $\mathrm{AMISE}^\ast$, the kernel enters through $\{R(K)^4 \mu_2(K)^2\}^{1/5}$. For the five standard kernels, this combined factor runs from $0.3491$ (Epanechnikov, the minimum) through $0.3508$ (biweight), $0.3531$ (triangular), and $0.3633$ (Gaussian) to $0.3701$ (uniform) — a spread of about 6%. Relative to Epanechnikov it is the Theorem 2 efficiency raised to the power $-4/5$ (uniform: $0.930^{-4/5} \approx 1.06$). In log-space, switching kernels moves $\ln \mathrm{AMISE}^\ast$ by at most about $0.06$. Bandwidth choice, by contrast, can move AMISE by an order of magnitude. The practical advice: pick any standard kernel (Gaussian for simplicity, Epanechnikov for compact support), and spend your energy on bandwidth selection (§30.8).
 </RemarkBlock>
 
 <RemarkBlock number={13} title="Higher-order kernels and faster rates">
