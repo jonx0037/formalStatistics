@@ -600,9 +600,9 @@ $$
 This matches the T30.12 test pin — the oracle-bandwidth computation at $n = 100$ for $f = N(0, 1)$. At $n = 1000$ the bandwidth shrinks by the factor $10^{-1/5} \approx 0.631$ (T30.13), and the optimal AMISE shrinks by $10^{-4/5} \approx 0.158$ (T30.14).
 </ExampleBlock>
 
-![Two-panel AMISE figure. Left: AMISE curves for Gaussian, Epanechnikov, biweight, and triangular kernels at f = N(0,1), n = 200. All four minima land near h* between 0.37 and 0.40. Right: zoom on the minimum region showing the near-alignment of the four optima.](/images/topics/kernel-density-estimation/30-amise-and-optimal-bandwidth.png)
+![Two-panel AMISE figure. Left: AMISE curves for Gaussian, Epanechnikov, biweight, and triangular kernels at f = N(0,1), n = 200. The minimizing bandwidths differ by kernel, h* = 0.367 (Gaussian), 0.813 (Epanechnikov), 0.893 (triangular), and 0.963 (biweight), because each kernel's constants put h on its own scale; the minimum AMISE values agree within about 4%. Right: zoom on h from 0.25 to 1.25 showing all four minima.](/images/topics/kernel-density-estimation/30-amise-and-optimal-bandwidth.png)
 
-*Figure 5. AMISE for four kernels on $f = $ Normal$(0, 1)$, $n = 200$. Left: full range. Right: zoom on $[0.2, 0.4]$ showing the near-identical minima, confirming that kernel choice barely matters relative to bandwidth choice.*
+*Figure 5. AMISE for four kernels on $f = $ Normal$(0, 1)$, $n = 200$. Left: full range. Right: zoom on $h \in [0.25, 1.25]$. The minimizing bandwidths differ — $h^\ast = 0.367$ for the Gaussian, $0.813$ to $0.963$ for the compact kernels — because $h^\ast = \{R(K)/(n\,\mu_2(K)^2 R(f''))\}^{1/5}$ puts each kernel on its own scale, but the minimum AMISE values agree within about 4% ($0.00461$ to $0.00480$), confirming that kernel choice barely matters relative to bandwidth choice.*
 
 ![Log-log plot of AMISE* versus n for n in {50, 100, 200, 500, 1000, 2000, 5000, 10000} at f = N(0,1) with Gaussian kernel. The empirical slope matches the theoretical -0.8 rate; a dotted parametric-rate line at slope -1 is shown for reference.](/images/topics/kernel-density-estimation/30-mise-rate-vs-n.png)
 
