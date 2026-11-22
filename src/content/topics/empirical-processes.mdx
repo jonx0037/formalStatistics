@@ -856,10 +856,10 @@ Then $\sqrt{\log N_{[\,]}(\varepsilon)} \lesssim \varepsilon^{-1/2} \sqrt{\log(1
 §32.5 Step 3 computed $N_{[\,]}(\varepsilon, \mathcal{F}_{\mathrm{cdf}}, L^2(P)) \le \lceil \varepsilon^{-2} \rceil$ for $P = \mathrm{Uniform}(0, 1)$. Plugging into the bracketing integral:
 
 $$
-J_{[\,]}(1, \mathcal{F}_{\mathrm{cdf}}, L^2(P)) \;=\; \int_0^1 \sqrt{\log \lceil \varepsilon^{-2} \rceil}\,d\varepsilon \;\approx\; \int_0^1 \sqrt{2 \log(1/\varepsilon)}\,d\varepsilon \;=\; \frac{\sqrt{2\pi}}{2} \;<\; \infty,
+J_{[\,]}(1, \mathcal{F}_{\mathrm{cdf}}, L^2(P)) \;=\; \int_0^1 \sqrt{\log \lceil \varepsilon^{-2} \rceil}\,d\varepsilon \;\le\; \int_0^1 \Bigl(\sqrt{\log 2} + \sqrt{2 \log(1/\varepsilon)}\Bigr)\,d\varepsilon \;=\; \sqrt{\log 2} + \frac{\sqrt{2\pi}}{2} \;<\; \infty,
 $$
 
-using the standard Gaussian-tail integral $\int_0^1 \sqrt{\log(1/\varepsilon)}\,d\varepsilon = \sqrt{\pi}/2$. Finiteness confirmed — Thm 4 delivers §32.5 Thm 3 as a specialisation, which is exactly what we proved in full. The $\mathcal{F}_{\mathrm{cdf}}$ calculation is the cleanest worked example of Dudley's criterion.
+using $\lceil \varepsilon^{-2} \rceil \le 2\varepsilon^{-2}$ on $(0, 1]$, $\sqrt{a + b} \le \sqrt a + \sqrt b$, and the standard Gaussian-tail integral $\int_0^1 \sqrt{\log(1/\varepsilon)}\,d\varepsilon = \sqrt{\pi}/2$. (Numerically the integral is about $1.367$; dropping the ceiling gives $\sqrt{2\pi}/2 \approx 1.253$.) Finiteness confirmed — Thm 4 delivers §32.5 Thm 3 as a specialization, which is exactly what we proved in full. The $\mathcal{F}_{\mathrm{cdf}}$ calculation is the cleanest worked example of Dudley's criterion.
 
 </ExampleBlock>
 
@@ -922,7 +922,7 @@ $$
 \mathrm{IC}_P(x) \;:=\; \phi'_P(\delta_x - P), \qquad x \in \mathcal{X},
 $$
 
-i.e., the Hadamard derivative evaluated at the "point-mass perturbation" $\delta_x - P$. The influence function measures how $\phi$ reacts to a tiny bit of probability mass added at $x$ (and a tiny bit subtracted, uniformly, to preserve normalisation). By linearity of $\phi'_P$, $\sqrt n (\phi(P_n) - \phi(P))$ is approximately $n^{-1/2} \sum_i \mathrm{IC}_P(X_i)$, and its asymptotic variance is $P(\mathrm{IC}_P^2) = \mathrm{Var}_P(\mathrm{IC}_P)$. The influence function is the primitive notion behind efficient-influence-function estimators in semiparametric theory — see Rem 17.
+i.e., the Hadamard derivative evaluated at the "point-mass perturbation" $\delta_x - P$. The influence function measures how $\phi$ reacts to a tiny bit of probability mass added at $x$ (and the same amount removed from $P$ in proportion to $P$ itself, along the path $t \mapsto (1 - t)P + t\,\delta_x = P + t(\delta_x - P)$, to preserve normalization). By linearity of $\phi'_P$, $\sqrt n (\phi(P_n) - \phi(P))$ is approximately $n^{-1/2} \sum_i \mathrm{IC}_P(X_i)$, and its asymptotic variance is $P(\mathrm{IC}_P^2) = \mathrm{Var}_P(\mathrm{IC}_P)$. The influence function is the primitive notion behind efficient-influence-function estimators in semiparametric theory — see Rem 17.
 
 </DefinitionBlock>
 
