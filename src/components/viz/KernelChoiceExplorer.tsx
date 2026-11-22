@@ -6,7 +6,8 @@
  * sensitizing the reader to kernel-choice negligibility. A side table carries
  * the closed-form kernel constants (μ₂(K), R(K), efficiency) and the current
  * AMISE(h) for each visible kernel — so the reader can also see numerically
- * why Epanechnikov is the theoretical optimum but only by fractions of a percent.
+ * why Epanechnikov is the theoretical optimum but only by a few percent
+ * (efficiencies 0.93–1.00; optimal AMISE within about 6% across all five).
  *
  * Two bandwidth modes:
  *   • equal h   — a single slider drives every kernel at the same bandwidth
@@ -407,8 +408,8 @@ export default function KernelChoiceExplorer() {
 
       <p className="mt-3 text-xs text-slate-500 leading-relaxed">
         The five kernels track the true density so closely that in any given sample you rarely see
-        a meaningful difference. Epanechnikov is AMISE-optimal (efficiency = 1), but the next three
-        are within a percent; Uniform trails by ~7%. In practice, the bandwidth <span className="italic">h</span>{' '}
+        a meaningful difference. Epanechnikov is AMISE-optimal (efficiency = 1), but Biweight and
+        Triangular are within 1.5%, Gaussian trails by ~5%, and Uniform by ~7%. In practice, the bandwidth <span className="italic">h</span>{' '}
         carries all the action.
       </p>
     </div>

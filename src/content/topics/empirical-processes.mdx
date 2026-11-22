@@ -856,10 +856,10 @@ Then $\sqrt{\log N_{[\,]}(\varepsilon)} \lesssim \varepsilon^{-1/2} \sqrt{\log(1
 §32.5 Step 3 computed $N_{[\,]}(\varepsilon, \mathcal{F}_{\mathrm{cdf}}, L^2(P)) \le \lceil \varepsilon^{-2} \rceil$ for $P = \mathrm{Uniform}(0, 1)$. Plugging into the bracketing integral:
 
 $$
-J_{[\,]}(1, \mathcal{F}_{\mathrm{cdf}}, L^2(P)) \;=\; \int_0^1 \sqrt{\log \lceil \varepsilon^{-2} \rceil}\,d\varepsilon \;\approx\; \int_0^1 \sqrt{2 \log(1/\varepsilon)}\,d\varepsilon \;=\; \frac{\sqrt{2\pi}}{2} \;<\; \infty,
+J_{[\,]}(1, \mathcal{F}_{\mathrm{cdf}}, L^2(P)) \;=\; \int_0^1 \sqrt{\log \lceil \varepsilon^{-2} \rceil}\,d\varepsilon \;\le\; \int_0^1 \Bigl(\sqrt{\log 2} + \sqrt{2 \log(1/\varepsilon)}\Bigr)\,d\varepsilon \;=\; \sqrt{\log 2} + \frac{\sqrt{2\pi}}{2} \;<\; \infty,
 $$
 
-using the standard Gaussian-tail integral $\int_0^1 \sqrt{\log(1/\varepsilon)}\,d\varepsilon = \sqrt{\pi}/2$. Finiteness confirmed — Thm 4 delivers §32.5 Thm 3 as a specialisation, which is exactly what we proved in full. The $\mathcal{F}_{\mathrm{cdf}}$ calculation is the cleanest worked example of Dudley's criterion.
+using $\lceil \varepsilon^{-2} \rceil \le 2\varepsilon^{-2}$ on $(0, 1]$, $\sqrt{a + b} \le \sqrt a + \sqrt b$, and the standard Gaussian-tail integral $\int_0^1 \sqrt{\log(1/\varepsilon)}\,d\varepsilon = \sqrt{\pi}/2$. (Numerically the integral is about $1.367$; dropping the ceiling gives $\sqrt{2\pi}/2 \approx 1.253$.) Finiteness confirmed — Thm 4 delivers §32.5 Thm 3 as a specialization, which is exactly what we proved in full. The $\mathcal{F}_{\mathrm{cdf}}$ calculation is the cleanest worked example of Dudley's criterion.
 
 </ExampleBlock>
 
@@ -922,7 +922,7 @@ $$
 \mathrm{IC}_P(x) \;:=\; \phi'_P(\delta_x - P), \qquad x \in \mathcal{X},
 $$
 
-i.e., the Hadamard derivative evaluated at the "point-mass perturbation" $\delta_x - P$. The influence function measures how $\phi$ reacts to a tiny bit of probability mass added at $x$ (and a tiny bit subtracted, uniformly, to preserve normalisation). By linearity of $\phi'_P$, $\sqrt n (\phi(P_n) - \phi(P))$ is approximately $n^{-1/2} \sum_i \mathrm{IC}_P(X_i)$, and its asymptotic variance is $P(\mathrm{IC}_P^2) = \mathrm{Var}_P(\mathrm{IC}_P)$. The influence function is the primitive notion behind efficient-influence-function estimators in semiparametric theory — see Rem 17.
+i.e., the Hadamard derivative evaluated at the "point-mass perturbation" $\delta_x - P$. The influence function measures how $\phi$ reacts to a tiny bit of probability mass added at $x$ (and the same amount removed from $P$ in proportion to $P$ itself, along the path $t \mapsto (1 - t)P + t\,\delta_x = P + t(\delta_x - P)$, to preserve normalization). By linearity of $\phi'_P$, $\sqrt n (\phi(P_n) - \phi(P))$ is approximately $n^{-1/2} \sum_i \mathrm{IC}_P(X_i)$, and its asymptotic variance is $P(\mathrm{IC}_P^2) = \mathrm{Var}_P(\mathrm{IC}_P)$. The influence function is the primitive notion behind efficient-influence-function estimators in semiparametric theory — see Rem 17.
 
 </DefinitionBlock>
 
@@ -966,9 +966,9 @@ This strengthens Topic 9 §9.5's CMT in two ways: $g$ is replaced by a sequence 
 
 </TheoremBlock>
 
-![Two-panel functional-delta demonstration. Left: histogram of $\sqrt n(\hat\xi_{0.5} - 0)$ across 5000 $n=500$ Normal replicates, overlaid with theoretical $\mathcal{N}(0, \pi/2)$ density. Right: ten $\mathbb{G}_n$ paths with the dashed influence function $\mathrm{IC}(x) = -\mathrm{sign}(x)/(2\phi(0))$ overlaid as a visual cue.](/images/topics/empirical-processes/32-functional-delta.png)
+![Three-panel functional-delta demonstration across 5000 Monte-Carlo replicates of n = 500 standard Normal samples. Left: histogram of root-n times the sample mean, overlaid with the N(0, 1) density. Middle: histogram of root-n times the sample median, overlaid with the N(0, pi/2) density. Right: histogram of the Cramér–von-Mises statistic, n times the integral of (F_n minus F_0) squared dF_0, overlaid with the density of its weighted chi-square limit, the sum over j of Z_j squared over (pi j) squared.](/images/topics/empirical-processes/32-functional-delta.png)
 
-*Figure 6. Functional delta method for the sample median. Left: the empirical sampling distribution of $\sqrt n$ times the sample-median deviation lines up with the theoretical Gaussian — asymptotic variance $\pi / 2 \approx 1.571$ from the influence-function formula $1/(4 f(0)^2)$. Right: the influence function plotted alongside $\mathbb{G}_n$ paths shows visually how the delta method extracts the limit — it integrates against IC.*
+*Figure 6. The functional delta method in three regimes: $n = 500$, 5000 Monte-Carlo replicates from Normal$(0, 1)$. Left: the mean, a linear functional — $\sqrt n\,\bar X_n$ matches $\mathcal{N}(0, 1)$. Middle: the median — by Ex 13 at $p = 1/2$ its influence function is $\mathrm{IC}(x) = \mathrm{sign}(x)/(2 f(0))$ with $f(0) = 1/\sqrt{2\pi}$, so $\sqrt n$ times the sample median lines up with $\mathcal{N}(0, \pi/2)$, the asymptotic variance $1/(4 f(0)^2) = \pi/2 \approx 1.571$ (Monte-Carlo variance $1.518$). Right: the Cramér–von-Mises statistic $n \int (F_n - F_0)^2\,dF_0$ at $F = F_0$ lives on the $n$ scale, not $\sqrt n$, and its limit is not Gaussian: it is the weighted-$\chi^2$ series $\sum_j Z_j^2/(\pi j)^2$ of Ex 10, reached by the continuous mapping theorem rather than the delta method.*
 
 <FunctionalDeltaExplorer client:visible />
 

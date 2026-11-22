@@ -600,9 +600,9 @@ $$
 This matches the T30.12 test pin — the oracle-bandwidth computation at $n = 100$ for $f = N(0, 1)$. At $n = 1000$ the bandwidth shrinks by the factor $10^{-1/5} \approx 0.631$ (T30.13), and the optimal AMISE shrinks by $10^{-4/5} \approx 0.158$ (T30.14).
 </ExampleBlock>
 
-![Two-panel AMISE figure. Left: AMISE curves for Gaussian, Epanechnikov, biweight, and triangular kernels at f = N(0,1), n = 200. All four minima land near h* between 0.37 and 0.40. Right: zoom on the minimum region showing the near-alignment of the four optima.](/images/topics/kernel-density-estimation/30-amise-and-optimal-bandwidth.png)
+![Two-panel AMISE figure. Left: AMISE curves for Gaussian, Epanechnikov, biweight, and triangular kernels at f = N(0,1), n = 200. The minimizing bandwidths differ by kernel, h* = 0.367 (Gaussian), 0.813 (Epanechnikov), 0.893 (triangular), and 0.963 (biweight), because each kernel's constants put h on its own scale; the minimum AMISE values agree within about 4%. Right: zoom on h from 0.25 to 1.25 showing all four minima.](/images/topics/kernel-density-estimation/30-amise-and-optimal-bandwidth.png)
 
-*Figure 5. AMISE for four kernels on $f = $ Normal$(0, 1)$, $n = 200$. Left: full range. Right: zoom on $[0.2, 0.4]$ showing the near-identical minima, confirming that kernel choice barely matters relative to bandwidth choice.*
+*Figure 5. AMISE for four kernels on $f = $ Normal$(0, 1)$, $n = 200$. Left: full range. Right: zoom on $h \in [0.25, 1.25]$. The minimizing bandwidths differ — $h^\ast = 0.367$ for the Gaussian, $0.813$ to $0.963$ for the compact kernels — because $h^\ast = \{R(K)/(n\,\mu_2(K)^2 R(f''))\}^{1/5}$ puts each kernel on its own scale, but the minimum AMISE values agree within about 4% ($0.00461$ to $0.00480$), confirming that kernel choice barely matters relative to bandwidth choice.*
 
 ![Log-log plot of AMISE* versus n for n in {50, 100, 200, 500, 1000, 2000, 5000, 10000} at f = N(0,1) with Gaussian kernel. The empirical slope matches the theoretical -0.8 rate; a dotted parametric-rate line at slope -1 is shown for reference.](/images/topics/kernel-density-estimation/30-mise-rate-vs-n.png)
 
@@ -617,7 +617,7 @@ The AMISE-optimal $h^\ast$ is the first-order condition on a quadratic-in-$h^2$ 
 </RemarkBlock>
 
 <RemarkBlock number={12} title="Kernel choice negligibility">
-Theorem 5 minimizes $R(K)$ subject to $\mu_2(K) = \sigma_0^2$. Substituting into $\mathrm{AMISE}^\ast$, the kernel enters through $\{R(K)^4 \mu_2(K)^2\}^{1/5}$. For the five standard kernels, this combined factor ranges from $0.98^{1/5}$ (uniform) to $1.00$ (Epanechnikov) — a spread of under 2%. In log-space, switching kernels moves AMISE$^\ast$ by less than 0.01. Bandwidth choice, by contrast, can move AMISE by an order of magnitude. The practical advice: pick any standard kernel (Gaussian for simplicity, Epanechnikov for compact support), and spend your energy on bandwidth selection (§30.8).
+Theorem 5 minimizes $R(K)$ subject to $\mu_2(K) = \sigma_0^2$. Substituting into $\mathrm{AMISE}^\ast$, the kernel enters through $\{R(K)^4 \mu_2(K)^2\}^{1/5}$. For the five standard kernels, this combined factor runs from $0.3491$ (Epanechnikov, the minimum) through $0.3508$ (biweight), $0.3531$ (triangular), and $0.3633$ (Gaussian) to $0.3701$ (uniform) — a spread of about 6%. Relative to Epanechnikov it is the Theorem 2 efficiency raised to the power $-4/5$ (uniform: $0.930^{-4/5} \approx 1.06$). In log-space, switching kernels moves $\ln \mathrm{AMISE}^\ast$ by at most about $0.06$. Bandwidth choice, by contrast, can move AMISE by an order of magnitude. The practical advice: pick any standard kernel (Gaussian for simplicity, Epanechnikov for compact support), and spend your energy on bandwidth selection (§30.8).
 </RemarkBlock>
 
 <RemarkBlock number={13} title="Higher-order kernels and faster rates">
